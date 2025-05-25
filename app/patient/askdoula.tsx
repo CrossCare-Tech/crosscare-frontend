@@ -1466,7 +1466,7 @@ useEffect(() => {
     try {
       // Clear chat history from AsyncStorage
       await AsyncStorage.removeItem("chatHistory")
-
+              setIsPaused(true);
       // Clear messages from state
       setMessages([])
 
@@ -1493,7 +1493,7 @@ useEffect(() => {
               setIsPaused(false);
             },
           },
-          { text: t('askDoula.no') },
+          { text: t('askDoula.no')},
         ]
       );
     } catch (error) {
