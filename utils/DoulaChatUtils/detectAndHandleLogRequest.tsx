@@ -1,6 +1,5 @@
 import axios from "axios";
 import { detectLogRequestWithPatterns } from "./logRequestWithPatterns";
-import { useTranslation } from 'react-i18next';
 
 // Define the function parameters and return type
 export interface LogRequestResult {
@@ -13,10 +12,15 @@ export const detectAndHandleLogRequest = async (
   userId: string,
   extractMetricFromText: (text: string, metricType: string) => any,
   updateHealthData: () => Promise<void>,
-  addResponseMessage: (content: string) => void
+  addResponseMessage: (content: string) => void,
+  shouldSpeak:boolean,
+  speakResponse: (text:string)=>void,
+  t: (key: string) => string
 ): Promise<LogRequestResult> => {
+  console.log(t);
   // First try pattern-based recognition
-  const {t} = useTranslation();
+
+  console.log("shouldSpeak value:", shouldSpeak);
   const patternMatch = detectLogRequestWithPatterns(query);
 
   if (patternMatch) {
@@ -116,9 +120,10 @@ export const detectAndHandleLogRequest = async (
           // Success - refresh health data
           await updateHealthData();
 
-          if(shouldSpeak){
-              speakResponse(successMessage);
-            }
+           if (shouldSpeak) {
+            console.log("Speaking pattern match success:", successMessage);
+            speakResponse(successMessage);
+          }
 
           // Add response message
           addResponseMessage(successMessage);
@@ -131,9 +136,15 @@ export const detectAndHandleLogRequest = async (
     } catch (error) {
       console.error("Error logging health metric:", error);
 
-      addResponseMessage(
-        t('healthData.log_error')
-      );
+       const errorMessage =   t('healthData.log_error');
+
+      // ✅ FIX: Add missing speakResponse call for errors
+      if (shouldSpeak) {
+        console.log("Speaking error message:", errorMessage);
+        speakResponse(errorMessage);
+      }
+
+      addResponseMessage(errorMessage);
     }
 
     return { handled: true }; // We had a pattern match, even if the API call failed
@@ -242,11 +253,11 @@ export const detectAndHandleLogRequest = async (
           sleepStart: sleepStart,
           sleepEnd: sleepEnd,
         };
-        successMessage = `I've logged your sleep from ${sleepStart} to ${sleepEnd}.`;
+        successMessage = `${t('healthData.logged_sleep_from')} ${sleepStart} ${t('healthData.to')} ${sleepEnd}.`;
       } else {
         // If we couldn't extract specific sleep times, provide guidance
         addResponseMessage(
-          t('healthData.sleep_log_instruction'),
+          t('healthData.sleep_log_instruction')
         );
         return { handled: true };
       }
@@ -262,6 +273,11 @@ export const detectAndHandleLogRequest = async (
         // Success - refresh health data
         await updateHealthData();
 
+        if (shouldSpeak) {
+            speakResponse(successMessage);
+          }
+
+
         // Add response message
         addResponseMessage(successMessage);
 
@@ -273,9 +289,15 @@ export const detectAndHandleLogRequest = async (
   } catch (error) {
     console.error("Error logging health metric:", error);
 
-    addResponseMessage(
-      "I'm sorry, I couldn't log that health information. Please try again or use the tracking screens."
-    );
+     const errorMessage = "I'm sorry, I couldn't log that health information. Please try again or use the tracking screens.";
+
+      // ✅ FIX: Add missing speakResponse call for errors
+      if (shouldSpeak) {
+        console.log("Speaking error message:", errorMessage);
+        speakResponse(errorMessage);
+      }
+
+      addResponseMessage(errorMessage);
 
     return { handled: true };
   }
