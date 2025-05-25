@@ -436,8 +436,16 @@ useEffect(() => {
       await AsyncStorage.setItem(`questionnaire_auto_paused_${user?.user_id}`, 'true')
       await AsyncStorage.setItem(`questionnaire_paused_${user?.user_id}`, 'true')
 
-      // Auto-pause the questionnaire
-      await handlePauseResumeToggle()
+      if (typeof questionnaireManager.resumeQuestionnaire === "function") {
+      await questionnaireManager.resumeQuestionnaire();
+    } else {
+      // fallback: if only toggle is available, call it only if currently paused
+      if (questionnaireManager.isPaused) {
+        await handlePauseResumeToggle();
+      }
+    }
+
+    setIsPaused(false);
     }
 
     // If app is coming back to foreground and was auto-paused
@@ -447,7 +455,10 @@ useEffect(() => {
       wasActiveRef.current
     ) {
       console.log("App returning to foreground - questionnaire was auto-paused")
-      wasActiveRef.current = false
+      wasActiveRef.current = true
+
+        await AsyncStorage.setItem(`questionnaire_auto_paused_${user?.user_id}`, 'true')
+      await AsyncStorage.setItem(`questionnaire_paused_${user?.user_id}`, 'true')
 
       setIsPaused(true)
 
@@ -508,130 +519,6 @@ useEffect(() => {
     }, [user?.user_id]),
   )
 
-
-  // useEffect(() => {
-  //   const checkQuestionnaireStatus = async () => {
-  //     const isPaused = await questionnaireManager.checkForPausedQuestionnaire();
-
-  //     // In the useEffect for checkQuestionnaireStatus, modify the paused questionnaire section
-  //     // If there's a paused questionnaire and no messages yet, ask if they want to continue
-  //     if (isPaused && messages.length === 0) {
-  //       console.log("Found paused questionnaire, asking to continue");
-
-  //       // Try to load the last question that was asked
-  //       try {
-  //         const lastQuestionJson = await AsyncStorage.getItem(
-  //           `last_question_${user?.user_id}`
-  //         );
-  //         if (lastQuestionJson) {
-  //           const lastQuestion = JSON.parse(lastQuestionJson);
-  //           console.log(
-  //             "Found last question for paused questionnaire:",
-  //             lastQuestion
-  //           );
-
-  //           // If the last message was a pause confirmation, use a different message to resume
-  //           if (lastQuestion.domainId === "pause") {
-  //             setMessages([
-  //               {
-  //                 id: Date.now().toString(),
-  //                 type: "text",
-  //                 content: `Hey ${
-  //                   user?.user_name || "there"
-  //                 }, you have an unfinished questionnaire. Would you like to continue where you left off?`,
-  //                 isUser: false,
-  //                 timestamp: new Date(),
-  //               },
-  //             ]);
-  //             return;
-  //           }
-
-  //           // If it was a domain continuation question, use that context
-  //           if (lastQuestion.domainId === "continue") {
-  //             const savedState = await AsyncStorage.getItem(
-  //               `questionnaire_state_${user?.user_id}`
-  //             );
-  //             if (savedState) {
-  //               const parsedState = JSON.parse(savedState);
-  //               const nextDomainIndex = parsedState.currentDomainIndex + 1;
-
-  //               if (nextDomainIndex < QUESTIONNAIRE_DOMAINS.length) {
-  //                 const nextDomain =
-  //                   QUESTIONNAIRE_DOMAINS[parsedState.currentDomainIndex];
-  //                 setMessages([
-  //                   {
-  //                     id: Date.now().toString(),
-  //                     type: "text",
-  //                     content: `Hey ${
-  //                       user?.user_name || "there"
-  //                     }, we were discussing ${QUESTIONNAIRE_DOMAINS[
-  //                       parsedState.currentDomainIndex
-  //                     ].description.toLowerCase()} and about to move to ${nextDomain.description.toLowerCase()}. Would you like to continue where you left off?`,
-  //                     isUser: false,
-  //                     timestamp: new Date(),
-  //                   },
-  //                 ]);
-  //                 return;
-  //               }
-  //             }
-  //           }
-
-  //           // For a regular question, use the domain context
-  //           const savedState = await AsyncStorage.getItem(
-  //             `questionnaire_state_${user?.user_id}`
-  //           );
-  //           if (savedState) {
-  //             const parsedState = JSON.parse(savedState);
-  //             const currentDomain =
-  //               QUESTIONNAIRE_DOMAINS[parsedState.currentDomainIndex];
-
-  //             if (currentDomain) {
-  //               setMessages([
-  //                 {
-  //                   id: Date.now().toString(),
-  //                   type: "text",
-  //                   content: `Hey ${
-  //                     user?.user_name || "there"
-  //                   }, you have an unfinished questionnaire about ${currentDomain.description.toLowerCase()}. Would you like to continue where you left off?`,
-  //                   isUser: false,
-  //                   timestamp: new Date(),
-  //                 },
-  //               ]);
-  //               return;
-  //             }
-  //           }
-  //         }
-  //       } catch (error) {
-  //         console.error("Error getting last question:", error);
-  //       }
-
-  //       // Fallback message if we can't determine the context
-  //       setMessages([
-  //         {
-  //           id: Date.now().toString(),
-  //           type: "text",
-  //           content: `Hey ${
-  //             user?.user_name || "there"
-  //           }, you have an unfinished questionnaire. Would you like to continue where you left off?`,
-  //           isUser: false,
-  //           timestamp: new Date(),
-  //         },
-  //       ]);
-  //       return;
-  //     }
-  //   };
-
-  //   checkQuestionnaireStatus();
-  // }, [
-  //   questionnaireManager,
-  //   messages,
-  //   user,
-  //   checkQuestionnaireCompletionStatus,
-  // ]);
-
-  // Fetch health data when component mounts
-
-  // Auto-scroll to bottom when messages change or when typing indicator appears
   useEffect(() => {
     if (scrollViewRef.current && (messages.length > 0 || isTyping)) {
       setTimeout(() => {
@@ -778,323 +665,6 @@ useEffect(() => {
     }
   }, [isTyping, loadingAnimation])
 
-
-  // const fetchHealthData = async () => {
-  //   if (user && user.user_id) {
-  //     try {
-  //       // Use the specified endpoint format
-  //       const apiUrl = `https://crosscare-backends.onrender.com/api/user/activity/${user.user_id}`;
-  //       console.log(`Making API call to: ${apiUrl}`);
-
-  //       // Make the API call
-  //       const response = await axios.get(apiUrl);
-  //       const apiData = response.data.activities 
-
-
-
-  //       // Process the data if we got a response
-  //       if (
-  //         apiData &&
-  //         Array.isArray(apiData) &&
-  //         apiData.length > 0
-  //       ) {
-  //         console.log(
-  //           "API data found. First record:",
-  //           JSON.stringify(apiData[0], null, 2)
-  //         );
-
-  //         // Sort by date (newest first)
-  //         const sortedRecords = [...apiData].sort(
-  //           (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-  //         );
-
-
-  //         // Get the most recent record
-  //         const latestRecord = sortedRecords[0];
-
-  //         // Get the last 7 days of records for weekly stats
-  //         const last7Days = sortedRecords.slice(0, 7);
-
-  //         // Get the last 30 days of records for monthly stats
-  //         const last30Days = sortedRecords.slice(0, 30);
-
-  //         // Calculate sleep duration in hours for a record
-  //         const calculateSleepDuration = (record: any) => {
-  //           if (
-  //             record.details &&
-  //             record.details.sleep &&
-  //             record.details.sleep.start &&
-  //             record.details.sleep.end
-  //           ) {
-  //             const start = new Date(record.details.sleep.start);
-  //             const end = new Date(record.details.sleep.end);
-  //             return (end.getTime() - start.getTime()) / (1000 * 60 * 60); // Convert ms to hours
-  //           }
-  //           return 0;
-  //         };
-
-  //         // Create a new stats object to update state
-  //         const newHealthStats = {
-  //           water: {
-  //             today: 0,
-  //             weekly: 0,
-  //             monthly: 0,
-  //             avgWeekly: 0,
-  //             avgMonthly: 0,
-  //           },
-  //           steps: {
-  //             today: 0,
-  //             weekly: 0,
-  //             monthly: 0,
-  //             avgWeekly: 0,
-  //             avgMonthly: 0,
-  //           },
-  //           weight: {
-  //             today: 0,
-  //             weekly: 0,
-  //             monthly: 0,
-  //             avgWeekly: 0,
-  //             avgMonthly: 0,
-  //             unit: "kg",
-  //           },
-  //           heart: {
-  //             today: 0,
-  //             weekly: 0,
-  //             monthly: 0,
-  //             avgWeekly: 0,
-  //             avgMonthly: 0,
-  //           },
-  //           sleep: {
-  //             today: 0,
-  //             weekly: 0,
-  //             monthly: 0,
-  //             avgWeekly: 0,
-  //             avgMonthly: 0,
-  //           },
-  //         };
-
-  //         // TODAY'S STATS
-  //         newHealthStats.water.today = latestRecord.details?.water || 0;
-  //         newHealthStats.steps.today = latestRecord.details?.steps || 0;
-  //         newHealthStats.heart.today = latestRecord.details?.heart || 0;
-  //         newHealthStats.sleep.today = calculateSleepDuration(latestRecord);
-  //         if (latestRecord.details?.weight?.value) {
-  //           newHealthStats.weight.today = latestRecord.details.weight.value;
-  //           newHealthStats.weight.unit =
-  //             latestRecord.details.weight.unit || "kg";
-  //         }
-
-  //         // WEEKLY STATS
-  //         // Filter records with valid data for each metric
-  //         const weeklyWaterRecords = last7Days.filter(
-  //           (r) =>
-  //             r.details &&
-  //             typeof r.details.water === "number" &&
-  //             r.details.water > 0
-  //         );
-  //         const weeklyStepsRecords = last7Days.filter(
-  //           (r) =>
-  //             r.details &&
-  //             typeof r.details.steps === "number" &&
-  //             r.details.steps > 0
-  //         );
-  //         const weeklyHeartRecords = last7Days.filter(
-  //           (r) =>
-  //             r.details &&
-  //             typeof r.details.heart === "number" &&
-  //             r.details.heart > 0
-  //         );
-  //         const weeklySleepRecords = last7Days.filter(
-  //           (r) => calculateSleepDuration(r) > 0
-  //         );
-  //         const weeklyWeightRecords = last7Days.filter(
-  //           (r) =>
-  //             r.details &&
-  //             r.details.weight &&
-  //             typeof r.details.weight.value === "number" &&
-  //             r.details.weight.value > 0
-  //         );
-
-  //         // Calculate totals
-  //         newHealthStats.water.weekly = weeklyWaterRecords.reduce(
-  //           (sum, r) => sum + r.details.water,
-  //           0
-  //         );
-  //         newHealthStats.steps.weekly = weeklyStepsRecords.reduce(
-  //           (sum, r) => sum + r.details.steps,
-  //           0
-  //         );
-  //         newHealthStats.heart.weekly = weeklyHeartRecords.reduce(
-  //           (sum, r) => sum + r.details.heart,
-  //           0
-  //         );
-  //         newHealthStats.sleep.weekly = weeklySleepRecords.reduce(
-  //           (sum, r) => sum + calculateSleepDuration(r),
-  //           0
-  //         );
-  //         newHealthStats.weight.weekly = weeklyWeightRecords.reduce(
-  //           (sum, r) => sum + r.details.weight.value,
-  //           0
-  //         );
-
-  //         // Calculate averages
-  //         newHealthStats.water.avgWeekly =
-  //           weeklyWaterRecords.length > 0
-  //             ? newHealthStats.water.weekly / weeklyWaterRecords.length
-  //             : 0;
-  //         newHealthStats.steps.avgWeekly =
-  //           weeklyStepsRecords.length > 0
-  //             ? newHealthStats.steps.weekly / weeklyStepsRecords.length
-  //             : 0;
-  //         newHealthStats.heart.avgWeekly =
-  //           weeklyHeartRecords.length > 0
-  //             ? newHealthStats.heart.weekly / weeklyHeartRecords.length
-  //             : 0;
-  //         newHealthStats.sleep.avgWeekly =
-  //           weeklySleepRecords.length > 0
-  //             ? newHealthStats.sleep.weekly / weeklySleepRecords.length
-  //             : 0;
-  //         newHealthStats.weight.avgWeekly =
-  //           weeklyWeightRecords.length > 0
-  //             ? newHealthStats.weight.weekly / weeklyWeightRecords.length
-  //             : 0;
-
-  //         // MONTHLY STATS
-  //         // Filter records with valid data for each metric
-  //         const monthlyWaterRecords = last30Days.filter(
-  //           (r) =>
-  //             r.details &&
-  //             typeof r.details.water === "number" &&
-  //             r.details.water > 0
-  //         );
-  //         const monthlyStepsRecords = last30Days.filter(
-  //           (r) =>
-  //             r.details &&
-  //             typeof r.details.steps === "number" &&
-  //             r.details.steps > 0
-  //         );
-  //         const monthlyHeartRecords = last30Days.filter(
-  //           (r) =>
-  //             r.details &&
-  //             typeof r.details.heart === "number" &&
-  //             r.details.heart > 0
-  //         );
-  //         const monthlySleepRecords = last30Days.filter(
-  //           (r) => calculateSleepDuration(r) > 0
-  //         );
-  //         const monthlyWeightRecords = last30Days.filter(
-  //           (r) =>
-  //             r.details &&
-  //             r.details.weight &&
-  //             typeof r.details.weight.value === "number" &&
-  //             r.details.weight.value > 0
-  //         );
-
-  //         // Calculate totals
-  //         newHealthStats.water.monthly = monthlyWaterRecords.reduce(
-  //           (sum, r) => sum + r.details.water,
-  //           0
-  //         );
-  //         newHealthStats.steps.monthly = monthlyStepsRecords.reduce(
-  //           (sum, r) => sum + r.details.steps,
-  //           0
-  //         );
-  //         newHealthStats.heart.monthly = monthlyHeartRecords.reduce(
-  //           (sum, r) => sum + r.details.heart,
-  //           0
-  //         );
-  //         newHealthStats.sleep.monthly = monthlySleepRecords.reduce(
-  //           (sum, r) => sum + calculateSleepDuration(r),
-  //           0
-  //         );
-  //         newHealthStats.weight.monthly = monthlyWeightRecords.reduce(
-  //           (sum, r) => sum + r.details.weight.value,
-  //           0
-  //         );
-
-  //         // Calculate averages
-  //         newHealthStats.water.avgMonthly =
-  //           monthlyWaterRecords.length > 0
-  //             ? newHealthStats.water.monthly / monthlyWaterRecords.length
-  //             : 0;
-  //         newHealthStats.steps.avgMonthly =
-  //           monthlyStepsRecords.length > 0
-  //             ? newHealthStats.steps.monthly / monthlyStepsRecords.length
-  //             : 0;
-  //         newHealthStats.heart.avgMonthly =
-  //           monthlyHeartRecords.length > 0
-  //             ? newHealthStats.heart.monthly / monthlyHeartRecords.length
-  //             : 0;
-  //         newHealthStats.sleep.avgMonthly =
-  //           monthlySleepRecords.length > 0
-  //             ? newHealthStats.sleep.monthly / monthlySleepRecords.length
-  //             : 0;
-  //         newHealthStats.weight.avgMonthly =
-  //           monthlyWeightRecords.length > 0
-  //             ? newHealthStats.weight.monthly / monthlyWeightRecords.length
-  //             : 0;
-
-  //         // Create health data object with safer property access (for backward compatibility)
-  //         const newHealthData = {
-  //           steps: {
-  //             today: newHealthStats.steps.today,
-  //             weekly: newHealthStats.steps.weekly,
-  //           },
-  //           water: {
-  //             today: newHealthStats.water.today,
-  //             weekly: newHealthStats.water.weekly,
-  //           },
-  //           weight: {
-  //             current: latestRecord.details?.weight?.value || 0,
-  //             unit: latestRecord.details?.weight?.unit || "kg",
-  //             previous: 0,
-  //           },
-  //         };
-
-  //         // Find previous weight record for backward compatibility
-  //         const prevWeightRecord = sortedRecords.find(
-  //           (r) =>
-  //             r !== latestRecord &&
-  //             r.details &&
-  //             r.details.weight &&
-  //             typeof r.details.weight.value === "number" &&
-  //             r.details.weight.value > 0
-  //         );
-
-  //         if (
-  //           prevWeightRecord &&
-  //           prevWeightRecord.details &&
-  //           prevWeightRecord.details.weight
-  //         ) {
-  //           newHealthData.weight.previous =
-  //             prevWeightRecord.details.weight.value;
-  //         }
-
-  //         // Update state with the new health data
-  //         setHealthStats(newHealthStats);
-  //         setHealthData(newHealthData as any);
-  //         console.log(
-  //           "Health stats calculated successfully:",
-  //           JSON.stringify(newHealthStats, null, 2)
-  //         );
-  //       } else {
-  //         console.log("No valid data in API response");
-  //       }
-  //     } catch (error: any) {
-  //       console.error("API call error:", error.message);
-  //       if (error.response) {
-  //         console.error("API error response status:", error.response.status);
-  //         console.error(
-  //           "API error response data:",
-  //           JSON.stringify(error.response.data, null, 2)
-  //         );
-  //       }
-  //     }
-  //   } else {
-  //     console.log("No user ID available")
-  //   }
-  // };
-
   useFocusEffect(
     useCallback(() => {
       // This will run when the screen comes into focus
@@ -1235,7 +805,7 @@ useEffect(() => {
       const apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
 
       // Your API key should be stored in an environment variable in production
-      const apiKey = process.env.GEMINI_API // Replace with your actual API key
+      const apiKey = 'AIzaSyDa4LHDX8SHeXNeKr6sZP5TCIrEIPnkjSU' // Replace with your actual API key
 
       // Create enhanced prompt with health data if available
       let enhancedPrompt = systemPrompt;
@@ -1563,7 +1133,8 @@ useEffect(() => {
     }
   };
 
- const handleLogRequest = async (query: string): Promise<boolean> => {
+ const handleLogRequest = async (query: string, shouldSpeak:boolean): Promise<boolean> => {
+  console.log(t);
     // Create a helper function to add messages to the chat
     const addResponseMessage = (content: string) => {
       setMessages((prevMessages) => [
@@ -1585,13 +1156,22 @@ useEffect(() => {
       extractMetricFromText,
       fetchAndUpdateHealthData,
       addResponseMessage,
+      shouldSpeak,
+      speakResponse,
+      t,
     )
+
+    if (shouldSpeak && result?.message) {
+      console.log("SJdj")
+        speakResponse(result?.message);
+      }
 
     return result.handled
   }
 
 
-  const handleGoalRequest = async (query: string): Promise<boolean> => {
+  const handleGoalRequest = async (query: string, shouldSpeak:boolean): Promise<boolean> => {
+    console.log(t);
     // Create a helper function to add messages to the chat
     const addResponseMessage = (content: string) => {
       setMessages((prevMessages) => [
@@ -1613,18 +1193,44 @@ useEffect(() => {
       extractMetricFromText,
       fetchAndUpdateHealthData,
       addResponseMessage,
+      shouldSpeak,
+      speakResponse,
+      t,
     )
+
+     if (shouldSpeak && result?.message) {
+       console.log("SJasddj")
+        speakResponse(result?.message);
+      }
 
     return result.handled
   }
 
 
 
-  const handleProcessUserQuery = async (query: string) => {
-    // Create a function for the RAG service call
-    const callRagService = async (query: string, conversationHistory: any[] = []) => {
-      try {
-        console.log(`Calling RAG service with query: "${query}"`)
+  const handleProcessUserQuery = async (query: string, shouldSpeak:boolean) => {
+
+      console.log("=== handleProcessUserQuery called ===");
+    console.log("Query:", query);
+    console.log("shouldSpeak:", shouldSpeak);
+    console.log("currentLanguage:", currentLanguage);
+    console.log(t);
+  
+  // Create a function for the RAG service call
+  const callRagService = async (query: string, conversationHistory: any[] = [], currentLanguage: string) => {
+    console.log("=== callRagService called ===");
+    console.log("Query:", query);
+    console.log("ConversationHistory length:", conversationHistory.length);
+    console.log("CurrentLanguage:", currentLanguage);
+    
+    try {
+      console.log(`Calling RAG service with data:`, {
+        query,
+        conversationHistoryLength: conversationHistory.length,
+        currentLanguage,
+        userId: user?.user_id,
+        url: `${RAG_SERVICE_URL}/${user?.user_id}`
+      });
 
         const response = await axios.post(`${RAG_SERVICE_URL}/${user?.user_id}`, {
           query: query,
@@ -1672,13 +1278,14 @@ useEffect(() => {
 
         return null
       }
-    }
+    };
     await processUserQuery({
       query,
       userId: user.user_id,
       messages,
       healthStats,
       questionnaireManager,
+      currentLanguage,
       callbacks: {
         setIsProcessing,
         setMessages,
@@ -1688,8 +1295,9 @@ useEffect(() => {
         sendToAPI,
         callRagService,
       },
-      shouldSpeak
-    })
+      shouldSpeak,
+      t,
+    });
   }
 
   const sendMessage = async (messageContent: string = inputText) => {
@@ -1703,7 +1311,7 @@ useEffect(() => {
         timestamp: new Date(),
       }
 
-         Speech.stop();
+      Speech.stop();
       // Update messages state with the new message
       const updatedMessages = [...messages, userMessage]
       setMessages(updatedMessages as Message[])
@@ -1711,8 +1319,12 @@ useEffect(() => {
       setIsTyping(true)
       setIsAssistantResponding(true)
 
-      const updatedProgress = await getProgressFromStorage()
-      setProgress(updatedProgress)
+      if (questionnaireManager.isActive){
+
+        const updatedProgress = await getProgressFromStorage()
+        setProgress(updatedProgress)
+      }
+
 
       // Only process as questionnaire response when the questionnaire is active and not paused
       if (questionnaireManager.isActive && !questionnaireManager.isPaused && !questionnaireManager.isCompleted) {
@@ -1725,7 +1337,7 @@ useEffect(() => {
       }
 
       // Otherwise, process as a regular chat message
-      await handleProcessUserQuery(messageContent)
+      await handleProcessUserQuery(messageContent, false)
       setIsTyping(false)
       setIsAssistantResponding(false)
     }
@@ -1793,7 +1405,7 @@ useEffect(() => {
     if (transcript) {
       setIsTyping(true);
       setIsAssistantResponding(true);
-  setIsSpeaking(true);
+  // setIsSpeaking(true);
 
   
       // Check for log/goal requests with the same processing logic as text
@@ -1806,16 +1418,16 @@ useEffect(() => {
       const translatedText = translationResult.response;
 
       // Pass the processed transcript to processUserQuery
-      await handleProcessUserQuery(transcript, true);
+      await handleProcessUserQuery(translatedText, true);
         } finally {
             setIsTyping(false);
             setIsAssistantResponding(false);
         }
     }
 
-      if(assistantResponse){
-          speakResponse(assistantResponse);
-      }
+      // if(assistantResponse){
+      //     speakResponse(assistantResponse);
+      // }
   }
 
   const handleOptionPress = (optionText: string) => {
@@ -1862,6 +1474,7 @@ useEffect(() => {
       await AsyncStorage.removeItem(`questionnaire_completed_${user?.user_id}`)
       await AsyncStorage.removeItem(`questionnaire_state_${user?.user_id}`)
       await AsyncStorage.removeItem(`last_question_${user?.user_id}`)
+      await AsyncStorage.removeItem(`questionnaire_paused_${user?.user_id}`)
       await AsyncStorage.removeItem(`intro_shown_${user?.user_id}`)
 
       console.log("Chat history cleared successfully")
@@ -1944,11 +1557,11 @@ useEffect(() => {
   const getCurrentDomainTitle = () => {
     const domainIndex = getCurrentDomainIndex()
     const domain = QUESTIONNAIRE_DOMAINS[domainIndex]
-    return domain ? domain.description : "Getting to Know You"
+    return domain ? domain.description : t('getting');
   }
 
     const [isContextLoaded, setIsContextLoaded] = useState(false)
-  const [forceUpdate, setForceUpdate] = useState(0)
+    const [forceUpdate, setForceUpdate] = useState(0)
 
   // Handle pause/resume button press
   const handlePauseResumeToggle = async () => {
@@ -2097,19 +1710,23 @@ useEffect(() => {
 
   const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null);
 
- const toggleMute = () => {
-    const newMuteState = !isMuted;
-    setIsMuted(newMuteState);
-    setIsProcessing(false);
+//  const toggleMute = () => {
+//     const newMuteState = !isMuted;
+//     setIsMuted(newMuteState);
+//     setIsProcessing(false);
     
-    // Stop any ongoing speech when muting
-    if (newMuteState && isSpeaking) {
-        Speech.stop();
-        setIsSpeaking(false);
-    }
-}; 
+//     // Stop any ongoing speech when muting
+//     if (newMuteState && isSpeaking) {
+//         Speech.stop();
+//         setIsSpeaking(false);
+//     }
+// }; 
 
  const speakMessage = (messageId: string, messageContent: string) => {
+
+    setSpeakingMessageId(messageId)
+                           
+
     // If this message is already being spoken, stop it
     if (speakingMessageId === messageId) {
       Speech.stop()
@@ -2117,6 +1734,8 @@ useEffect(() => {
       setSpeakingMessageId(null)
       return
     }
+
+    console.log("message id", messageId);
 
     // If another message is being spoken, stop it first
     if (isSpeaking) {
@@ -2130,7 +1749,6 @@ useEffect(() => {
 
     // Set the speaking state and ID before starting speech
     setIsSpeaking(true)
-    setSpeakingMessageId(messageId)
 
     const speechOptions: Speech.SpeechOptions = {
       language: currentLanguage,
@@ -2157,8 +1775,11 @@ useEffect(() => {
     }
 
     // Start speaking the text
-    Speech.speak(messageContent, speechOptions)
+
+      Speech.speak(messageContent, speechOptions)
   }
+
+
 
   return (
     <KeyboardAvoidingView
@@ -2179,7 +1800,7 @@ useEffect(() => {
               alignItems:'center'
             }}>
 
-            <TouchableOpacity onPress={() => router.back()}>
+            <TouchableOpacity onPress={() =>handleGoBack()}>
               <Ionicons name="chevron-back" size={20} color="#434343" />
             </TouchableOpacity>
             {/* )} */}
@@ -2200,13 +1821,13 @@ useEffect(() => {
         {(questionnaireManager.isActive || questionnaireManager.isPaused || !questionnaireManager.isCompleted) && (
           <View style={styles.questionnaireStatusContainer}>
             <View style={styles.statusTextContainer}>
-              <Text style={styles.questionnaireStatusTitle}>Questionnaire Status - {getCurrentDomainTitle()}</Text>
+              <Text style={styles.questionnaireStatusTitle}>{t('questionStatus')} - {getCurrentDomainTitle()}</Text>
               <TouchableOpacity
                 style={[styles.pauseButton, isPaused && styles.resumeButton]}
                 onPress={handlePauseResumeToggle}
               >
                 <Text style={[styles.pauseButtonText, isPaused && styles.resumeButtonText]}>
-                  {isPaused ? "Resume" : "Pause"}
+                  {isPaused ? t('resume') : t('pause')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -2281,7 +1902,32 @@ useEffect(() => {
                         message.isUser ? styles.userBubble : styles.doulaBubble,
                       ]}
                     >
-                      <Text
+                       {!message.isUser && (
+                        <TouchableOpacity
+                          style={styles.bubbleMuteButton}
+                          onPress={() => {
+                          console.log('Pressed message ID:', message.id)
+                          console.log('Current speaking ID:', speakingMessageId)
+                          console.log('Is speaking:', isSpeaking)
+                          speakMessage(message.id, message.content)
+                        }}
+                        >
+                          <Ionicons
+                            name={
+                              (speakingMessageId === message.id && isSpeaking) 
+                                ? "volume-high" 
+                                : "volume-medium"
+                            }
+                            size={16}
+                            color={
+                              (speakingMessageId === message.id && isSpeaking)
+                                ? "#E162BC" 
+                                : '#CCCCCC'
+                            }
+                          />
+                        </TouchableOpacity>
+                      )}
+                      {/* <Text
                         style={[
                           styles.messageText,
                           message.isUser
@@ -2290,9 +1936,9 @@ useEffect(() => {
                         ]}
                       >
                         {message.content}
-                      </Text>
+                      </Text> */}
 
-                       {/* {message.isUser ? (
+                       {message.isUser ? (
       <Text
         style={[
           styles.messageText,
@@ -2309,7 +1955,7 @@ useEffect(() => {
       >
         {message.content}
       </Markdown>
-    )} */}
+    )}
                     </View>
                   ) : (
                     <AudioMessage audioUri={message.content} isUser={message.isUser} />
@@ -2474,7 +2120,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: "DMSans500",
     color: "rgba(136, 59, 114, 1)",
-    maxWidth: "90%",
+    flex:1,
   },
   pauseButton: {
     paddingHorizontal: 14,
@@ -2570,6 +2216,9 @@ const styles = StyleSheet.create({
   },
   doulaMessageText: {
     color: "#434343",
+    fontSize: 14,
+   lineHeight: 22,
+   fontFamily: "Inter400",
   },
   doulaAvatar: {
     width: 36,
