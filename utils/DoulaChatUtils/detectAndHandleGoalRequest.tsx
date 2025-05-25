@@ -1,6 +1,5 @@
 import axios from "axios";
 import { detectGoalRequestWithPatterns } from "./goalRequestWithPatterns";
-import { useTranslation } from 'react-i18next';
 
 // Define the function parameters and return type
 export interface GoalRequestResult {
@@ -13,10 +12,13 @@ export const detectAndHandleGoalRequest = async (
   userId: string,
   extractMetricFromText: (text: string, metricType: string) => any,
   updateHealthData: () => Promise<void>,
-  addResponseMessage: (content: string) => void
+  addResponseMessage: (content: string) => void,
+  shouldSpeak:boolean,
+  speakResponse: (text: string) =>void,
+  t: (key: string) => string
 ): Promise<GoalRequestResult> => {
   // First try pattern-based recognition
-  const {t} = useTranslation();
+  console.log(t);
   const patternMatch = detectGoalRequestWithPatterns(query);
 
   if (patternMatch) {
@@ -51,6 +53,7 @@ export const detectAndHandleGoalRequest = async (
           await updateHealthData();
 
           // Add response message
+          // if(shouldSpeak)
           addResponseMessage(successMessage);
 
           return { handled: true };
@@ -62,7 +65,7 @@ export const detectAndHandleGoalRequest = async (
       console.error("Error setting health goal:", error);
       
       addResponseMessage(
-        t('healthData.goal_set_error')
+         t('healthData.goal_set_error')
       );
     }
 
@@ -122,10 +125,6 @@ export const detectAndHandleGoalRequest = async (
         // Success - refresh health data
         await updateHealthData();
 
-        if(shouldSpeak){
-            speakResponse(successMessage);
-          }
-
         // Add response message
         addResponseMessage(successMessage);
 
@@ -138,7 +137,7 @@ export const detectAndHandleGoalRequest = async (
     console.error("Error setting health goal:", error);
     
     addResponseMessage(
-       t('healthData.goal_set_error')
+      t('healthData.goal_set_error')
     );
 
     return { handled: true };
