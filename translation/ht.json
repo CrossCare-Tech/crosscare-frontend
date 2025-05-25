@@ -6,8 +6,12 @@
   "delete": "Efase",
   "confirm": "Konfime",
   "loading": "Chaje...",
+  "resume": "Rezime",
+  "pause": "Pran yon poz",
   "search": "Rechèch",
   "journals": "Jounal",
+  "questionStatus":"Estati Kesyonè",
+   "getting":"Aprann Konnen Ou",
   "create": "Kreye",
   "settings": "Anviwònman",
   "new_entry": "Nouvo Antre",
@@ -202,7 +206,7 @@
     "birthPlanning": "Planifikasyon Akouchman",
     "travelSafety": "Sekirite Vwayaj",
     "healthStats1": "Montre estat sante mwen",
-    "nutritionAdvice1": "Ki manje mwen dwe manje pandan twazyèm trimès mwen?",
+    "nutritionAdvice1": "Banm konsèy sou nitrisyon?",
     "exerciseTips1": "Ki egzèsis ki an sekirite pandan gwosès?",
     "birthPlanning1": "Kijan pou m fè yon plan pou akouchman?",
     "travelSafety1": "Èske li an sekirite pou vwayaje pandan gwosès?"
@@ -750,5 +754,8 @@
     "weekly_average": "Mwayèn chak semèn",
     "monthly_average1": "Mwayèn chak mwa",
       "weight": "Pwa"
+  },
+  "questionaire":{
+    "do":"Èske w ap viv nan yon kay oswa yon apatman?"
   }
 }

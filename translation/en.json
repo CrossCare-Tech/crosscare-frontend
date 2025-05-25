@@ -5,11 +5,15 @@
   "save": "Save",
   "delete": "Delete",
   "confirm": "Confirm",
+  "resume": "Resume",
+  "pause": "Pause",
   "loading": "Loading...",
   "journals": "Journal",
   "search": "Search",
   "create": "Create",
+  "getting":"Getting to Know You",
   "settings": "Settings",
+  "questionStatus":"Questionnaire Status",
   "new_entry": "New Entry",
   "changephoto": "Change Photo",
   "track_title": "What Would You Like To Track?",
@@ -202,7 +206,7 @@
     "birthPlanning": "Birth Planning",
     "travelSafety": "Travel Safety",
     "healthStats1": "Show my health stats",
-    "nutritionAdvice1": "What foods should I eat during my third trimester?",
+    "nutritionAdvice1": "Give me nutrition advice?",
     "exerciseTips1": "What exercises are safe during pregnancy?",
     "birthPlanning1": "How do I create a birth plan?",
     "travelSafety1": "Is it safe to travel during pregnancy?"
@@ -750,5 +754,8 @@
       "current": "Current",
       "last_night": "Last night",
       "hours": "hours"
+  },
+  "questionaire":{
+    "do":"Do you live in a house or an apartment?"
   }
 }

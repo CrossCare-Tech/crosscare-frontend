@@ -6,10 +6,14 @@
   "delete": "Eliminar",
   "confirm": "Confirmar",
   "Analysis": "Análisis",
+  "resume": "Reanudar",
+  "pause": "Pausa",
   "loading": "Cargando...",
   "search": "Buscar",
   "create": "Crear",
+  "questionStatus":"Estado del cuestionario",
   "journals": "Diario",
+   "getting":"Conociéndote",
   "settings": "Configuración",
   "new_entry": "Nueva entrada",
   "changephoto": "Cambiar foto",
@@ -155,7 +159,7 @@
     "birthPlanning": "Planificación del parto",
     "travelSafety": "Seguridad al viajar",
     "healthStats1": "Mostrar mis estadísticas de salud",
-    "nutritionAdvice1": "¿Qué alimentos debo comer durante mi tercer trimestre?",
+    "nutritionAdvice1": "Dame consejos de nutrición?",
     "exerciseTips1": "¿Qué ejercicios son seguros durante el embarazo?",
     "birthPlanning1": "¿Cómo creo un plan de parto?",
     "travelSafety1": "¿Es seguro viajar durante el embarazo?"
@@ -754,5 +758,8 @@
      "weekly_average": "Promedio semanal",
     "monthly_average1": "Promedio mensual",
     "weight": "Peso"
+  },
+  "questionaire":{
+    "do":"¿Vives en una casa o en un apartamento?"
   }
 }
