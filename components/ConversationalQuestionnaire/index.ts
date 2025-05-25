@@ -46,7 +46,7 @@ import {
 import axios from "axios";
 import { AppState, type AppStateStatus } from "react-native"
 // Default OpenAI API key (you'll want to store this securely)
-const DEFAULT_API_KEY = process.env.EXPO_PUBLIC_OPENAI_API_KEY || "";
+const DEFAULT_API_KEY = process.env.EXPO_PUBLIC_OPENAI_API_KEY || ""
 
 const ConversationalQuestionnaire = ({
   userId,

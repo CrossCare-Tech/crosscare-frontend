@@ -104,7 +104,7 @@ export const generateEmpathyResponse = async (
   trigger: EmpathyTrigger,
   userResponse: string,
   questionContext: string,
-  apiKey: string = process.env.EXPO_PUBLIC_OPENAI_API_KEY || ''
+  apiKey: string = process.env.EXPO_PUBLIC_OPENAI_API_KEY || "",
 ): Promise<EmpathyResponse> => {
   try {
     console.log("Generating AI empathy response for:", {
