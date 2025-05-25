@@ -7,6 +7,7 @@ export interface ConversationalQuestionnaireProps {
   onQuestionReady: (question: string) => void;
   onQuestionnaireComplete: () => void;
   onResponseSaved: (response: QuestionnaireResponse) => void;
+  setIsPaused: (val: boolean) => void,
   openAIApiKey?: string; // For intent classification
 }
 

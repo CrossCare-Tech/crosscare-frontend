@@ -53,6 +53,7 @@ const ConversationalQuestionnaire = ({
   onQuestionReady,
   onQuestionnaireComplete,
   onResponseSaved,
+  setIsPaused,
   openAIApiKey = DEFAULT_API_KEY,
 }: ConversationalQuestionnaireProps): ConversationalQuestionnaireManager => {
   // Use useReducer instead of multiple useState calls for complex state
@@ -692,6 +693,7 @@ const ConversationalQuestionnaire = ({
 
             // Save as last message
             saveLastQuestion("pause", noTimeKey, noTimeMessage);
+            setIsPaused(true);
 
             // Set paused state
             dispatch({

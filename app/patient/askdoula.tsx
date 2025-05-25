@@ -115,6 +115,7 @@ export default function askdoula() {
       // You can do additional processing here if needed
       console.log("Response saved:", response)
     },
+    setIsPaused: (val: boolean) => setIsPaused(val),
     // You need to add your OpenAI API key here
     openAIApiKey: process.env.EXPO_PUBLIC_OPENAI_API_KEY || "",
   })
@@ -1488,7 +1489,8 @@ useEffect(() => {
             text: t('askDoula.yes'),
             onPress: () => {
               // Start the questionnaire
-              questionnaireManager.startQuestionnaire()
+              questionnaireManager.startQuestionnaire();
+              setIsPaused(false);
             },
           },
           { text: t('askDoula.no') },
