@@ -100,7 +100,7 @@ const Home = () => {
   const user = useSelector((state: any) => state.user);
   // console.log("token", token);
   // console.log("userData1", user);
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
 
   const [weeksComplete, setWeeksComplete] = useState(0);
   const { progressPercentage, remainingDays, dueDate } =
