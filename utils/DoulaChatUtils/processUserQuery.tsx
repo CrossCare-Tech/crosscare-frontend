@@ -1,9 +1,9 @@
-import { useTranslation } from 'react-i18next';
 export interface ProcessUserQueryParams {
     query: string;
     userId: string;
     messages: any[];
     healthStats: any;
+    currentLanguage: string;
     questionnaireManager: {
       isActive: boolean;
       handleUserResponse: (query: string) => Promise<boolean> | boolean;
@@ -14,14 +14,15 @@ export interface ProcessUserQueryParams {
     callbacks: {
       setIsProcessing: (value: boolean) => void;
       setMessages: (updater: (prevMessages: any[]) => any[]) => void;
-      handleLogRequest: (query: string) => Promise<boolean>;
-      handleGoalRequest: (query: string) => Promise<boolean>;
+      handleLogRequest: (query: string, shouldSpeak:boolean) => Promise<boolean>;
+      handleGoalRequest: (query: string, shouldSpeak:boolean) => Promise<boolean>;
       speakResponse: (text: string) => void;
       sendToAPI: (messageContent: string, messageType: 'text' | 'audio') => Promise<{ response: string }>;
       callRagService?: (query: string, conversationHistory: any[], currentLanguage: string) => Promise<any>;
     };
-    shouldSpeak:boolean
-  }
+    shouldSpeak: boolean;
+    t: (key: string) => string;
+}
 
 export const processUserQuery = async ({
   query,
@@ -29,12 +30,20 @@ export const processUserQuery = async ({
   messages,
   healthStats,
   questionnaireManager,
-  callbacks
+  callbacks,
+  shouldSpeak,
+  currentLanguage,
+  t,
 }: ProcessUserQueryParams): Promise<void> => {
-  const {t} = useTranslation();
-  try {
+
+   try {
     console.log("processUserQuery started with:", query);
-    callbacks.setIsProcessing(true);
+
+    if(shouldSpeak){
+      callbacks.setIsProcessing(true);
+    }
+
+    console.log(shouldSpeak, t);
 
     // Check if this is a response to the "continue paused questionnaire" question
     if (messages.length > 0 && !messages[messages.length - 1].isUser) {
@@ -135,20 +144,29 @@ export const processUserQuery = async ({
       return;
     }
 
+    // IMPORTANT: These callback functions are likely calling React hooks!
     // First check if this is a log request
-    const wasHandledAsLogRequest = await callbacks.handleLogRequest(query);
-
-    if (wasHandledAsLogRequest) {
-      callbacks.setIsProcessing(false);
-      return;
+    try {
+      const wasHandledAsLogRequest = await callbacks.handleLogRequest(query, shouldSpeak);
+      if (wasHandledAsLogRequest) {
+        callbacks.setIsProcessing(false);
+        return;
+      }
+    } catch (error) {
+      console.error("Error in handleLogRequest - likely contains React hooks:", error);
+      // Continue processing instead of stopping
     }
 
     // Then check if this is a goal setting request
-    const wasHandledAsGoalRequest = await callbacks.handleGoalRequest(query);
-
-    if (wasHandledAsGoalRequest) {
-      callbacks.setIsProcessing(false);
-      return;
+    try {
+      const wasHandledAsGoalRequest = await callbacks.handleGoalRequest(query, shouldSpeak);
+      if (wasHandledAsGoalRequest) {
+        callbacks.setIsProcessing(false);
+        return;
+      }
+    } catch (error) {
+      console.error("Error in handleGoalRequest - likely contains React hooks:", error);
+      // Continue processing instead of stopping
     }
 
     // Check for different types of health stat queries
@@ -166,7 +184,7 @@ export const processUserQuery = async ({
 
     // Check for comprehensive stats query
     const isComprehensiveQuery =
-      /all stats|all metrics|health summary|overview|Show my health stats/i.test(query) ||
+      /all stats|all metrics|health summary|overview/i.test(query) ||
       (/avg|average/i.test(query) &&
         /heart|water|steps|sleep|weight/i.test(query) &&
         /heart|water|steps|sleep|weight/i.test(query) &&
@@ -232,7 +250,7 @@ export const processUserQuery = async ({
       // Weight stats
       if (healthStats.weight.avgWeekly > 0) {
         if (reportPeriod === "today") {
-          statsMessage += `${t('weight')}: ${healthStats.weight.today} ${healthStats.weight.unit} ${t('healthData.steps_today')}\n`;
+          statsMessage += `${t('weight')}: ${healthStats.weight.today} ${healthStats.weight.unit} ${t('healthData.steps_today')}\n\n`;
         } else if (reportPeriod === "weekly") {
           statsMessage += `${t('weight')}: ${healthStats.weight.avgWeekly.toFixed(
             1
@@ -282,15 +300,11 @@ export const processUserQuery = async ({
         healthStats.sleep.avgWeekly === 0
       ) {
         statsMessage +=
-         `\n${t('healthData.message')}`;
+           `\n${t('healthData.message')}`;
       }
 
       // Speak the response
-      callbacks.speakResponse(statsMessage);
-
-      if(shouldSpeak){
-          speakResponse(statsMessage);
-        }
+      
 
       // Add the response to messages
       callbacks.setMessages((prevMessages) => [
@@ -303,6 +317,10 @@ export const processUserQuery = async ({
           timestamp: new Date(),
         },
       ]);
+
+      if (shouldSpeak) {
+        callbacks.speakResponse(statsMessage);
+      }
 
       callbacks.setIsProcessing(false);
       return; // Exit early since we've handled this specific query
@@ -336,11 +354,8 @@ export const processUserQuery = async ({
       }
 
       waterMessage += `${t('healthData.hydration_reminder')}`;
+      
       // Speak the response
-      callbacks.speakResponse(waterMessage);
-      if(shouldSpeak){
-          speakResponse(waterMessage);
-        }
 
       // Add the response to messages
       callbacks.setMessages((prevMessages) => [
@@ -354,6 +369,10 @@ export const processUserQuery = async ({
         },
       ]);
 
+      if (shouldSpeak) {
+        callbacks.speakResponse(waterMessage);
+      }
+
       callbacks.setIsProcessing(false);
       return;
     }
@@ -366,12 +385,12 @@ export const processUserQuery = async ({
         healthStats.weight.avgWeekly === 0 &&
         healthStats.weight.today === 0
       ) {
-        const noDataMessage =
-         `${t('healthData.no_weight_data')}`;
-            if(shouldSpeak){
-              speakResponse(noDataMessage);
-            }
-        callbacks.speakResponse(noDataMessage);
+         const noDataMessage =
+            `${t('healthData.no_weight_data')}`;
+        
+        if (shouldSpeak) {
+          callbacks.speakResponse(noDataMessage);
+        }
 
         // Add the response to messages
         callbacks.setMessages((prevMessages) => [
@@ -402,11 +421,9 @@ export const processUserQuery = async ({
         )} ${healthStats.weight.unit} ${t('healthData.over_past_week')}`;
       }
 
-      if(shouldSpeak){
-          speakResponse(weightMessage);
-        }
-
-      callbacks.speakResponse(weightMessage);
+      if (shouldSpeak) {
+        callbacks.speakResponse(weightMessage);
+      }
 
       // Add the response to messages
       callbacks.setMessages((prevMessages) => [
@@ -454,10 +471,7 @@ export const processUserQuery = async ({
       stepsMessage +=
           ` ${t('healthData.walking_encouragement')}`;
 
-          if(shouldSpeak){
-            callbacks.speakResponse(stepsMessage);
-          }
-
+      
 
       // Add the response to messages
       callbacks.setMessages((prevMessages) => [
@@ -471,6 +485,10 @@ export const processUserQuery = async ({
         },
       ]);
 
+      if (shouldSpeak) {
+        callbacks.speakResponse(stepsMessage);
+      }
+
       callbacks.setIsProcessing(false);
       return;
     }
@@ -481,11 +499,10 @@ export const processUserQuery = async ({
         healthStats.heart.avgWeekly === 0 &&
         healthStats.heart.today === 0
       ) {
-        const noDataMessage =
+         const noDataMessage =
             `${t('healthData.no_heart_data')}`;
-            if(shouldSpeak){
-              callbacks.speakResponse(noDataMessage);
-            }
+        
+      
 
         callbacks.setMessages((prevMessages) => [
           ...prevMessages,
@@ -497,6 +514,10 @@ export const processUserQuery = async ({
             timestamp: new Date(),
           },
         ]);
+
+          if (shouldSpeak) {
+          callbacks.speakResponse(noDataMessage);
+        }
 
         callbacks.setIsProcessing(false);
         return;
@@ -513,19 +534,16 @@ export const processUserQuery = async ({
       } else if (isMonthlyQuery) {
         heartMessage = `${t('healthData.average_heart_rate')} ${healthStats.heart.avgMonthly.toFixed(
           0
-        )} bpm ${t('healthData.over_past_month')}`;
+        )} bpm ${t('healthData.over_past_week')}`;
       } else {
-        heartMessage = `${t('healthData.current_heart_rate')} ${
+        heartMessage = `${t('healthData.average_heart_rate')} ${
           healthStats.heart.today
-        } bpm, ${t('healthData.and_weekly_average_is')} ${healthStats.heart.avgWeekly.toFixed(
+        } bpm, ${t('healthData.over_past_week')} ${healthStats.heart.avgWeekly.toFixed(
           0
         )} bpm.`;
       }
 
-       if(shouldSpeak){
-          callbacks.speakResponse(heartMessage);
-        }
-
+     
 
       callbacks.setMessages((prevMessages) => [
         ...prevMessages,
@@ -537,6 +555,10 @@ export const processUserQuery = async ({
           timestamp: new Date(),
         },
       ]);
+
+       if (shouldSpeak) {
+        callbacks.speakResponse(heartMessage);
+      }
 
       callbacks.setIsProcessing(false);
       return;
@@ -559,11 +581,8 @@ export const processUserQuery = async ({
         if (ragResponse && ragResponse.success) {
           // Use the response from RAG service
           const assistantMessage = ragResponse.response;
-          if (shouldSpeak) {
-               setIsProcessing(true);
-           speakResponse(assistantMessage);
-        }
-          callbacks.speakResponse(assistantMessage);
+          
+          
 
           // Add the response to messages
           callbacks.setMessages((prevMessages) => [
@@ -576,6 +595,10 @@ export const processUserQuery = async ({
               timestamp: new Date(),
             },
           ]);
+
+          if (shouldSpeak) {
+            callbacks.speakResponse(assistantMessage);
+          }
           
           callbacks.setIsProcessing(false);
           return;
@@ -590,12 +613,6 @@ export const processUserQuery = async ({
     
     if (apiResponse) {
       const assistantMessage = apiResponse.response;
-      callbacks.speakResponse(assistantMessage);
-
-      if (shouldSpeak) {
-                 setIsProcessing(true);
-                  speakResponse(assistantMessage);
-            }
 
       // Add the response to messages
       callbacks.setMessages((prevMessages) => [
@@ -608,6 +625,10 @@ export const processUserQuery = async ({
           timestamp: new Date(),
         },
       ]);
+
+      if (shouldSpeak) {
+        callbacks.speakResponse(assistantMessage);
+      }
     }
 
     callbacks.setIsProcessing(false);
@@ -615,9 +636,7 @@ export const processUserQuery = async ({
     console.error("Error in processUserQuery:", error.message);
     console.error("Error stack:", error.stack);
     callbacks.setIsProcessing(false);
-     if (shouldSpeak) {
-      setIsProcessing(false);
-    }
+    
     // Add error message to chat
     callbacks.setMessages((prevMessages) => [
       ...prevMessages,
@@ -629,11 +648,5 @@ export const processUserQuery = async ({
         timestamp: new Date(),
       },
     ]);
-  }
-   finally {
-    // Only reset isProcessing if it was a voice input
-    if (shouldSpeak) {
-      setIsProcessing(false);
-    }
   }
 };
