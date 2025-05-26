@@ -20,10 +20,6 @@ import { StatusBar, Platform } from "react-native";
 import Card from "@/components/Card";
 import { useTranslation } from "react-i18next"
 import '../../../translation/i18next' 
-
-// Ensure all items have a valid onPress function
-
-
 import ProgressCircle from "@/components/ProgressCircle";
 import { Image } from "react-native";
 import FoodIcon from "@/assets/images/Svg/FoodIcon";
@@ -39,6 +35,7 @@ import * as ImagePicker from "expo-image-picker";
 import { useBadge } from "@/context/BadgeContext";
 import User from "@/assets/images/Svg/User";
 import { Linking } from "react-native";
+import PregnancyModal from "../modal/preagnancyModal";
 
 interface Progress {
   progressPercentage: number;
@@ -103,8 +100,11 @@ const Home = () => {
   const { t } = useTranslation()
 
   const [weeksComplete, setWeeksComplete] = useState(0);
-  const { progressPercentage, remainingDays, dueDate } =
-    calculatePregnancyProgress(weeksComplete);
+  const pregnancyProgress = React.useMemo(() => {
+    return calculatePregnancyProgress(weeksComplete);
+  }, [weeksComplete]);
+  const [showPregnancyModal, setShowPregnancyModal] = useState(false);
+  const { progressPercentage, remainingDays, dueDate } = pregnancyProgress;
   // const [name, setName] = useState<string>("");
   // const [age, setAge] = useState<number>(0);
   // const [email, setEmail] = useState<string>("");
@@ -114,7 +114,20 @@ const Home = () => {
   // const { stepsWalked, stepGoal, fetchStepData } = useStepsStore();
   const { stepsWalked, stepGoal } = useStepsWithAutoRefresh(user?.user_id);
 
-  const [foodQualityScore, setFoodQualityScore] = useState(9);
+  const [foodQualityScore, setFoodQualityScore] = useState('50%');
+
+  const handlePregnancySave = (week: number) => {
+    // Convert days to weeks if needed
+    setWeeksComplete(week || 0);
+    
+    // You can also save this to your backend here
+    // updatePregnancyProgress(value, unit);
+  };
+
+  // Add this to trigger the modal (you can call this from any button/component)
+  const openPregnancyModal = () => {
+    setShowPregnancyModal(true);
+  };
   // const [steps, setSteps] = useState(null);
 
   const userId = user?.user_id;
@@ -882,54 +895,27 @@ const cardData = cardData1.map((item) => ({
             </View>
 
             <View style={styles.foodQualityContainer}>
-              <View
-                style={[
-                  styles.qualityIndicator,
-                  {
-                    backgroundColor: "#22C8009E",
-                    flex: 0.6,
-                    borderWidth: 0.5,
-                    borderColor: "#22C8009E",
-                  },
-                ]}
-              />
-              <View
-                style={[
-                  styles.qualityIndicator,
-                  {
-                    backgroundColor: "#E79E00A6",
-                    flex: 0.2,
-                    borderWidth: 0.5,
-                    borderColor: "#C68700CC",
-                  },
-                ]}
-              />
-              <View
-                style={[
-                  styles.qualityIndicator,
-                  {
-                    backgroundColor: "#FF000099",
-                    flex: 0.2,
-                    borderWidth: 0.5,
-                    borderColor: "#FF0000CC",
-                  },
-                ]}
-              />
+              <View style={styles.progressBar}>
+                <View style={[styles.progressFill, { width: `${(240 / 3000) * 100}%` }]} />
+              </View>
+              <View style={styles.caloriesContainer}>
+                <Text style={styles.calorieText}>240</Text>
+                <Text style={styles.calorieSubText}> / 3000 Calories</Text>
+              </View>
             </View>
+            
 
             <View style={{
               flexDirection: "row",
+              gap:2,
             }}>
-              
-            <Text style={styles.qualityScoreLabel} numberOfLines={1}>
-             {t('home.quality_score')}:{" "}
-             
-            </Text>
-            <Text style={styles.qualityScoreValue}>{foodQualityScore} <Text style={{
-              fontSize: 12,
-              color: "#373737",
-              fontFamily: "DMSans500",
-            }}>/10</Text> </Text> 
+                <View style={styles.goodFoodBadge}>
+                  <Text style={styles.goodFoodText}>Good Food: 2</Text>
+                </View>
+                <View style={styles.badFoodBadge}>
+                  <Text style={styles.badFoodText}>Bad Food: 2</Text>
+                </View>
+          
             </View>
 
           </TouchableOpacity>
@@ -971,7 +957,10 @@ const cardData = cardData1.map((item) => ({
           {/* Due Date Card */}
           <TouchableOpacity
             style={styles.statCard4}
-            onPress={() => router.push("/patient/track")}
+            onPress={() => router.push({
+            pathname: "/patient/track",
+            params: { weeksComplete: weeksComplete.toString() }
+          })}
           >
             <View style={styles.statHeader}>
               <View
@@ -996,7 +985,7 @@ const cardData = cardData1.map((item) => ({
                 color: "#434343",
               }}
             >
-              <Text
+              <Text onPress={openPregnancyModal}
                 style={{
                   fontSize: 16,
                   fontFamily: "DMSans600",
@@ -1027,6 +1016,12 @@ const cardData = cardData1.map((item) => ({
           showsVerticalScrollIndicator={false}
         />
       </ScrollView>
+
+      <PregnancyModal
+        visible={showPregnancyModal}
+        onClose={() => setShowPregnancyModal(false)}
+        onSave={handlePregnancySave}
+      />
     </SafeAreaView>
   );
 };
@@ -1146,9 +1141,64 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   foodQualityContainer: {
-    flexDirection: "row",
-    marginVertical: 8,
+    flexDirection: "column",
+    // marginVertical: 2,
+    gap:5,
   },
+  progressBar: {
+  height: 5,
+  width: '100%',
+  backgroundColor: '#E5F5EC',
+  borderRadius: 10,
+  overflow: 'hidden',
+  // marginBottom: 12,
+},
+calorieText: {
+  fontSize: 14,
+  fontFamily: 'DMSans600',
+  color: 'rgba(70, 208, 45, 1)',
+},
+calorieSubText: {
+  fontSize: 10,
+  fontFamily: 'DMSans500',
+  color: 'rgba(55, 55, 55, 1)',
+},
+goodFoodBadge: {
+    backgroundColor: 'rgba(112, 217, 92, 1)',
+    borderWidth:0.5,
+    borderColor:'rgba(64, 206, 35, 1)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius:4,
+  },
+  goodFoodText: {
+    color: '#FFFFFF',
+    fontSize: 7,
+    fontFamily: 'DMSans600',
+  },
+  badFoodBadge: {
+    borderWidth:0.5,
+    borderColor:'rgba(252, 49, 48, 1)',
+    backgroundColor: 'rgba(249, 98, 97, 1)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 4,
+  },
+  badFoodText: {
+    color: '#FFFFFF',
+    fontSize: 7,
+    fontFamily: 'DMSans600',
+  },
+caloriesContainer: {
+  flexDirection: 'row',
+  alignItems: 'baseline',
+  // marginBottom: 8,
+},
+progressFill: {
+  height: '100%',
+  borderRadius:10,
+  backgroundColor: 'rgba(70, 208, 45, 1)',
+},
   qualityIndicator: {
     height: 12,
     marginHorizontal: 1,

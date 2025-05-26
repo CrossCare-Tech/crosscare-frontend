@@ -16,6 +16,7 @@ import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import WeekSelector from "@/components/WeekSelector";
 import { useTranslation } from "react-i18next";
+import { useLocalSearchParams } from "expo-router";
 
 interface Section {
   id: number
@@ -33,9 +34,12 @@ interface FruitData {
 
 export default function track() {
   const router = useRouter();
+   const { weeksComplete } = useLocalSearchParams(); 
   const {t} = useTranslation();
 
-  const [selectedWeek, setSelectedWeek] = useState<string | undefined>(undefined);
+    const initialWeek = weeksComplete ? parseInt(weeksComplete as string) : 8;
+  
+  const [selectedWeek, setSelectedWeek] = useState<string | undefined>(initialWeek.toString());
   const [babyData, setBabyData] = useState<FruitData>({
     name: "cherry",
     imageUrl: "https://cdn-icons-png.flaticon.com/512/590/590685.png",
@@ -105,27 +109,28 @@ export default function track() {
       content: t('momDescription'),
       backgroundColor: "#6ED7E9", // Teal background for Mom section
     },
-    {
-      id: 4,
-      title: t('funFact'),
-      content: t('funFactDescription'),
-      backgroundColor: "#F989D9", // White background for Fun Fact section
-    },
+    // {
+    //   id: 4,
+    //   title: t('funFact'),
+    //   content: t('funFactDescription'),
+    //   backgroundColor: "#F989D9", // White background for Fun Fact section
+    // },
   ];
 
   const [progress] = useState(new Animated.Value(0));
 
   useEffect(() => {
-    // Set initial progress based on default week (8/40)
-    const initialWeekNumber = 8
-    const initialProgress = initialWeekNumber / 40
+  // ✅ Use the passed week for initial progress
+  const initialProgress = initialWeek / 40
+  
+  Animated.timing(progress, {
+    toValue: initialProgress,
+    duration: 1000,
+    useNativeDriver: false,
+  }).start()
 
-    Animated.timing(progress, {
-      toValue: initialProgress,
-      duration: 1000,
-      useNativeDriver: false,
-    }).start()
-  }, [])
+  console.log('Track component initialized with week:', initialWeek);
+}, [initialWeek])
 
   interface RenderCustomProgressBarProps {
     progressValue: Animated.Value;
@@ -215,13 +220,6 @@ export default function track() {
                       }}
                     >
                       <Text style={styles.progressText}>{item.title}</Text>
-                      <Text style={styles.trimesterText}>
-                          {Number.parseInt(selectedWeek ?? "0") <= 13
-                          ? t("trimester1")
-                          : Number.parseInt(selectedWeek ?? "0") <= 26
-                          ? t("trimester2")
-                          : t("trimester3")}
-                      </Text>
                     </View>
                     {renderCustomProgressBar({ progressValue: progress })}
                     <View

@@ -16,6 +16,7 @@ import { Platform } from "react-native"
 import AsyncStorage from "@react-native-async-storage/async-storage"
 import { useSelector } from "react-redux"
 import { useTranslation } from "react-i18next"
+import FoodQualityCircle from "@/components/FoodQualityCircle"
 
 const MAX_HEIGHT = 200
 const BAR_WIDTH = 20
@@ -37,6 +38,7 @@ interface Food {
   name: string
   portion: string
   calories: number
+  classification?: 'good' | 'bad';
 }
 
 interface Meal {
@@ -60,7 +62,7 @@ const CustomProgressBar = ({ progress }: { progress: number }) => {
   )
 }
 
-const FoodItem = ({ name, portion, calories, onDelete }: Food & { onDelete: () => void }) => {
+const FoodItem = ({ name, portion, calories,  classification,  onDelete }: Food & { onDelete: () => void }) => {
   const [menuVisible, setMenuVisible] = useState(false);
 
   useEffect(() => {
@@ -86,7 +88,21 @@ const FoodItem = ({ name, portion, calories, onDelete }: Food & { onDelete: () =
   return (
     <View style={styles.foodItem}>
       <View style={styles.foodItemLeft}>
+        <View style={{
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 8,
+          flex: 1,
+        }}>
+
+        <View style={[
+            styles.classificationDot,
+            {
+              backgroundColor: classification === 'bad' ? 'rgba(252, 49, 48, 1)' : 'rgba(64, 206, 35, 1)'
+            }
+          ]} />
         <Text style={styles.foodName}>{name}</Text>
+        </View>
         <Text style={styles.foodPortion}>{portion}</Text>
       </View>
       <View
@@ -169,6 +185,7 @@ const MealItem = ({
               name={food.name}
               portion={food.portion}
               calories={food.calories}
+              classification={food.classification}
               onDelete={() => onDeleteFood(meal.title, idx)}
             />
           ))}
@@ -547,7 +564,7 @@ const meals = () => {
         <View style={styles.mealContainer}>
           <View style={styles.mealCircleContainer}>
             <View style={styles.mealCircle}>
-              <FoodIcon width={80} height={80} />
+              <FoodQualityCircle goodCount={2} badCount={3}/>
             </View>
           </View>
 
@@ -834,7 +851,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: "Inter400",
     color: "#373737",
-    marginBottom: 4,
+  },
+  classificationDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 50,
   },
   foodPortion: {
     fontSize: 12,

@@ -17,10 +17,33 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { AntDesign, Feather, Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams, router } from "expo-router";
 import { useTranslation } from "react-i18next";
+import FoodClassificationModal from "./modal/foodClassificationModal";
 
 // Enable LayoutAnimation for Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
+interface ToggleSelectionItem {
+  fdcId: number;
+  // Include other properties that might be used from the item
+  name?: string;
+  description?: string;
+  servingSize?: number;
+  servingSizeUnit?: string;
+  calories?: number;
+  foodNutrients?: FoodNutrient[];
+}
+
+interface FoodClassification {
+  classification: 'good' | 'bad';
+}
+
+interface SelectedFood {
+  name: string;
+  portion: string;
+  calories: number;
+  classification: 'good' | 'bad';
 }
 
 
@@ -181,7 +204,67 @@ const addmeals = () => {
 };
 
 
+  const [classificationModalVisible, setClassificationModalVisible] = useState(false);
+  const [selectedFoodForClassification, setSelectedFoodForClassification] = useState<ToggleSelectionItem | null>(null);
 
+
+// Replace your existing toggleSelection function with this updated version
+const toggleSelection = (item: ToggleSelectionItem): void => {
+  const newSelected = new Set(selectedItems);
+  if (selectedItems.has(item.fdcId)) {
+    // If item is already selected, remove it
+    newSelected.delete(item.fdcId);
+    setSelectedItems(newSelected);
+  } else {
+    // If item is not selected, show classification modal first
+    setSelectedFoodForClassification(item);
+    setClassificationModalVisible(true);
+  }
+};
+
+  const [foodClassifications, setFoodClassifications] = useState(new Map());
+
+const handleFoodClassification = (classification: 'good' | 'bad'): void => {
+    if (!selectedFoodForClassification) return;
+
+    const item: ToggleSelectionItem = selectedFoodForClassification;
+    const newSelected: Set<number> = new Set(selectedItems);
+    newSelected.add(item.fdcId);
+    setSelectedItems(newSelected);
+
+    // Store the classification
+    const newClassifications = new Map(foodClassifications);
+    newClassifications.set(item.fdcId, classification);
+    setFoodClassifications(newClassifications);
+
+    console.log(classification);
+    // Navigate back with the selected food
+    if (mealType) {
+      const selectedFood = {
+        name: item.name || item.description,
+        portion: `${item.servingSize} ${item.servingSizeUnit}`,
+        calories: item.calories || 0,
+        classification: classification
+      };
+
+      router.replace({
+        pathname: "/patient/meals",
+        params: {
+          mealType,
+          selectedFood: JSON.stringify(selectedFood),
+        },
+      });
+    }
+
+    setClassificationModalVisible(false);
+    setSelectedFoodForClassification(null);
+};
+
+// Add this function to handle modal close without classification
+const handleModalClose = () => {
+  setClassificationModalVisible(false);
+  setSelectedFoodForClassification(null);
+};
 
   const searchFood = async (input: string) => {
   if (!input.trim()) {
@@ -478,35 +561,35 @@ const addmeals = () => {
     getMacronutrient(foodItem, "carbohydrate");
   const getFat = (foodItem: any) => getMacronutrient(foodItem, "total lipid");
 
-  const toggleSelection = (item: any) => {
-    const newSelected = new Set(selectedItems);
-    if (selectedItems.has(item.fdcId)) {
-      newSelected.delete(item.fdcId);
-      setSelectedItems(newSelected);
-    } else {
-      newSelected.add(item.fdcId);
-      setSelectedItems(newSelected);
+  // const toggleSelection = (item: any) => {
+  //   const newSelected = new Set(selectedItems);
+  //   if (selectedItems.has(item.fdcId)) {
+  //     newSelected.delete(item.fdcId);
+  //     setSelectedItems(newSelected);
+  //   } else {
+  //     newSelected.add(item.fdcId);
+  //     setSelectedItems(newSelected);
 
-      if (mealType) {
-        // Prepare the food item to send back
-        const calories = getCalories(item);
-        const selectedFood = {
-          name: item.name || item.description,
-          portion: `${item.servingSize} ${item.servingSizeUnit}`,
-          calories: calories,
-        };
+  //     if (mealType) {
+  //       // Prepare the food item to send back
+  //       const calories = getCalories(item);
+  //       const selectedFood = {
+  //         name: item.name || item.description,
+  //         portion: `${item.servingSize} ${item.servingSizeUnit}`,
+  //         calories: calories,
+  //       };
 
-        // Navigate back to meals screen with the selected food
-        router.push({
-          pathname: "/patient/meals",
-          params: {
-            mealType,
-            selectedFood: JSON.stringify(selectedFood),
-          },
-        });
-      }
-    }
-  };
+  //       // Navigate back to meals screen with the selected food
+  //       router.push({
+  //         pathname: "/patient/meals",
+  //         params: {
+  //           mealType,
+  //           selectedFood: JSON.stringify(selectedFood),
+  //         },
+  //       });
+  //     }
+  //   }
+  // };
 
   const getNutrientValue = (foodItem: FoodItem, nutrientNames: string[]) => {
   if (!foodItem.foodNutrients) return 0;
@@ -643,30 +726,33 @@ const calories = item.calories ?? 0;
       <View style={styles.foodItemContainer}>
       <TouchableOpacity
         onPress={() => toggleExpanded(item.fdcId)}
-        style={[
-          styles.foodItem, 
-          isExpanded && styles.expandedFoodItem
-        ]}
+        style={
+          styles.foodItem}
         activeOpacity={0.7}
       >
         <View style={styles.foodInfo}>
-          <Text style={styles.foodName}>{item.name || item.description}
-          
-          </Text>
-          <Text style={styles.servingSize}>
-            <Text>{item.servingSize}</Text> <Text>{item.servingSizeUnit}</Text> {scoreLabel && (
-              <Text style={{ fontSize: 12, color: scoreLabel.color, fontWeight: "600", marginLeft: 6 }}>
-                {"  "}
-                <View style={{
-                  width: 10,
-                  height: 10,
-                  borderRadius: 5,
-                  backgroundColor: `${scoreLabel.color}`
-                }}/> {scoreLabel.label}
-              </Text>
-            )}
-          </Text>
-        </View>
+      <Text style={styles.foodName}>
+        {isSelected && (
+          <>
+            <View style={[
+              styles.classificationDot,
+              {
+                backgroundColor: foodClassifications.get(item.fdcId) === 'bad'
+                  ? 'rgba(252, 49, 48, 1)'  // Red for bad food
+                  : 'rgba(64, 206, 35, 1)'  // Green for good food
+              }
+            ]} />
+            <Text> </Text> {/* Small space after dot */}
+          </>
+        )}
+        {item.name || item.description}
+      </Text>
+      
+      <Text style={styles.servingSize}>
+        <Text>{item.servingSize}</Text> 
+        <Text>{item.servingSizeUnit}</Text>
+      </Text>
+    </View>
 
         <View style={styles.rightContent}>
           <Text style={styles.calories}>{calories} Cal</Text>
@@ -695,7 +781,7 @@ const calories = item.calories ?? 0;
         </View>
       </TouchableOpacity>
       
-      <Animated.View 
+      {/* <Animated.View 
           style={[
             styles.expandedDetailsContainer,
             {
@@ -798,7 +884,7 @@ const calories = item.calories ?? 0;
               <Text style={styles.categoryValue}>{item.foodCategory}</Text>
             </Animated.View>
           </Animated.View>
-        </Animated.View>
+        </Animated.View> */}
     </View>
     );
   };
@@ -861,6 +947,13 @@ const calories = item.calories ?? 0;
           showsVerticalScrollIndicator={false}
         />
       )}
+
+      <FoodClassificationModal
+        visible={classificationModalVisible}
+        foodName={selectedFoodForClassification?.name || selectedFoodForClassification?.description || ''}
+        onClose={handleModalClose}
+        onClassify={handleFoodClassification}
+      />
     </SafeAreaView>
   );
 };
@@ -944,6 +1037,11 @@ const styles = StyleSheet.create({
     color: "#434343",
     marginBottom: 4,
   },
+    classificationDot: {
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+    },
   servingSize: {
     fontSize: 12,
     flexDirection:'row',

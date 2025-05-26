@@ -386,28 +386,6 @@ const name = () => {
     router.replace("/login");
   };
 
-  const MenuItem = ({
-    icon,
-    title,
-    subtitle,
-    onPress,
-  }: {
-    icon: React.ReactNode;
-    title: string;
-    subtitle: string;
-    onPress: () => void;
-  }) => {
-    return (
-      <TouchableOpacity style={styles.menuItem} onPress={onPress}>
-        <View style={styles.iconContainer}>{icon}</View>
-        <View style={styles.menuTextContainer}>
-          <Text style={styles.menuTitle}>{title}</Text>
-          <Text style={styles.menuSubtitle} numberOfLines={1}>{subtitle}</Text>
-        </View>
-      </TouchableOpacity>
-    );
-  };
-
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={"white"} />
