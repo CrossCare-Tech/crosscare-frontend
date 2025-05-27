@@ -685,7 +685,10 @@
     "errorNoResults": "Nenhum resultado encontrado",
     "errorGeneric": "Erro ao buscar comida",
     "checkmarkAria": "Selecionado",
-    "addAria": "Adicionar"
+    "addAria": "Adicionar",
+    "setCalorieGoal": "Definir Meta de Calorias",
+    "enterCalorieGoal": "Digite sua meta diária de calorias",
+    "loading": "Carregando..."
   },
   "healthData": {
     "userhealth": "Dados de saúde do usuário:",
@@ -757,5 +760,9 @@
   },
   "questionaire":{
     "do":"Vive em uma casa ou em um apartamento?"
+  },
+  "common": {
+    "cancel": "Cancelar",
+    "save": "Salvar"
   }
 }

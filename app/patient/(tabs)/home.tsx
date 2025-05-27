@@ -36,6 +36,7 @@ import { useBadge } from "@/context/BadgeContext";
 import User from "@/assets/images/Svg/User";
 import { Linking } from "react-native";
 import PregnancyModal from "../modal/preagnancyModal";
+import { useMealStore } from "@/zustandStore/mealStore";
 
 interface Progress {
   progressPercentage: number;
@@ -98,7 +99,16 @@ const Home = () => {
   // console.log("token", token);
   // console.log("userData1", user);
   const { t } = useTranslation()
-
+  const { 
+    calorieGoal, 
+    caloriesConsumed, 
+    goodFoodCount, 
+    badFoodCount,
+    meals,
+    isLoading,
+    error,
+    getFoodQualityRatio
+  } = useMealStore();
   const [weeksComplete, setWeeksComplete] = useState(0);
   const pregnancyProgress = React.useMemo(() => {
     return calculatePregnancyProgress(weeksComplete);
@@ -182,7 +192,7 @@ const cardData = cardData1.map((item) => ({
       setAllVisited();
     }, [userId]);
   
-    const checkAndAwardExplorerBadge = async (userId) => {
+    const checkAndAwardExplorerBadge = async (userId: string) => {
       try {
         // Get visited status for all areas
         const healthVisited = await AsyncStorage.getItem('health');
@@ -255,7 +265,7 @@ const cardData = cardData1.map((item) => ({
     };
   
     // Function to make API call to award the Explorer badge
-    const awardExplorerBadge = async (userId) => {
+    const awardExplorerBadge = async (userId: string) => {
       try {
         const badgeType = "EXPLORER";
         
@@ -896,11 +906,11 @@ const cardData = cardData1.map((item) => ({
 
             <View style={styles.foodQualityContainer}>
               <View style={styles.progressBar}>
-                <View style={[styles.progressFill, { width: `${(240 / 3000) * 100}%` }]} />
+                <View style={[styles.progressFill, { width: `${(caloriesConsumed / calorieGoal) * 100}%` }]} />
               </View>
               <View style={styles.caloriesContainer}>
-                <Text style={styles.calorieText}>240</Text>
-                <Text style={styles.calorieSubText}> / 3000 Calories</Text>
+                <Text style={styles.calorieText}>{caloriesConsumed}</Text>
+                <Text style={styles.calorieSubText}> / {calorieGoal} Calories</Text>
               </View>
             </View>
             
@@ -910,10 +920,10 @@ const cardData = cardData1.map((item) => ({
               gap:2,
             }}>
                 <View style={styles.goodFoodBadge}>
-                  <Text style={styles.goodFoodText}>Good Food: 2</Text>
+                  <Text style={styles.goodFoodText}>Good Food: {goodFoodCount}</Text>
                 </View>
                 <View style={styles.badFoodBadge}>
-                  <Text style={styles.badFoodText}>Bad Food: 2</Text>
+                  <Text style={styles.badFoodText}>Bad Food: {badFoodCount}</Text>
                 </View>
           
             </View>

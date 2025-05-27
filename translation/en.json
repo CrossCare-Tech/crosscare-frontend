@@ -443,9 +443,9 @@
   "baby": "Baby",
   "babyDescription": "In week 8, the embryo looks more and more like a human, instead of an alien. The head is about half of the entire body length.",
   "mom": "Mom",
-  "momDescription": "In week 8, people around you still won’t notice your growing belly, but you might find yourself having trouble buttoning your favorite jeans.",
+  "momDescription": "In week 8, people around you still won't notice your growing belly, but you might find yourself having trouble buttoning your favorite jeans.",
   "funFact": "Fun Fact",
-  "funFactDescription": "A baby’s heart starts beating as early as 5-6 weeks, and by week 10, they already have tiny fingers.",
+  "funFactDescription": "A baby's heart starts beating as early as 5-6 weeks, and by week 10, they already have tiny fingers.",
   "length": "Length",
   "currentWeek": "Current week",
   "trimester1": "1st trimester",
@@ -685,7 +685,10 @@
     "errorNoResults": "No results found",
     "errorGeneric": "Error searching for food",
     "checkmarkAria": "Selected",
-    "addAria": "Add"
+    "addAria": "Add",
+    "setCalorieGoal": "Set Calorie Goal",
+    "enterCalorieGoal": "Enter your daily calorie goal",
+    "loading": "Loading..."
   },
   "healthData": {
     "weight":"Weight",
@@ -757,5 +760,9 @@
   },
   "questionaire":{
     "do":"Do you live in a house or an apartment?"
+  },
+  "common": {
+    "cancel": "Cancel",
+    "save": "Save"
   }
 }

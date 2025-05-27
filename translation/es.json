@@ -2,7 +2,7 @@
   "back": "Atrás",
   "next": "Siguiente",
   "cancel": "Cancelar",
-  "save": "Ahorrar",
+  "save": "Guardar",
   "delete": "Eliminar",
   "confirm": "Confirmar",
   "Analysis": "Análisis",
@@ -689,7 +689,10 @@
     "errorNoResults": "No se encontraron resultados",
     "errorGeneric": "Error al buscar comida",
     "checkmarkAria": "Seleccionado",
-    "addAria": "Agregar"
+    "addAria": "Agregar",
+    "setCalorieGoal": "Establecer Meta de Calorías",
+    "enterCalorieGoal": "Ingresa tu meta diaria de calorías",
+    "loading": "Cargando..."
   },
   "healthData": {
     "userhealth": "Datos de salud del usuario:",

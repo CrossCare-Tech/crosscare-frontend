@@ -1,22 +1,19 @@
-//
-
-import { StyleSheet, Text, View, StatusBar, ScrollView, Animated, Dimensions } from "react-native"
+import { StyleSheet, Text, View, StatusBar, ScrollView, Animated, Dimensions, Modal } from "react-native"
 import React, { useEffect, useMemo, useRef, useState } from "react"
 import { SafeAreaView } from "react-native-safe-area-context"
-import { TouchableOpacity } from "react-native"
+import { ActivityIndicator, TouchableOpacity } from "react-native"
 import { router, useLocalSearchParams } from "expo-router"
 import { Feather, FontAwesome5, Ionicons, MaterialIcons } from "@expo/vector-icons"
 import FoodIcon from "@/assets/images/Svg/FoodIcon"
 import { LinearGradient } from "expo-linear-gradient"
 import CalorieGoalModal from "./modal/caloriegoalmodal"
-
-// Import DateTimePicker at the top of the file
 import DateTimePicker from "@react-native-community/datetimepicker"
 import { Platform } from "react-native"
 import AsyncStorage from "@react-native-async-storage/async-storage"
 import { useSelector } from "react-redux"
 import { useTranslation } from "react-i18next"
 import FoodQualityCircle from "@/components/FoodQualityCircle"
+import { useMealStore, FoodItem } from "@/zustandStore/mealStore"
 
 const MAX_HEIGHT = 200
 const BAR_WIDTH = 20
@@ -26,27 +23,32 @@ interface DataItem {
   day: string
   calories: number
   date: string
+  isRangeLabel?: boolean
+  rangeLabel?: string
+  id?: string
 }
 
 interface CustomBarProps {
   item: DataItem
   index: number
   isSelected: boolean
-}
-
-interface Food {
-  name: string
-  portion: string
-  calories: number
-  classification?: 'good' | 'bad';
+  roundedMax: number
+  roundedMin: number
+  timeRange: string
 }
 
 interface Meal {
   title: string
   goalCalories: number
   totalCalories: number
-  foods: Food[]
+  foods: FoodItem[]
   description: string
+}
+
+// Time range options type
+type TimeRangeOption = {
+  id: string
+  label: string
 }
 
 const CustomProgressBar = ({ progress }: { progress: number }) => {
@@ -62,8 +64,9 @@ const CustomProgressBar = ({ progress }: { progress: number }) => {
   )
 }
 
-const FoodItem = ({ name, portion, calories,  classification,  onDelete }: Food & { onDelete: () => void }) => {
+const FoodItems = ({ name, portion, calories, classification, onDelete }: FoodItem & { onDelete: () => void }) => {
   const [menuVisible, setMenuVisible] = useState(false);
+  const { t } = useTranslation();
 
   useEffect(() => {
     let timeoutId: NodeJS.Timeout | null = null
@@ -82,9 +85,6 @@ const FoodItem = ({ name, portion, calories,  classification,  onDelete }: Food 
     }
   }, [menuVisible])
 
-  const {t} = useTranslation();
-  
-
   return (
     <View style={styles.foodItem}>
       <View style={styles.foodItemLeft}>
@@ -94,14 +94,13 @@ const FoodItem = ({ name, portion, calories,  classification,  onDelete }: Food 
           gap: 8,
           flex: 1,
         }}>
-
-        <View style={[
+          <View style={[
             styles.classificationDot,
             {
-              backgroundColor: classification === 'bad' ? 'rgba(252, 49, 48, 1)' : 'rgba(64, 206, 35, 1)'
+              backgroundColor: classification === 'BAD' ? 'rgba(252, 49, 48, 1)' : 'rgba(64, 206, 35, 1)'
             }
           ]} />
-        <Text style={styles.foodName}>{name}</Text>
+          <Text style={styles.foodName}>{name}</Text>
         </View>
         <Text style={styles.foodPortion}>{portion}</Text>
       </View>
@@ -150,7 +149,7 @@ const MealItem = ({
   onAddPress: (mealType: string) => void
   onDeleteFood: (mealType: string, foodIndex: number) => void
 }) => {
-  const {t} = useTranslation();
+  const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(false)
   const hasFoods = meal.foods && meal.foods.length > 0
 
@@ -160,8 +159,7 @@ const MealItem = ({
         <Text style={styles.mealTitle}>{t(meal.title)}</Text>
         <View style={styles.mealCaloriesContainer}>
           <Text style={styles.mealCalories}>
-            {/* {meal.totalCalories} of {meal.goalCalories} Cal */}
-            {t('meals.mealCalories',{totalCalories: meal.totalCalories, goalCalories: meal.goalCalories})}
+            {meal.totalCalories} Cal
           </Text>
           <TouchableOpacity style={styles.addButton} onPress={() => onAddPress(meal.title)}>
             <Ionicons name="add-circle" size={20} color="#38C472" />
@@ -180,7 +178,7 @@ const MealItem = ({
       {hasFoods && (
         <View style={styles.expandedContent}>
           {meal.foods.map((food, idx) => (
-            <FoodItem
+            <FoodItems
               key={idx}
               name={food.name}
               portion={food.portion}
@@ -204,111 +202,344 @@ const meals = () => {
   const selectedFoodJson = params.selectedFood as string
   const selectedFood = selectedFoodJson ? JSON.parse(selectedFoodJson) : null
   const mealType = params.mealType as string
-  const [progress, setProgress] = React.useState(0)
+  
+  // Use the Zustand store
+  const { 
+    calorieGoal, 
+    caloriesConsumed, 
+    goodFoodCount, 
+    badFoodCount,
+    meals: storeMeals,
+    chartData,
+    currentTimeRange,
+    isLoading, 
+    error,
+    fetchMeals,
+    updateCalorieGoal,
+    addFoodItem,
+    fetchMealsForDate,
+    deleteFoodItem,
+    getFoodQualityRatio,
+    fetchCalorieHistory
+  } = useMealStore();
+  
+  const [progress, setProgress] = useState(0)
   const [isGoalModalVisible, setIsGoalModalVisible] = useState(false)
-  const [calorieGoal, setCalorieGoal] = useState("")
-  const user = useSelector((state:any)=>state.user);
+  const [customCalorieGoal, setCustomCalorieGoal] = useState("")
+  const user = useSelector((state: any) => state.user);
   const userId = user?.user_id;
 
-  useEffect(() => {
-      const setMealVisited = async () => {
-        if(userId){
-        await AsyncStorage.setItem('meal_1', 'true');
-        }
-      };
-      
-      setMealVisited();
-    }, [userId]);
-
-  // Add these state variables after the other useState declarations
+  // Date picker states
   const [showDatePicker, setShowDatePicker] = useState(false)
   const [selectedDate, setSelectedDate] = useState(new Date())
 
-  // Flag to track if we've processed the current food params
-  const [processedCurrentParams, setProcessedCurrentParams] = useState(false)
+  const [timeRange, setTimeRange] = useState("week")
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
+  const [tooltipAnim] = useState(new Animated.Value(0))
+  const tooltipTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const periodSelectorRef = useRef<View>(null)
+  const [dropdownVisible, setDropdownVisible] = useState(false)
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, right: 0 })
+  const [filteredData, setFilteredData] = useState<DataItem[]>([])
 
-  // Initialize meal data
-  const [mealData, setMealData] = useState<Meal[]>([
-    {
+  const { t } = useTranslation();
+
+  // Time range options - matching weight.tsx
+  const timeRangeOptions: TimeRangeOption[] = [
+    { id: "today", label: t('today') },
+    { id: "week", label: t('last7Days') },
+    { id: "month", label: t('thisMonth') },
+    { id: "lastMonth", label: t('lastMonth') },
+  ]
+
+  // Format the meal data from the store to the format expected by the UI
+  const formattedMealData = useMemo(() => {
+    if (!storeMeals) return [];
+    
+    // Default structure with translations
+    const defaultMealData = [
+      {
+        title: "meals.mealTitles.Breakfast",
+        goalCalories: 0, // No individual goal
+        totalCalories: 0,
+        foods: [],
+        description: "meals.mealDescriptions.Breakfast",
+      },
+      {
+        title: "meals.mealTitles.Lunch",
+        goalCalories: 0, // No individual goal
+        totalCalories: 0,
+        foods: [],
+        description: "meals.mealDescriptions.Lunch",
+      },
+      {
+        title: "meals.mealTitles.Snacks",
+        goalCalories: 0, // No individual goal
+        totalCalories: 0,
+        foods: [],
+        description: "meals.mealDescriptions.Snacks",
+      },
+      {
+        title: "meals.mealTitles.Dinner",
+        goalCalories: 0, // No individual goal
+        totalCalories: 0,
+        foods: [],
+        description: "meals.mealDescriptions.Dinner",
+      },
+    ];
+    
+    // Map store meals to UI format
+    const mappedBreakfast = storeMeals.BREAKFAST?.length > 0 ? {
       title: "meals.mealTitles.Breakfast",
-      goalCalories: 169,
-      totalCalories: 0,
-      foods: [],
+      goalCalories: 0, // No individual goal
+      totalCalories: storeMeals.BREAKFAST.reduce((sum, meal) => sum + meal.totalCalories, 0),
+      foods: storeMeals.BREAKFAST.flatMap(meal => meal.foodItems || []),
       description: "meals.mealDescriptions.Breakfast",
-    },
-    {
+    } : defaultMealData[0];
+    
+    const mappedLunch = storeMeals.LUNCH?.length > 0 ? {
       title: "meals.mealTitles.Lunch",
-      goalCalories: 169,
-      totalCalories: 0,
-      foods: [],
+      goalCalories: 0, // No individual goal
+      totalCalories: storeMeals.LUNCH.reduce((sum, meal) => sum + meal.totalCalories, 0),
+      foods: storeMeals.LUNCH.flatMap(meal => meal.foodItems || []),
       description: "meals.mealDescriptions.Lunch",
-    },
-    {
+    } : defaultMealData[1];
+    
+    const mappedSnacks = storeMeals.SNACK?.length > 0 ? {
       title: "meals.mealTitles.Snacks",
-      goalCalories: 169,
-      totalCalories: 0,
-      foods: [],
+      goalCalories: 0, // No individual goal
+      totalCalories: storeMeals.SNACK.reduce((sum, meal) => sum + meal.totalCalories, 0),
+      foods: storeMeals.SNACK.flatMap(meal => meal.foodItems || []),
       description: "meals.mealDescriptions.Snacks",
-    },
-    {
+    } : defaultMealData[2];
+    
+    const mappedDinner = storeMeals.DINNER?.length > 0 ? {
       title: "meals.mealTitles.Dinner",
-      goalCalories: 338,
-      totalCalories: 0,
-      foods: [],
+      goalCalories: 0, // No individual goal
+      totalCalories: storeMeals.DINNER.reduce((sum, meal) => sum + meal.totalCalories, 0),
+      foods: storeMeals.DINNER.flatMap(meal => meal.foodItems || []),
       description: "meals.mealDescriptions.Dinner",
-    },
-  ])
+    } : defaultMealData[3];
+    
+    return [mappedBreakfast, mappedLunch, mappedSnacks, mappedDinner];
+  }, [storeMeals, calorieGoal]);
 
-  // Use a ref to track processed food items
-  const processedFoodRef = useRef(new Set())
+  // Generate all days for the selected time range - matching weight.tsx logic
+  const generateAllDays = (timeRange: string): DataItem[] => {
+    const today = new Date()
+    const days = []
+    let startDate: Date
+    let endDate: Date
 
-  // Replace the useEffect hook that handles receiving selected food with this updated version
-  // Handle receiving selected food from food search screen
-  useEffect(() => {
-    if (params.selectedFood && params.mealType) {
-      try {
-        const selectedFood = JSON.parse(params.selectedFood as string)
-        const mealType = params.mealType as string
+    if (timeRange === "today") {
+      // Today view - just show today
+      const todayStr = today.toISOString().split("T")[0]
 
-        // Use a ref to track if we've already processed this specific food item
-        const foodKey = `${mealType}-${JSON.stringify(selectedFood)}`
+      return [
+        {
+          id: `today-${todayStr}`,
+          date: todayStr,
+          day: "Today",
+          calories: 0,
+        },
+      ]
+    } else if (timeRange === "week") {
+      // Weekly view - show each day
+      startDate = new Date(today)
+      const dayOfWeek = startDate.getDay()
+      startDate.setDate(startDate.getDate() - dayOfWeek)
 
-        // Check if we've already processed this exact food item
-        if (!processedFoodRef.current.has(foodKey)) {
-          // Mark this food as processed
-          processedFoodRef.current.add(foodKey)
+      endDate = new Date(startDate)
+      endDate.setDate(startDate.getDate() + 6)
 
-          // Add the food to the appropriate meal
-          setMealData((prevMeals) => {
-            return prevMeals.map((meal) => {
-              if (meal.title === mealType) {
-                // Add the food and update total calories
-                const updatedFoods = [...meal.foods, selectedFood]
-                const updatedTotalCalories = updatedFoods.reduce((sum, food) => sum + food.calories, 0)
+      const currentDate = new Date(startDate)
+      while (currentDate <= endDate) {
+        const dateString = currentDate.toISOString().split("T")[0]
+        days.push({
+          id: `empty-${dateString}`,
+          date: dateString,
+          day: currentDate.toLocaleDateString("en-US", { weekday: "short" }).charAt(0),
+          calories: 0,
+        })
+        currentDate.setDate(currentDate.getDate() + 1)
+      }
+    } else if (timeRange === "month" || timeRange === "lastMonth") {
+      // For month views, create date ranges around key dates
+      const dateRanges = [
+        { label: "1", start: 1, end: 4 },
+        { label: "5", start: 5, end: 9 },
+        { label: "10", start: 10, end: 14 },
+        { label: "15", start: 15, end: 19 },
+        { label: "20", start: 20, end: 24 },
+        { label: "25", start: 25, end: 29 },
+        { label: "30", start: 30, end: 31 },
+      ]
 
-                return {
-                  ...meal,
-                  foods: updatedFoods,
-                  totalCalories: updatedTotalCalories,
-                }
-              }
-              return meal
-            })
+      if (timeRange === "month") {
+        startDate = new Date(today.getFullYear(), today.getMonth(), 1)
+        endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0)
+      } else {
+        startDate = new Date(today.getFullYear(), today.getMonth() - 1, 1)
+        endDate = new Date(today.getFullYear(), today.getMonth(), 0)
+      }
+
+      const lastDay = endDate.getDate()
+
+      // Generate entries for each date range
+      for (const range of dateRanges) {
+        if (range.start <= lastDay) {
+          // Add the main label date
+          const labelDate = new Date(startDate)
+          labelDate.setDate(range.start)
+          const labelDateString = labelDate.toISOString().split("T")[0]
+
+          days.push({
+            id: `label-${labelDateString}`,
+            date: labelDateString,
+            day: range.label,
+            calories: 0,
+            isRangeLabel: true, // Mark this as a label for the range
           })
 
-          // Clear the URL parameters after processing to prevent re-processing on reload
-          // Use Expo Router's setParams to clear the parameters
-          router.setParams({})
+          // Add individual days in the range
+          for (let day = range.start; day <= Math.min(range.end, lastDay); day++) {
+            const currentDate = new Date(startDate)
+            currentDate.setDate(day)
+            const dateString = currentDate.toISOString().split("T")[0]
+
+            days.push({
+              id: `day-${dateString}`,
+              date: dateString,
+              day: "", // Empty string for non-label days
+              calories: 0,
+              rangeLabel: range.label, // Reference to which label this belongs to
+            })
+          }
         }
-      } catch (error) {
-        console.error("Error parsing selected food:", error)
       }
     }
-  }, [params.selectedFood, params.mealType])
 
-  const [tooltipAnim] = useState(new Animated.Value(0)) // Start with 0 opacity
-  const tooltipTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
+    return days
+  }
+
+  // Process and filter data based on time range - matching weight.tsx
+  const processDataForTimeRange = (data: DataItem[], timeRange: string) => {
+    const allDays = generateAllDays(timeRange)
+
+    if (data.length === 0) {
+      return allDays
+    }
+
+    const dataMap = new Map()
+    data.forEach((item) => {
+      if (item.date) {
+        // Ensure we're working with a string date
+        const dateKey =
+          typeof item.date === "string" ? item.date.split("T")[0] : new Date(item.date).toISOString().split("T")[0]
+        dataMap.set(dateKey, item)
+      }
+    })
+
+    // For "today" view, we need to specifically check if today's data exists
+    if (timeRange === "today") {
+      const todayStr = new Date().toISOString().split("T")[0]
+      const todayData = dataMap.get(todayStr)
+
+      if (todayData) {
+        return [
+          {
+            id: `today-${todayStr}`,
+            date: todayStr,
+            day: t('today'),
+            calories: todayData.calories || 0,
+          },
+        ]
+      } else {
+        return allDays // Return empty today template
+      }
+    }
+
+    // For week view, ensure we map data to the correct days
+    if (timeRange === "week") {
+      return allDays.map((day) => {
+        const existingData = dataMap.get(day.date)
+        if (existingData) {
+          return {
+            ...day,
+            calories: existingData.calories || 0,
+          }
+        }
+        return day
+      })
+    }
+
+    // For month views, handle the date ranges
+    return allDays.map((day) => {
+      // For range labels, just return as is
+      if (day.isRangeLabel) {
+        return day
+      }
+
+      const existingData = dataMap.get(day.date)
+      if (existingData) {
+        return {
+          ...day,
+          calories: existingData.calories || 0,
+          isRangeLabel: day.isRangeLabel,
+          rangeLabel: day.rangeLabel,
+        }
+      }
+      return day
+    })
+  }
+
+  // Keep this useEffect but modify it to only fetch calorie history when timeRange changes
+  useEffect(() => {
+    if (userId && timeRange) {
+      // Only fetch calorie history when time range changes
+      fetchCalorieHistory(userId, timeRange);
+    }
+  }, [timeRange, fetchCalorieHistory, userId]);
+
+  // Update filtered data when time range changes
+  useEffect(() => {
+    const filtered = processDataForTimeRange(chartData, timeRange)
+    setFilteredData(filtered)
+
+    // Reset selected index when changing time range
+    setSelectedIndex(null)
+  }, [timeRange, chartData])
+
+  // Add a separate useEffect for badge tracking that only runs once
+  useEffect(() => {
+    // Mark as visited for badge tracking
+    AsyncStorage.setItem('meal_1', 'true');
+  }, []);
+
+  // Handle adding selected food from params
+  useEffect(() => {
+    if (selectedFood && mealType && userId) {
+      // Convert from UI format to store format
+      const newFoodItem: FoodItem = {
+        name: selectedFood.name,
+        portion: selectedFood.portion,
+        calories: selectedFood.calories,
+        classification: selectedFood.classification === 'good' ? 'GOOD' : 'BAD'
+      };
+      
+      // Add the food item via the store
+      addFoodItem(userId, mealType, newFoodItem);
+      
+      // Clear URL parameters
+      router.setParams({});
+    }
+  }, [selectedFood, mealType, userId, addFoodItem]);
+
+  // Update progress when calorie data changes
+  useEffect(() => {
+    const newProgress = calorieGoal > 0 ? caloriesConsumed / calorieGoal : 0;
+    setProgress(newProgress);
+  }, [caloriesConsumed, calorieGoal]);
 
   const handleOpenGoalModal = () => {
     setIsGoalModalVisible(true)
@@ -319,7 +550,10 @@ const meals = () => {
   }
 
   const handleSaveGoal = (newGoal: string) => {
-    setCalorieGoal(newGoal)
+    setCustomCalorieGoal(newGoal)
+    if (userId) {
+      updateCalorieGoal(userId, Number(newGoal));
+    }
     setIsGoalModalVisible(false)
   }
 
@@ -332,56 +566,68 @@ const meals = () => {
   }
 
   const handleDeleteFood = (mealType: string, foodIndex: number) => {
-    setMealData((prevMeals) => {
-      return prevMeals.map((meal) => {
-        if (meal.title === mealType) {
-          // Remove the food at the specified index
-          const updatedFoods = [...meal.foods]
-          updatedFoods.splice(foodIndex, 1)
-
-          // Recalculate total calories
-          const updatedTotalCalories = updatedFoods.reduce((sum, food) => sum + food.calories, 0)
-
-          return {
-            ...meal,
-            foods: updatedFoods,
-            totalCalories: updatedTotalCalories,
-          }
-        }
-        return meal
-      })
-    })
+    // Get the correct meal type for the API
+    const apiMealType = mealType === "meals.mealTitles.Breakfast" ? "BREAKFAST" :
+                       mealType === "meals.mealTitles.Lunch" ? "LUNCH" :
+                       mealType === "meals.mealTitles.Dinner" ? "DINNER" : "SNACK";
+    
+    // Find the meal and food item IDs from the store
+    const meals = storeMeals[apiMealType];
+    if (!meals || meals.length === 0) return;
+    
+    // Find which meal contains this food item
+    let foodItemId = null;
+    let mealId = null;
+    
+    // We need to find the specific meal and food item by index
+    let currentIndex = 0;
+    for (const meal of meals) {
+      const foodItems = meal.foodItems || [];
+      if (currentIndex + foodItems.length > foodIndex) {
+        // This meal contains our target food
+        const itemIndex = foodIndex - currentIndex;
+        foodItemId = foodItems[itemIndex]?.id;
+        mealId = meal.id;
+        break;
+      }
+      currentIndex += foodItems.length;
+    }
+    
+    if (userId && mealId && foodItemId) {
+      deleteFoodItem(userId, mealId, foodItemId);
+    }
   }
 
-  // Sample data for the last 7 days (in calories)
-  const data = [
-    { day: "S", calories: 9400, date: "FEB 25, 2025" },
-    { day: "M", calories: 9350, date: "FEB 26, 2025" },
-    { day: "T", calories: 9500, date: "FEB 27, 2025" },
-    { day: "W", calories: 9450, date: "FEB 28, 2025" },
-    { day: "T", calories: 9600, date: "FEB 29, 2025" },
-    { day: "F", calories: 9700, date: "MAR 1, 2025" },
-    { day: "S", calories: 9300, date: "MAR 2, 2025" },
-  ]
-
-  // Convert calories to kilocalories for display
-  const formatToKcal = (calories: number) => {
-    return (calories / 1000).toFixed(1)
-  }
-
-  // Calculate y-axis values using useMemo to prevent recalculation on every render
+  // Calculate y-axis values using useMemo to prevent recalculation on every render - matching weight.tsx
   const { yAxisLabels, roundedMax, roundedMin } = useMemo(() => {
-    // Get min and max calories
-    const maxCalories = Math.max(...data.map((item) => item.calories))
-    const minCalories = Math.min(...data.map((item) => item.calories))
+    if (!filteredData.length) {
+      return { yAxisLabels: ["2.0", "1.5", "1.0", "0.5", "0.0"], roundedMax: 2000, roundedMin: 0 }
+    }
+
+    // Filter out zero calories for calculation
+    const nonZeroCalories = filteredData
+      .filter((item) => !item.isRangeLabel && item.calories > 0)
+      .map((item) => item.calories)
+
+    // If no non-zero calories, use default range
+    if (nonZeroCalories.length === 0) {
+      return { yAxisLabels: ["2.0", "1.5", "1.0", "0.5", "0.0"], roundedMax: 2000, roundedMin: 0 }
+    }
+
+    const maxCalories = Math.max(...nonZeroCalories)
+    const minCalories = Math.min(...nonZeroCalories)
 
     // Convert to kcal for rounding
     const maxKcal = maxCalories / 1000
     const minKcal = minCalories / 1000
 
+    // Add padding to the range
+    const paddedMax = maxKcal + 0.2
+    const paddedMin = Math.max(0, minKcal - 0.2)
+
     // Round to nearest 0.1 for kcal
-    const roundedMaxKcal = Math.ceil(maxKcal * 10) / 10
-    const roundedMinKcal = Math.floor(minKcal * 10) / 10
+    const roundedMaxKcal = Math.ceil(paddedMax * 10) / 10
+    const roundedMinKcal = Math.floor(paddedMin * 10) / 10
 
     // Convert back to calories for internal calculations
     const roundedMax = roundedMaxKcal * 1000
@@ -410,9 +656,9 @@ const meals = () => {
       roundedMax,
       roundedMin,
     }
-  }, [data]) // Only recalculate when data changes
+  }, [filteredData]) // Only recalculate when data changes
 
-  // Function to hide tooltip after a delay
+  // Function to hide tooltip after a delay - matching weight.tsx
   const hideTooltipAfterDelay = () => {
     // Clear any existing timeout
     if (tooltipTimeoutRef.current) {
@@ -432,8 +678,17 @@ const meals = () => {
   }
 
   const handleBarPress = (index: number): void => {
+    // Get the actual item
+    const item = filteredData[index]
+
+    // Skip if it's a range label or has no data
+    if (item.isRangeLabel || item.calories <= 0) {
+      return
+    }
+
     if (selectedIndex === index) {
-      return // Already selected
+      setSelectedIndex(null) // Deselect if already selected
+      return
     }
 
     // Animate tooltip disappearing and reappearing
@@ -452,12 +707,6 @@ const meals = () => {
 
     setSelectedIndex(index)
 
-    Animated.timing(tooltipAnim, {
-      toValue: 1,
-      duration: 300,
-      useNativeDriver: true,
-    }).start()
-
     // Set timeout to hide tooltip after delay
     hideTooltipAfterDelay()
   }
@@ -471,42 +720,129 @@ const meals = () => {
     }
   }, [])
 
-  const CustomBar = ({ item, index, isSelected }: CustomBarProps) => {
+  // Get the current selected time range label
+  const getTimeRangeLabel = () => {
+    const option = timeRangeOptions.find((option) => option.id === timeRange)
+    return option ? option.label : "Last 7 Days"
+  }
+
+  // Convert calories to kilocalories for display
+  const formatToKcal = (calories: number) => {
+    return (calories / 1000).toFixed(1)
+  }
+
+  // Fixed CustomBar component - matching weight.tsx
+  const CustomBar = ({ item, index, isSelected, timeRange }: CustomBarProps) => {
+    // Check if this is a month view
+    const isMonthView = timeRange !== "week" && timeRange !== "today"
+
+    // Skip rendering for range labels in month view - they're just for organization
+    if (isMonthView && item.isRangeLabel) {
+      return (
+        <View style={styles.dateRangeContainer}>
+          <Text style={styles.dateRangeLabel}>{item.day}</Text>
+        </View>
+      )
+    }
+
+    // Check if the bar has calorie data
+    const hasCalories = item.calories > 0
+
     // Calculate bar height based on data range
     const dataRange = roundedMax - roundedMin
-    const normalizedCalories = item.calories - roundedMin // Adjust for minimum value
-    const barHeight = (normalizedCalories / dataRange) * MAX_HEIGHT
+    const normalizedCalories = hasCalories ? item.calories - roundedMin : 0 // Adjust for minimum value
+
+    // Ensure we don't get NaN or negative values for barHeight
+    let barHeight = 0
+    if (dataRange > 0 && normalizedCalories > 0) {
+      barHeight = (normalizedCalories / dataRange) * MAX_HEIGHT
+      // Ensure minimum visible height for bars with very small values
+      barHeight = Math.max(barHeight, 2)
+    }
+
+    // Use thinner bars for month views, wider for today view
+    let barWidth = BAR_WIDTH
+    if (isMonthView) {
+      barWidth = 4
+    } else if (timeRange === "today") {
+      barWidth = BAR_WIDTH * 2 // Wider bar for today view
+    }
+
+    // Format the date for display
+    const formatDate = (dateString: string) => {
+      if (!dateString) return ""
+      try {
+        const date = new Date(dateString)
+        return date
+          .toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+          })
+          .toUpperCase()
+      } catch (e) {
+        return dateString // Return original if parsing fails
+      }
+    }
 
     return (
-      <TouchableOpacity activeOpacity={0.8} onPress={() => handleBarPress(index)} style={styles.barContainer}>
-        <View style={styles.barLabelContainer}>
-          <Text style={styles.barLabel}>{item.day}</Text>
-        </View>
+      <TouchableOpacity
+        activeOpacity={0.8}
+        onPress={() => (hasCalories ? handleBarPress(index) : null)}
+        style={[
+          styles.barContainer,
+          timeRange === "today" && {
+            width: barWidth,
+            flex: 1,
+            alignItems: "center",
+            justifyContent: "flex-end",
+          },
+          isMonthView && {
+            width: barWidth,
+            marginRight: 2, // Tighter spacing for clustered bars
+            marginLeft: item.rangeLabel && index > 0 && filteredData[index - 1].rangeLabel !== item.rangeLabel ? 10 : 0, // Add space between ranges
+          },
+        ]}
+        disabled={!hasCalories} // Disable touch for bars with no calories
+      >
+        {/* Show day label for week view and today view */}
+        {(timeRange === "week" || timeRange === "today") && (
+          <View style={styles.barLabelContainer}>
+            <Text style={styles.barLabel}>{item.day}</Text>
+          </View>
+        )}
 
-        <View style={[styles.barWrapper, { height: barHeight }]}>
-          <LinearGradient
-            colors={isSelected ? ["#38C472", "#38C472"] : ["#A3E4BE", "#A3E4BE"]}
-            style={[styles.bar, { height: "100%" }]}
-          />
-        </View>
+        {/* Only render the bar if there's calorie data */}
+        {hasCalories && (
+          <View style={[styles.barWrapper, { height: barHeight }, { width: barWidth }]}>
+            <LinearGradient
+              colors={isSelected ? ["#38C472", "#38C472"] : ["#A3E4BE", "#A3E4BE"]}
+              style={[
+                styles.bar,
+                { height: "100%" },
+                isMonthView && { borderTopLeftRadius: 2, borderTopRightRadius: 2 },
+              ]}
+            />
+          </View>
+        )}
 
-        {isSelected && (
+        {/* Only show tooltip for selected bars with calories */}
+        {isSelected && hasCalories && (
           <Animated.View style={[styles.tooltip, { opacity: tooltipAnim }]}>
             <View style={styles.tooltipContent}>
               <Text style={styles.tooltipTitle}>{t('meals.calories')}</Text>
               <Text style={styles.tooltipWeight}>
-                {formatToKcal(item.calories)}
+                {formatToKcal(item.calories)}{" "}
                 <Text
                   style={{
                     fontSize: 16,
                     color: "#38C472",
                   }}
                 >
-                  {" "}
                   kcal
                 </Text>
               </Text>
-              <Text style={styles.tooltipDate}>{item.date}</Text>
+              <Text style={styles.tooltipDate}>{formatDate(item.date)}</Text>
             </View>
             <View style={[styles.tooltipArrow, { borderTopColor: "#38C472" }]} />
           </Animated.View>
@@ -515,34 +851,31 @@ const meals = () => {
     )
   }
 
-  // Calculate total calories for the day
-  const totalCalories = mealData.reduce((sum, meal) => sum + meal.totalCalories, 0)
-
-  // Calculate consumed calories (for now it's 0)
-  const consumedCalories = totalCalories
-
-  // Get the calorie goal value to display
-  const displayCalorieGoal = calorieGoal
-    ? calorieGoal
-    : mealData.reduce((sum, meal) => sum + meal.goalCalories, 0).toString()
-
-  // Calculate progress for the progress bar
-  const calorieProgress =
-    Number.parseInt(displayCalorieGoal) > 0 ? consumedCalories / Number.parseInt(displayCalorieGoal) : 0
-
-  useEffect(() => {
-    setProgress(calorieProgress)
-  }, [calorieProgress, calorieGoal, mealData])
-
-  // Add this function before the return statement
+  // Handle date change
   const handleDateChange = (event, date) => {
     setShowDatePicker(false)
-    if (date) {
+    if (date && userId) {
       setSelectedDate(date)
+      
+      // Format the date to YYYY-MM-DD format for the API
+      const formattedDate = date.toISOString().split('T')[0];
+      
+      // Fetch meals for the selected date
+      fetchMealsForDate(userId, formattedDate);
     }
   }
 
-  const {t} = useTranslation();
+  useEffect(() => {
+    if (userId) {
+      // Fetch meals for today initially
+      const today = new Date().toISOString().split('T')[0];
+      fetchMealsForDate(userId, today);
+    }
+  }, [userId, fetchMealsForDate]);
+
+  
+  // Get the food quality ratio for the circle visualization
+  const { goodRatio, badRatio } = getFoodQualityRatio();
 
   return (
     <SafeAreaView style={styles.container}>
@@ -564,7 +897,7 @@ const meals = () => {
         <View style={styles.mealContainer}>
           <View style={styles.mealCircleContainer}>
             <View style={styles.mealCircle}>
-              <FoodQualityCircle goodCount={2} badCount={3}/>
+              <FoodQualityCircle goodCount={goodFoodCount} badCount={badFoodCount} />
             </View>
           </View>
 
@@ -572,7 +905,7 @@ const meals = () => {
 
           <View style={styles.calorieInfoContainer}>
             <Text style={styles.calorieText}>
-              {consumedCalories}{" "}
+              {caloriesConsumed}{" "}
               <Text
                 style={{
                   color: "#333",
@@ -580,7 +913,7 @@ const meals = () => {
                   fontFamily: "Inter400",
                 }}
               >
-                {t('meals.caloriesConsumed',{displayCalorieGoal: displayCalorieGoal})}
+                {t('meals.caloriesConsumed', { displayCalorieGoal: calorieGoal.toString() })}
               </Text>
             </Text>
             <TouchableOpacity style={styles.editButton} onPress={handleOpenGoalModal}>
@@ -589,12 +922,13 @@ const meals = () => {
           </View>
         </View>
 
-        {/* Replace the Today Dropdown TouchableOpacity with this: */}
+        {/* Date picker button */}
         <TouchableOpacity style={styles.todayContainer} onPress={() => setShowDatePicker(true)}>
           <Text style={styles.todayText}>
             {selectedDate.toLocaleDateString("en-US", {
               month: "short",
               day: "numeric",
+              year: selectedDate.getFullYear() !== new Date().getFullYear() ? "numeric" : undefined
             })}
           </Text>
           <View
@@ -613,25 +947,53 @@ const meals = () => {
 
         {/* Meal List */}
         <View style={styles.mealList}>
-          {mealData.map((meal, index) => (
-            <MealItem
-              key={index}
-              meal={meal}
-              index={index}
-              onAddPress={handleAddFood}
-              onDeleteFood={handleDeleteFood}
-            />
-          ))}
+          {isLoading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#38C472" />
+              <Text style={styles.loadingText}>{t('meals.loadingMeals')}</Text>
+            </View>
+          ) : (
+            formattedMealData.map((meal, index) => (
+              <MealItem
+                key={index}
+                meal={meal}
+                index={index}
+                onAddPress={handleAddFood}
+                onDeleteFood={handleDeleteFood}
+              />
+            ))
+          )}
         </View>
 
-        <View style={styles.analysisContainer}>
-          <View style={styles.analysisHeader}>
-            <View style={styles.analysisTab}>
+        {/* Timeline Section - matching weight.tsx */}
+        <View style={styles.timelineContainer}>
+          <View style={styles.timelineHeader}>
+            <View style={styles.timelineIconContainer}>
               <MaterialIcons name="bar-chart" size={18} color="#A3E4BE" />
-              <Text style={styles.analysisTabText}>{t('meals.analysis')}</Text>
+              <Text style={styles.timelineTitle}>{t('meals.analysis')}</Text>
             </View>
-            <TouchableOpacity style={styles.periodSelector}>
-              <Text style={styles.periodText}>{t('meals.last7Days')}</Text>
+
+            <TouchableOpacity
+              ref={periodSelectorRef}
+              style={styles.periodSelector}
+              onPress={() => {
+                // Measure the position of the period selector button
+                if (periodSelectorRef.current) {
+                  periodSelectorRef.current.measure(
+                    (x: any, y: any, width: number, height: any, pageX: any, pageY: any) => {
+                      setDropdownPosition({
+                        top: pageY + 10, // Position below the button with a small gap
+                        right: width > 0 ? Dimensions.get("window").width - (pageX + width) : 20,
+                      })
+                      setDropdownVisible(true)
+                    },
+                  )
+                } else {
+                  setDropdownVisible(false)
+                }
+              }}
+            >
+              <Text style={styles.periodText}>{getTimeRangeLabel()}</Text>
               <Ionicons name="chevron-down" size={14} color="#38C472" />
             </TouchableOpacity>
           </View>
@@ -654,11 +1016,51 @@ const meals = () => {
               <View key={index} style={[styles.gridLine, { top: (index / (yAxisLabels.length - 1)) * MAX_HEIGHT }]} />
             ))}
 
+            {/* For month views, render date labels at the bottom */}
+            {timeRange !== "week" && timeRange !== "today" && (
+              <View style={styles.dateLabelsContainer}>
+                {filteredData
+                  .filter((item) => item.isRangeLabel)
+                  .map((item, index) => (
+                    <Text key={index} style={styles.monthDateLabel}>
+                      {item.day}
+                    </Text>
+                  ))}
+              </View>
+            )}
+
             {/* Bars */}
-            <View style={styles.barsContainer}>
-              {data.map((item, index) => (
-                <CustomBar key={index} item={item} index={index} isSelected={selectedIndex === index} />
-              ))}
+            <View
+              style={[
+                styles.barsContainer,
+                timeRange === "today" && styles.todayBarsContainer,
+                timeRange !== "week" && timeRange !== "today" && { paddingHorizontal: 10 },
+              ]}
+            >
+              {isLoading ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="large" color="#38C472" />
+                </View>
+              ) : filteredData.length === 0 ? (
+                <View style={styles.noDataContainer}>
+                  <Text style={styles.noDataText}>{t('meals.noDataAvailable')}</Text>
+                </View>
+              ) : (
+                // For month views, filter out the range labels as they're shown separately
+                filteredData
+                  .filter((item) => timeRange === "week" || timeRange === "today" || !item.isRangeLabel)
+                  .map((item, index) => (
+                    <CustomBar
+                      key={index}
+                      item={item}
+                      index={filteredData.findIndex((d) => d.date === item.date)} // Use original index for reference
+                      isSelected={selectedIndex === filteredData.findIndex((d) => d.date === item.date)}
+                      roundedMax={roundedMax}
+                      roundedMin={roundedMin}
+                      timeRange={timeRange}
+                    />
+                  ))
+              )}
             </View>
           </View>
         </View>
@@ -693,11 +1095,41 @@ const meals = () => {
 
         <CalorieGoalModal visible={isGoalModalVisible} onClose={handleCloseGoalModal} onSave={handleSaveGoal} />
       </ScrollView>
+
+      {/* Time Range Dropdown Modal - matching weight.tsx */}
+      <Modal
+        transparent={true}
+        visible={dropdownVisible}
+        animationType="fade"
+        onRequestClose={() => setDropdownVisible(false)}
+      >
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setDropdownVisible(false)}>
+          <View style={[styles.dropdownContainer, { top: dropdownPosition.top, right: dropdownPosition.right }]}>
+            {timeRangeOptions.map((option) => (
+              <TouchableOpacity
+                key={option.id}
+                style={[styles.dropdownItem, timeRange === option.id && styles.dropdownItemSelected]}
+                onPress={() => {
+                  setTimeRange(option.id)
+                  setDropdownVisible(false)
+                }}
+              >
+                <Text style={[styles.dropdownItemText, timeRange === option.id && styles.dropdownItemTextSelected]}>
+                  {option.label}
+                </Text>
+                {timeRange === option.id && <Ionicons name="checkmark" size={16} color="#38C472" />}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   )
 }
 
 export default meals;
+
+// ... existing code ...
 
 const styles = StyleSheet.create({
   container: {
@@ -716,6 +1148,18 @@ const styles = StyleSheet.create({
   },
   backButton: {
     padding: 8,
+  },
+  loaderContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+  loaderText: {
+    marginTop: 10,
+    color: '#38C472',
+    fontFamily: 'Inter500',
+    fontSize: 16,
   },
   headerTitle: {
     fontSize: 14,
@@ -781,7 +1225,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginTop: 20,
     paddingVertical: 8,
-    gap:2,
+    gap: 2,
     width: '30%',
     marginBottom: 10,
     borderRadius: 8,
@@ -829,7 +1273,7 @@ const styles = StyleSheet.create({
     padding: 2,
   },
   expandedContent: {
-    backgroundColor: "rgba(232, 232, 232, 0.25);",
+    backgroundColor: "rgba(232, 232, 232, 0.25)",
     padding: 16,
     marginBottom: 12,
     borderRadius: 12,
@@ -840,8 +1284,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    // paddingVertical: 8,
-
     paddingBottom: 12,
   },
   foodItemLeft: {
@@ -871,13 +1313,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    // paddingVertical: 10,
-
     paddingTop: 20,
-    // paddingHorizontal: 16,
-
-    // backgroundColor: "#FFFFFF",
-
     borderTopWidth: 0.5,
     borderTopColor: "#E6E6E6",
   },
@@ -902,26 +1338,27 @@ const styles = StyleSheet.create({
     fontFamily: "Inter400",
     color: "#7B7B7B",
   },
-  analysisContainer: {
-    marginTop: 40,
-    paddingHorizontal: 16,
+  // Timeline styles - matching weight.tsx
+  timelineContainer: {
+    marginTop: 25,
+    marginHorizontal: 16,
   },
-  analysisHeader: {
+  timelineHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: 10,
   },
-  analysisTab: {
+  timelineIconContainer: {
     flexDirection: "row",
     alignItems: "center",
   },
-  analysisTabText: {
-    marginLeft: 6,
+  timelineTitle: {
     fontSize: 14,
-    color: "#333",
+    fontFamily: "Inter500",
     letterSpacing: 0.28,
-    fontFamily: "Inter400",
+    marginLeft: 5,
+    color: "#373737",
   },
   periodSelector: {
     flexDirection: "row",
@@ -941,33 +1378,12 @@ const styles = StyleSheet.create({
     fontFamily: "Inter500",
     color: "#38C472",
   },
-  chartTitle: {
-    fontSize: 16,
-    fontFamily: "Inter600",
-    color: "#373737",
-  },
-  barContainer: {
-    width: BAR_WIDTH,
-    marginRight: SPACING,
-    alignItems: "center",
-    height: "100%",
-    justifyContent: "flex-end",
-  },
-  barsContainer: {
+  // Chart styles - matching weight.tsx
+  customChartContainer: {
     flexDirection: "row",
-    alignItems: "flex-end",
-    height: "100%",
-    paddingLeft: SPACING,
-  },
-  barWrapper: {
-    width: BAR_WIDTH,
-    borderRadius: 0,
-    overflow: "hidden",
-  },
-  bar: {
-    width: "100%",
-    borderTopLeftRadius: 5,
-    borderTopRightRadius: 5,
+    marginTop: 10,
+    height: MAX_HEIGHT + 40, // Add extra height for labels
+    marginRight: 16,
   },
   yAxisContainer: {
     width: 40,
@@ -975,13 +1391,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "flex-end",
     paddingRight: 5,
-  },
-  customChartContainer: {
-    flexDirection: "row",
-    marginTop: 10,
-    height: MAX_HEIGHT + 40, // Add extra height for labels
-    marginRight: 16,
-    // marginBottom: 30,
   },
   yAxisLabel: {
     color: "#AAAAAA",
@@ -1000,12 +1409,62 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: "#EEEEEE",
   },
+  barsContainer: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    height: "100%",
+    paddingLeft: SPACING,
+  },
+  todayBarsContainer: {
+    justifyContent: "center",
+    paddingLeft: 0,
+  },
+  barContainer: {
+    width: BAR_WIDTH,
+    marginRight: SPACING,
+    alignItems: "center",
+    height: "100%",
+    justifyContent: "flex-end",
+  },
+  barWrapper: {
+    width: BAR_WIDTH,
+    borderRadius: 0,
+    overflow: "hidden",
+  },
+  bar: {
+    width: "100%",
+    borderTopLeftRadius: 5,
+    borderTopRightRadius: 5,
+  },
+  barLabelContainer: {
+    position: "absolute",
+    bottom: -25,
+    alignItems: "center",
+  },
+  barLabel: {
+    fontSize: 14,
+    color: "#888888",
+    fontFamily: "Inter400",
+  },
   tooltip: {
     position: "absolute",
     top: -60, // Positioned above the bar
     alignItems: "center",
     width: 120,
     zIndex: 10, // Ensure tooltip is above other elements
+  },
+  tooltipContent: {
+    backgroundColor: "white",
+    borderRadius: 10,
+    padding: 10,
+    alignItems: "flex-start",
+    borderWidth: 1,
+    borderColor: "#38C472",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   tooltipArrow: {
     width: 0,
@@ -1034,28 +1493,54 @@ const styles = StyleSheet.create({
     color: "#434343",
     fontFamily: "Inter500",
   },
-  tooltipContent: {
-    backgroundColor: "white",
-    borderRadius: 10,
-    padding: 10,
-    alignItems: "flex-start",
-    borderWidth: 1,
-    borderColor: "#38C472",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
   },
-  barLabelContainer: {
+  loadingText: {
+    marginTop: 10,
+    color: '#38C472',
+    fontFamily: 'Inter500',
+    fontSize: 14,
+  },
+  noDataContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    height: MAX_HEIGHT,
+  },
+  noDataText: {
+    color: "#999",
+    fontFamily: "Inter400",
+    fontSize: 14,
+  },
+  dateRangeContainer: {
+    alignItems: "center",
+    width: 20,
+    height: "100%",
+  },
+  dateRangeLabel: {
     position: "absolute",
     bottom: -25,
-    alignItems: "center",
-  },
-  barLabel: {
-    fontSize: 14,
+    fontSize: 12,
     color: "#888888",
-    fontFamily: "Inter400",
+    fontFamily: "Inter500",
+  },
+  dateLabelsContainer: {
+    position: "absolute",
+    bottom: -25,
+    left: 0,
+    right: 0,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingHorizontal: 15,
+  },
+  monthDateLabel: {
+    fontSize: 12,
+    color: "#888888",
+    fontFamily: "Inter500",
   },
   bottomContainer: {
     flexDirection: "row",
@@ -1088,18 +1573,16 @@ const styles = StyleSheet.create({
     borderColor: "#60D08E",
     paddingVertical: 10,
     borderRadius: 20,
-
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.25,
     shadowRadius: 4,
-    boxShadow: "0px 0px 4px 0px rgba(0, 0, 0, 0.25) inset, 0px 0px 2.6px 0px rgba(0, 0, 0, 0.32);",
   },
   reminderButtonText: {
     color: "#FEF8FD",
     marginLeft: 8,
     fontSize: 12,
-    maxWidth:130,
+    maxWidth: 130,
     fontFamily: "Inter500",
   },
   popupMenuOverlay: {
@@ -1145,5 +1628,44 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: "Inter400",
   },
+  // Dropdown styles - matching weight.tsx
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.1)",
+  },
+  dropdownContainer: {
+    position: "absolute",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#A3E4BE",
+    width: 160,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  dropdownItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(56, 196, 114, 0.1)",
+  },
+  dropdownItemSelected: {
+    backgroundColor: "#EBF9F1",
+  },
+  dropdownItemText: {
+    color: "#373737",
+    fontSize: 14,
+    fontFamily: "Inter400",
+  },
+  dropdownItemTextSelected: {
+    color: "#38C472",
+    fontFamily: "Inter600",
+  },
 })
-

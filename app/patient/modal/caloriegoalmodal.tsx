@@ -1,67 +1,56 @@
-import React, { useState } from "react";
-import { useTranslation } from "react-i18next";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Modal,
-  TextInput,
-} from "react-native";
+// app/patient/modal/caloriegoalmodal.tsx
+import React, { useState } from 'react';
+import { Modal, View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 interface CalorieGoalModalProps {
   visible: boolean;
   onClose: () => void;
-  onSave: (calories: string) => void;
+  onSave: (goal: string) => void;
 }
 
 const CalorieGoalModal = ({ visible, onClose, onSave }: CalorieGoalModalProps) => {
-  const [calories, setCalories] = useState("");
-
-  const {t} = useTranslation();
-
+  const [calorieGoal, setCalorieGoal] = useState('');
+  const { t } = useTranslation();
+  
   const handleSave = () => {
-    onSave(calories);
-    setCalories("");
+    if (calorieGoal.trim() === '') return;
+    onSave(calorieGoal);
+    setCalorieGoal(''); // Reset the input
   };
-
-  const handleCancel = () => {
-    setCalories("");
-    onClose();
-  };
-
+  
   return (
     <Modal
-      transparent={true}
       visible={visible}
+      transparent
       animationType="fade"
       onRequestClose={onClose}
     >
       <View style={styles.modalOverlay}>
-        <View style={styles.modalContainer}>
-          <Text style={styles.modalTitle}>{t('meals.setNewGoal')}</Text>
+        <View style={styles.modalContent}>
+          <Text style={styles.modalTitle}>{t('meals.setCalorieGoal')}</Text>
           
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={styles.input}
-              value={calories}
-              onChangeText={setCalories}
-              keyboardType="numeric"
-              placeholder="-- Cal"
-              placeholderTextColor="#ccc"
-            />
-          </View>
+          <TextInput
+            style={styles.input}
+            placeholder={t('meals.enterCalorieGoal')}
+            placeholderTextColor="#999"
+            keyboardType="numeric"
+            value={calorieGoal}
+            onChangeText={setCalorieGoal}
+            autoFocus
+          />
           
           <View style={styles.buttonContainer}>
-            <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
-              <Text style={styles.cancelButtonText}>{t('cancel')}</Text>
+            <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
+              <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
             </TouchableOpacity>
             
             <TouchableOpacity 
-              style={styles.saveButton}
+              style={[styles.saveButton, !calorieGoal.trim() && styles.saveButtonDisabled]} 
               onPress={handleSave}
+              disabled={!calorieGoal.trim()}
             >
-              <Text style={styles.saveButtonText} numberOfLines={1}>{t('meals.saveContinue')}</Text>
+              <Text style={styles.saveButtonText}>{t('common.save')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -73,80 +62,67 @@ const CalorieGoalModal = ({ visible, onClose, onSave }: CalorieGoalModalProps) =
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  modalContainer: {
-    width: "80%",
-    backgroundColor: "white",
-    borderRadius: 15,
+  modalContent: {
+    width: '80%',
+    backgroundColor: 'white',
+    borderRadius: 10,
     padding: 20,
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
-    shadowRadius: 4,
+    shadowRadius: 3.84,
     elevation: 5,
   },
   modalTitle: {
     fontSize: 18,
-    fontFamily: "Inter600",
-    color: "#38C472",
+    fontFamily: 'Inter600',
+    color: '#38C472',
     marginBottom: 20,
-  },
-  inputContainer: {
-    width: "60%",
-    marginBottom: 20,
+    textAlign: 'center',
   },
   input: {
     borderWidth: 1,
-    borderColor: "#A3E4BE",
-    borderRadius: 10,
-    padding: 10,
+    borderColor: '#E6E6E6',
+    borderRadius: 8,
+    padding: 12,
     fontSize: 16,
-    textAlign: "center",
-    fontFamily: "Inter500",
+    fontFamily: 'Inter400',
+    marginBottom: 20,
   },
   buttonContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    width: "100%",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
   cancelButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
+    flex: 1,
+    padding: 12,
+    borderRadius: 8,
+    marginRight: 10,
+    backgroundColor: '#F5F5F5',
   },
   cancelButtonText: {
-    color: "#7B7B7B",
-    fontSize: 14,
-    fontFamily: "Inter500",
+    color: '#666',
+    textAlign: 'center',
+    fontFamily: 'Inter500',
   },
   saveButton: {
-    backgroundColor: "#38C472",
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 32,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 0,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
-    borderWidth: 1,
-    borderColor: "#A3E4BE",
+    flex: 1,
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: '#38C472',
+  },
+  saveButtonDisabled: {
+    backgroundColor: '#A3E4BE',
   },
   saveButtonText: {
-    color: "white",
-    fontSize: 14,
-    maxWidth:120,
-    fontFamily: "Inter500",
-  },
+    color: 'white',
+    textAlign: 'center',
+    fontFamily: 'Inter500',
+  }
 });
 
 export default CalorieGoalModal;

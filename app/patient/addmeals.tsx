@@ -18,6 +18,8 @@ import { AntDesign, Feather, Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams, router } from "expo-router";
 import { useTranslation } from "react-i18next";
 import FoodClassificationModal from "./modal/foodClassificationModal";
+import { useMealStore, FoodItem as MealStoreFoodItem } from "@/zustandStore/mealStore";
+import { useSelector } from "react-redux";
 
 // Enable LayoutAnimation for Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -26,7 +28,6 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 
 interface ToggleSelectionItem {
   fdcId: number;
-  // Include other properties that might be used from the item
   name?: string;
   description?: string;
   servingSize?: number;
@@ -46,7 +47,6 @@ interface SelectedFood {
   classification: 'good' | 'bad';
 }
 
-
 // Define types for the API response
 interface FoodNutrient {
   nutrientId: number;
@@ -65,22 +65,19 @@ interface FoodItem {
   servingSizeUnit?: string;
   foodNutrients: FoodNutrient[];
   foodCategory?: string;
-  yukaScore?: {
-    nutriscore_score: number;
-    nutriscore_grade: string;
-    components: {
-      negative: {
-        saturated_fat: number | null;
-      };
-      positive: {
-        protein: number | null;
-        carbohydrate: number | null;
-      };
-    };
-  };
   carbs?: number;
   fat?: number;
   protein?: number;
+  yukaScore?: {
+    rawScore: number;
+    grade: string;
+    energy: number;
+    saturatedFat: string;
+    sugars: string;
+    sodium: number;
+    fiber: string;
+    protein: string;
+  };
 }
 
 interface FoodApiResponse {
@@ -90,69 +87,7 @@ interface FoodApiResponse {
 
 const API_KEY = "snfzY15agSASht2DEL9fJF5HhAxRntErPycnZvYq";
 
-type ScoreLabel = {
-  label: string;
-  color: string; // hex or color code
-};
-
-interface NutriscoreComponent {
-  id: string;
-  value: number;
-}
-
-interface NutriscoreData {
-  score: number;
-  grade: string;
-  components: {
-    negative: NutriscoreComponent[];
-    positive: NutriscoreComponent[];
-  };
-}
-
-interface Nutriments {
-  proteins_100g?: number;
-  carbohydrates_100g?: number;
-  [key: string]: any;
-}
-
-interface Product {
-  nutriscore_data: NutriscoreData;
-  nutriments: Nutriments;
-  nutriscore_score?: number;
-  nutriscore_grade?: string;
-  yukaScore?: {
-    nutriscore_score: number;
-    nutriscore_grade: string;
-    components: {
-      negative: {
-        saturated_fat: number | null;
-      };
-      positive: {
-        protein: number | null;
-        carbohydrate: number | null;
-      };
-    };
-  };
-}
-
-// const getScoreLabel = (score: number): ScoreLabel => {
-//   if (score >= 30) return { label: "Bad", color: "#FF000099" };       // red
-//   else if (score <= 10) return { label: "Poor", color: "#E79E00A6" }; // orange
-//   else if (score <= 15) return { label: "Average", color: "#E9C46A" }; // yellow
-//   else if (score <= 20) return { label: "Good", color: "#22C8009E" };  // green
-//   else return { label: "Good", color: "#22C8009E" };             // dark green
-// };
-
-const getScoreLabel = (score: number): ScoreLabel => {
-  if (score >= 90) return { label: "Excellent", color: "#22C8009E" };       // dark green
-  else if (score >= 70) return { label: "Good", color: "#22C8009E" };        // lighter green
-  else if (score >= 50) return { label: "Moderate", color: "#E9C46A" };    // yellow
-  else if (score >= 30) return { label: "Poor", color: "#E79E00A6" };        // orange
-  else return { label: "Very Poor", color: "#FF000099" };                    // red
-};
-
 const addmeals = () => {
-
   const {t} = useTranslation();
   const router = useRouter();
   const params = useLocalSearchParams();
@@ -166,271 +101,124 @@ const addmeals = () => {
   const [isSearchMode, setIsSearchMode] = useState(false);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const animatedValues = useRef<{ [key: number]: Animated.Value }>({});
-  const animatedHeights = useRef<{ [key: number]: Animated.Value }>({});
-  const detailsHeights = useRef<{ [key: number]: number }>({});
-
-
+  const user = useSelector((state: any) => state.user);
+  const { addFoodItem } = useMealStore();
+  const [foodClassifications, setFoodClassifications] = useState(new Map());
+  const [classificationModalVisible, setClassificationModalVisible] = useState(false);
+  const [selectedFoodForClassification, setSelectedFoodForClassification] = useState<ToggleSelectionItem | null>(null);
+  
   // Initial API call to get some default foods
   useEffect(() => {
     searchFood("common foods");
   }, []);
 
-  const extractNutriScoreInfo = (product: Product) => {
-      const components = product.yukaScore?.components;
-
-      const saturatedFat = components?.negative?.saturated_fat ?? 0;
-
-      // Access protein directly from the positive component
-      const protein = components?.positive?.protein ?? product.nutriments?.proteins_100g ?? 0;
-
-      const carbohydrate = components?.positive?.carbohydrate ?? product.nutriments?.carbohydrates_100g ?? 0;
-
-      const nutriscoreScore = product.yukaScore?.nutriscore_score ?? product.nutriscore_score ?? 0;
-      const nutriscoreGrade = product.yukaScore?.nutriscore_grade ?? product.nutriscore_grade ?? 'unknown';
-
-  return {
-    nutriscore_score: nutriscoreScore,
-    nutriscore_grade: nutriscoreGrade,
-    components: {
-      negative: {
-        saturated_fat: saturatedFat,
-      },
-      positive: {
-        protein,
-        carbohydrate,
-      }
+  // Handle item selection
+  const toggleSelection = (item: ToggleSelectionItem): void => {
+    const newSelected = new Set(selectedItems);
+    if (selectedItems.has(item.fdcId)) {
+      // If item is already selected, remove it
+      newSelected.delete(item.fdcId);
+      setSelectedItems(newSelected);
+    } else {
+      // If item is not selected, show classification modal first
+      setSelectedFoodForClassification(item);
+      setClassificationModalVisible(true);
     }
   };
-};
 
 
-  const [classificationModalVisible, setClassificationModalVisible] = useState(false);
-  const [selectedFoodForClassification, setSelectedFoodForClassification] = useState<ToggleSelectionItem | null>(null);
-
-
-// Replace your existing toggleSelection function with this updated version
-const toggleSelection = (item: ToggleSelectionItem): void => {
-  const newSelected = new Set(selectedItems);
-  if (selectedItems.has(item.fdcId)) {
-    // If item is already selected, remove it
-    newSelected.delete(item.fdcId);
-    setSelectedItems(newSelected);
-  } else {
-    // If item is not selected, show classification modal first
-    setSelectedFoodForClassification(item);
-    setClassificationModalVisible(true);
-  }
-};
-
-  const [foodClassifications, setFoodClassifications] = useState(new Map());
-
-const handleFoodClassification = (classification: 'good' | 'bad'): void => {
+  const handleFoodClassification = (classification: 'good' | 'bad'): void => {
     if (!selectedFoodForClassification) return;
-
+  
     const item: ToggleSelectionItem = selectedFoodForClassification;
     const newSelected: Set<number> = new Set(selectedItems);
     newSelected.add(item.fdcId);
     setSelectedItems(newSelected);
-
+  
     // Store the classification
     const newClassifications = new Map(foodClassifications);
     newClassifications.set(item.fdcId, classification);
     setFoodClassifications(newClassifications);
-
-    console.log(classification);
-    // Navigate back with the selected food
-    if (mealType) {
-      const selectedFood = {
-        name: item.name || item.description,
-        portion: `${item.servingSize} ${item.servingSizeUnit}`,
-        calories: item.calories || 0,
-        classification: classification
-      };
-
-      router.replace({
-        pathname: "/patient/meals",
-        params: {
-          mealType,
-          selectedFood: JSON.stringify(selectedFood),
-        },
-      });
+  
+    // Create food item for the store
+    const storeFood: MealStoreFoodItem = {
+      name: item.name || item.description || "",
+      portion: `${item.servingSize} ${item.servingSizeUnit}`,
+      calories: item.calories || 0,
+      classification: classification === 'good' ? 'GOOD' : 'BAD'
+    };
+  
+    // Convert UI meal type to API meal type
+    const apiMealType = mealType === "meals.mealTitles.Breakfast" ? "BREAKFAST" :
+                       mealType === "meals.mealTitles.Lunch" ? "LUNCH" :
+                       mealType === "meals.mealTitles.Dinner" ? "DINNER" :
+                       mealType === "meals.mealTitles.Snacks" ? "SNACK" : 
+                       mealType.toUpperCase(); // Fallback to uppercase version
+  
+    console.log(`Converting meal type from "${mealType}" to "${apiMealType}"`);
+  
+    // If user is logged in, add the food directly via the store
+    if (user?.user_id) {
+      // Use the converted apiMealType instead of the raw mealType
+      addFoodItem(user.user_id, apiMealType, storeFood);
     }
-
+  
+    router.back();
+  
     setClassificationModalVisible(false);
     setSelectedFoodForClassification(null);
-};
+  };
 
-// Add this function to handle modal close without classification
-const handleModalClose = () => {
-  setClassificationModalVisible(false);
-  setSelectedFoodForClassification(null);
-};
+  // Handle modal close without classification
+  const handleModalClose = () => {
+    setClassificationModalVisible(false);
+    setSelectedFoodForClassification(null);
+  };
 
+  // Search food using USDA API only
   const searchFood = async (input: string) => {
-  if (!input.trim()) {
-    setIsSearchMode(false);
-    setDisplayData([]);
-    setError(null);
-    return;
-  }
-
-  setLoading(true);
-  setError(null);
-  setIsSearchMode(true);
-
-  try {
-    const isUPC = /^\d{8,14}$/.test(input.trim()); // simple regex to detect UPC code
-
-    if (isUPC) {
-      // Treat input as UPC, fetch OpenFoodFacts product by UPC
-      const offResponse = await fetch(
-        `https://world.openfoodfacts.org/api/v0/product/${encodeURIComponent(input)}.json`
-      );
-
-      if (!offResponse.ok) {
-        throw new Error(`OpenFoodFacts API failed with status ${offResponse.status}`);
-      }
-
-      const offData = await offResponse.json();
-
-      console.log(offData);
-
-      if (offData.status === 1 && offData.product) {
-          const product = offData.product;
-          // Map OpenFoodFacts product to FoodItem
-          const mappedProduct = {
-            fdcId: -Number.parseInt(product.code),
-            description: product.product_name || product.generic_name || "Unknown",
-            name: product.product_name || product.generic_name || "Unknown",
-            servingSize:Number.parseFloat(product.serving_size),
-            servingSizeUnit: product.serving_size_unit || "g",
-            foodCategory: product.categories,
-            yukaScore: {
-              nutriscore_score: product.nutriscore_score,
-            },
-            calories: product.nutriments["energy-kcal"].toFixed(1) ?? 0,
-            // Extract from product.nutriments, fallback to 0
-            carbs: product.nutriments?.carbohydrates_100g.toFixed(1) ?? 0,
-            fat: product.nutriments?.fat_100g.toFixed(1) ?? 0,
-            protein: product.nutriments?.proteins_100g.toFixed(1) ?? 0,
-          };
-
-          console.log(mappedProduct);
-
-          if (product.nutriscore_data) {
-            const nutriInfo = extractNutriScoreInfo(product);
-            mappedProduct.yukaScore = nutriInfo;
-
-            mappedProduct.carbs = nutriInfo.components.positive.carbohydrate;
-            mappedProduct.fat = nutriInfo.components.negative.saturated_fat;
-            mappedProduct.protein = nutriInfo.components.positive.protein;
-          }
-
-
-        console.log(product.nutriscore_data)
-
-        setSearchResults([mappedProduct]);
-        setDisplayData([mappedProduct]);
-        setLoading(false);
-        return;
-      }
-
-      // If no product found on OpenFoodFacts by UPC:
-      setError("No product found on OpenFoodFacts for this UPC");
-      setSearchResults([]);
+    if (!input.trim()) {
+      setIsSearchMode(false);
       setDisplayData([]);
-      setLoading(false);
+      setError(null);
       return;
     }
 
-    // If input is not a UPC, fallback to USDA search by product name
-    const usdaResponse = await fetch(
-      `https://api.nal.usda.gov/fdc/v1/foods/search?query=${encodeURIComponent(input)}&api_key=${API_KEY}`,
-      { headers: { accept: "application/json" } }
-    );
+    setLoading(true);
+    setError(null);
+    setIsSearchMode(true);
 
-    if (!usdaResponse.ok) {
-      throw new Error(`USDA API request failed with status ${usdaResponse.status}`);
-    }
+    try {
+      // Search USDA database by product name
+      const usdaResponse = await fetch(
+        `https://api.nal.usda.gov/fdc/v1/foods/search?query=${encodeURIComponent(input)}&api_key=${API_KEY}`,
+        { headers: { accept: "application/json" } }
+      );
 
-    const usdaData = await usdaResponse.json();
+      if (!usdaResponse.ok) {
+        throw new Error(`USDA API request failed with status ${usdaResponse.status}`);
+      }
 
-    if (usdaData && Array.isArray(usdaData.foods) && usdaData.foods.length > 0) {
-      const processedResults = processSearchResults(usdaData.foods);
-      setSearchResults(processedResults);
-      setDisplayData(processedResults);
-    } else {
-      setError("No results found in USDA for this product name");
+      const usdaData = await usdaResponse.json();
+
+      if (usdaData && Array.isArray(usdaData.foods) && usdaData.foods.length > 0) {
+        const processedResults = processSearchResults(usdaData.foods);
+        setSearchResults(processedResults);
+        setDisplayData(processedResults);
+      } else {
+        setError("No results found in USDA for this product name");
+        setSearchResults([]);
+        setDisplayData([]);
+      }
+    } catch (error) {
+      console.error("Error searching for food:", error);
       setSearchResults([]);
       setDisplayData([]);
+      setError(`Error searching for food: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setLoading(false);
     }
-  } catch (error) {
-    console.error("Error searching for food:", error);
-    setSearchResults([]);
-    setDisplayData([]);
-    setError(`Error searching for food: ${error instanceof Error ? error.message : String(error)}`);
-  } finally {
-    setLoading(false);
-  }
-};
-
-
-
-
-
-  // const searchFood = async (query: string) => {
-  //   if (!query.trim()) {
-  //     setIsSearchMode(false);
-  //     setDisplayData([]);
-  //     setError(null);
-  //     return;
-  //   }
-
-  //   setLoading(true);
-  //   setError(null);
-  //   setIsSearchMode(true);
-
-  //   try {
-  //     const response = await fetch(
-  //       `https://api.nal.usda.gov/fdc/v1/foods/search?query=${encodeURIComponent(
-  //         query
-  //       )}&api_key=${API_KEY}`,
-  //       {
-  //         headers: {
-  //           accept: "application/json",
-  //         },
-  //       }
-  //     );
-
-  //     if (!response.ok) {
-  //       throw new Error(`API request failed with status ${response.status}`);
-  //     }
-
-  //     const data = await response.json();
-  //     console.log(data.foods);
-
-  //     if (data && Array.isArray(data.foods)) {
-  //       const processedResults = processSearchResults(data.foods);
-  //       setSearchResults(processedResults);
-  //       setDisplayData(processedResults);
-  //     } else {
-  //       setSearchResults([]);
-  //       setDisplayData([]);
-  //       setError("No results found");
-  //     }
-  //   } catch (error) {
-  //     console.error("Error searching for food:", error);
-  //     setSearchResults([]);
-  //     setDisplayData([]);
-  //     setError(
-  //       `Error searching for food: ${
-  //         error instanceof Error ? error.message : String(error)
-  //       }`
-  //     );
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
+  };
 
   const processSearchResults = (foods: FoodItem[]) => {
     const uniqueFoods = new Map();
@@ -441,24 +229,27 @@ const handleModalClose = () => {
         // Extract a cleaner name from the description
         const cleanName = getCleanName(food.description);
         const score = calculateScore(food);
+        const calories = getNutrientValue(food, ["energy", "calories"]);
 
         uniqueFoods.set(normalizedName, {
           ...food,
           // Add a name field derived from description
           name: cleanName,
           // Add default serving size if not present
-          servingSize:
-            food.servingSize || getDefaultServingSize(food.description),
-          servingSizeUnit:
-            food.servingSizeUnit || getDefaultServingUnit(food.description),
-            category: food.foodCategory || "Unknown",
-            yukaScore: score,
-            expanded: false,
+          servingSize: food.servingSize || getDefaultServingSize(food.description),
+          servingSizeUnit: food.servingSizeUnit || getDefaultServingUnit(food.description),
+          category: food.foodCategory || "Unknown",
+          yukaScore: score,
+          calories: calories,
+          carbs: getNutrientValue(food, ["carbohydrate", "carbs"]).toFixed(1),
+          fat: getNutrientValue(food, ["fat", "total fat"]).toFixed(1),
+          protein: getNutrientValue(food, ["protein"]).toFixed(1),
+          expanded: false,
         });
       }
     });
 
-    return Array.from(uniqueFoods.values()).slice(0, 50); // Return top 10 results
+    return Array.from(uniqueFoods.values()).slice(0, 50);
   };
 
   // Function to extract a cleaner name from the description
@@ -467,7 +258,7 @@ const handleModalClose = () => {
     let name = description;
 
     // Remove text in parentheses
-    name = name.replace(/$$[^)]*$$/g, "");
+    name = name.replace(/\([^)]*\)/g, "");
 
     // Remove text after comma, colon, or dash
     name = name.split(/[,:-]/)[0];
@@ -521,147 +312,64 @@ const handleModalClose = () => {
     return "serving";
   };
 
-  const getCalories = (foodItem: any) => {
-    if (foodItem.calories) {
-      return foodItem.calories;
-    }
-
-    if (foodItem.foodNutrients) {
-      const calories = foodItem.foodNutrients.find(
-        (nutrient: FoodNutrient) =>
-          (nutrient.nutrientName &&
-            nutrient.nutrientName.toLowerCase().includes("energy")) ||
-          (nutrient.nutrient &&
-            nutrient.nutrient.name &&
-            nutrient.nutrient.name.toLowerCase().includes("energy"))
-      );
-      return calories ? Math.round(calories.value) : 0;
-    }
-
-    return 0;
-  };
-
-  const getMacronutrient = (foodItem: any, target: string) => {
-    if (foodItem.foodNutrients) {
-      const nutrient = foodItem.foodNutrients.find(
-        (n: FoodNutrient) =>
-          (n.nutrientName &&
-            n.nutrientName.toLowerCase().includes(target.toLowerCase())) ||
-          (n.nutrient &&
-            n.nutrient.name &&
-            n.nutrient.name.toLowerCase().includes(target.toLowerCase()))
-      );
-      return nutrient ? Math.round(nutrient.value) : 0;
-    }
-    return 0;
-  };
-
-  const getProtein = (foodItem: any) => getMacronutrient(foodItem, "protein");
-  const getCarbs = (foodItem: any) =>
-    getMacronutrient(foodItem, "carbohydrate");
-  const getFat = (foodItem: any) => getMacronutrient(foodItem, "total lipid");
-
-  // const toggleSelection = (item: any) => {
-  //   const newSelected = new Set(selectedItems);
-  //   if (selectedItems.has(item.fdcId)) {
-  //     newSelected.delete(item.fdcId);
-  //     setSelectedItems(newSelected);
-  //   } else {
-  //     newSelected.add(item.fdcId);
-  //     setSelectedItems(newSelected);
-
-  //     if (mealType) {
-  //       // Prepare the food item to send back
-  //       const calories = getCalories(item);
-  //       const selectedFood = {
-  //         name: item.name || item.description,
-  //         portion: `${item.servingSize} ${item.servingSizeUnit}`,
-  //         calories: calories,
-  //       };
-
-  //       // Navigate back to meals screen with the selected food
-  //       router.push({
-  //         pathname: "/patient/meals",
-  //         params: {
-  //           mealType,
-  //           selectedFood: JSON.stringify(selectedFood),
-  //         },
-  //       });
-  //     }
-  //   }
-  // };
-
   const getNutrientValue = (foodItem: FoodItem, nutrientNames: string[]) => {
-  if (!foodItem.foodNutrients) return 0;
-  for (const name of nutrientNames) {
-    const found = foodItem.foodNutrients.find(
-      (n) =>
-        (n.nutrientName && n.nutrientName.toLowerCase().includes(name)) ||
-        (n.nutrient && n.nutrient.name.toLowerCase().includes(name))
-    );
-    if (found && found.value != null) {
-      return found.value;
+    if (!foodItem.foodNutrients) return 0;
+    for (const name of nutrientNames) {
+      const found = foodItem.foodNutrients.find(
+        (n) =>
+          (n.nutrientName && n.nutrientName.toLowerCase().includes(name)) ||
+          (n.nutrient && n.nutrient.name.toLowerCase().includes(name))
+      );
+      if (found && found.value != null) {
+        return found.value;
+      }
     }
-  }
-  return 0;
-};
-
-const calculateScore = (foodItem: FoodItem) => {
-  const servingSize = foodItem.servingSize || 100; // default 100g if missing
-  const factor = 100 / servingSize; // normalize to per 100g
-
-  // Extract nutrient values normalized per 100g
-  const energy = getNutrientValue(foodItem, ["energy", "calories"]) * factor; // kcal
-  const saturatedFat = getNutrientValue(foodItem, ["saturated fat"]) * factor; // g
-  const sugars = getNutrientValue(foodItem, ["sugars", "sugar"]) * factor; // g
-  const sodium = getNutrientValue(foodItem, ["sodium"]) * factor; // mg
-  const fiber = getNutrientValue(foodItem, ["fiber"]) * factor; // g
-  const protein = getNutrientValue(foodItem, ["protein"]) * factor; // g
-
-  // Negative points (penalties)
-  const negativePoints =
-    Math.min(Math.floor(energy / 100), 10) +
-    Math.min(Math.floor(saturatedFat), 10) +
-    Math.min(Math.floor(sugars / 4.5), 10) +
-    Math.min(Math.floor(sodium / 90), 10);
-
-  // Positive points (benefits)
-  const positivePoints =
-    Math.min(Math.floor(fiber / 0.9), 5) + Math.min(Math.floor(protein / 1.6), 5);
-
-  // Raw score
-  const rawScore = negativePoints - positivePoints;
-
-  // console.log("RawScore", rawScore);
-
-  // Map rawScore to grade A-E
-  let grade = "E";
-  if (rawScore <= 0) grade = "A";
-  else if (rawScore <= 5) grade = "B";
-  else if (rawScore <= 10) grade = "C";
-  else if (rawScore <= 15) grade = "D";
-
-  // console.log("Grade", grade);
-
-  return {
-    rawScore,
-    grade,
-    energy: Math.round(energy),
-    saturatedFat: saturatedFat.toFixed(1),
-    sugars: sugars.toFixed(1),
-    sodium: Math.round(sodium),
-    fiber: fiber.toFixed(1),
-    protein: protein.toFixed(1),
+    return 0;
   };
-};
 
+  const calculateScore = (foodItem: FoodItem) => {
+    const servingSize = foodItem.servingSize || 100; // default 100g if missing
+    const factor = 100 / servingSize; // normalize to per 100g
 
+    // Extract nutrient values normalized per 100g
+    const energy = getNutrientValue(foodItem, ["energy", "calories"]) * factor; // kcal
+    const saturatedFat = getNutrientValue(foodItem, ["saturated fat"]) * factor; // g
+    const sugars = getNutrientValue(foodItem, ["sugars", "sugar"]) * factor; // g
+    const sodium = getNutrientValue(foodItem, ["sodium"]) * factor; // mg
+    const fiber = getNutrientValue(foodItem, ["fiber"]) * factor; // g
+    const protein = getNutrientValue(foodItem, ["protein"]) * factor; // g
 
-  const getAnimatedValue = (id: number) => {
-    if (!animatedValues.current[id]) {
-      animatedValues.current[id] = new Animated.Value(expandedId === id ? 1 : 0);
-    }
-    return animatedValues.current[id];
+    // Negative points (penalties)
+    const negativePoints =
+      Math.min(Math.floor(energy / 100), 10) +
+      Math.min(Math.floor(saturatedFat), 10) +
+      Math.min(Math.floor(sugars / 4.5), 10) +
+      Math.min(Math.floor(sodium / 90), 10);
+
+    // Positive points (benefits)
+    const positivePoints =
+      Math.min(Math.floor(fiber / 0.9), 5) + Math.min(Math.floor(protein / 1.6), 5);
+
+    // Raw score
+    const rawScore = negativePoints - positivePoints;
+
+    // Map rawScore to grade A-E
+    let grade = "E";
+    if (rawScore <= 0) grade = "A";
+    else if (rawScore <= 5) grade = "B";
+    else if (rawScore <= 10) grade = "C";
+    else if (rawScore <= 15) grade = "D";
+
+    return {
+      rawScore,
+      grade,
+      energy: Math.round(energy),
+      saturatedFat: saturatedFat.toFixed(1),
+      sugars: sugars.toFixed(1),
+      sodium: Math.round(sodium),
+      fiber: fiber.toFixed(1),
+      protein: protein.toFixed(1),
+    };
   };
 
   const toggleExpanded = (id: number) => {
@@ -685,207 +393,67 @@ const calculateScore = (foodItem: FoodItem) => {
 
   // Update the renderFoodItem to use the new toggleSelection
   const renderFoodItem = ({ item }: { item: any }) => {
-    // const calories = getCalories(item);
     const isSelected = selectedItems.has(item.fdcId);
-    const isExpanded = expandedId === item.fdcId;
-    
-    const animValue = getAnimatedValue(item.fdcId);
-    
-    // Calculate animations
-    const slideIn = animValue.interpolate({
-      inputRange: [0, 1],
-      outputRange: [-20, 0],
-    });
-    
-    const fadeIn = animValue.interpolate({
-      inputRange: [0, 1],
-      outputRange: [0, 1],
-    });
-    
-    const rotateArrow = animValue.interpolate({
-      inputRange: [0, 1],
-      outputRange: ['0deg', '90deg'],
-    });
-
-    const maxHeight = animValue.interpolate({
-      inputRange: [0, 1],
-      outputRange: [0, 150], // Adjust this value based on your content
-    });
-
-    const protein = item.protein ?? 0;
-const carbs = item.carbs ?? 0;
-const fat = item.fat ?? 0;
-const calories = item.calories ?? 0;
-
-
-     const yukaScore = item.yukaScore;
-  const scoreLabel = yukaScore ? getScoreLabel(yukaScore.nutriscore_score) : null;
-
+    const calories = item.calories ?? 0;
 
     return (
       <View style={styles.foodItemContainer}>
-      <TouchableOpacity
-        onPress={() => toggleExpanded(item.fdcId)}
-        style={
-          styles.foodItem}
-        activeOpacity={0.7}
-      >
-        <View style={styles.foodInfo}>
-      <Text style={styles.foodName}>
-        {isSelected && (
-          <>
-            <View style={[
-              styles.classificationDot,
-              {
-                backgroundColor: foodClassifications.get(item.fdcId) === 'bad'
-                  ? 'rgba(252, 49, 48, 1)'  // Red for bad food
-                  : 'rgba(64, 206, 35, 1)'  // Green for good food
-              }
-            ]} />
-            <Text> </Text> {/* Small space after dot */}
-          </>
-        )}
-        {item.name || item.description}
-      </Text>
-      
-      <Text style={styles.servingSize}>
-        <Text>{item.servingSize}</Text> 
-        <Text>{item.servingSizeUnit}</Text>
-      </Text>
-    </View>
-
-        <View style={styles.rightContent}>
-          <Text style={styles.calories}>{calories} Cal</Text>
-          <TouchableOpacity
-            style={styles.addButton}
-            onPress={() => toggleSelection(item)}
-          >
-            {isSelected ? (
-              <View
-                style={{
-                  width: 20,
-                  height: 20,
-                  padding: 2,
-                  justifyContent: "center",
-                  alignItems: "center",
-                  backgroundColor: "#EBF9F1",
-                  borderRadius: 50,
-                }}
-              >
-                <Feather name="check" size={15} color="#38C472" />
-              </View>
-            ) : (
-              <Feather name="plus" size={18} color="#38C472" />
-            )}
-          </TouchableOpacity>
-        </View>
-      </TouchableOpacity>
-      
-      {/* <Animated.View 
-          style={[
-            styles.expandedDetailsContainer,
-            {
-              maxHeight,
-              opacity: fadeIn,
-            }
-          ]}
+        <TouchableOpacity
+          onPress={() => toggleExpanded(item.fdcId)}
+          style={styles.foodItem}
+          activeOpacity={0.7}
         >
-          <Animated.View 
-            style={[
-              styles.expandedDetails,
-              {
-                transform: [{ translateX: slideIn }]
-              }
-            ]}
-          >
-            <View style={styles.macroRow}>
-              <Animated.View 
-                style={[
-                  styles.macroItem, 
-                  { 
-                    opacity: animValue.interpolate({
-                      inputRange: [0, 0.7, 1],
-                      outputRange: [0, 0.5, 1]
-                    }),
-                    transform: [{ 
-                      translateY: animValue.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [10, 0]
-                      }) 
-                    }]
-                  }
-                ]}
-              >
-                <Text style={styles.macroLabel}>{t('meals.macroLabels.Protein')}</Text>
-                <Text style={styles.macroValue}>{protein}g</Text>
-              </Animated.View>
-              
-              <Animated.View 
-                style={[
-                  styles.macroItem, 
-                  { 
-                    opacity: animValue.interpolate({
-                      inputRange: [0, 0.8, 1],
-                      outputRange: [0, 0.5, 1]
-                    }),
-                    transform: [{ 
-                      translateY: animValue.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [10, 0]
-                      }) 
-                    }]
-                  }
-                ]}
-              >
-                <Text style={styles.macroLabel}>{t('meals.macroLabels.Carbs')}</Text>
-                <Text style={styles.macroValue}>{carbs}g</Text>
-              </Animated.View>
-              
-              <Animated.View 
-                style={[
-                  styles.macroItem, 
-                  { 
-                    opacity: animValue.interpolate({
-                      inputRange: [0, 0.9, 1],
-                      outputRange: [0, 0.5, 1]
-                    }),
-                    transform: [{ 
-                      translateY: animValue.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [10, 0]
-                      }) 
-                    }]
-                  }
-                ]}
-              >
-                <Text style={styles.macroLabel}>{t('meals.macroLabels.Fat')}</Text>
-                <Text style={styles.macroValue}>{fat}g</Text>
-              </Animated.View>
-            </View>
+          <View style={styles.foodInfo}>
+            <Text style={styles.foodName}>
+              {isSelected && (
+                <>
+                  <View style={[
+                    styles.classificationDot,
+                    {
+                      backgroundColor: foodClassifications.get(item.fdcId) === 'bad'
+                        ? 'rgba(252, 49, 48, 1)'  // Red for bad food
+                        : 'rgba(64, 206, 35, 1)'  // Green for good food
+                    }
+                  ]} />
+                  <Text> </Text> {/* Small space after dot */}
+                </>
+              )}
+              {item.name || item.description}
+            </Text>
             
-            <Animated.View 
-              style={[
-                styles.categoryContainer,
-                {
-                  opacity: animValue.interpolate({
-                    inputRange: [0, 0.8, 1],
-                    outputRange: [0, 0.5, 1]
-                  }),
-                  transform: [{ 
-                    translateX: animValue.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [15, 0]
-                    }) 
-                  }]
-                }
-              ]}
+            <Text style={styles.servingSize}>
+              <Text>{item.servingSize}</Text> 
+              <Text>{item.servingSizeUnit}</Text>
+            </Text>
+          </View>
+
+          <View style={styles.rightContent}>
+            <Text style={styles.calories}>{calories} Cal</Text>
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={() => toggleSelection(item)}
             >
-              <Text style={styles.categoryLabel}>{t('meals.categoryLabel')}</Text>
-              <Text style={styles.categoryValue}>{item.foodCategory}</Text>
-            </Animated.View>
-          </Animated.View>
-        </Animated.View> */}
-    </View>
+              {isSelected ? (
+                <View
+                  style={{
+                    width: 20,
+                    height: 20,
+                    padding: 2,
+                    justifyContent: "center",
+                    alignItems: "center",
+                    backgroundColor: "#EBF9F1",
+                    borderRadius: 50,
+                  }}
+                >
+                  <Feather name="check" size={15} color="#38C472" />
+                </View>
+              ) : (
+                <Feather name="plus" size={18} color="#38C472" />
+              )}
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </View>
     );
   };
 
@@ -922,9 +490,6 @@ const calories = item.calories ?? 0;
               }
             }}
           />
-          <TouchableOpacity onPress={() => router.push("/patient/upccode")}>
-            <AntDesign name="qrcode" size={18} />
-          </TouchableOpacity>
         </View>
       </View>
 
@@ -972,8 +537,6 @@ const styles = StyleSheet.create({
     height: 56,
   },
   backButton: {
-    // width: 44,
-    // height: 44,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -987,7 +550,6 @@ const styles = StyleSheet.create({
     borderRadius: 50,
     paddingVertical: 12,
     marginLeft: 10,
-    // height: 36,
     paddingHorizontal: 16,
   },
   searchIcon: {
@@ -1013,6 +575,9 @@ const styles = StyleSheet.create({
     marginTop: 20,
     marginBottom: 10,
   },
+  foodItemContainer: {
+    marginBottom: 4,
+  },
   foodItem: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -1037,11 +602,11 @@ const styles = StyleSheet.create({
     color: "#434343",
     marginBottom: 4,
   },
-    classificationDot: {
-      width: 10,
-      height: 10,
-      borderRadius: 5,
-    },
+  classificationDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
   servingSize: {
     fontSize: 12,
     flexDirection:'row',

@@ -22,6 +22,7 @@ import { BadgeProvider } from "@/context/BadgeContext";
 import { BadgeMonitor } from "@/context/BadgeMonitor";
 import '../translation/i18next'
 import { loadSavedLanguage } from "@/translation/i18next";
+import { useMealStore } from "@/zustandStore/mealStore";
 import { setLanguage } from "@/store/languageSlice";
 // Prevent the splash screen from a@/translation/i18nextfore asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -30,7 +31,7 @@ const RootLayoutNav = () => {
   const dispatch = useDispatch();
   const user = useSelector((state: any) => state.user);
   const currentLanguage = useSelector((state: any) => state.language.current)
-
+  const { fetchMeals, fetchCalorieHistory } = useMealStore();
   const router = useRouter();
   const colorScheme = useColorScheme();
   const token = useSelector((state: any) => state.user.token);
@@ -84,6 +85,24 @@ const RootLayoutNav = () => {
     checkToken();
   }, [dispatch]);
   
+  useEffect(() => {
+    const fetchUserMealData = async () => {
+      if (user?.user_id || user?.id) {
+        const userId = user.user_id || user.id;
+        console.log("Fetching meals for user:", userId);
+        
+        try {
+          // Fetch current meals and calorie history
+          await fetchMeals(userId);
+          await fetchCalorieHistory(userId, 'week');
+        } catch (error) {
+          console.error("Error fetching meal data:", error);
+        }
+      }
+    };
+
+    fetchUserMealData();
+  }, [user?.user_id, user?.id, fetchMeals, fetchCalorieHistory]);
 
   // Hide the splash screen once fonts are loaded
   useEffect(() => {
