@@ -68,15 +68,19 @@ interface MealStore extends MealProgress {
   chartData: DataItem[];
   currentTimeRange: string;
   
+  // Add selectedDate to track current viewing date
+  selectedDate: string;
+  
   // Actions
   fetchMeals: (userId: string) => Promise<void>;
   fetchMealsForDate: (userId: string, date: string) => Promise<void>;
-  updateCalorieGoal: (userId: string, goal: number) => Promise<boolean>;
-  addFoodItem: (userId: string, mealType: string, foodItem: FoodItem) => Promise<boolean>;
+  updateCalorieGoal: (userId: string, goal: number, date?: string) => Promise<boolean>;
+  addFoodItem: (userId: string, mealType: string, foodItem: FoodItem, date?: string) => Promise<boolean>;
   deleteFoodItem: (userId: string, mealId: string, foodItemId: string) => Promise<boolean>;
   getFoodQualityRatio: () => { goodRatio: number, badRatio: number };
   resetState: () => void;
   fetchCalorieHistory: (userId: string, timeRange?: string) => Promise<void>;
+  setSelectedDate: (date: string) => void; // New action to track selected date
 }
 
 export const useMealStore = create<MealStore>()(
@@ -88,6 +92,7 @@ export const useMealStore = create<MealStore>()(
         caloriesConsumed: 0,
         goodFoodCount: 0,
         badFoodCount: 0,
+        selectedDate: new Date().toISOString().split('T')[0], // Today by default
         meals: {
           BREAKFAST: [],
           LUNCH: [],
@@ -96,9 +101,14 @@ export const useMealStore = create<MealStore>()(
         },
         isLoading: false,
         error: null,
-        baseUrl: Platform.OS === 'android' ? 'https://crosscare-backends.onrender.com/api' : 'https://crosscare-backends.onrender.com/api',
+        baseUrl: Platform.OS === 'android' ? 'http://10.0.2.2:8000/api' : 'http://10.0.2.2:8000/api',
         chartData: [],
         currentTimeRange: 'week',
+        
+        // New action to set selected date
+        setSelectedDate: (date: string) => {
+          set({ selectedDate: date });
+        },
         
         // Action to fetch all meals for a user
         fetchMeals: async (userId: string) => {
@@ -185,8 +195,8 @@ export const useMealStore = create<MealStore>()(
             }
           },
 
-        // Update calorie goal
-        updateCalorieGoal: async (userId: string, goal: number) => {
+        // Updated updateCalorieGoal to accept date parameter
+        updateCalorieGoal: async (userId: string, goal: number, date?: string) => {
           if (!userId) {
             console.error("Cannot update calorie goal: User ID is required");
             return false;
@@ -195,12 +205,16 @@ export const useMealStore = create<MealStore>()(
           set({ isLoading: true, error: null });
           
           try {
+            const targetDate = date || get().selectedDate;
             const response = await fetch(`${get().baseUrl}/user/activity/${userId}/caloriesGoal`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json'
               },
-              body: JSON.stringify({ calorieGoal: goal })
+              body: JSON.stringify({ 
+                calorieGoal: goal,
+                date: targetDate // Pass the date to backend
+              })
             });
             
             if (!response.ok) {
@@ -209,10 +223,14 @@ export const useMealStore = create<MealStore>()(
             
             const data = await response.json();
             
-            // Update local state
-            set({ calorieGoal: goal, isLoading: false });
+            // Only update local state if we're updating the currently viewed date
+            if (targetDate === get().selectedDate) {
+              set({ calorieGoal: goal, isLoading: false });
+            } else {
+              set({ isLoading: false });
+            }
             
-            console.log("Calorie goal updated successfully:", data);
+            console.log("Calorie goal updated successfully for date:", targetDate);
             return true;
           } catch (error) {
             console.error("Error updating calorie goal:", error);
@@ -224,8 +242,8 @@ export const useMealStore = create<MealStore>()(
           }
         },
         
-        // Add a food item to a meal
-        addFoodItem: async (userId: string, mealType: string, foodItem: FoodItem) => {
+        // Updated addFoodItem to accept date parameter
+        addFoodItem: async (userId: string, mealType: string, foodItem: FoodItem, date?: string) => {
           if (!userId) {
             console.error("Cannot add food item: User ID is required");
             return false;
@@ -236,6 +254,7 @@ export const useMealStore = create<MealStore>()(
           set({ isLoading: true, error: null });
           
           try {
+            const targetDate = date || get().selectedDate;
             const response = await fetch(`${get().baseUrl}/user/activity/${userId}/foodItem`, {
               method: 'POST',
               headers: {
@@ -246,7 +265,8 @@ export const useMealStore = create<MealStore>()(
                 name: foodItem.name,
                 portion: foodItem.portion,
                 calories: foodItem.calories,
-                classification: foodItem.classification
+                classification: foodItem.classification,
+                date: targetDate // Pass the date to backend
               })
             });
             
@@ -256,64 +276,64 @@ export const useMealStore = create<MealStore>()(
             
             const data = await response.json();
             
-            // Update local state with the new daily progress
-            if (data.dailyProgress) {
-              set({
-                caloriesConsumed: data.dailyProgress.caloriesConsumed || 0,
-                goodFoodCount: data.dailyProgress.goodFoodCount || 0,
-                badFoodCount: data.dailyProgress.badFoodCount || 0,
-                isLoading: false
-              });
+            // Only update local state if we're adding to the currently viewed date
+            if (targetDate === get().selectedDate) {
+              // Update local state with the new daily progress
+              if (data.dailyProgress) {
+                set({
+                  caloriesConsumed: data.dailyProgress.caloriesConsumed || 0,
+                  goodFoodCount: data.dailyProgress.goodFoodCount || 0,
+                  badFoodCount: data.dailyProgress.badFoodCount || 0,
+                  isLoading: false
+                });
+              } else {
+                set({ isLoading: false });
+              }
+              
+              // Update meals in local state
+              if (data.foodItem) {
+                const normalizedType = normalizeMealType(normalizedMealType);
+                const currentMeals = { ...get().meals };
+                
+                if (!currentMeals[normalizedType]) {
+                  currentMeals[normalizedType] = [];
+                }
+                
+                if (currentMeals[normalizedType].length > 0) {
+                  const updatedMeal = { 
+                    ...currentMeals[normalizedType][0],
+                    foodItems: [
+                      ...currentMeals[normalizedType][0].foodItems,
+                      data.foodItem
+                    ],
+                    totalCalories: currentMeals[normalizedType][0].totalCalories + (data.foodItem.calories || 0),
+                    foodItemsCount: currentMeals[normalizedType][0].foodItemsCount + 1
+                  };
+                  
+                  currentMeals[normalizedType] = [
+                    updatedMeal,
+                    ...currentMeals[normalizedType].slice(1)
+                  ];
+                } else {
+                  const newMeal = {
+                    id: data.mealId || 'temp-id',
+                    mealType: normalizedType,
+                    totalCalories: data.foodItem.calories || 0,
+                    foodItemsCount: 1,
+                    isSavedAsMeal: false,
+                    foodItems: [data.foodItem]
+                  };
+                  
+                  currentMeals[normalizedType] = [newMeal];
+                }
+                
+                set({ meals: currentMeals });
+              }
             } else {
               set({ isLoading: false });
             }
             
-            // Instead of fetching all meals, just update the local state with the new item
-            // Only if we received the new item in the response
-            if (data.foodItem) {
-              const normalizedType = normalizeMealType(normalizedMealType);
-              const currentMeals = { ...get().meals };
-              
-              // Find the appropriate meal array or create it
-              if (!currentMeals[normalizedType]) {
-                currentMeals[normalizedType] = [];
-              }
-              
-              // Add the food item to the existing meal or create a new meal
-              if (currentMeals[normalizedType].length > 0) {
-                // Add to first meal of this type (simplification)
-                const updatedMeal = { 
-                  ...currentMeals[normalizedType][0],
-                  foodItems: [
-                    ...currentMeals[normalizedType][0].foodItems,
-                    data.foodItem
-                  ],
-                  totalCalories: currentMeals[normalizedType][0].totalCalories + (data.foodItem.calories || 0),
-                  foodItemsCount: currentMeals[normalizedType][0].foodItemsCount + 1
-                };
-                
-                currentMeals[normalizedType] = [
-                  updatedMeal,
-                  ...currentMeals[normalizedType].slice(1)
-                ];
-              } else {
-                // Create a new meal
-                const newMeal = {
-                  id: data.mealId || 'temp-id',
-                  mealType: normalizedType,
-                  totalCalories: data.foodItem.calories || 0,
-                  foodItemsCount: 1,
-                  isSavedAsMeal: false,
-                  foodItems: [data.foodItem]
-                };
-                
-                currentMeals[normalizedType] = [newMeal];
-              }
-              
-              set({ meals: currentMeals });
-            }
-            
-            console.log("Food item added successfully:", data);
+            console.log("Food item added successfully for date:", targetDate);
             return true;
           } catch (error) {
             console.error("Error adding food item:", error);
@@ -452,7 +472,8 @@ export const useMealStore = create<MealStore>()(
           caloriesConsumed: state.caloriesConsumed,
           goodFoodCount: state.goodFoodCount,
           badFoodCount: state.badFoodCount,
-          meals: state.meals
+          meals: state.meals,
+          selectedDate: state.selectedDate // Persist selected date
         })
       }
     )

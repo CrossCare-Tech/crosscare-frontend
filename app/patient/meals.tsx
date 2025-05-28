@@ -210,6 +210,7 @@ const meals = () => {
     goodFoodCount, 
     badFoodCount,
     meals: storeMeals,
+    selectedDate: storeSelectedDate,
     chartData,
     currentTimeRange,
     isLoading, 
@@ -220,7 +221,8 @@ const meals = () => {
     fetchMealsForDate,
     deleteFoodItem,
     getFoodQualityRatio,
-    fetchCalorieHistory
+    fetchCalorieHistory,
+    setSelectedDate
   } = useMealStore();
   
   const [progress, setProgress] = useState(0)
@@ -231,7 +233,7 @@ const meals = () => {
 
   // Date picker states
   const [showDatePicker, setShowDatePicker] = useState(false)
-  const [selectedDate, setSelectedDate] = useState(new Date())
+  const [selectedDate, setSelectedDateLocal] = useState(new Date(storeSelectedDate));
 
   const [timeRange, setTimeRange] = useState("week")
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
@@ -527,13 +529,14 @@ const meals = () => {
         classification: selectedFood.classification === 'good' ? 'GOOD' : 'BAD'
       };
       
-      // Add the food item via the store
-      addFoodItem(userId, mealType, newFoodItem);
+      // Add the food item for the selected date
+      const targetDate = selectedDate.toISOString().split('T')[0];
+      addFoodItem(userId, mealType, newFoodItem, targetDate);
       
       // Clear URL parameters
       router.setParams({});
     }
-  }, [selectedFood, mealType, userId, addFoodItem]);
+  }, [selectedFood, mealType, userId, addFoodItem, selectedDate]);
 
   // Update progress when calorie data changes
   useEffect(() => {
@@ -552,7 +555,8 @@ const meals = () => {
   const handleSaveGoal = (newGoal: string) => {
     setCustomCalorieGoal(newGoal)
     if (userId) {
-      updateCalorieGoal(userId, Number(newGoal));
+      const targetDate = selectedDate.toISOString().split('T')[0];
+      updateCalorieGoal(userId, Number(newGoal), targetDate);
     }
     setIsGoalModalVisible(false)
   }
@@ -855,10 +859,13 @@ const meals = () => {
   const handleDateChange = (event, date) => {
     setShowDatePicker(false)
     if (date && userId) {
-      setSelectedDate(date)
+      setSelectedDateLocal(date)
       
       // Format the date to YYYY-MM-DD format for the API
       const formattedDate = date.toISOString().split('T')[0];
+      
+      // Update store's selected date
+      setSelectedDate(formattedDate);
       
       // Fetch meals for the selected date
       fetchMealsForDate(userId, formattedDate);
