@@ -101,7 +101,7 @@ export const useMealStore = create<MealStore>()(
         },
         isLoading: false,
         error: null,
-        baseUrl: Platform.OS === 'android' ? 'http://10.0.2.2:8000/api' : 'http://10.0.2.2:8000/api',
+        baseUrl: Platform.OS === 'android' ? 'https://crosscare-backends.onrender.com/api' : 'https://crosscare-backends.onrender.com/api',
         chartData: [],
         currentTimeRange: 'week',
         
