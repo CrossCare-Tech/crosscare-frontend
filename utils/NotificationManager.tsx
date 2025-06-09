@@ -5,6 +5,7 @@ import { DailyTriggerInput, SchedulableTriggerInputTypes } from 'expo-notificati
 
 // Define constants
 const REMINDER_STORAGE_KEY = 'health_reminders';
+const APPOINTMENT_REMINDERS_ENABLED_KEY = 'appointment_reminders_enabled';
 
 // Configure notification behavior
 Notifications.setNotificationHandler({
@@ -219,7 +220,135 @@ export async function displayTestNotification() {
   });
 }
 
+// Schedule a one-time appointment reminder
+export async function scheduleAppointmentReminder(
+  appointmentDateTime: Date, 
+  description: string,
+  appointmentId?: string
+): Promise<string[] | null> {
+  try {
+    // Request notification permissions
+    const hasPermission = await requestNotificationPermissions();
+    if (!hasPermission) {
+      console.log('Notification permissions not granted');
+      return null;
+    }
+
+    const now = new Date();
+    const reminderIds: string[] = [];
+
+    // Calculate reminder times
+    const oneHourBefore = new Date(appointmentDateTime);
+    oneHourBefore.setHours(oneHourBefore.getHours() - 1);
+
+    const oneDayBefore = new Date(appointmentDateTime);
+    oneDayBefore.setDate(oneDayBefore.getDate() - 1);
+
+    // Schedule 1-hour reminder if it's in the future
+    if (oneHourBefore > now) {
+      const oneHourReminderId = `appointment-1h-${Date.now()}`;
+      
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: '📅 Appointment Reminder',
+          body: `You have an appointment "${description}" in 1 hour`,
+          data: { 
+            screen: '/patient/calendar',
+            appointmentId: appointmentId || 'unknown'
+          },
+          sound: true,
+        },
+        trigger: { 
+          type: SchedulableTriggerInputTypes.TIME_INTERVAL,
+          seconds: Math.floor((oneHourBefore.getTime() - now.getTime()) / 1000),
+        },
+        identifier: oneHourReminderId,
+      });
+      
+      console.log('1-hour appointment reminder scheduled for:', oneHourBefore);
+      reminderIds.push(oneHourReminderId);
+    }
+
+    // Schedule 24-hour reminder if it's in the future
+    if (oneDayBefore > now) {
+      const oneDayReminderId = `appointment-24h-${Date.now()}`;
+      
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: '📅 Appointment Reminder',
+          body: `You have an appointment "${description}" tomorrow`,
+          data: { 
+            screen: '/patient/calendar',
+            appointmentId: appointmentId || 'unknown'
+          },
+          sound: true,
+        },
+        trigger: { 
+          type: SchedulableTriggerInputTypes.TIME_INTERVAL,
+          seconds: Math.floor((oneDayBefore.getTime() - now.getTime()) / 1000),
+        },
+        identifier: oneDayReminderId,
+      });
+      
+      console.log('24-hour appointment reminder scheduled for:', oneDayBefore);
+      reminderIds.push(oneDayReminderId);
+    }
+
+    return reminderIds.length > 0 ? reminderIds : null;
+  } catch (error) {
+    console.error('Error scheduling appointment reminder:', error);
+    return null;
+  }
+}
+
 // Get all scheduled notifications (for debugging)
 export async function getAllScheduledNotifications() {
   return await Notifications.getAllScheduledNotificationsAsync();
+}
+
+// Cancel all reminders for a specific appointment
+export async function cancelAppointmentReminders(appointmentId: string): Promise<void> {
+  try {
+    // Get all scheduled notifications
+    const scheduledNotifications = await Notifications.getAllScheduledNotificationsAsync();
+    
+    // Filter notifications related to this appointment
+    const appointmentNotifications = scheduledNotifications.filter(
+      notification => notification.identifier?.includes(`appointment-`) && 
+                     notification.content.data?.appointmentId === appointmentId
+    );
+    
+    // Cancel each notification
+    for (const notification of appointmentNotifications) {
+      if (notification.identifier) {
+        await Notifications.cancelScheduledNotificationAsync(notification.identifier);
+        console.log(`Canceled reminder: ${notification.identifier}`);
+      }
+    }
+  } catch (error) {
+    console.error('Error canceling appointment reminders:', error);
+  }
+}
+
+// Check if appointment reminders are enabled
+export async function areAppointmentRemindersEnabled(): Promise<boolean> {
+  try {
+    const reminderPreference = await AsyncStorage.getItem(APPOINTMENT_REMINDERS_ENABLED_KEY);
+    // Default to true if the preference hasn't been set
+    return reminderPreference !== 'false';
+  } catch (error) {
+    console.error('Error checking reminder preference:', error);
+    // Default to true if there's an error
+    return true;
+  }
+}
+
+// Set appointment reminders enabled/disabled
+export async function setAppointmentRemindersEnabled(enabled: boolean): Promise<void> {
+  try {
+    await AsyncStorage.setItem(APPOINTMENT_REMINDERS_ENABLED_KEY, enabled.toString());
+    console.log(`Appointment reminders ${enabled ? 'enabled' : 'disabled'}`);
+  } catch (error) {
+    console.error('Error saving reminder preference:', error);
+  }
 }

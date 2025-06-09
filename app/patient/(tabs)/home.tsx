@@ -164,6 +164,7 @@ const Home = () => {
     bg1: "#FFE5B0", // Light yellow
     bg2: "#FFAA00", // Bright orange
     image1: require("../../../assets/images/calendra.png"),
+    onPress: () => router.push("/patient/calendar"),
   },
   {
     id: '3',

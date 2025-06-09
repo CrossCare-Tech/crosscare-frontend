@@ -1,4 +1,3 @@
-// app/patient/modal/caloriegoalmodal.tsx
 import React, { useState } from 'react';
 import { Modal, View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
