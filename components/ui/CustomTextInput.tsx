@@ -11,7 +11,7 @@ interface CustomTextInputProps extends TextInputProps {
   onChangeText: (text: string) => void;
   placeholder: string;
   secureTextEntry?: boolean;
-  type: 'email' | 'password' | 'username'; // Add other types if necessary
+  type: 'email' | 'password' | 'username'| 'number'; // Add other types if necessary
   errorMessage?: string;
 }
 
@@ -36,7 +36,7 @@ const CustomTextInput: React.FC<CustomTextInputProps> = ({
     <View style={styles.container}>
       <View style={styles.inputContainer}>
         {/* Icon */}
-        <Feather name={icon} size={16} color="#8A8A8A" style={styles.icon} />
+        <Feather name={icon as any} size={16} color="#8A8A8A" style={styles.icon} />
         {/* TextInput */}
         <TextInput
           {...props}

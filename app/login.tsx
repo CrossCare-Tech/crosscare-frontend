@@ -188,7 +188,7 @@ const Login: FC = () => {
             type="email"
             value={email}
             onChangeText={handleChangeEmail}
-            placeholder="Username"
+            placeholder="Email"
             errorMessage={emailError}
           />
           <CustomTextInput
@@ -242,7 +242,7 @@ const Login: FC = () => {
             marginTop: 12,
           }}
         >
-          <Text
+          {/* <Text
             style={{
               fontSize: 14,
               color: "#1B2559",
@@ -273,6 +273,29 @@ const Login: FC = () => {
               onPress={() => router.push("/signup")}
             >
               Administrator/Doctor
+            </Text>
+          </Text> */}
+          
+          {/* New Patient Signup Link */}
+          <Text
+            style={{
+              fontSize: 14,
+              color: "#545454",
+              fontFamily: "DMSans400",
+              textAlign: "center",
+              marginTop: 8,
+            }}
+          >
+            New patient?{" "}
+            <Text
+              style={{
+                fontFamily: "DMSans500",
+                color: "#E05FA0",
+                textDecorationLine: "underline",
+              }}
+              onPress={() => router.push("/signup")}
+            >
+              Sign up
             </Text>
           </Text>
         </View>

@@ -11,6 +11,8 @@ import {
   Linking,
   View,
   StatusBar,
+  ScrollView,
+  Dimensions,
 } from "react-native";
 import { supabase } from "@/supabase/supabase";
 import { useNavigation } from "@react-navigation/native";
@@ -20,11 +22,19 @@ import { fontSize, height, width } from "@/constants/helper";
 import CustomTextInput from "@/components/ui/CustomTextInput";
 import LogoSvg from "@/assets/images/Svg/LogoSvg";
 import { LinearGradient } from "expo-linear-gradient";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { FontAwesome5 } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
+
+const screenHeight = Dimensions.get("window").height;
 
 const SignUp: FC = () => {
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [dateOfBirth, setDateOfBirth] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
   const [role, setRole] = useState("patient");
   const navigation = useNavigation();
@@ -32,6 +42,11 @@ const SignUp: FC = () => {
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const redirectTo = makeRedirectUri();
+
+  // Error states
+  const [firstNameError, setFirstNameError] = useState("");
+  const [lastNameError, setLastNameError] = useState("");
+  const [dobError, setDobError] = useState("");
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -43,9 +58,52 @@ const SignUp: FC = () => {
     Linking.openURL("mailto:");
   };
 
+  const handleDateChange = (event: any, selectedDate?: Date) => {
+    setShowDatePicker(Platform.OS === 'ios');
+    if (selectedDate) {
+      setDateOfBirth(selectedDate);
+      if (dobError) {
+        setDobError("");
+      }
+    }
+  };
+
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  };
+
+  const validateAge = (birthDate: Date) => {
+    const today = new Date();
+    const age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      return age - 1;
+    }
+    return age;
+  };
+
   const handleSignUp = async () => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const newError: any = {};
+
+    // Validation
+    if (!firstName.trim()) {
+      newError.firstName = "First name is required.";
+    }
+
+    if (!lastName.trim()) {
+      newError.lastName = "Last name is required.";
+    }
+
+    const age = validateAge(dateOfBirth);
+    if (age < 13) {
+      newError.dob = "You must be at least 13 years old to sign up.";
+    }
 
     if (!email) {
       newError.email = "Email is required.";
@@ -55,99 +113,78 @@ const SignUp: FC = () => {
 
     if (!password) {
       newError.password = "Password is required.";
+    } else if (password.length < 6) {
+      newError.password = "Password must be at least 6 characters long.";
     }
 
-    // router.replace(
-    //   role === "doctor" ? "/patient/(tabs)/home" : "/doctor/(tabs)/home"
-    // );
-
     if (Object.keys(newError).length > 0) {
+      setFirstNameError(newError.firstName || "");
+      setLastNameError(newError.lastName || "");
+      setDobError(newError.dob || "");
       setEmailError(newError.email || "");
       setPasswordError(newError.password || "");
-      setLoading(false);
       return;
     }
 
     setLoading(true);
 
     try {
-      // Check if user exists in either patient or doctor table
-      const { data: existingPatient } = await supabase
-        .from("patient")
-        .select()
-        .eq("email", email)
-        .single();
-
-      const { data: existingDoctor } = await supabase
-        .from("doctor")
-        .select()
-        .eq("email", email)
-        .single();
-
-      if (existingPatient || existingDoctor) {
-        Alert.alert(
-          "Error",
-          "This email is already registered. Please use a different email."
-        );
-        setLoading(false);
-        return;
-      }
-
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            name: name,
-            role: "doctor",
-          },
-          // emailRedirectTo: redirectTo,
-        },
-      });
-
-      console.log(authData);
-
-      if (authError) {
-        Alert.alert("Signup Failed", authError.message);
-        setLoading(false);
-        return;
-      }
-      const auth_id = authData.user?.id;
-
-      // Insert into appropriate table based on role
-      const tableName = "doctor";
-      const { error: dbError } = await supabase.from(tableName).insert([
+      const response = await fetch(
+        `http://10.0.2.2:8000/api/signup`,
         {
-          name,
-          email,
-          auth_id,
-          role,
-        },
-      ]);
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            firstName: firstName.trim(),
+            lastName: lastName.trim(),
+            dateOfBirth: dateOfBirth.toISOString(),
+            email: email.toLowerCase().trim(),
+            password: password,
+          }),
+        }
+      );
 
-      if (dbError) {
-        console.log(dbError.message);
-        Alert.alert("Error Saving User", dbError.message);
-        setLoading(false);
-      } else {
-        setLoading(false);
-        setEmail("");
-        setPassword("");
-        setName("");
-        Alert.alert(
-          "Email Verification Required",
-          "Please check your email and verify your account to continue.",
-          [
-            {
-              text: "OK",
-              onPress: () => router.replace("/login"),
-            },
-          ]
-        );
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Signup failed");
       }
+
+      Alert.alert(
+        "Success", 
+        "Account created successfully! Please login with your credentials.",
+        [
+          {
+            text: "OK",
+            onPress: () => router.replace("/login"),
+          },
+        ]
+      );
+
     } catch (error: any) {
-      Alert.alert("Error", error.message);
+      Alert.alert("Signup Failed", error.message);
+      console.log(JSON.stringify(error, null, 2));
+      if (error.message.includes("email")) {
+        setEmailError("Email already exists or is invalid");
+      }
+    } finally {
       setLoading(false);
+    }
+  };
+
+  const handleChangeFirstName = (text: string) => {
+    setFirstName(text);
+    if (firstNameError) {
+      setFirstNameError("");
+    }
+  };
+
+  const handleChangeLastName = (text: string) => {
+    setLastName(text);
+    if (lastNameError) {
+      setLastNameError("");
     }
   };
 
@@ -166,256 +203,245 @@ const SignUp: FC = () => {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-    >
-      <StatusBar barStyle={'dark-content'}/>
-      <View
-        style={{
-          justifyContent: "center",
-          marginTop: Platform.OS === "ios" ? height * 0.12 : height * 0.19,
-        }}
+    <SafeAreaView style={{
+      flex: 1,
+      backgroundColor: "#fff",
+    }}>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
-        <View
-          style={{
-            alignItems: "center",
-          }}
+        <ScrollView 
+          contentContainerStyle={styles.scrollContainer}
+          showsVerticalScrollIndicator={false}
         >
-          <LogoSvg />
-        </View>
-        <Text style={styles.title}>Welcome, Get Started!</Text>
-        <View
-          style={{
-            width: "100%",
-            marginTop: width * 56,
-            flexDirection: "column",
-            gap: 20,
-          }}
-        >
-          <CustomTextInput
-            icon="user"
-            type="email"
-            value={email}
-            onChangeText={handleChangeEmail}
-            placeholder="Username"
-            errorMessage={emailError}
-          />
-          <CustomTextInput
-            icon="lock"
-            type="password"
-            value={password}
-            onChangeText={handleChangePassword}
-            placeholder="Password"
-            secureTextEntry={true}
-            errorMessage={passwordError}
-          />
-          <TouchableOpacity
-            style={styles.button}
-            onPress={handleSignUp}
-            disabled={loading}
-          >
-            <LinearGradient
-              colors={["#87247D", "#E05FA0"]} // Gradient colors
-              start={{ x: 0, y: 0 }} // Start of the gradient (top-left)
-              end={{ x: 1, y: 0 }} // End of the gradient (top-right)
-              style={styles.gradient} // Apply gradient as background
-            >
-              {loading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.buttonText}>Sign Up</Text>
-              )}
-            </LinearGradient>
-          </TouchableOpacity>
-        </View>
-
-        {/*<View style={{
-      flexDirection: "row",
-      justifyContent: "space-around",
-      alignItems: "center",
-      width: "100%",
-      marginBottom: 20,
-    }}>  
-      <TouchableOpacity 
-        onPress={() => setRole("patient")}
-        style={[
-          styles.roleButton,
-          role === "patient" && styles.selectedRole
-        ]}
-      >
-        <Text style={[
-          styles.roleText,
-          role === "patient" && styles.selectedRoleText
-        ]}>Patient</Text>
-      </TouchableOpacity>
-      <TouchableOpacity
-        onPress={() => setRole("doctor")}
-        style={[
-          styles.roleButton,
-          role === "doctor" && styles.selectedRole
-        ]}
-      >
-        <Text style={[
-          styles.roleText,
-          role === "doctor" && styles.selectedRoleText
-        ]}>Doctor</Text>
-      </TouchableOpacity>
-    </View> */}
-
-        <TouchableOpacity onPress={() => router.push("/forget-password")}>
-          <Text
-            style={{
-              fontSize: width * 14,
-              width: "100%",
-              textAlign: "left",
-              color: "#E05FA0",
-              fontFamily: "DMSans400",
-              marginTop: 17,
-              textDecorationLine: "underline",
-            }}
-          >
-            Forgot Password?
-          </Text>
-        </TouchableOpacity>
-        <View
-          style={{
-            flexDirection: "column",
-            gap: 12,
-            marginTop: 12,
-          }}
-        >
-          <Text
-            style={{
-              fontSize: width * 14,
-              color: "#1B2559",
-              fontFamily: "DMSans400",
-              marginTop: 0.017,
-              textAlign: "center",
-              // textDecorationLine: "underline",
-            }}
-          >
-            -OR-
-          </Text>
-          <Text
-            style={{
-              fontSize: width * 14,
-              color: "#545454",
-              fontFamily: "DMSans400",
-
-              textAlign: "center",
-            }}
+          <View style={styles.headerContainer}>
+            <View style={styles.logoContainer}>
+              <LogoSvg />
+            </View>
+            <Text style={styles.title}>Create Your Account</Text>
             
-          >
-            Login as{" "}
-            <Text
-              style={{
-                fontFamily: "DMSans400",
-                color: "#E05FA0",
-                textDecorationLine: "underline",
-              }}
-              onPress={() => router.push("/login")}
-            >
-              Patient
-            </Text>
-          </Text>
-        </View>
-      </View>
-      {/* <GoogleSigninButton
-      size={GoogleSigninButton.Size.Wide}
-      color={GoogleSigninButton.Color.Dark}
-      onPress={handleGoogleSignin}
-    /> */}
-      {/* <Text style={styles.footerText}>
-      Don't have an account?{" "}
-      <Text style={styles.link} onPress={() => router.push("/signup")}>
-        Sign Up
-      </Text>
-    </Text> */}
-      <Text style={styles.footerText}>
-        Terms & Conditions | Privacy Policy | Contact Us
-      </Text>
-    </KeyboardAvoidingView>
+            <View style={styles.formContainer}>
+              {/* First Name */}
+              <CustomTextInput
+                icon="user"
+                type="username"
+                value={firstName}
+                onChangeText={handleChangeFirstName}
+                placeholder="First Name"
+                errorMessage={firstNameError}
+              />
+
+              {/* Last Name */}
+              <CustomTextInput
+                icon="user"
+                type="username"
+                value={lastName}
+                onChangeText={handleChangeLastName}
+                placeholder="Last Name"
+                errorMessage={lastNameError}
+              />
+
+              {/* Date of Birth */}
+              <View style={styles.inputContainer}>
+                <TouchableOpacity 
+                  style={[styles.dateInput, dobError ? styles.errorInput : null]} 
+                  onPress={() => setShowDatePicker(true)}
+                >
+                  <FontAwesome5 name="calendar" size={16} color="#777" style={styles.dateIcon} />
+                  <Text style={[styles.dateText, !dateOfBirth && styles.placeholderText]}>
+                    {formatDate(dateOfBirth)}
+                  </Text>
+                  <FontAwesome5 name="chevron-down" size={14} color="#777" />
+                </TouchableOpacity>
+                {dobError ? <Text style={styles.errorText}>{dobError}</Text> : null}
+              </View>
+
+              {/* Email */}
+              <CustomTextInput
+                icon="envelope"
+                type="email"
+                value={email}
+                onChangeText={handleChangeEmail}
+                placeholder="Email Address"
+                errorMessage={emailError}
+              />
+
+              {/* Password */}
+              <CustomTextInput
+                icon="lock"
+                type="password"
+                value={password}
+                onChangeText={handleChangePassword}
+                placeholder="Password"
+                secureTextEntry={true}
+                errorMessage={passwordError}
+              />
+
+              {/* Signup Button */}
+              <TouchableOpacity
+                style={styles.button}
+                onPress={handleSignUp}
+                disabled={loading}
+              >
+                <LinearGradient
+                  colors={["#EF99D9", "#E35ABB"]}
+                  start={{ x: Math.cos((117 * Math.PI) / 180), y: Math.sin((117 * Math.PI) / 180) }}
+                  end={{ x: Math.cos(((117 + 180) * Math.PI) / 180), y: Math.sin(((117 + 180) * Math.PI) / 180) }}
+                  style={styles.gradient}
+                >
+                  {loading ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Text style={styles.buttonText}>Sign Up</Text>
+                  )}
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+
+            {/* Login Link */}
+            <View style={styles.loginLinkContainer}>
+              <Text style={styles.loginText}>
+                Already have an account?{" "}
+                <Text
+                  style={styles.loginLink}
+                  onPress={() => router.push("/login")}
+                >
+                  Login
+                </Text>
+              </Text>
+            </View>
+          </View>
+        </ScrollView>
+
+        {/* Date Picker Modal */}
+        {showDatePicker && (
+          <DateTimePicker
+            value={dateOfBirth}
+            mode="date"
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            onChange={handleDateChange}
+            maximumDate={new Date()}
+          />
+        )}
+
+        {/* Footer */}
+        <Text style={styles.footerText}>
+          Terms & Conditions | Privacy Policy | Contact Us
+        </Text>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: "space-between",
-    paddingHorizontal: 40,
     backgroundColor: "#fff",
   },
+  scrollContainer: {
+    flexGrow: 1,
+    justifyContent: "space-between",
+    paddingHorizontal: 40,
+  },
+  headerContainer: {
+    flex: 1,
+    justifyContent: "center",
+    marginTop: 40,
+  },
+  logoContainer: {
+    alignItems: "center",
+  },
   title: {
-    fontSize: width * 18,
+    fontSize: 18,
     textAlign: "center",
-    fontFamily: "Satoshi500",
+    fontFamily: "DMSans500",
     color: "#545454",
+    marginTop: 20,
+  },
+  formContainer: {
+    width: "100%",
+    marginTop: 40,
+    flexDirection: "column",
+    gap: 20,
+  },
+  inputContainer: {
+    marginBottom: 0,
+  },
+  dateInput: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 10,
+    paddingHorizontal: 15,
+    paddingVertical: 15,
+    backgroundColor: '#fff',
+  },
+  errorInput: {
+    borderColor: '#FF6B6B',
+  },
+  dateIcon: {
+    marginRight: 12,
+  },
+  dateText: {
+    flex: 1,
+    fontSize: 16,
+    color: "#333",
+    fontFamily: "DMSans400",
+  },
+  placeholderText: {
+    color: "#999",
+  },
+  errorText: {
+    color: '#FF6B6B',
+    fontSize: 12,
+    marginTop: 5,
+    fontFamily: "DMSans400",
   },
   gradient: {
-    width: "100%",  // Make the gradient fill the entire button
-    height: "100%", // Make the gradient fill the entire button
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    width: "100%",
     justifyContent: "center",
     alignItems: "center",
     borderRadius: 8,
   },
-  googleButton: {
-    width: "100%",
-    height: 50,
-    backgroundColor: "#fff",
-    borderWidth: 1,
-    borderColor: "#ddd",
-    justifyContent: "center",
-    alignItems: "center",
-    borderRadius: 10,
-    marginTop: 15,
-  },
-  googleButtonText: {
-    fontSize: 18,
-    color: "black",
-    fontWeight: "bold",
-  },
   button: {
-    height: 56,
     backgroundColor: "#87247D",
     justifyContent: "center",
     alignItems: "center",
     borderRadius: 8,
+    marginTop: 10,
   },
   buttonText: {
-    fontSize: width * 18,
+    fontSize: 20,
     color: "#fff",
-    fontFamily: "Satoshi700",
+    letterSpacing: 0.2,
+    fontFamily: "DMSans600",
+  },
+  loginLinkContainer: {
+    marginTop: 30,
+    alignItems: "center",
+  },
+  loginText: {
+    fontSize: 14,
+    color: "#545454",
+    fontFamily: "DMSans400",
+    textAlign: "center",
+  },
+  loginLink: {
+    fontFamily: "DMSans500",
+    color: "#E05FA0",
+    textDecorationLine: "underline",
   },
   footerText: {
     textAlign: "center",
     fontFamily: "DMSans400",
-    fontSize: width * 12,
+    fontSize: 12,
     color: "#545454",
     paddingBottom: 20,
-  },
-  link: {
-    color: "#4CAF50",
-    fontWeight: "bold",
-  },
-  roleButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    width: "48%",
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "#4CAF50",
-  },
-  selectedRole: {
-    backgroundColor: "#4CAF50",
-  },
-  roleText: {
-    fontSize: 16,
-    color: "#4CAF50",
-    textAlign: "center",
-  },
-  selectedRoleText: {
-    color: "#fff",
+    marginTop: 20,
   },
 });
 
