@@ -107,7 +107,8 @@ const Home = () => {
     meals,
     isLoading,
     error,
-    getFoodQualityRatio
+    getFoodQualityRatio,
+    fetchUserGoals
   } = useMealStore();
   const [weeksComplete, setWeeksComplete] = useState(0);
   const pregnancyProgress = React.useMemo(() => {
@@ -134,6 +135,16 @@ const Home = () => {
     // updatePregnancyProgress(value, unit);
   };
 
+  useEffect(() => {
+    if (user?.user_id) {
+      // Initialize all user goals when the app loads
+      useMealStore.getState().fetchUserGoals(user.user_id);
+      useWaterStore.getState().fetchUserGoals(user.user_id);
+      // useStepsStore.getState().fetchUserGoals(user.user_id);
+    }
+  }, [user?.user_id]);
+    
+
   // Add this to trigger the modal (you can call this from any button/component)
   const openPregnancyModal = () => {
     setShowPregnancyModal(true);
@@ -143,20 +154,23 @@ const Home = () => {
   const userId = user?.user_id;
 
   const cardData1 = [
-  {
-    id: '1',
-    title: t('cards.askDoula.title'),
-    description: t('cards.askDoula.description'),
-    bg1: "#FBBBE9", // Light pink
-    bg2: "#E162BC", // Deep pink
-    image1: require("../../../assets/images/hairs/h1/face/c1.png"),
-    onPress: () => {
-      router.push({
-        pathname: "/patient/askdoula",
-        params: { from_modal: "true" },
-      });
+    {
+      id: '1',
+      title: t('cards.askDoula.title'),
+      description: t('cards.askDoula.description'),
+      bg1: "#FBBBE9", // Light pink
+      bg2: "#E162BC", // Deep pink
+      // ✅ Use the user's avatar if available, otherwise fall back to doulaImg.png
+      image1: user?.avatar_url && user.avatar_url.trim() !== '' 
+        ? { uri: user.avatar_url }
+        : require("../../../assets/images/hairs/h1/face/c1.png"),
+      onPress: () => {
+        router.push({
+          pathname: "/patient/askdoula",
+          params: { from_modal: "true" },
+        });
+      },
     },
-  },
   {
     id: '2',
     title: t('cards.calendar.title'),
@@ -306,66 +320,7 @@ const cardData = cardData1.map((item) => ({
       }
     };
 
-  const fetchWaterData = useCallback(async () => {
-    try {
-      // Check if user ID is available before making the request
-      if (!user?.user_id) {
-        console.log("Cannot fetch water data: user ID is undefined");
-        return;
-      }
-
-      const response = await fetch(
-        `https://crosscare-backends.onrender.com/api/user/activity/${user.user_id}/waterstatus`
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch water data");
-      }
-
-      const data = await response.json();
-      // console.log("Refreshed water data:", data);
-
-      // Process the water data array to get the latest entry
-      if (data && data && Array.isArray(data)) {
-        // Sort by date (newest first)
-        const sortedData = [...data].sort((a, b) => {
-          return new Date(b.date).getTime() - new Date(a.date).getTime();
-        });
-
-        // Find the latest entry with a valid waterMl value
-        const latestEntry = sortedData.find((entry) => entry.waterMl !== null);
-
-        if (latestEntry) {
-          // console.log("Latest water entry:", latestEntry);
-          // Update the glass count with the latest waterMl value
-          setGlassCount(latestEntry.waterMl);
-        }
-      }
-    } catch (error) {
-      console.error("Error fetching water data:", error);
-    }
-  }, [user?.user_id, setGlassCount]);
-
-  // Add this useFocusEffect instead:
-  useFocusEffect(
-    useCallback(() => {
-      // console.log("Home screen in focus, fetching water data...");
-
-      // Fetch immediately when screen comes into focus
-      fetchWaterData();
-
-      // Set up polling interval
-      const syncInterval = setInterval(() => {
-        fetchWaterData();
-      }, 5000); // Check every 10 seconds
-
-      // Clean up interval when screen loses focus
-      return () => {
-        // console.log("Home screen lost focus, clearing water data interval");
-        clearInterval(syncInterval);
-      };
-    }, [fetchWaterData])
-  );
+  
 
   useEffect(() => {
     const getUserData = async () => {

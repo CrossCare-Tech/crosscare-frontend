@@ -220,7 +220,6 @@ export default function water() {
       // Check if it's a new day
       if (isNewDay()) {
         // Reset glass count to 0 for the new day
-        setGlassCount(0);
         
         // Update the last accessed date in the store
         useWaterStore.getState().setLastAccessedDate(new Date().toISOString().split('T')[0]);
@@ -254,7 +253,7 @@ export default function water() {
           date: formattedDate,
           waterMl: waterMl || 0,
           waterL: waterMl / 1000 || 0,
-          goalMl: item.goalMl !== null ? Number(item.goalMl) * 250 : 0, // Assuming goalMl is also in glasses
+          goalMl: item.goalMl !== null ? Number(item.goalMl) : 0, // Backend now returns goalMl in milliliters, not glasses
           day: item.day || new Date(formattedDate).toLocaleDateString('en-US', { weekday: 'short' }).charAt(0)
         };
       });
@@ -359,12 +358,8 @@ export default function water() {
     fetchWaterData();
     
     // Set up a polling interval to check for updates from external sources (like AI)
-    const syncInterval = setInterval(() => {
-      syncWaterIntakeFromApi();
-    }, 20000); // Check every 20 seconds
     
-    return () => clearInterval(syncInterval);
-  }, [user.user_id, setGlassCount, setMaxGlasses]);
+  }, [user.user_id]);
 
   // Modify the postWaterIntake function to handle both local updates and external updates
   const postWaterIntake = async (newGlassCount = glassCount) => {
@@ -638,6 +633,9 @@ export default function water() {
   // Use wider bars for today view
     const barWidth = isTodayView ? BAR_WIDTH * 2 : isMonthView ? 4 : BAR_WIDTH
     
+    // Calculate glasses from ml (250ml per glass)
+    const glassCount = Math.round(item.waterMl / 250);
+    
     return (
       <TouchableOpacity
         activeOpacity={0.8}
@@ -677,17 +675,34 @@ export default function water() {
         </View>
 
         {isSelected && (
-          <View style={styles.tooltip}>
+          <Animated.View 
+            style={[
+              styles.tooltip,
+              {
+                opacity: tooltipAnim,
+                transform: [
+                  {
+                    translateY: tooltipAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [-10, 0],
+                    }),
+                  },
+                ],
+              },
+            ]}
+          >
             <View style={styles.tooltipContent}>
               <Text style={styles.tooltipTitle}>{t('water')}</Text>
               <Text style={styles.tooltipWeight}>
-                {item.waterL.toFixed(2)}{" "}
-                <Text style={{ fontSize: 16, color: "#67B6FF" }}>L</Text>
+                {glassCount}{" "}
+                <Text style={{ fontSize: 16, color: "#67B6FF" }}>
+                  {glassCount === 1 ? t('waterScreen.glass') : t('waterScreen.Glasses')}
+                </Text>
               </Text>
               <Text style={styles.tooltipDate}>{item.date}</Text>
             </View>
             <View style={styles.tooltipArrow} />
-          </View>
+          </Animated.View>
         )}
       </TouchableOpacity>
     );
@@ -1186,10 +1201,11 @@ const styles = StyleSheet.create({
   },
   tooltip: {
     position: "absolute",
-    top: -60, // Positioned above the bar
+    top: -55, 
     alignItems: "center",
     width: 120,
-    zIndex: 10, // Ensure tooltip is above other elements
+    zIndex: 10, 
+    alignSelf: "center",
   },
   tooltipArrow: {
     width: 0,

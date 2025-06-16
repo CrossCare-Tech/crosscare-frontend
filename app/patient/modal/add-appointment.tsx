@@ -4,7 +4,7 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useSelector } from 'react-redux';
-import { scheduleAppointmentReminder, areAppointmentRemindersEnabled, cancelAppointmentReminders } from '../../../utils/NotificationManager';
+import { scheduleAppointmentReminder, areAppointmentRemindersEnabled, cancelAppointmentReminders, debugNotifications } from '../../../utils/NotificationManager';
 
 interface AppointmentForm {
   description: string;
@@ -139,6 +139,9 @@ const AddAppointmentScreen = () => {
       appointmentDateTime.setHours(form.time.getHours());
       appointmentDateTime.setMinutes(form.time.getMinutes());
       
+      console.log('📅 Appointment DateTime (local):', appointmentDateTime);
+      console.log('📅 Appointment DateTime (ISO):', appointmentDateTime.toISOString());
+      
       // Get the patient ID from Redux store
       const patientId = user.user_id;
       
@@ -166,6 +169,7 @@ const AddAppointmentScreen = () => {
         
         // Get the updated appointment data
         const appointmentData = await response.json();
+        console.log('Updated appointment response:', appointmentData);
         
         // Cancel existing reminders for this appointment
         await cancelAppointmentReminders(appointmentId);
@@ -191,15 +195,35 @@ const AddAppointmentScreen = () => {
         }
 
         // Get the appointment data from the response
-        const appointmentData = await response.json();
-        savedAppointmentId = appointmentData.id || '';
+        const responseData = await response.json();
+        console.log('Full appointment response data:', responseData);
+        
+        // Extract ID correctly from the response structure
+        savedAppointmentId = responseData.id || responseData.data?.id || '';
+        console.log('Extracted appointment ID:', savedAppointmentId);
+        
+        if (!savedAppointmentId) {
+          console.error('Warning: No appointment ID found in response');
+        }
       }
 
       // Check if reminders are enabled
       const remindersEnabled = await areAppointmentRemindersEnabled();
+      console.log('Reminders Enabled:', remindersEnabled);
       
-      // Only schedule reminders if they're enabled
+      // Debug the condition evaluation
+      console.log('Checking reminder conditions:', { 
+        remindersEnabled, 
+        savedAppointmentId, 
+        shouldSchedule: Boolean(remindersEnabled && savedAppointmentId) 
+      });
+      
+      // Only schedule reminders if they're enabled and we have an appointment ID
       if (remindersEnabled && savedAppointmentId) {
+        console.log('🔔 Scheduling reminders...');
+        console.log('Appointment DateTime for reminders:', appointmentDateTime);
+        console.log('Current time:', new Date());
+        
         // Schedule reminders for this appointment using the utility function
         const reminderIds = await scheduleAppointmentReminder(
           appointmentDateTime, 
@@ -208,10 +232,16 @@ const AddAppointmentScreen = () => {
         );
         
         if (reminderIds && reminderIds.length > 0) {
-          console.log(`Scheduled ${reminderIds.length} reminders for appointment:`, reminderIds);
+          console.log(`✅ Scheduled ${reminderIds.length} reminders for appointment:`, reminderIds);
+          
+          // Debug: Check what was actually scheduled
+          const debugInfo = await debugNotifications();
+          console.log('🔍 Debug info after scheduling:', debugInfo);
+        } else {
+          console.log('❌ No reminders were scheduled - check logs for errors');
         }
       } else {
-        console.log('Reminders are disabled. No reminders scheduled for this appointment.');
+        console.log('⏭️ Reminders are disabled or no appointment ID. No reminders scheduled.');
       }
 
       // Navigate back to calendar screen

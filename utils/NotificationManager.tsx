@@ -227,26 +227,36 @@ export async function scheduleAppointmentReminder(
   appointmentId?: string
 ): Promise<string[] | null> {
   try {
+    console.log('📅 Scheduling appointment reminder...');
+    console.log('Appointment DateTime (from backend):', appointmentDateTime);
+    console.log('Current time:', new Date());
+    
     // Request notification permissions
     const hasPermission = await requestNotificationPermissions();
     if (!hasPermission) {
-      console.log('Notification permissions not granted');
+      console.log('❌ Notification permissions not granted');
       return null;
     }
 
     const now = new Date();
     const reminderIds: string[] = [];
 
+    // Ensure we're working with proper Date objects
+    const appointmentDate = new Date(appointmentDateTime);
+    
     // Calculate reminder times
-    const oneHourBefore = new Date(appointmentDateTime);
-    oneHourBefore.setHours(oneHourBefore.getHours() - 1);
+    const oneHourBefore = new Date(appointmentDate.getTime() - (60 * 60 * 1000)); // 1 hour in milliseconds
+    const oneDayBefore = new Date(appointmentDate.getTime() - (24 * 60 * 60 * 1000)); // 24 hours in milliseconds
 
-    const oneDayBefore = new Date(appointmentDateTime);
-    oneDayBefore.setDate(oneDayBefore.getDate() - 1);
+    console.log('One hour before:', oneHourBefore);
+    console.log('One day before:', oneDayBefore);
 
     // Schedule 1-hour reminder if it's in the future
     if (oneHourBefore > now) {
-      const oneHourReminderId = `appointment-1h-${Date.now()}`;
+      const oneHourReminderId = `appointment-1h-${appointmentId || Date.now()}`;
+      const secondsUntilReminder = Math.floor((oneHourBefore.getTime() - now.getTime()) / 1000);
+      
+      console.log(`⏰ Scheduling 1-hour reminder in ${secondsUntilReminder} seconds`);
       
       await Notifications.scheduleNotificationAsync({
         content: {
@@ -258,20 +268,25 @@ export async function scheduleAppointmentReminder(
           },
           sound: true,
         },
-        trigger: { 
+        trigger: {
           type: SchedulableTriggerInputTypes.TIME_INTERVAL,
-          seconds: Math.floor((oneHourBefore.getTime() - now.getTime()) / 1000),
+          seconds: secondsUntilReminder, // Fixed: Convert milliseconds to seconds
         },
         identifier: oneHourReminderId,
       });
       
-      console.log('1-hour appointment reminder scheduled for:', oneHourBefore);
+      console.log('✅ 1-hour appointment reminder scheduled for:', oneHourBefore);
       reminderIds.push(oneHourReminderId);
+    } else {
+      console.log('⏭️ 1-hour reminder time has passed, skipping');
     }
 
     // Schedule 24-hour reminder if it's in the future
     if (oneDayBefore > now) {
-      const oneDayReminderId = `appointment-24h-${Date.now()}`;
+      const oneDayReminderId = `appointment-24h-${appointmentId || Date.now()}`;
+      const secondsUntilDayReminder = Math.floor((oneDayBefore.getTime() - now.getTime()) / 1000);
+      
+      console.log(`⏰ Scheduling 24-hour reminder in ${secondsUntilDayReminder} seconds`);
       
       await Notifications.scheduleNotificationAsync({
         content: {
@@ -283,20 +298,49 @@ export async function scheduleAppointmentReminder(
           },
           sound: true,
         },
-        trigger: { 
+        trigger: {
           type: SchedulableTriggerInputTypes.TIME_INTERVAL,
-          seconds: Math.floor((oneDayBefore.getTime() - now.getTime()) / 1000),
+          seconds: secondsUntilDayReminder, // Fixed: Proper time calculation
         },
         identifier: oneDayReminderId,
       });
       
-      console.log('24-hour appointment reminder scheduled for:', oneDayBefore);
+      console.log('✅ 24-hour appointment reminder scheduled for:', oneDayBefore);
       reminderIds.push(oneDayReminderId);
+    } else {
+      console.log('⏭️ 24-hour reminder time has passed, skipping');
     }
+
+    // Debug: Show what was scheduled
+    const debugInfo = await debugNotifications();
+    console.log('🔍 Current scheduled notifications:', debugInfo);
 
     return reminderIds.length > 0 ? reminderIds : null;
   } catch (error) {
-    console.error('Error scheduling appointment reminder:', error);
+    console.error('❌ Error scheduling appointment reminder:', error);
+    return null;
+  }
+}
+
+export async function debugNotifications() {
+  try {
+    const permissions = await Notifications.getPermissionsAsync();
+    console.log('Notification Permissions:', permissions);
+    
+    const scheduled = await getAllScheduledNotifications();
+    console.log('Scheduled Notifications:', scheduled);
+    
+    return {
+      permissions,
+      scheduledCount: scheduled.length,
+      scheduled: scheduled.map(n => ({
+        identifier: n.identifier,
+        trigger: n.trigger,
+        content: n.content.title
+      }))
+    };
+  } catch (error) {
+    console.error('Error debugging notifications:', error);
     return null;
   }
 }

@@ -1,4 +1,3 @@
-// zustandStore/mealStore.ts
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -12,7 +11,8 @@ export interface FoodItem {
   id?: string;
   name: string;
   portion: string;
-  calories: number;
+  quantity?: number; // Number of portions
+  calories: number; // Calories per single portion
   classification: FoodClassification;
 }
 
@@ -77,10 +77,12 @@ interface MealStore extends MealProgress {
   updateCalorieGoal: (userId: string, goal: number, date?: string) => Promise<boolean>;
   addFoodItem: (userId: string, mealType: string, foodItem: FoodItem, date?: string) => Promise<boolean>;
   deleteFoodItem: (userId: string, mealId: string, foodItemId: string) => Promise<boolean>;
+  updateFoodItemQuantity: (userId: string, mealId: string, foodItemId: string, quantity: number) => Promise<boolean>;
   getFoodQualityRatio: () => { goodRatio: number, badRatio: number };
   resetState: () => void;
   fetchCalorieHistory: (userId: string, timeRange?: string) => Promise<void>;
   setSelectedDate: (date: string) => void; // New action to track selected date
+  fetchUserGoals: (userId: string) => Promise<void>;
 }
 
 export const useMealStore = create<MealStore>()(
@@ -127,6 +129,8 @@ export const useMealStore = create<MealStore>()(
             }
             
             const data = await response.json();
+
+            console.log("Meals calorie goal fetched successfully:", data.calorieGoal);
             
             // Update state with fetched data
             set({
@@ -266,6 +270,7 @@ export const useMealStore = create<MealStore>()(
                 portion: foodItem.portion,
                 calories: foodItem.calories,
                 classification: foodItem.classification,
+                quantity: foodItem.quantity || 1, // Include quantity
                 date: targetDate // Pass the date to backend
               })
             });
@@ -290,45 +295,8 @@ export const useMealStore = create<MealStore>()(
                 set({ isLoading: false });
               }
               
-              // Update meals in local state
-              if (data.foodItem) {
-                const normalizedType = normalizeMealType(normalizedMealType);
-                const currentMeals = { ...get().meals };
-                
-                if (!currentMeals[normalizedType]) {
-                  currentMeals[normalizedType] = [];
-                }
-                
-                if (currentMeals[normalizedType].length > 0) {
-                  const updatedMeal = { 
-                    ...currentMeals[normalizedType][0],
-                    foodItems: [
-                      ...currentMeals[normalizedType][0].foodItems,
-                      data.foodItem
-                    ],
-                    totalCalories: currentMeals[normalizedType][0].totalCalories + (data.foodItem.calories || 0),
-                    foodItemsCount: currentMeals[normalizedType][0].foodItemsCount + 1
-                  };
-                  
-                  currentMeals[normalizedType] = [
-                    updatedMeal,
-                    ...currentMeals[normalizedType].slice(1)
-                  ];
-                } else {
-                  const newMeal = {
-                    id: data.mealId || 'temp-id',
-                    mealType: normalizedType,
-                    totalCalories: data.foodItem.calories || 0,
-                    foodItemsCount: 1,
-                    isSavedAsMeal: false,
-                    foodItems: [data.foodItem]
-                  };
-                  
-                  currentMeals[normalizedType] = [newMeal];
-                }
-                
-                set({ meals: currentMeals });
-              }
+              // Re-fetch meals to get updated data with quantities
+              await get().fetchMealsForDate(userId, targetDate);
             } else {
               set({ isLoading: false });
             }
@@ -462,6 +430,84 @@ export const useMealStore = create<MealStore>()(
               chartData: [] // Set empty array on error
             });
           }
+        },
+        
+        // New action to update food item quantity
+        updateFoodItemQuantity: async (userId: string, mealId: string, foodItemId: string, quantity: number) => {
+          if (!userId || !mealId || !foodItemId) {
+            console.error("Cannot update food item quantity: Missing required IDs");
+            return false;
+          }
+          
+          set({ isLoading: true, error: null });
+          
+          try {
+            const response = await fetch(`${get().baseUrl}/user/${userId}/meals/${mealId}/fooditems/${foodItemId}/quantity`, {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ quantity })
+            });
+            console.log("Food item quantity updated successfully:", response);
+            
+            if (!response.ok) {
+              throw new Error(`Failed to update food item quantity: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            if (!data.success) {
+              throw new Error(data.error || "Unknown error updating food item quantity");
+            }
+            
+            // Re-fetch all meals to get the updated data
+            await get().fetchMeals(userId);
+            
+            console.log("Food item quantity updated successfully:", data);
+            return true;
+          } catch (error) {
+            console.error("Error updating food item quantity:", error);
+            set({ 
+              isLoading: false, 
+              error: error instanceof Error ? error.message : "Unknown error updating food item quantity" 
+            });
+            return false;
+          }
+        },
+        
+        // New action to fetch user goals
+        fetchUserGoals: async (userId: string) => {
+          if (!userId) {
+            console.error("Cannot fetch user goals: User ID is required");
+            return;
+          }
+          
+          set({ isLoading: true, error: null });
+          
+          try {
+            const response = await fetch(`${get().baseUrl}/user/activity/${userId}/goals`);
+            
+            if (!response.ok) {
+              throw new Error(`Failed to fetch goals: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            // Update the store with the goals
+            set({
+              calorieGoal: data.calorieGoal,
+              isLoading: false
+            });
+            
+            console.log("User goals fetched successfully:", data);
+          } catch (error) {
+            console.error("Error fetching user goals:", error);
+            set({ 
+              isLoading: false, 
+              error: error instanceof Error ? error.message : "Unknown error fetching goals" 
+            });
+          }
         }
       }),
       {
@@ -472,8 +518,6 @@ export const useMealStore = create<MealStore>()(
           caloriesConsumed: state.caloriesConsumed,
           goodFoodCount: state.goodFoodCount,
           badFoodCount: state.badFoodCount,
-          meals: state.meals,
-          selectedDate: state.selectedDate // Persist selected date
         })
       }
     )

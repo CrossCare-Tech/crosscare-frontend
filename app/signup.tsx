@@ -130,7 +130,7 @@ const SignUp: FC = () => {
 
     try {
       const response = await fetch(
-        `http://10.0.2.2:8000/api/signup`,
+        `https://crosscare-backends.onrender.com/api/signup`,
         {
           method: "POST",
           headers: {
@@ -152,16 +152,11 @@ const SignUp: FC = () => {
         throw new Error(data.message || "Signup failed");
       }
 
-      Alert.alert(
-        "Success", 
-        "Account created successfully! Please login with your credentials.",
-        [
-          {
-            text: "OK",
-            onPress: () => router.replace("/login"),
-          },
-        ]
-      );
+      // Navigate to email verification screen
+      router.push({
+        pathname: "/verify-email",
+        params: { email: email.toLowerCase().trim() }
+      });
 
     } catch (error: any) {
       Alert.alert("Signup Failed", error.message);

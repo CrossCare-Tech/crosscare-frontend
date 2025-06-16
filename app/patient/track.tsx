@@ -97,18 +97,7 @@ export default function track() {
       title: `${selectedWeek} ${t("weeksRemaining")}`,
       backgroundColor: "#6ED7E9",
     },
-    {
-      id: 2,
-      title: t('baby'),
-      content: t('babyDescription'),
-      backgroundColor: "#F989D9", // Pink background for Baby section
-    },
-    {
-      id: 3,
-      title: t('mom'),
-      content: t('momDescription'),
-      backgroundColor: "#6ED7E9", // Teal background for Mom section
-    },
+    
     // {
     //   id: 4,
     //   title: t('funFact'),
@@ -244,7 +233,7 @@ export default function track() {
                 {item.id !== 1 && (
                   <Text style={styles.cardTitle}>{item.title}</Text>
                 )}
-                <Text style={styles.cardText}>{item.content}</Text>
+                
               </View>
             )}
             keyExtractor={(item, index) => index.toString()}

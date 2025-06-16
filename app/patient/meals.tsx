@@ -64,7 +64,19 @@ const CustomProgressBar = ({ progress }: { progress: number }) => {
   )
 }
 
-const FoodItems = ({ name, portion, calories, classification, onDelete }: FoodItem & { onDelete: () => void }) => {
+const FoodItems = ({ 
+  id, 
+  name, 
+  portion, 
+  quantity = 1, 
+  calories, 
+  classification, 
+  onDelete, 
+  onQuantityChange 
+}: FoodItem & { 
+  onDelete: () => void;
+  onQuantityChange: (newQuantity: number) => void;
+}) => {
   const [menuVisible, setMenuVisible] = useState(false);
   const { t } = useTranslation();
 
@@ -85,6 +97,11 @@ const FoodItems = ({ name, portion, calories, classification, onDelete }: FoodIt
     }
   }, [menuVisible])
 
+  const handleQuantityChange = (change: number) => {
+    const newQuantity = Math.max(1, quantity + change);
+    onQuantityChange(newQuantity);
+  };
+
   return (
     <View style={styles.foodItem}>
       <View style={styles.foodItemLeft}>
@@ -103,6 +120,24 @@ const FoodItems = ({ name, portion, calories, classification, onDelete }: FoodIt
           <Text style={styles.foodName}>{name}</Text>
         </View>
         <Text style={styles.foodPortion}>{portion}</Text>
+        
+        {/* Quantity Controls */}
+        <View style={styles.quantityContainer}>
+          <TouchableOpacity 
+            style={styles.quantityButton} 
+            onPress={() => handleQuantityChange(-1)}
+            disabled={quantity <= 1}
+          >
+            <Text style={[styles.quantityButtonText, quantity <= 1 && styles.quantityButtonDisabled]}>-</Text>
+          </TouchableOpacity>
+          <Text style={styles.quantityText}>{quantity}</Text>
+          <TouchableOpacity 
+            style={styles.quantityButton} 
+            onPress={() => handleQuantityChange(1)}
+          >
+            <Text style={styles.quantityButtonText}>+</Text>
+          </TouchableOpacity>
+        </View>
       </View>
       <View
         style={{
@@ -111,7 +146,7 @@ const FoodItems = ({ name, portion, calories, classification, onDelete }: FoodIt
           gap: 8,
         }}
       >
-        <Text style={styles.foodCalories}>{calories} Cal</Text>
+        <Text style={styles.foodCalories}>{calories * quantity} Cal</Text>
         <TouchableOpacity onPress={() => setMenuVisible(true)}>
           <Feather name="more-vertical" size={14} color="#E5E5E5" />
         </TouchableOpacity>
@@ -143,11 +178,13 @@ const MealItem = ({
   index,
   onAddPress,
   onDeleteFood,
+  onQuantityChange,
 }: {
   meal: Meal
   index: number
   onAddPress: (mealType: string) => void
   onDeleteFood: (mealType: string, foodIndex: number) => void
+  onQuantityChange: (mealType: string, foodIndex: number, newQuantity: number) => void
 }) => {
   const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(false)
@@ -180,17 +217,16 @@ const MealItem = ({
           {meal.foods.map((food, idx) => (
             <FoodItems
               key={idx}
+              id={food.id}
               name={food.name}
               portion={food.portion}
+              quantity={food.quantity}
               calories={food.calories}
               classification={food.classification}
               onDelete={() => onDeleteFood(meal.title, idx)}
+              onQuantityChange={(newQuantity) => onQuantityChange(meal.title, idx, newQuantity)}
             />
           ))}
-          <TouchableOpacity style={styles.saveAsMealButton}>
-            <Text style={styles.saveAsMealText}>{t('meals.saveAsMeal')}</Text>
-            <Ionicons name="chevron-forward" size={16} color="#434343" />
-          </TouchableOpacity>
         </View>
       )}
     </View>
@@ -222,7 +258,8 @@ const meals = () => {
     deleteFoodItem,
     getFoodQualityRatio,
     fetchCalorieHistory,
-    setSelectedDate
+    setSelectedDate,
+    updateFoodItemQuantity
   } = useMealStore();
   
   const [progress, setProgress] = useState(0)
@@ -233,7 +270,8 @@ const meals = () => {
 
   // Date picker states
   const [showDatePicker, setShowDatePicker] = useState(false)
-  const [selectedDate, setSelectedDateLocal] = useState(new Date(storeSelectedDate));
+  // Use store date directly instead of local state
+  const selectedDate = new Date(storeSelectedDate || new Date().toISOString().split('T')[0]);
 
   const [timeRange, setTimeRange] = useState("week")
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
@@ -495,22 +533,43 @@ const meals = () => {
     })
   }
 
-  // Keep this useEffect but modify it to only fetch calorie history when timeRange changes
+  // Initial data loading
   useEffect(() => {
-    if (userId && timeRange) {
-      // Only fetch calorie history when time range changes
+    if (userId) {
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Set initial selected date if not set
+      if (!storeSelectedDate) {
+        setSelectedDate(today);
+      }
+      
+      // Fetch meals and chart data
+      const targetDate = storeSelectedDate || today;
+      fetchMealsForDate(userId, targetDate);
       fetchCalorieHistory(userId, timeRange);
     }
-  }, [timeRange, fetchCalorieHistory, userId]);
+  }, [userId]);
 
-  // Update filtered data when time range changes
+  // Chart data fetching when timeRange changes
+  useEffect(() => {
+    if (userId && timeRange) {
+      fetchCalorieHistory(userId, timeRange);
+    }
+  }, [timeRange, userId, fetchCalorieHistory]);
+
+  // Update filtered data when chart data changes
   useEffect(() => {
     const filtered = processDataForTimeRange(chartData, timeRange)
     setFilteredData(filtered)
-
-    // Reset selected index when changing time range
     setSelectedIndex(null)
   }, [timeRange, chartData])
+
+  // Debug logging
+  useEffect(() => {
+    console.log('🟡 Chart data:', chartData);
+    console.log('🟡 Filtered data:', filteredData);
+    console.log('🟡 Time range:', timeRange);
+  }, [chartData, filteredData, timeRange]);
 
   // Add a separate useEffect for badge tracking that only runs once
   useEffect(() => {
@@ -563,9 +622,10 @@ const meals = () => {
 
   const handleAddFood = (mealType: string) => {
     // Navigate to food search screen with meal type
+    const formattedDate = selectedDate.toISOString().split('T')[0];
     router.push({
       pathname: "/patient/addmeals",
-      params: { mealType },
+      params: { mealType, selectedDate: formattedDate },
     })
   }
 
@@ -856,33 +916,57 @@ const meals = () => {
   }
 
   // Handle date change
-  const handleDateChange = (event, date) => {
+  const handleDateChange = (event: any, date?: Date) => {
     setShowDatePicker(false)
     if (date && userId) {
-      setSelectedDateLocal(date)
-      
       // Format the date to YYYY-MM-DD format for the API
       const formattedDate = date.toISOString().split('T')[0];
       
       // Update store's selected date
       setSelectedDate(formattedDate);
+      console.log('Selected date:', formattedDate);
       
       // Fetch meals for the selected date
       fetchMealsForDate(userId, formattedDate);
     }
   }
-
-  useEffect(() => {
-    if (userId) {
-      // Fetch meals for today initially
-      const today = new Date().toISOString().split('T')[0];
-      fetchMealsForDate(userId, today);
-    }
-  }, [userId, fetchMealsForDate]);
-
   
   // Get the food quality ratio for the circle visualization
   const { goodRatio, badRatio } = getFoodQualityRatio();
+
+  // Update the MealItem component to handle quantity changes
+  const handleQuantityChange = (mealType: string, foodIndex: number, newQuantity: number) => {
+    // Get the correct meal type for the API
+    const apiMealType = mealType === "meals.mealTitles.Breakfast" ? "BREAKFAST" :
+                       mealType === "meals.mealTitles.Lunch" ? "LUNCH" :
+                       mealType === "meals.mealTitles.Dinner" ? "DINNER" : "SNACK";
+    
+    // Find the meal and food item IDs from the store
+    const meals = storeMeals[apiMealType];
+    if (!meals || meals.length === 0) return;
+    
+    // Find which meal contains this food item
+    let foodItemId = null;
+    let mealId = null;
+    
+    // We need to find the specific meal and food item by index
+    let currentIndex = 0;
+    for (const meal of meals) {
+      const foodItems = meal.foodItems || [];
+      if (currentIndex + foodItems.length > foodIndex) {
+        // This meal contains our target food
+        const itemIndex = foodIndex - currentIndex;
+        foodItemId = foodItems[itemIndex]?.id;
+        mealId = meal.id;
+        break;
+      }
+      currentIndex += foodItems.length;
+    }
+    
+    if (userId && mealId && foodItemId) {
+      updateFoodItemQuantity(userId, mealId, foodItemId, newQuantity);
+    }
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -967,6 +1051,7 @@ const meals = () => {
                 index={index}
                 onAddPress={handleAddFood}
                 onDeleteFood={handleDeleteFood}
+                onQuantityChange={handleQuantityChange}
               />
             ))
           )}
@@ -1135,8 +1220,6 @@ const meals = () => {
 }
 
 export default meals;
-
-// ... existing code ...
 
 const styles = StyleSheet.create({
   container: {
@@ -1315,19 +1398,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: "Inter400",
     color: "#7B7B7B",
-  },
-  saveAsMealButton: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingTop: 20,
-    borderTopWidth: 0.5,
-    borderTopColor: "#E6E6E6",
-  },
-  saveAsMealText: {
-    fontSize: 14,
-    fontFamily: "Inter500",
-    color: "#38C472",
   },
   descriptionContainer: {
     backgroundColor: "rgba(232, 232, 232, 0.25)",
@@ -1674,5 +1744,36 @@ const styles = StyleSheet.create({
   dropdownItemTextSelected: {
     color: "#38C472",
     fontFamily: "Inter600",
+  },
+  quantityContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 4,
+    gap: 8,
+  },
+  quantityButton: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "#EBF9F1",
+    borderWidth: 1,
+    borderColor: "#A3E4BE",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  quantityButtonText: {
+    fontSize: 14,
+    fontFamily: "Inter600",
+    color: "#38C472",
+  },
+  quantityButtonDisabled: {
+    color: "#CCCCCC",
+  },
+  quantityText: {
+    fontSize: 14,
+    fontFamily: "Inter500",
+    color: "#373737",
+    minWidth: 20,
+    textAlign: "center",
   },
 })

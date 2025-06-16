@@ -206,7 +206,7 @@
     "birthPlanning": "Birth Planning",
     "travelSafety": "Travel Safety",
     "healthStats1": "Show my health stats",
-    "nutritionAdvice1": "Give me nutrition advice?",
+    "nutritionAdvice1": "Give me some general nutrition advice?",
     "exerciseTips1": "What exercises are safe during pregnancy?",
     "birthPlanning1": "How do I create a birth plan?",
     "travelSafety1": "Is it safe to travel during pregnancy?"
@@ -756,7 +756,32 @@
       "monthly_averages": "Monthly average",
       "current": "Current",
       "last_night": "Last night",
-      "hours": "hours"
+      "hours": "hours",
+      "no_meal_data": "I don't have access to your meal data yet. Try logging some food first!",
+      "calories_consumed_today": "You've consumed",
+      "calories": "calories",
+      "out_of": "out of",
+      "calorie_goal": "calorie goal",
+      "you_have": "You have",
+      "calories_remaining": "calories remaining",
+      "goal_reached": "Great job reaching your goal!",
+      "average_daily_calories": "Your average daily calorie intake is",
+      "calories_past_week": "calories over the past week",
+      "calories_today": "Today you've consumed",
+      "goal_is": "Your goal is",
+      "no_food_logged_today": "You haven't logged any food today yet",
+      "food_quality_today": "Today you've eaten",
+      "healthy_foods": "healthy foods and",
+      "less_healthy_foods": "less healthy foods",
+      "thats": "That's",
+      "healthy_choices": "healthy choices",
+      "no_meals_logged_today": "You haven't logged any meals today yet",
+      "meals_logged_today": "Today you've logged meals for",
+      "total_calories": "Total calories:",
+      "consumed_today": "consumed today",
+      "goal": "Goal",
+      "avg_per_day_weekly": "average per day this week"
+      
   },
   "questionaire":{
     "do":"Do you live in a house or an apartment?"

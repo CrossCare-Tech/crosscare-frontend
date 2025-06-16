@@ -4,8 +4,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppState } from 'react-native';
 
 // Replace these with your actual Supabase URL and Anon Key from your Supabase dashboard
-const SUPABASE_URL = 'https://jgpjbgkjttaztoaztxht.supabase.co';
-const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || undefined;
+const SUPABASE_URL = 'https://sfpyewutvgmsmlywgcor.supabase.co';
+const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || undefined;
 
 // Create a Supabase client
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY!, {
@@ -17,12 +17,13 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY!, {
   },
 });
 
+
 // Initialize session restoration and token refresh
 const initializeAuth = async () => {
   try {
     // Wait for the session to be fully retrieved
     const { data: { session }, error } = await supabase.auth.getSession();
-    
+    console.log('Session data:', session);
     if (error) {
       console.error('Session retrieval error:', error);
       return;

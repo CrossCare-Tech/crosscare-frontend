@@ -28,6 +28,7 @@ const Calendar = () => {
     const loadReminderPreference = async () => {
       try {
         const enabled = await areAppointmentRemindersEnabled();
+        console.log('Reminders Enabled:', enabled);
         setRemindersEnabled(enabled);
       } catch (error) {
         console.error('Error loading reminder preference:', error);
@@ -69,7 +70,7 @@ const Calendar = () => {
       }
 
       const data = await response.json();
-      console.log(data);
+      console.log("Fetched appointments:", data);
       
       // Process the appointments to add status
       const now = new Date();

@@ -351,48 +351,53 @@ const FloatingButton: React.FC<FloatingButtonProps> = ({
   })
 
   const renderButtonContent = () => {
+    // Show loading state
     if (isLoadingAvatar) {
-      return <Image
-      source={{
-        uri: user?.avatar_url || 'https://tskzddfyjazcirdvloch.supabase.co/storage/v1/object/public/cross-care/avatars/avatar-660e8400-e29b-41d4-a716-446655440014-46d376a4-820f-45d8-82cb-82766db041fa.jpg'
-      }}
-        style={styles.image}
-        resizeMode={user?.avatar_url ? "cover" : "contain"}
-        onError={() => setImageLoaded(false)}
-      />
-    }
-    
-    if (avatarImage) {
       return (
         <Image
-        source={{
-          uri: user?.avatar_url || 'https://tskzddfyjazcirdvloch.supabase.co/storage/v1/object/public/cross-care/avatars/avatar-660e8400-e29b-41d4-a716-446655440014-46d376a4-820f-45d8-82cb-82766db041fa.jpg'
-        }}
+          source={require("../assets/images/doulaImg.png")}
           style={styles.image}
-          resizeMode={user?.avatar_url ? "cover" : "contain"}
-          onError={() => setImageLoaded(false)}
+          resizeMode="contain"
         />
       );
     }
     
-    // Fallback to default image if no avatar or error loading
-    return imageLoaded ? (
+    // Check if user has a valid avatar URL
+    if (user?.avatar_url && user.avatar_url.trim() !== '') {
+      return (
+        <Image
+          source={{ uri: user.avatar_url }}
+          style={styles.image}
+          resizeMode="cover"
+          onError={() => {
+            console.log("Failed to load user avatar, falling back to default");
+            setImageLoaded(false);
+          }}
+        />
+      );
+    }
+    
+    // Check if we have a local avatar image from AsyncStorage
+    if (avatarImage && avatarImage.trim() !== '') {
+      return (
+        <Image
+          source={{ uri: avatarImage }}
+          style={styles.image}
+          resizeMode="cover"
+          onError={() => {
+            console.log("Failed to load local avatar, falling back to default");
+            setImageLoaded(false);
+          }}
+        />
+      );
+    }
+    
+    // Fallback to default doulaImg.png
+    return (
       <Image
-      source={{
-        uri: user?.avatar_url  || 'https://tskzddfyjazcirdvloch.supabase.co/storage/v1/object/public/cross-care/avatars/avatar-660e8400-e29b-41d4-a716-446655440014-46d376a4-820f-45d8-82cb-82766db041fa.jpg'
-      }}
+        source={require("../assets/images/doulaImg.png")}
         style={styles.image}
-        resizeMode="cover"
-        onError={() => setImageLoaded(false)}
-      />
-    ) : (
-      <Image
-      source={{
-        uri: user?.avatar_url || 'https://tskzddfyjazcirdvloch.supabase.co/storage/v1/object/public/cross-care/avatars/avatar-660e8400-e29b-41d4-a716-446655440014-46d376a4-820f-45d8-82cb-82766db041fa.jpg'
-      }}
-        style={styles.image}
-        resizeMode="cover"
-        onError={() => setImageLoaded(false)}
+        resizeMode="contain"
       />
     );
   };

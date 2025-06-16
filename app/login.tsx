@@ -94,6 +94,29 @@ const Login: FC = () => {
       console.log("API Response:", data);
 
       if (!response.ok) {
+        // Check if email verification is required
+        if (data.requiresVerification) {
+          Alert.alert(
+            "Email Verification Required",
+            "Please verify your email address before logging in.",
+            [
+              {
+                text: "Verify Now",
+                onPress: () => router.push({
+                  pathname: "/verify-email",
+                  params: { email: data.email || email }
+                }),
+              },
+              {
+                text: "Cancel",
+                style: "cancel",
+              },
+            ]
+          );
+          setLoading(false);
+          return;
+        }
+        
         throw new Error(data.message || "Login failed");
       }
 

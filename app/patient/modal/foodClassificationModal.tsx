@@ -16,7 +16,7 @@ interface FoodClassificationModalProps {
   visible: boolean;
   foodName: string;
   onClose: () => void;
-  onClassify: (classification: 'good' | 'bad') => void;
+  onClassify: (classification: 'good' | 'bad', quantity: number) => void;
 }
 
 const FoodClassificationModal: React.FC<FoodClassificationModalProps> = ({
@@ -27,13 +27,14 @@ const FoodClassificationModal: React.FC<FoodClassificationModalProps> = ({
 }) => {
   const [selectedClassification, setSelectedClassification] = useState<'good' | 'bad' | null>(null);
   const [showResult, setShowResult] = useState(false);
+  const [quantity, setQuantity] = useState(1);
 
   const handleClassification = (classification: 'good' | 'bad') => {
     setSelectedClassification(classification);
     setShowResult(true);
     
-    // Call the parent callback
-    onClassify(classification);
+    // Call the parent callback with quantity
+    onClassify(classification, quantity);
     
     // Auto close after showing result for 1.5 seconds
     setTimeout(() => {
@@ -44,7 +45,12 @@ const FoodClassificationModal: React.FC<FoodClassificationModalProps> = ({
   const handleClose = () => {
     setSelectedClassification(null);
     setShowResult(false);
+    setQuantity(1); // Reset quantity
     onClose();
+  };
+
+  const handleQuantityChange = (change: number) => {
+    setQuantity(Math.max(1, quantity + change));
   };
 
   return (
@@ -73,6 +79,27 @@ const FoodClassificationModal: React.FC<FoodClassificationModalProps> = ({
               </View>
               
               <Text style={styles.questionText}>How would you classify this food:</Text>
+              
+              {/* Quantity Selector */}
+              <View style={styles.quantitySection}>
+                <Text style={styles.quantityLabel}>Quantity:</Text>
+                <View style={styles.quantityContainer}>
+                  <TouchableOpacity 
+                    style={[styles.quantityButton, quantity <= 1 && styles.quantityButtonDisabled]} 
+                    onPress={() => handleQuantityChange(-1)}
+                    disabled={quantity <= 1}
+                  >
+                    <Text style={[styles.quantityButtonText, quantity <= 1 && styles.quantityButtonTextDisabled]}>-</Text>
+                  </TouchableOpacity>
+                  <Text style={styles.quantityText}>{quantity}</Text>
+                  <TouchableOpacity 
+                    style={styles.quantityButton} 
+                    onPress={() => handleQuantityChange(1)}
+                  >
+                    <Text style={styles.quantityButtonText}>+</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
               
               <View style={styles.buttonContainer}>
                 <TouchableOpacity
@@ -184,6 +211,48 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontFamily:'Inter600',
     marginBottom: 16,
+  },
+  quantitySection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  quantityLabel: {
+    fontSize: 16,
+    color: 'rgba(55, 55, 55, 1)',
+    fontFamily: 'Inter600',
+    marginRight: 8,
+  },
+  quantityContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(200, 200, 200, 1)',
+    borderRadius: 8,
+    padding: 4,
+  },
+  quantityButton: {
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  quantityButtonDisabled: {
+    backgroundColor: 'rgba(200, 200, 200, 1)',
+  },
+  quantityButtonText: {
+    fontSize: 16,
+    fontFamily: 'Inter600',
+  },
+  quantityButtonTextDisabled: {
+    color: 'rgba(150, 150, 150, 1)',
+  },
+  quantityText: {
+    fontSize: 16,
+    color: 'rgba(55, 55, 55, 1)',
+    fontFamily: 'Inter600',
+    marginHorizontal: 8,
   },
   buttonContainer: {
     flexDirection: 'row',

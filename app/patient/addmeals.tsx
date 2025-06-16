@@ -92,6 +92,7 @@ const addmeals = () => {
   const router = useRouter();
   const params = useLocalSearchParams();
   const mealType = params.mealType as string;
+  const selectedDate = params.selectedDate as string;
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<FoodItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -106,6 +107,7 @@ const addmeals = () => {
   const [foodClassifications, setFoodClassifications] = useState(new Map());
   const [classificationModalVisible, setClassificationModalVisible] = useState(false);
   const [selectedFoodForClassification, setSelectedFoodForClassification] = useState<ToggleSelectionItem | null>(null);
+  const [selectedQuantity, setSelectedQuantity] = useState(1);
   
   // Initial API call to get some default foods
   useEffect(() => {
@@ -122,12 +124,13 @@ const addmeals = () => {
     } else {
       // If item is not selected, show classification modal first
       setSelectedFoodForClassification(item);
+      setSelectedQuantity(1);
       setClassificationModalVisible(true);
     }
   };
 
 
-  const handleFoodClassification = (classification: 'good' | 'bad'): void => {
+  const handleFoodClassification = (classification: 'good' | 'bad', quantity: number): void => {
     if (!selectedFoodForClassification) return;
   
     const item: ToggleSelectionItem = selectedFoodForClassification;
@@ -145,6 +148,7 @@ const addmeals = () => {
       name: item.name || item.description || "",
       portion: `${item.servingSize} ${item.servingSizeUnit}`,
       calories: item.calories || 0,
+      quantity: quantity,
       classification: classification === 'good' ? 'GOOD' : 'BAD'
     };
   
@@ -160,7 +164,7 @@ const addmeals = () => {
     // If user is logged in, add the food directly via the store
     if (user?.user_id) {
       // Use the converted apiMealType instead of the raw mealType
-      addFoodItem(user.user_id, apiMealType, storeFood);
+      addFoodItem(user.user_id, apiMealType, storeFood, selectedDate);
     }
   
     router.back();
