@@ -1,24 +1,24 @@
-import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { devtools } from 'zustand/middleware';
-import { Platform } from 'react-native';
+import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { devtools } from "zustand/middleware";
+import { Platform } from "react-native";
 
 // Type definitions
-export type FoodClassification = 'GOOD' | 'BAD';
+export type FoodClassification = "GOOD" | "BAD";
 
 export interface FoodItem {
   id?: string;
   name: string;
   portion: string;
-  quantity?: number; // Number of portions
-  calories: number; // Calories per single portion
+  quantity?: number;
+  calories: number;
   classification: FoodClassification;
 }
 
 export interface Meal {
   id?: string;
-  mealType: 'BREAKFAST' | 'LUNCH' | 'DINNER' | 'SNACK';
+  mealType: "BREAKFAST" | "LUNCH" | "DINNER" | "SNACK";
   totalCalories: number;
   foodItemsCount: number;
   isSavedAsMeal: boolean;
@@ -26,10 +26,10 @@ export interface Meal {
 }
 
 interface DataItem {
-    day: string
-    calories: number
-    date: string
-  }
+  day: string;
+  calories: number;
+  date: string;
+}
 
 export interface MealProgress {
   calorieGoal: number;
@@ -38,51 +38,69 @@ export interface MealProgress {
   badFoodCount: number;
 }
 
+// Helper function to get today's date in YYYY-MM-DD format
+const getTodayDate = () => new Date().toISOString().split("T")[0];
+
 // Helper function to normalize meal type
-const normalizeMealType = (mealType: string): 'BREAKFAST' | 'LUNCH' | 'DINNER' | 'SNACK' => {
+const normalizeMealType = (
+  mealType: string
+): "BREAKFAST" | "LUNCH" | "DINNER" | "SNACK" => {
   const type = mealType.toUpperCase();
-  if (['BREAKFAST', 'LUNCH', 'DINNER', 'SNACK'].includes(type)) {
-    return type as 'BREAKFAST' | 'LUNCH' | 'DINNER' | 'SNACK';
+  if (["BREAKFAST", "LUNCH", "DINNER", "SNACK"].includes(type)) {
+    return type as "BREAKFAST" | "LUNCH" | "DINNER" | "SNACK";
   }
-  return 'BREAKFAST'; // Default
+  return "BREAKFAST";
 };
 
 // Interface for the store
 interface MealStore extends MealProgress {
-  // Meal data by type
   meals: {
     BREAKFAST: Meal[];
     LUNCH: Meal[];
     DINNER: Meal[];
     SNACK: Meal[];
   };
-  
-  // Loading states
+
   isLoading: boolean;
   error: string | null;
-  
-  // API URLs
   baseUrl: string;
-  
-  // New properties for chart data
   chartData: DataItem[];
   currentTimeRange: string;
-  
-  // Add selectedDate to track current viewing date
   selectedDate: string;
-  
+  lastAccessedDate: string | null; // Track last accessed date
+
   // Actions
+  checkAndResetForNewDay: () => void; // New action to check and reset daily data
   fetchMeals: (userId: string) => Promise<void>;
   fetchMealsForDate: (userId: string, date: string) => Promise<void>;
-  updateCalorieGoal: (userId: string, goal: number, date?: string) => Promise<boolean>;
-  addFoodItem: (userId: string, mealType: string, foodItem: FoodItem, date?: string) => Promise<boolean>;
-  deleteFoodItem: (userId: string, mealId: string, foodItemId: string) => Promise<boolean>;
-  updateFoodItemQuantity: (userId: string, mealId: string, foodItemId: string, quantity: number) => Promise<boolean>;
-  getFoodQualityRatio: () => { goodRatio: number, badRatio: number };
+  updateCalorieGoal: (
+    userId: string,
+    goal: number,
+    date?: string
+  ) => Promise<boolean>;
+  addFoodItem: (
+    userId: string,
+    mealType: string,
+    foodItem: FoodItem,
+    date?: string
+  ) => Promise<boolean>;
+  deleteFoodItem: (
+    userId: string,
+    mealId: string,
+    foodItemId: string
+  ) => Promise<boolean>;
+  updateFoodItemQuantity: (
+    userId: string,
+    mealId: string,
+    foodItemId: string,
+    quantity: number
+  ) => Promise<boolean>;
+  getFoodQualityRatio: () => { goodRatio: number; badRatio: number };
   resetState: () => void;
   fetchCalorieHistory: (userId: string, timeRange?: string) => Promise<void>;
-  setSelectedDate: (date: string) => void; // New action to track selected date
+  setSelectedDate: (date: string) => void;
   fetchUserGoals: (userId: string) => Promise<void>;
+  resetDailyProgress: () => void; // New action to reset daily progress
 }
 
 export const useMealStore = create<MealStore>()(
@@ -94,47 +112,127 @@ export const useMealStore = create<MealStore>()(
         caloriesConsumed: 0,
         goodFoodCount: 0,
         badFoodCount: 0,
-        selectedDate: new Date().toISOString().split('T')[0], // Today by default
+        selectedDate: getTodayDate(),
+        lastAccessedDate: null, // Track when the store was last accessed
         meals: {
           BREAKFAST: [],
           LUNCH: [],
           DINNER: [],
-          SNACK: []
+          SNACK: [],
         },
         isLoading: false,
         error: null,
-        baseUrl: Platform.OS === 'android' ? 'https://crosscare-backends.onrender.com/api' : 'https://crosscare-backends.onrender.com/api',
+        baseUrl:
+          Platform.OS === "android"
+            ? "https://crosscare-backends.onrender.com/api"
+            : "https://crosscare-backends.onrender.com/api",
         chartData: [],
-        currentTimeRange: 'week',
-        
-        // New action to set selected date
-        setSelectedDate: (date: string) => {
-          set({ selectedDate: date });
+        currentTimeRange: "week",
+
+        // New action to check and reset for new day
+        checkAndResetForNewDay: () => {
+          const today = getTodayDate();
+          const lastDate = get().lastAccessedDate;
+
+          console.log(
+            "🔍 Checking date change - Today:",
+            today,
+            "Last accessed:",
+            lastDate
+          );
+
+          if (!lastDate || lastDate !== today) {
+            console.log("📅 New day detected! Resetting daily progress...");
+
+            // Reset daily progress but keep the goal
+            const currentGoal = get().calorieGoal;
+
+            set({
+              caloriesConsumed: 0,
+              goodFoodCount: 0,
+              badFoodCount: 0,
+              meals: {
+                BREAKFAST: [],
+                LUNCH: [],
+                DINNER: [],
+                SNACK: [],
+              },
+              selectedDate: today,
+              lastAccessedDate: today,
+              calorieGoal: currentGoal, // Persist the goal
+            });
+
+            console.log(
+              "✅ Daily progress reset completed. Goal preserved:",
+              currentGoal
+            );
+          } else {
+            console.log("📊 Same day - no reset needed");
+          }
         },
-        
-        // Action to fetch all meals for a user
+
+        // Action to manually reset daily progress
+        resetDailyProgress: () => {
+          const currentGoal = get().calorieGoal;
+          const today = getTodayDate();
+
+          set({
+            caloriesConsumed: 0,
+            goodFoodCount: 0,
+            badFoodCount: 0,
+            meals: {
+              BREAKFAST: [],
+              LUNCH: [],
+              DINNER: [],
+              SNACK: [],
+            },
+            selectedDate: today,
+            lastAccessedDate: today,
+            calorieGoal: currentGoal, // Preserve the goal
+          });
+
+          console.log(
+            "🔄 Manual daily progress reset completed. Goal preserved:",
+            currentGoal
+          );
+        },
+
+        setSelectedDate: (date: string) => {
+          set({
+            selectedDate: date,
+            lastAccessedDate: getTodayDate(), // Update last accessed when date changes
+          });
+        },
+
         fetchMeals: async (userId: string) => {
           if (!userId) {
             console.error("Cannot fetch meals: User ID is required");
             return;
           }
-          
+
+          // Check for new day before fetching
+          get().checkAndResetForNewDay();
+
           set({ isLoading: true, error: null });
-          
+
           try {
-            const response = await fetch(`${get().baseUrl}/user/activity/${userId}/foodItem`);
-            
+            const response = await fetch(
+              `${get().baseUrl}/user/activity/${userId}/foodItem`
+            );
+
             if (!response.ok) {
               throw new Error(`Failed to fetch meals: ${response.status}`);
             }
-            
-            const data = await response.json();
 
-            console.log("Meals calorie goal fetched successfully:", data.calorieGoal);
-            
+            const data = await response.json();
+            console.log(
+              "Meals calorie goal fetched successfully:",
+              data.calorieGoal
+            );
+
             // Update state with fetched data
             set({
-              calorieGoal: data.calorieGoal || 0,
+              calorieGoal: data.calorieGoal || get().calorieGoal, // Preserve existing goal if API doesn't return one
               caloriesConsumed: data.caloriesConsumed || 0,
               goodFoodCount: data.goodFoodCount || 0,
               badFoodCount: data.badFoodCount || 0,
@@ -142,241 +240,298 @@ export const useMealStore = create<MealStore>()(
                 BREAKFAST: data.meals?.BREAKFAST || [],
                 LUNCH: data.meals?.LUNCH || [],
                 DINNER: data.meals?.DINNER || [],
-                SNACK: data.meals?.SNACK || []
+                SNACK: data.meals?.SNACK || [],
               },
-              isLoading: false
+              isLoading: false,
+              lastAccessedDate: getTodayDate(), // Update last accessed
             });
-            
+
             console.log("Meals fetched successfully:", data);
           } catch (error) {
             console.error("Error fetching meals:", error);
-            set({ 
-              isLoading: false, 
-              error: error instanceof Error ? error.message : "Unknown error fetching meals" 
+            set({
+              isLoading: false,
+              error:
+                error instanceof Error
+                  ? error.message
+                  : "Unknown error fetching meals",
             });
           }
         },
-        
-        fetchMealsForDate: async (userId: string, date: string) => {
-            if (!userId || !date) {
-              console.error("Cannot fetch meals for date: User ID and date are required");
-              return;
-            }
-            
-            set({ isLoading: true, error: null });
-            
-            try {
-              const response = await fetch(`${get().baseUrl}/user/activity/${userId}/foodItem?date=${date}`);
-              
-              if (!response.ok) {
-                throw new Error(`Failed to fetch meals for date: ${response.status}`);
-              }
-              
-              const data = await response.json();
-              
-              // Update state with fetched data for the specific date
-              set({
-                calorieGoal: data.calorieGoal || 0,
-                caloriesConsumed: data.caloriesConsumed || 0,
-                goodFoodCount: data.goodFoodCount || 0,
-                badFoodCount: data.badFoodCount || 0,
-                meals: {
-                  BREAKFAST: data.meals?.BREAKFAST || [],
-                  LUNCH: data.meals?.LUNCH || [],
-                  DINNER: data.meals?.DINNER || [],
-                  SNACK: data.meals?.SNACK || []
-                },
-                isLoading: false
-              });
-              
-              console.log("Meals for date fetched successfully:", data);
-            } catch (error) {
-              console.error("Error fetching meals for date:", error);
-              set({ 
-                isLoading: false, 
-                error: error instanceof Error ? error.message : "Unknown error fetching meals for date" 
-              });
-            }
-          },
 
-        // Updated updateCalorieGoal to accept date parameter
-        updateCalorieGoal: async (userId: string, goal: number, date?: string) => {
+        fetchMealsForDate: async (userId: string, date: string) => {
+          if (!userId || !date) {
+            console.error(
+              "Cannot fetch meals for date: User ID and date are required"
+            );
+            return;
+          }
+
+          // Only reset if we're fetching data for today and it's a new day
+          if (date === getTodayDate()) {
+            get().checkAndResetForNewDay();
+          }
+
+          set({ isLoading: true, error: null });
+
+          try {
+            const response = await fetch(
+              `${get().baseUrl}/user/activity/${userId}/foodItem?date=${date}`
+            );
+
+            if (!response.ok) {
+              throw new Error(
+                `Failed to fetch meals for date: ${response.status}`
+              );
+            }
+
+            const data = await response.json();
+
+            // Update state with fetched data for the specific date
+            set({
+              calorieGoal: data.calorieGoal || get().calorieGoal, // Preserve existing goal
+              caloriesConsumed: data.caloriesConsumed || 0,
+              goodFoodCount: data.goodFoodCount || 0,
+              badFoodCount: data.badFoodCount || 0,
+              meals: {
+                BREAKFAST: data.meals?.BREAKFAST || [],
+                LUNCH: data.meals?.LUNCH || [],
+                DINNER: data.meals?.DINNER || [],
+                SNACK: data.meals?.SNACK || [],
+              },
+              isLoading: false,
+              lastAccessedDate: getTodayDate(), // Update last accessed
+            });
+
+            console.log("Meals for date fetched successfully:", data);
+          } catch (error) {
+            console.error("Error fetching meals for date:", error);
+            set({
+              isLoading: false,
+              error:
+                error instanceof Error
+                  ? error.message
+                  : "Unknown error fetching meals for date",
+            });
+          }
+        },
+
+        updateCalorieGoal: async (
+          userId: string,
+          goal: number,
+          date?: string
+        ) => {
           if (!userId) {
             console.error("Cannot update calorie goal: User ID is required");
             return false;
           }
-          
+
           set({ isLoading: true, error: null });
-          
+
           try {
             const targetDate = date || get().selectedDate;
-            const response = await fetch(`${get().baseUrl}/user/activity/${userId}/caloriesGoal`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({ 
-                calorieGoal: goal,
-                date: targetDate // Pass the date to backend
-              })
-            });
-            
+            const response = await fetch(
+              `${get().baseUrl}/user/activity/${userId}/caloriesGoal`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  calorieGoal: goal,
+                  date: targetDate,
+                }),
+              }
+            );
+
             if (!response.ok) {
-              throw new Error(`Failed to update calorie goal: ${response.status}`);
+              throw new Error(
+                `Failed to update calorie goal: ${response.status}`
+              );
             }
-            
+
             const data = await response.json();
-            
-            // Only update local state if we're updating the currently viewed date
-            if (targetDate === get().selectedDate) {
-              set({ calorieGoal: goal, isLoading: false });
-            } else {
-              set({ isLoading: false });
-            }
-            
-            console.log("Calorie goal updated successfully for date:", targetDate);
+
+            // Always update the goal regardless of date - goals should persist
+            set({
+              calorieGoal: goal,
+              isLoading: false,
+              lastAccessedDate: getTodayDate(),
+            });
+
+            console.log(
+              "Calorie goal updated successfully for date:",
+              targetDate
+            );
             return true;
           } catch (error) {
             console.error("Error updating calorie goal:", error);
-            set({ 
-              isLoading: false, 
-              error: error instanceof Error ? error.message : "Unknown error updating calorie goal" 
+            set({
+              isLoading: false,
+              error:
+                error instanceof Error
+                  ? error.message
+                  : "Unknown error updating calorie goal",
             });
             return false;
           }
         },
-        
-        // Updated addFoodItem to accept date parameter
-        addFoodItem: async (userId: string, mealType: string, foodItem: FoodItem, date?: string) => {
+
+        addFoodItem: async (
+          userId: string,
+          mealType: string,
+          foodItem: FoodItem,
+          date?: string
+        ) => {
           if (!userId) {
             console.error("Cannot add food item: User ID is required");
             return false;
           }
-          
+
           const normalizedMealType = normalizeMealType(mealType);
-          
+
           set({ isLoading: true, error: null });
-          
+
           try {
             const targetDate = date || get().selectedDate;
-            const response = await fetch(`${get().baseUrl}/user/activity/${userId}/foodItem`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({
-                mealType: normalizedMealType,
-                name: foodItem.name,
-                portion: foodItem.portion,
-                calories: foodItem.calories,
-                classification: foodItem.classification,
-                quantity: foodItem.quantity || 1, // Include quantity
-                date: targetDate // Pass the date to backend
-              })
-            });
-            
+            const response = await fetch(
+              `${get().baseUrl}/user/activity/${userId}/foodItem`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  mealType: normalizedMealType,
+                  name: foodItem.name,
+                  portion: foodItem.portion,
+                  calories: foodItem.calories,
+                  classification: foodItem.classification,
+                  quantity: foodItem.quantity || 1,
+                  date: targetDate,
+                }),
+              }
+            );
+
             if (!response.ok) {
               throw new Error(`Failed to add food item: ${response.status}`);
             }
-            
+
             const data = await response.json();
-            
+
             // Only update local state if we're adding to the currently viewed date
             if (targetDate === get().selectedDate) {
-              // Update local state with the new daily progress
               if (data.dailyProgress) {
                 set({
                   caloriesConsumed: data.dailyProgress.caloriesConsumed || 0,
                   goodFoodCount: data.dailyProgress.goodFoodCount || 0,
                   badFoodCount: data.dailyProgress.badFoodCount || 0,
-                  isLoading: false
+                  isLoading: false,
+                  lastAccessedDate: getTodayDate(),
                 });
               } else {
-                set({ isLoading: false });
+                set({
+                  isLoading: false,
+                  lastAccessedDate: getTodayDate(),
+                });
               }
-              
-              // Re-fetch meals to get updated data with quantities
+
               await get().fetchMealsForDate(userId, targetDate);
             } else {
-              set({ isLoading: false });
+              set({
+                isLoading: false,
+                lastAccessedDate: getTodayDate(),
+              });
             }
-            
+
             console.log("Food item added successfully for date:", targetDate);
             return true;
           } catch (error) {
             console.error("Error adding food item:", error);
-            set({ 
-              isLoading: false, 
-              error: error instanceof Error ? error.message : "Unknown error adding food item" 
+            set({
+              isLoading: false,
+              error:
+                error instanceof Error
+                  ? error.message
+                  : "Unknown error adding food item",
             });
             return false;
           }
         },
-        
-        // Delete a food item
-        deleteFoodItem: async (userId: string, mealId: string, foodItemId: string) => {
+
+        deleteFoodItem: async (
+          userId: string,
+          mealId: string,
+          foodItemId: string
+        ) => {
           if (!userId || !mealId || !foodItemId) {
             console.error("Cannot delete food item: Missing required IDs");
             return false;
           }
-          
+
           set({ isLoading: true, error: null });
-          
+
           try {
-            const response = await fetch(`${get().baseUrl}/user/${userId}/meals/${mealId}/fooditems/${foodItemId}`, {
-              method: 'DELETE'
-            });
-            
+            const response = await fetch(
+              `${
+                get().baseUrl
+              }/user/${userId}/meals/${mealId}/fooditems/${foodItemId}`,
+              {
+                method: "DELETE",
+              }
+            );
+
             if (!response.ok) {
               throw new Error(`Failed to delete food item: ${response.status}`);
             }
-            
+
             const data = await response.json();
-            
+
             if (!data.success) {
               throw new Error(data.error || "Unknown error deleting food item");
             }
-            
-            // Update local state with the new daily progress
+
             set({
               caloriesConsumed: data.dailyProgress.caloriesConsumed,
               goodFoodCount: data.dailyProgress.goodFoodCount,
               badFoodCount: data.dailyProgress.badFoodCount,
-              isLoading: false
+              isLoading: false,
+              lastAccessedDate: getTodayDate(),
             });
-            
-            // Re-fetch all meals to get the updated data
+
             await get().fetchMeals(userId);
-            
+
             console.log("Food item deleted successfully:", data);
             return true;
           } catch (error) {
             console.error("Error deleting food item:", error);
-            set({ 
-              isLoading: false, 
-              error: error instanceof Error ? error.message : "Unknown error deleting food item" 
+            set({
+              isLoading: false,
+              error:
+                error instanceof Error
+                  ? error.message
+                  : "Unknown error deleting food item",
             });
             return false;
           }
         },
-        
-        // Calculate food quality ratio
+
         getFoodQualityRatio: () => {
           const { goodFoodCount, badFoodCount } = get();
           const total = goodFoodCount + badFoodCount;
-          
+
           if (total === 0) {
-            return { goodRatio: 0.5, badRatio: 0.5 }; // Default 50/50 when no data
+            return { goodRatio: 0.5, badRatio: 0.5 };
           }
-          
+
           return {
             goodRatio: goodFoodCount / total,
-            badRatio: badFoodCount / total
+            badRatio: badFoodCount / total,
           };
         },
-        
-        // Reset state
+
         resetState: () => {
+          const today = getTodayDate();
           set({
             calorieGoal: 0,
             caloriesConsumed: 0,
@@ -386,139 +541,177 @@ export const useMealStore = create<MealStore>()(
               BREAKFAST: [],
               LUNCH: [],
               DINNER: [],
-              SNACK: []
+              SNACK: [],
             },
             isLoading: false,
-            error: null
+            error: null,
+            selectedDate: today,
+            lastAccessedDate: today,
           });
         },
-        
-        // New action to fetch calorie history
-        fetchCalorieHistory: async (userId: string, timeRange: string = 'week') => {
+
+        fetchCalorieHistory: async (
+          userId: string,
+          timeRange: string = "week"
+        ) => {
           if (!userId) {
             console.error("Cannot fetch calorie history: User ID is required");
             return;
           }
-          
+
           set({ isLoading: true, error: null });
-          
+
           try {
-            const response = await fetch(`${get().baseUrl}/user/activity/${userId}/calorieHistory?timeRange=${timeRange}`);
-            
+            const response = await fetch(
+              `${
+                get().baseUrl
+              }/user/activity/${userId}/calorieHistory?timeRange=${timeRange}`
+            );
+
             if (!response.ok) {
-              throw new Error(`Failed to fetch calorie history: ${response.status}`);
+              throw new Error(
+                `Failed to fetch calorie history: ${response.status}`
+              );
             }
-            
+
             const data = await response.json();
-            
+
             if (data.success) {
               set({
                 chartData: data.chartData || [],
                 currentTimeRange: timeRange,
-                isLoading: false
+                isLoading: false,
+                lastAccessedDate: getTodayDate(),
               });
             } else {
-              throw new Error(data.error || "Unknown error fetching calorie history");
+              throw new Error(
+                data.error || "Unknown error fetching calorie history"
+              );
             }
-            
+
             console.log("Calorie history fetched successfully:", data);
           } catch (error) {
             console.error("Error fetching calorie history:", error);
-            set({ 
-              isLoading: false, 
-              error: error instanceof Error ? error.message : "Unknown error fetching calorie history",
-              chartData: [] // Set empty array on error
+            set({
+              isLoading: false,
+              error:
+                error instanceof Error
+                  ? error.message
+                  : "Unknown error fetching calorie history",
+              chartData: [],
             });
           }
         },
-        
-        // New action to update food item quantity
-        updateFoodItemQuantity: async (userId: string, mealId: string, foodItemId: string, quantity: number) => {
+
+        updateFoodItemQuantity: async (
+          userId: string,
+          mealId: string,
+          foodItemId: string,
+          quantity: number
+        ) => {
           if (!userId || !mealId || !foodItemId) {
-            console.error("Cannot update food item quantity: Missing required IDs");
+            console.error(
+              "Cannot update food item quantity: Missing required IDs"
+            );
             return false;
           }
-          
+
           set({ isLoading: true, error: null });
-          
+
           try {
-            const response = await fetch(`${get().baseUrl}/user/${userId}/meals/${mealId}/fooditems/${foodItemId}/quantity`, {
-              method: 'PUT',
-              headers: {
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({ quantity })
-            });
-            console.log("Food item quantity updated successfully:", response);
-            
+            const response = await fetch(
+              `${
+                get().baseUrl
+              }/user/${userId}/meals/${mealId}/fooditems/${foodItemId}/quantity`,
+              {
+                method: "PUT",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ quantity }),
+              }
+            );
+
             if (!response.ok) {
-              throw new Error(`Failed to update food item quantity: ${response.status}`);
+              throw new Error(
+                `Failed to update food item quantity: ${response.status}`
+              );
             }
-            
+
             const data = await response.json();
-            
+
             if (!data.success) {
-              throw new Error(data.error || "Unknown error updating food item quantity");
+              throw new Error(
+                data.error || "Unknown error updating food item quantity"
+              );
             }
-            
-            // Re-fetch all meals to get the updated data
+
             await get().fetchMeals(userId);
-            
+
             console.log("Food item quantity updated successfully:", data);
             return true;
           } catch (error) {
             console.error("Error updating food item quantity:", error);
-            set({ 
-              isLoading: false, 
-              error: error instanceof Error ? error.message : "Unknown error updating food item quantity" 
+            set({
+              isLoading: false,
+              error:
+                error instanceof Error
+                  ? error.message
+                  : "Unknown error updating food item quantity",
             });
             return false;
           }
         },
-        
-        // New action to fetch user goals
+
         fetchUserGoals: async (userId: string) => {
           if (!userId) {
             console.error("Cannot fetch user goals: User ID is required");
             return;
           }
-          
+
           set({ isLoading: true, error: null });
-          
+
           try {
-            const response = await fetch(`${get().baseUrl}/user/activity/${userId}/goals`);
-            
+            const response = await fetch(
+              `${get().baseUrl}/user/activity/${userId}/goals`
+            );
+
             if (!response.ok) {
               throw new Error(`Failed to fetch goals: ${response.status}`);
             }
-            
+
             const data = await response.json();
-            
-            // Update the store with the goals
+
             set({
               calorieGoal: data.calorieGoal,
-              isLoading: false
+              isLoading: false,
+              lastAccessedDate: getTodayDate(),
             });
-            
+
             console.log("User goals fetched successfully:", data);
           } catch (error) {
             console.error("Error fetching user goals:", error);
-            set({ 
-              isLoading: false, 
-              error: error instanceof Error ? error.message : "Unknown error fetching goals" 
+            set({
+              isLoading: false,
+              error:
+                error instanceof Error
+                  ? error.message
+                  : "Unknown error fetching goals",
             });
           }
-        }
+        },
       }),
       {
-        name: 'meal-storage',
+        name: "meal-storage",
         storage: createJSONStorage(() => AsyncStorage),
         partialize: (state) => ({
-          calorieGoal: state.calorieGoal,
-          caloriesConsumed: state.caloriesConsumed,
-          goodFoodCount: state.goodFoodCount,
-          badFoodCount: state.badFoodCount,
-        })
+          calorieGoal: state.calorieGoal, // Persist goal
+          caloriesConsumed: state.caloriesConsumed, // This will be reset on new day
+          goodFoodCount: state.goodFoodCount, // This will be reset on new day
+          badFoodCount: state.badFoodCount, // This will be reset on new day
+          lastAccessedDate: state.lastAccessedDate, // Track last access
+          selectedDate: state.selectedDate,
+        }),
       }
     )
   )
