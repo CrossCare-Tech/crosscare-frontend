@@ -1,5 +1,5 @@
 import {
-ActivityIndicator,
+  ActivityIndicator,
   Alert,
   FlatList,
   ScrollView,
@@ -18,8 +18,8 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { StatusBar, Platform } from "react-native";
 import Card from "@/components/Card";
-import { useTranslation } from "react-i18next"
-import '../../../translation/i18next' 
+import { useTranslation } from "react-i18next";
+import "../../../translation/i18next";
 import ProgressCircle from "@/components/ProgressCircle";
 import { Image } from "react-native";
 import FoodIcon from "@/assets/images/Svg/FoodIcon";
@@ -97,17 +97,17 @@ const Home = () => {
   const user = useSelector((state: any) => state.user);
   // console.log("token", token);
   // console.log("userData1", user);
-  const { t } = useTranslation()
-  const { 
-    calorieGoal, 
-    caloriesConsumed, 
-    goodFoodCount, 
+  const { t } = useTranslation();
+  const {
+    calorieGoal,
+    caloriesConsumed,
+    goodFoodCount,
     badFoodCount,
     meals,
     isLoading,
     error,
     getFoodQualityRatio,
-    fetchUserGoals
+    fetchUserGoals,
   } = useMealStore();
   const [weeksComplete, setWeeksComplete] = useState(0);
   const pregnancyProgress = React.useMemo(() => {
@@ -124,12 +124,12 @@ const Home = () => {
   // const { stepsWalked, stepGoal, fetchStepData } = useStepsStore();
   const { stepsWalked, stepGoal } = useStepsWithAutoRefresh(user?.user_id);
 
-  const [foodQualityScore, setFoodQualityScore] = useState('50%');
+  const [foodQualityScore, setFoodQualityScore] = useState("50%");
 
   const handlePregnancySave = (week: number) => {
     // Convert days to weeks if needed
     setWeeksComplete(week || 0);
-    
+
     // You can also save this to your backend here
     // updatePregnancyProgress(value, unit);
   };
@@ -142,7 +142,6 @@ const Home = () => {
       // useStepsStore.getState().fetchUserGoals(user.user_id);
     }
   }, [user?.user_id]);
-    
 
   // Add this to trigger the modal (you can call this from any button/component)
   const openPregnancyModal = () => {
@@ -154,15 +153,18 @@ const Home = () => {
 
   const cardData1 = [
     {
-      id: '1',
-      title: t('cards.askDoula.title'),
-      description: t('cards.askDoula.description'),
+      id: "1",
+      title: t("cards.askDoula.title"),
+      description: t("cards.askDoula.description"),
       bg1: "#FBBBE9", // Light pink
       bg2: "#E162BC", // Deep pink
       // ✅ Use the user's avatar if available, otherwise fall back to doulaImg.png
-      image1: user?.avatar_url && user.avatar_url.trim() !== '' 
-        ? { uri: user.avatar_url }
-        : { uri: "https://sfpyewutvgmsmlywgcor.supabase.co/storage/v1/object/public/crosscare/avatars/avatar-1f454ac3-fcc6-48c1-a5b8-9f7c77bb2bb0-ed0c26a3-ba05-43cc-a6bd-6b875fa99687.jpg"},
+      image1:
+        user?.avatar_url && user.avatar_url.trim() !== ""
+          ? { uri: user.avatar_url }
+          : {
+              uri: "https://sfpyewutvgmsmlywgcor.supabase.co/storage/v1/object/public/crosscare/avatars/avatar-1f454ac3-fcc6-48c1-a5b8-9f7c77bb2bb0-ed0c26a3-ba05-43cc-a6bd-6b875fa99687.jpg",
+            },
       onPress: () => {
         router.push({
           pathname: "/patient/askdoula",
@@ -170,156 +172,158 @@ const Home = () => {
         });
       },
     },
-  {
-    id: '2',
-    title: t('cards.calendar.title'),
-    description: t('cards.calendar.description'),
-    bg1: "#FFE5B0", // Light yellow
-    bg2: "#FFAA00", // Bright orange
-    image1: require("../../../assets/images/calendra.png"),
-    onPress: () => router.push("/patient/calendar"),
-  },
-  {
-    id: '3',
-    title: t('cards.motherCare.title'),
-    description: t('cards.motherCare.description'),
-    bg1: "#ACF3FF", // Light blue
-    bg2: "#64C4D4", // Turquoise
-    image1: require("../../../assets/images/mother.png"),
-    onPress: () => router.push("/patient/health"),
-  },
-];
+    {
+      id: "2",
+      title: t("cards.calendar.title"),
+      description: t("cards.calendar.description"),
+      bg1: "#FFE5B0", // Light yellow
+      bg2: "#FFAA00", // Bright orange
+      image1: require("../../../assets/images/calendra.png"),
+      onPress: () => router.push("/patient/calendar"),
+    },
+    {
+      id: "3",
+      title: t("cards.motherCare.title"),
+      description: t("cards.motherCare.description"),
+      bg1: "#ACF3FF", // Light blue
+      bg2: "#64C4D4", // Turquoise
+      image1: require("../../../assets/images/mother.png"),
+      onPress: () => router.push("/patient/health"),
+    },
+  ];
 
-const cardData = cardData1.map((item) => ({
-  ...item,
-  id: String(item.id), // Ensure id is a number
-  onPress: item.onPress || (() => {}),
-}));
+  const cardData = cardData1.map((item) => ({
+    ...item,
+    id: String(item.id), // Ensure id is a number
+    onPress: item.onPress || (() => {}),
+  }));
 
   useEffect(() => {
-      const setAllVisited = async () => {
-        if (userId) {
-          checkAndAwardExplorerBadge(userId);
-        }
-      };
-      
-      setAllVisited();
-    }, [userId]);
-  
-    const checkAndAwardExplorerBadge = async (userId: string) => {
-      try {
-        // Get visited status for all areas
-        const healthVisited = await AsyncStorage.getItem('health');
-        const journalVisited = await AsyncStorage.getItem('journal');
-        const selfCareVisited = await AsyncStorage.getItem('self-care');
-        const heartVisited = await AsyncStorage.getItem('heart_2');
-        const mealVisited = await AsyncStorage.getItem('meal_1');
-        const medicationVisited = await AsyncStorage.getItem('medication_3');
-        const weightVisited = await AsyncStorage.getItem('weight_4');
-        const waterVisited = await AsyncStorage.getItem('water_5');
-        const stepVisited = await AsyncStorage.getItem('step_6');
-        const sleepVisited = await AsyncStorage.getItem('sleep_7');
-        
-        console.log('Visited areas:', {
-          health: healthVisited,
-          journal: journalVisited,
-          selfCare: selfCareVisited,
-          heart: heartVisited,
-          meal: mealVisited,
-          medication: medicationVisited,
-          weight: weightVisited,
-          water: waterVisited,
-          step: stepVisited,
-          sleep: sleepVisited
-        });
-        
-        // Check if all required areas have been visited
-        // Main sections: health tracking, journal, and self-care
-        const mainSectionsVisited = healthVisited === 'true' && 
-                                   journalVisited === 'true' && 
-                                   selfCareVisited === 'true';
-        
-        // Optional: Check if at least one specific health tracker has been visited
-        // You can adjust this requirement based on your needs
-        const atLeastOneHealthTrackerVisited = 
-          heartVisited === 'true' &&
-          mealVisited === 'true' &&
-          medicationVisited === 'true' && 
-          weightVisited === 'true' && 
-          waterVisited === 'true' && 
-          stepVisited === 'true' && 
-          sleepVisited === 'true';
-        
-        if (mainSectionsVisited && atLeastOneHealthTrackerVisited) {
-          // Check if badge has already been awarded to prevent duplicate awards
-          const badgeAwarded = await AsyncStorage.getItem('explorerBadgeAwarded');
-          
-          if (badgeAwarded !== 'true') {
-            // Award the badge
-            await awardExplorerBadge(userId);
-            
-            // Mark badge as awarded
-            await AsyncStorage.setItem('explorerBadgeAwarded', 'true');
-            console.log('Explorer badge awarded and marked as awarded in storage');
-          } else {
-            console.log('Explorer badge already awarded previously');
-          }
-        } else {
-          console.log('Not all areas have been visited yet');
-          if (!mainSectionsVisited) {
-            console.log('Missing main sections');
-          }
-          if (!atLeastOneHealthTrackerVisited) {
-            console.log('No health trackers visited');
-          }
-        }
-      } catch (error) {
-        console.error('Error checking and awarding Explorer badge:', error);
-      }
-    };
-  
-    // Function to make API call to award the Explorer badge
-    const awardExplorerBadge = async (userId: string) => {
-      try {
-        const badgeType = "EXPLORER";
-        
-        // Prepare the data payload for the Explorer badge
-        const payload = {
-          badgeType: badgeType,
-          title: "EXPLORER",
-          description: "First time having explored all features of the app (should have navigated at least once to all habit trackers, self care, journal)"
-        };
-        
-        console.log('Making API call to award Explorer badge to user:', userId);
-        
-        // Make API call using fetch with error handling
-        const response = await fetch(
-          `https://crosscare-backends.onrender.com/api/user/${userId}/badges/award`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(payload),
-          }
-        );
-        
-        const data = await response.json();
-        
-        if (data.success) {
-          console.log('Explorer badge awarded successfully!', data);
-        } else {
-          console.error('Failed to award Explorer badge:', data.message);
-        }
-        
-        return data.success;
-      } catch (error) {
-        console.error('Error awarding Explorer badge:', error);
-        return false;
+    const setAllVisited = async () => {
+      if (userId) {
+        checkAndAwardExplorerBadge(userId);
       }
     };
 
-  
+    setAllVisited();
+  }, [userId]);
+
+  const checkAndAwardExplorerBadge = async (userId: string) => {
+    try {
+      // Get visited status for all areas
+      const healthVisited = await AsyncStorage.getItem("health");
+      const journalVisited = await AsyncStorage.getItem("journal");
+      const selfCareVisited = await AsyncStorage.getItem("self-care");
+      const heartVisited = await AsyncStorage.getItem("heart_2");
+      const mealVisited = await AsyncStorage.getItem("meal_1");
+      const medicationVisited = await AsyncStorage.getItem("medication_3");
+      const weightVisited = await AsyncStorage.getItem("weight_4");
+      const waterVisited = await AsyncStorage.getItem("water_5");
+      const stepVisited = await AsyncStorage.getItem("step_6");
+      const sleepVisited = await AsyncStorage.getItem("sleep_7");
+
+      console.log("Visited areas:", {
+        health: healthVisited,
+        journal: journalVisited,
+        selfCare: selfCareVisited,
+        heart: heartVisited,
+        meal: mealVisited,
+        medication: medicationVisited,
+        weight: weightVisited,
+        water: waterVisited,
+        step: stepVisited,
+        sleep: sleepVisited,
+      });
+
+      // Check if all required areas have been visited
+      // Main sections: health tracking, journal, and self-care
+      const mainSectionsVisited =
+        healthVisited === "true" &&
+        journalVisited === "true" &&
+        selfCareVisited === "true";
+
+      // Optional: Check if at least one specific health tracker has been visited
+      // You can adjust this requirement based on your needs
+      const atLeastOneHealthTrackerVisited =
+        heartVisited === "true" &&
+        mealVisited === "true" &&
+        medicationVisited === "true" &&
+        weightVisited === "true" &&
+        waterVisited === "true" &&
+        stepVisited === "true" &&
+        sleepVisited === "true";
+
+      if (mainSectionsVisited && atLeastOneHealthTrackerVisited) {
+        // Check if badge has already been awarded to prevent duplicate awards
+        const badgeAwarded = await AsyncStorage.getItem("explorerBadgeAwarded");
+
+        if (badgeAwarded !== "true") {
+          // Award the badge
+          await awardExplorerBadge(userId);
+
+          // Mark badge as awarded
+          await AsyncStorage.setItem("explorerBadgeAwarded", "true");
+          console.log(
+            "Explorer badge awarded and marked as awarded in storage"
+          );
+        } else {
+          console.log("Explorer badge already awarded previously");
+        }
+      } else {
+        console.log("Not all areas have been visited yet");
+        if (!mainSectionsVisited) {
+          console.log("Missing main sections");
+        }
+        if (!atLeastOneHealthTrackerVisited) {
+          console.log("No health trackers visited");
+        }
+      }
+    } catch (error) {
+      console.error("Error checking and awarding Explorer badge:", error);
+    }
+  };
+
+  // Function to make API call to award the Explorer badge
+  const awardExplorerBadge = async (userId: string) => {
+    try {
+      const badgeType = "EXPLORER";
+
+      // Prepare the data payload for the Explorer badge
+      const payload = {
+        badgeType: badgeType,
+        title: "EXPLORER",
+        description:
+          "First time having explored all features of the app (should have navigated at least once to all habit trackers, self care, journal)",
+      };
+
+      console.log("Making API call to award Explorer badge to user:", userId);
+
+      // Make API call using fetch with error handling
+      const response = await fetch(
+        `https://crosscare-backends.onrender.com/api/user/${userId}/badges/award`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.success) {
+        console.log("Explorer badge awarded successfully!", data);
+      } else {
+        console.error("Failed to award Explorer badge:", data.message);
+      }
+
+      return data.success;
+    } catch (error) {
+      console.error("Error awarding Explorer badge:", error);
+      return false;
+    }
+  };
 
   useEffect(() => {
     const getUserData = async () => {
@@ -338,7 +342,6 @@ const cardData = cardData1.map((item) => ({
   }, [token]);
 
   const getProfile = async () => {
-
     // Then fetch fresh data from API
     const response = await fetch(
       `https://crosscare-backends.onrender.com/api/user/${user?.user_id}/profile`,
@@ -395,14 +398,14 @@ const cardData = cardData1.map((item) => ({
     useCallback(() => {
       // console.log("Home screen in focus, fetching profile data...")
       if (user?.user_id) {
-        getProfile()
+        getProfile();
       }
 
       return () => {
         // console.log("Home screen lost focus")
-      }
-    }, [user?.user_id, getProfile]),
-  )
+      };
+    }, [user?.user_id, getProfile])
+  );
 
   // // Updated useEffect to handle questionnaire navigation based on responses
   // useEffect(() => {
@@ -468,7 +471,63 @@ const cardData = cardData1.map((item) => ({
   //     Alert.alert("Error", err.message || "An error occurred during logout.");
   //   }
   // };
+  // Add this useEffect in your Home component to coordinate date changes across stores
 
+  useEffect(() => {
+    if (userId) {
+      // Check for new day and reset stores accordingly
+      const checkAndResetAllStores = () => {
+        console.log("🏠 Home: Checking all stores for new day...");
+
+        // Check and reset meal store
+        const mealStore = useMealStore.getState();
+        mealStore.checkAndResetForNewDay();
+
+        // Check and reset water store
+        const waterStore = useWaterStore.getState();
+        waterStore.checkAndResetForNewDay();
+
+        // Initialize all user goals (these should persist)
+        mealStore.fetchUserGoals(userId);
+        waterStore.fetchUserGoals(userId);
+
+        console.log("🏠 Home: All stores checked and reset if needed");
+      };
+
+      // Run immediately when component mounts
+      checkAndResetAllStores();
+
+      // Set up an interval to check every minute for date changes
+      // This handles cases where the app stays open overnight
+      const intervalId = setInterval(() => {
+        checkAndResetAllStores();
+      }, 60000); // Check every minute
+
+      return () => {
+        clearInterval(intervalId);
+      };
+    }
+  }, [userId]);
+
+  // Also add this useFocusEffect to check when the app comes back into focus
+  useFocusEffect(
+    useCallback(() => {
+      if (userId) {
+        console.log("🏠 Home: App focused, checking for date changes...");
+
+        // Check all stores for new day when app comes back into focus
+        useMealStore.getState().checkAndResetForNewDay();
+        useWaterStore.getState().checkAndResetForNewDay();
+
+        // Fetch fresh data
+        getProfile();
+      }
+
+      return () => {
+        console.log("🏠 Home: App lost focus");
+      };
+    }, [userId])
+  );
   const Header = () => {
     return (
       <View
@@ -522,7 +581,6 @@ const cardData = cardData1.map((item) => ({
           onPress={() => {
             router.push({
               pathname: "/patient/settings/reminder",
-              
             });
           }}
         >
@@ -698,7 +756,7 @@ const cardData = cardData1.map((item) => ({
     }
   };
 
-  const userName = user.user_name.split(" ")[0]
+  const userName = user.user_name.split(" ")[0];
 
   return (
     <SafeAreaView
@@ -757,7 +815,8 @@ const cardData = cardData1.map((item) => ({
                 />
               ) : (
                 <>
-                  <User width='100%' height='100%' color="#888" /> {/* Replace with your icon component */}
+                  <User width="100%" height="100%" color="#888" />{" "}
+                  {/* Replace with your icon component */}
                 </>
               )}
             </View>
@@ -789,7 +848,10 @@ const cardData = cardData1.map((item) => ({
           }}
         >
           <Text style={styles.userName}>{userName}</Text>
-          <Text style={styles.weekText}>  {t("home.week")} {weeksComplete}</Text>
+          <Text style={styles.weekText}>
+            {" "}
+            {t("home.week")} {weeksComplete}
+          </Text>
         </View>
 
         <View
@@ -820,20 +882,26 @@ const cardData = cardData1.map((item) => ({
               >
                 <WaterIcon width={14} height={14} />
               </View>
-              <Text style={styles.statTitle} numberOfLines={1} ellipsizeMode="tail">{t('home.waterIntake')}</Text>
+              <Text
+                style={styles.statTitle}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
+                {t("home.waterIntake")}
+              </Text>
             </View>
 
             <View style={styles.waterProgressBar}>
-                <View
-                  style={[
-                    styles.waterProgress,
-                    {
-                      width:
-                        maxGlasses > 0
-                          ? `${(glassCount / maxGlasses) * 100}%` // Only calculate width if maxGlasses > 0
-                          : "0%", // Set width to 0% if maxGlasses is 0
-                    },
-                  ]}
+              <View
+                style={[
+                  styles.waterProgress,
+                  {
+                    width:
+                      maxGlasses > 0
+                        ? `${(glassCount / maxGlasses) * 100}%` // Only calculate width if maxGlasses > 0
+                        : "0%", // Set width to 0% if maxGlasses is 0
+                  },
+                ]}
               />
             </View>
 
@@ -841,7 +909,7 @@ const cardData = cardData1.map((item) => ({
               <Text style={styles.statSuffix}>
                 {" "}
                 <Text style={styles.statValue}>{glassCount}</Text> /{" "}
-                {maxGlasses} {t('home.glasses')}
+                {maxGlasses} {t("home.glasses")}
               </Text>
             </View>
           </TouchableOpacity>
@@ -865,33 +933,42 @@ const cardData = cardData1.map((item) => ({
               >
                 <FoodIcon width={14} height={14} />
               </View>
-              <Text style={styles.statTitle}>{t('home.food')}</Text>
+              <Text style={styles.statTitle}>{t("home.food")}</Text>
             </View>
 
             <View style={styles.foodQualityContainer}>
               <View style={styles.progressBar}>
-                <View style={[styles.progressFill, { width: `${(caloriesConsumed / calorieGoal) * 100}%` }]} />
+                <View
+                  style={[
+                    styles.progressFill,
+                    { width: `${(caloriesConsumed / calorieGoal) * 100}%` },
+                  ]}
+                />
               </View>
               <View style={styles.caloriesContainer}>
                 <Text style={styles.calorieText}>{caloriesConsumed}</Text>
-                <Text style={styles.calorieSubText}> / {calorieGoal} Calories</Text>
+                <Text style={styles.calorieSubText}>
+                  {" "}
+                  / {calorieGoal} Calories
+                </Text>
               </View>
             </View>
-            
 
-            <View style={{
-              flexDirection: "row",
-              gap:2,
-            }}>
-                <View style={styles.goodFoodBadge}>
-                  <Text style={styles.goodFoodText}>Good Food: {goodFoodCount}</Text>
-                </View>
-                <View style={styles.badFoodBadge}>
-                  <Text style={styles.badFoodText}>Bad Food: {badFoodCount}</Text>
-                </View>
-          
+            <View
+              style={{
+                flexDirection: "row",
+                gap: 2,
+              }}
+            >
+              <View style={styles.goodFoodBadge}>
+                <Text style={styles.goodFoodText}>
+                  Good Food: {goodFoodCount}
+                </Text>
+              </View>
+              <View style={styles.badFoodBadge}>
+                <Text style={styles.badFoodText}>Bad Food: {badFoodCount}</Text>
+              </View>
             </View>
-
           </TouchableOpacity>
 
           {/* Steps Card */}
@@ -913,7 +990,7 @@ const cardData = cardData1.map((item) => ({
               >
                 <StepsIcon width={14} height={14} />
               </View>
-              <Text style={styles.statTitle}>{t('home.steps')}</Text>
+              <Text style={styles.statTitle}>{t("home.steps")}</Text>
             </View>
 
             <Text style={styles.stepsValue}>{stepsWalked}</Text>
@@ -924,17 +1001,19 @@ const cardData = cardData1.map((item) => ({
                 marginTop: 5,
               }}
             >
-              <Text style={styles.stepsGoal}>{t('home.goal')}:</Text> {stepGoal}
+              <Text style={styles.stepsGoal}>{t("home.goal")}:</Text> {stepGoal}
             </Text>
           </TouchableOpacity>
 
           {/* Due Date Card */}
           <TouchableOpacity
             style={styles.statCard4}
-            onPress={() => router.push({
-            pathname: "/patient/track",
-            params: { weeksComplete: weeksComplete.toString() }
-          })}
+            onPress={() =>
+              router.push({
+                pathname: "/patient/track",
+                params: { weeksComplete: weeksComplete.toString() },
+              })
+            }
           >
             <View style={styles.statHeader}>
               <View
@@ -950,7 +1029,9 @@ const cardData = cardData1.map((item) => ({
               >
                 <Calendar width={14} height={14} />
               </View>
-              <Text style={styles.statTitle} numberOfLines={1}>{t('home.due_date')}</Text>
+              <Text style={styles.statTitle} numberOfLines={1}>
+                {t("home.due_date")}
+              </Text>
             </View>
             <Text
               style={{
@@ -959,7 +1040,8 @@ const cardData = cardData1.map((item) => ({
                 color: "#434343",
               }}
             >
-              <Text onPress={openPregnancyModal}
+              <Text
+                onPress={openPregnancyModal}
                 style={{
                   fontSize: 16,
                   fontFamily: "DMSans600",
@@ -968,7 +1050,7 @@ const cardData = cardData1.map((item) => ({
               >
                 {remainingDays}
               </Text>{" "}
-              {t('daysLeft')}
+              {t("daysLeft")}
             </Text>
             <Text
               style={{
@@ -1074,7 +1156,7 @@ const styles = StyleSheet.create({
   statHeader: {
     flexDirection: "row",
     alignItems: "center",
-    paddingRight:20,
+    paddingRight: 20,
     marginBottom: 5,
   },
   statIcon: {
@@ -1117,62 +1199,62 @@ const styles = StyleSheet.create({
   foodQualityContainer: {
     flexDirection: "column",
     // marginVertical: 2,
-    gap:5,
+    gap: 5,
   },
   progressBar: {
-  height: 5,
-  width: '100%',
-  backgroundColor: '#E5F5EC',
-  borderRadius: 10,
-  overflow: 'hidden',
-  // marginBottom: 12,
-},
-calorieText: {
-  fontSize: 14,
-  fontFamily: 'DMSans600',
-  color: 'rgba(70, 208, 45, 1)',
-},
-calorieSubText: {
-  fontSize: 10,
-  fontFamily: 'DMSans500',
-  color: 'rgba(55, 55, 55, 1)',
-},
-goodFoodBadge: {
-    backgroundColor: 'rgba(112, 217, 92, 1)',
-    borderWidth:0.5,
-    borderColor:'rgba(64, 206, 35, 1)',
+    height: 5,
+    width: "100%",
+    backgroundColor: "#E5F5EC",
+    borderRadius: 10,
+    overflow: "hidden",
+    // marginBottom: 12,
+  },
+  calorieText: {
+    fontSize: 14,
+    fontFamily: "DMSans600",
+    color: "rgba(70, 208, 45, 1)",
+  },
+  calorieSubText: {
+    fontSize: 10,
+    fontFamily: "DMSans500",
+    color: "rgba(55, 55, 55, 1)",
+  },
+  goodFoodBadge: {
+    backgroundColor: "rgba(112, 217, 92, 1)",
+    borderWidth: 0.5,
+    borderColor: "rgba(64, 206, 35, 1)",
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius:4,
+    borderRadius: 4,
   },
   goodFoodText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 7,
-    fontFamily: 'DMSans600',
+    fontFamily: "DMSans600",
   },
   badFoodBadge: {
-    borderWidth:0.5,
-    borderColor:'rgba(252, 49, 48, 1)',
-    backgroundColor: 'rgba(249, 98, 97, 1)',
+    borderWidth: 0.5,
+    borderColor: "rgba(252, 49, 48, 1)",
+    backgroundColor: "rgba(249, 98, 97, 1)",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 4,
   },
   badFoodText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 7,
-    fontFamily: 'DMSans600',
+    fontFamily: "DMSans600",
   },
-caloriesContainer: {
-  flexDirection: 'row',
-  alignItems: 'baseline',
-  // marginBottom: 8,
-},
-progressFill: {
-  height: '100%',
-  borderRadius:10,
-  backgroundColor: 'rgba(70, 208, 45, 1)',
-},
+  caloriesContainer: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    // marginBottom: 8,
+  },
+  progressFill: {
+    height: "100%",
+    borderRadius: 10,
+    backgroundColor: "rgba(70, 208, 45, 1)",
+  },
   qualityIndicator: {
     height: 12,
     marginHorizontal: 1,
@@ -1180,7 +1262,7 @@ progressFill: {
   },
   qualityScoreLabel: {
     fontSize: 12,
-    marginTop:6,
+    marginTop: 6,
     // maxWidth:' 100%',
     color: "#373737",
     fontFamily: "DMSans500",
@@ -1188,7 +1270,7 @@ progressFill: {
   qualityScoreValue: {
     fontSize: 18,
     color: "#22C800",
-    fontFamily:'DMSans600'
+    fontFamily: "DMSans600",
     // marginLeft: 5,
   },
   qualityScoreSuffix: {
