@@ -557,8 +557,8 @@ export default function askdoula() {
           const pauseState = await AsyncStorage.getItem(
             `questionnaire_paused_${user?.user_id}`
           );
-          const isPausedFromDedicated = pauseState === "true";
-
+          const isPausedFromDedicated =
+            pauseState === null ? true : pauseState === "true";
           // Get the progress
           const storedProgress = await getProgressFromStorage();
           setProgress(storedProgress);
@@ -571,7 +571,7 @@ export default function askdoula() {
             const context = JSON.parse(contextString);
             // Use dedicated storage value first, fall back to context
             const wasPaused =
-              isPausedFromDedicated || context?.isPaused || false;
+              isPausedFromDedicated ?? context?.isPaused ?? true;
 
             console.log(
               `Loaded pause state from storage: isPaused=${wasPaused}`
@@ -1227,7 +1227,7 @@ export default function askdoula() {
 
       default:
         return {
-          value: parseFloat(numbers[0]),
+          value: Number.parseFloat(numbers[0]),
         };
     }
   };
@@ -1476,16 +1476,16 @@ export default function askdoula() {
       );
       if (contextString) {
         const context = JSON.parse(contextString);
-        const isPaused = context?.isPaused || false;
+        const isPaused = context?.isPaused ?? true;
         console.log(`Loaded pause state from context: ${isPaused}`);
         return isPaused;
       }
 
       console.log("No pause state found, defaulting to false");
-      return false;
+      return true;
     } catch (error) {
       console.error("Error loading pause state:", error);
-      return false;
+      return true;
     }
   };
 
