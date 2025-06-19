@@ -18,13 +18,14 @@ import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
+import { CONFIG } from "@/constants/config";
 
 export default function NewPhotos() {
   const [title, setTitle] = useState("");
   const [imageUri, setImageUri] = useState<string | null>(null); // To store the selected image URI
   const [hasPermission, setHasPermission] = useState<boolean | null>(null); // For camera permission
   const user = useSelector((state: any) => state.user); // Assuming you have a Redux store set up
-  const {t} = useTranslation();
+  const { t } = useTranslation();
 
   // Request permission to use the camera and image picker
   useEffect(() => {
@@ -43,7 +44,7 @@ export default function NewPhotos() {
   }, []);
 
   const handleSave = async () => {
-    if(!title){
+    if (!title) {
       Alert.alert("Title is required", "Please enter a title for your entry.");
       return;
     }
@@ -53,15 +54,15 @@ export default function NewPhotos() {
     formData.append("title", title);
 
     // Check if imageUri exists, and append the image to FormData
-    formData.append('imageUrl', {
+    formData.append("imageUrl", {
       uri: imageUri,
-      type: 'image/jpeg', // or the appropriate MIME type
-      name: 'upload.jpg'
+      type: "image/jpeg", // or the appropriate MIME type
+      name: "upload.jpg",
     });
 
     try {
       const response = await fetch(
-        `https://crosscare-backends.onrender.com/api/user/activity/${user.user_id}/journal/upload`,
+        `${CONFIG.API_BASE_URL}/user/activity/${user.user_id}/journal/upload`,
         {
           method: "POST",
           headers: {
@@ -79,7 +80,7 @@ export default function NewPhotos() {
       console.log("Note saved successfully:", data);
       if (data.success) {
         setTitle("");
-        setImageUri(null)
+        setImageUri(null);
         router.back();
       }
     } catch (error: any) {
@@ -125,11 +126,11 @@ export default function NewPhotos() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={handleCancel}>
-          <Text style={styles.cancelText}>{t('cancel')}</Text>
+          <Text style={styles.cancelText}>{t("cancel")}</Text>
         </TouchableOpacity>
-        <Text style={styles.headerText}>{t('new_entry')}</Text>
+        <Text style={styles.headerText}>{t("new_entry")}</Text>
         <TouchableOpacity onPress={handleSave}>
-          <Text style={styles.createText}>{t('create')}</Text>
+          <Text style={styles.createText}>{t("create")}</Text>
         </TouchableOpacity>
       </View>
 
@@ -172,13 +173,13 @@ export default function NewPhotos() {
             )}
 
             <TouchableOpacity style={styles.addPhotoButton} onPress={pickImage}>
-              <Text style={styles.addPhotoText}>{t('journal.add_photo')}</Text>
+              <Text style={styles.addPhotoText}>{t("journal.add_photo")}</Text>
             </TouchableOpacity>
           </View>
 
           <TextInput
             style={styles.titleInput}
-            placeholder={t('journal.addtitle')}
+            placeholder={t("journal.addtitle")}
             value={title}
             onChangeText={setTitle}
             placeholderTextColor="#E5E5E5"

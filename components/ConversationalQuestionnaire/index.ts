@@ -6,6 +6,8 @@ import {
   ConversationalQuestionnaireManager,
   QuestionnaireAction,
 } from "./types";
+import { CONFIG } from "@/constants/config";
+
 interface SensitiveDisclosure {
   topic: string;
   questionId: string;
@@ -44,10 +46,10 @@ import {
   generateEmpathyResponse,
 } from "../../utils/ConversationalSystem/EmpathyResponses/generator";
 import axios from "axios";
-import { AppState, type AppStateStatus } from "react-native"
+import { AppState, type AppStateStatus } from "react-native";
 import { generateEducationalContent } from "@/utils/ConversationalSystem/EducationalContent/generator";
 // Default OpenAI API key (you'll want to store this securely)
-const DEFAULT_API_KEY = process.env.EXPO_PUBLIC_OPENAI_API_KEY || ""
+const DEFAULT_API_KEY = process.env.EXPO_PUBLIC_OPENAI_API_KEY || "";
 
 const ConversationalQuestionnaire = ({
   userId,
@@ -85,44 +87,48 @@ const ConversationalQuestionnaire = ({
   const [nextDomainIndex, setNextDomainIndex] = useState(-1);
   const hasLoadedRef = useRef(false);
 
-   // Track app state for auto-pause/resume
+  // Track app state for auto-pause/resume
   const appStateRef = useRef(AppState.currentState);
   const wasManuallyPaused = useRef(false);
 
   // Add AppState listener to handle app going to background/foreground
   useEffect(() => {
-    const subscription = AppState.addEventListener('change', handleAppStateChange);
-    
+    const subscription = AppState.addEventListener(
+      "change",
+      handleAppStateChange
+    );
+
     return () => {
       subscription.remove();
     };
   }, []);
 
-   // Handle app state changes (active, background, inactive)
+  // Handle app state changes (active, background, inactive)
   const handleAppStateChange = async (nextAppState: AppStateStatus) => {
-    console.log(`App state changed from ${appStateRef.current} to ${nextAppState}`);
-    
+    console.log(
+      `App state changed from ${appStateRef.current} to ${nextAppState}`
+    );
+
     // If app is going to background and questionnaire is active but not paused
     if (
-      appStateRef.current.match(/active/) && 
-      (nextAppState === 'background' || nextAppState === 'inactive') &&
-      context.isActive && 
-      !context.isPaused && 
+      appStateRef.current.match(/active/) &&
+      (nextAppState === "background" || nextAppState === "inactive") &&
+      context.isActive &&
+      !context.isPaused &&
       !context.isCompleted
     ) {
-      console.log('App going to background - auto-pausing questionnaire');
+      console.log("App going to background - auto-pausing questionnaire");
       wasManuallyPaused.current = false;
-      
+
       // Auto-pause the questionnaire
       await pauseQuestionnaire();
-      
+
       // Save the auto-pause state
       await AsyncStorage.setItem(`questionnaire_auto_paused_${userId}`, "true");
     }
-    
+
     appStateRef.current = nextAppState;
   };
-
 
   // Save context whenever it changes
   useEffect(() => {
@@ -188,14 +194,16 @@ const ConversationalQuestionnaire = ({
         }
 
         // Check if questionnaire was auto-paused
-        const autoPaused = await AsyncStorage.getItem(`questionnaire_auto_paused_${userId}`);
+        const autoPaused = await AsyncStorage.getItem(
+          `questionnaire_auto_paused_${userId}`
+        );
         if (autoPaused === "true") {
           wasManuallyPaused.current = false;
         } else {
           wasManuallyPaused.current = true;
         }
 
-        hasLoadedRef.current = true
+        hasLoadedRef.current = true;
       } catch (error) {
         console.error("Error loading conversation context:", error);
       }
@@ -894,18 +902,21 @@ const ConversationalQuestionnaire = ({
 
       // Check if this is an educational information question
       const educationalQuestions = [
-        'q1-smoke-info',
-        'q1-chemicals-info', 
-        'q1-exhaust-info',
-        'q1-lead-info',
-        'q1-filter-info',
-        'q1-no-filter-info',
-        'q4-14'
+        "q1-smoke-info",
+        "q1-chemicals-info",
+        "q1-exhaust-info",
+        "q1-lead-info",
+        "q1-filter-info",
+        "q1-no-filter-info",
+        "q4-14",
       ];
 
       if (educationalQuestions.includes(currentQuestion.id)) {
-        console.log('Detected educational information question:', currentQuestion.id);
-        
+        console.log(
+          "Detected educational information question:",
+          currentQuestion.id
+        );
+
         // Save the original response FIRST
         const questionnaireResponse = {
           questionId: currentQuestion.id,
@@ -914,57 +925,65 @@ const ConversationalQuestionnaire = ({
           flag: currentQuestion.flag || "",
           timestamp: new Date(),
         };
-      
+
         dispatch({
           type: "ADD_RESPONSE",
           payload: questionnaireResponse,
         });
-      
+
         onResponseSaved(questionnaireResponse);
-        
+
         try {
           // Generate AI-powered educational content
-          const educationalContent = await generateEducationalContent({
-            topic: currentQuestion.text,
-            questionId: currentQuestion.id,
-            userResponse: response,
-          }, openAIApiKey);
-      
+          const educationalContent = await generateEducationalContent(
+            {
+              topic: currentQuestion.text,
+              questionId: currentQuestion.id,
+              userResponse: response,
+            },
+            openAIApiKey
+          );
+
           // Send the educational content
           const educationKey = `education_${currentQuestion.id}`;
           if (!sentMessages.has(educationKey)) {
             sentMessages.add(educationKey);
-            
+
             // Save as educational response
             saveLastQuestion(
               currentDomain.id,
               currentQuestion.id,
               educationalContent.content
             );
-      
+
             // Send the educational content with the isEducational flag
             onQuestionReady(educationalContent.content, true);
           }
-      
+
           // Auto-progress logic - ALWAYS execute regardless of sentMessages
-          console.log('Auto-progressing after educational content');
-          
+          console.log("Auto-progressing after educational content");
+
           setTimeout(() => {
             // Handle follow-up logic
             if (currentQuestion.followUp) {
               let followUpId = null;
-              
+
               if (currentQuestion.followUp["*"]) {
                 followUpId = currentQuestion.followUp["*"];
               }
-              
+
               if (followUpId) {
                 if (followUpId.startsWith("domain[")) {
                   // Handle domain transition
-                  const targetQuestionId = followUpId.match(/domain\[([^\]]+)\]/)?.[1];
+                  const targetQuestionId =
+                    followUpId.match(/domain\[([^\]]+)\]/)?.[1];
                   if (targetQuestionId) {
                     for (let i = 0; i < QUESTIONNAIRE_DOMAINS.length; i++) {
-                      if (QUESTIONNAIRE_DOMAINS[i].questions.some(q => q.id === targetQuestionId)) {
+                      if (
+                        QUESTIONNAIRE_DOMAINS[i].questions.some(
+                          (q) => q.id === targetQuestionId
+                        )
+                      ) {
                         setNextDomainIndex(i);
                         setWaitingForDomainTransition(true);
                         askToContinue();
@@ -975,9 +994,9 @@ const ConversationalQuestionnaire = ({
                 } else {
                   // Regular follow-up within domain
                   const targetQuestionIndex = currentDomain.questions.findIndex(
-                    q => q.id === followUpId
+                    (q) => q.id === followUpId
                   );
-                  
+
                   if (targetQuestionIndex !== -1) {
                     dispatch({
                       type: "SET_POSITION",
@@ -985,14 +1004,14 @@ const ConversationalQuestionnaire = ({
                         currentQuestionIndex: targetQuestionIndex,
                       },
                     });
-                    
+
                     setTimeout(() => sendNextQuestion(), 500);
                     return;
                   }
                 }
               }
             }
-            
+
             // Default: move to next question
             const nextQuestionIndex = context.currentQuestionIndex + 1;
             if (nextQuestionIndex < currentDomain.questions.length) {
@@ -1002,17 +1021,16 @@ const ConversationalQuestionnaire = ({
                   currentQuestionIndex: nextQuestionIndex,
                 },
               });
-              
+
               setTimeout(() => sendNextQuestion(), 500);
             } else {
               askToContinue();
             }
           }, 2000); // 2 seconds delay
-      
+
           return true;
-          
         } catch (error) {
-          console.error('Error generating educational content:', error);
+          console.error("Error generating educational content:", error);
           // Even on error, still progress to next question
           setTimeout(() => {
             const nextQuestionIndex = context.currentQuestionIndex + 1;
@@ -1028,7 +1046,7 @@ const ConversationalQuestionnaire = ({
               askToContinue();
             }
           }, 1000);
-          
+
           return true;
         }
       }
@@ -1118,13 +1136,13 @@ const ConversationalQuestionnaire = ({
             domainId: currentDomain.id,
             response: response,
             flag: currentQuestion.flag || "",
-            timestamp: new Date()
+            timestamp: new Date(),
           };
 
           // Add to context
           dispatch({
-            type: 'ADD_RESPONSE',
-            payload: questionnaireResponse
+            type: "ADD_RESPONSE",
+            payload: questionnaireResponse,
           });
 
           // Notify parent
@@ -1136,43 +1154,49 @@ const ConversationalQuestionnaire = ({
             if (currentQuestion.followUp) {
               // Check if this option has a follow-up defined
               let followUpId = null;
-              
+
               // Check exact match with selected option from classification
-              if (classification.selectedOption && currentQuestion.followUp[classification.selectedOption]) {
-                followUpId = currentQuestion.followUp[classification.selectedOption];
-              } 
+              if (
+                classification.selectedOption &&
+                currentQuestion.followUp[classification.selectedOption]
+              ) {
+                followUpId =
+                  currentQuestion.followUp[classification.selectedOption];
+              }
               // Check wildcard
               else if (currentQuestion.followUp["*"]) {
                 followUpId = currentQuestion.followUp["*"];
               }
-              
+
               if (followUpId) {
-                const targetQuestionIndex = currentDomain.questions.findIndex(q => q.id === followUpId);
+                const targetQuestionIndex = currentDomain.questions.findIndex(
+                  (q) => q.id === followUpId
+                );
                 if (targetQuestionIndex !== -1) {
                   dispatch({
-                    type: 'SET_POSITION',
+                    type: "SET_POSITION",
                     payload: {
-                      currentQuestionIndex: targetQuestionIndex
-                    }
+                      currentQuestionIndex: targetQuestionIndex,
+                    },
                   });
-                  
+
                   // Send next question after a short delay
                   setTimeout(() => sendNextQuestion(), 500);
                   return;
                 }
               }
             }
-            
+
             // Default case: move to the next sequential question
             const nextQuestionIndex = context.currentQuestionIndex + 1;
             if (nextQuestionIndex < currentDomain.questions.length) {
               dispatch({
-                type: 'SET_POSITION',
+                type: "SET_POSITION",
                 payload: {
-                  currentQuestionIndex: nextQuestionIndex
-                }
+                  currentQuestionIndex: nextQuestionIndex,
+                },
               });
-              
+
               // Send next question
               setTimeout(() => sendNextQuestion(), 500);
             } else {
@@ -1446,66 +1470,66 @@ const ConversationalQuestionnaire = ({
     }
   };
 
-    // Helper to save a response and continue to the next question
-    const saveResponseAndContinue = (
-      response: string,
-      currentQuestion: any,
-      currentDomain: any
-    ): boolean => {
-      try {
-        // Create the response object
-        const questionnaireResponse = {
-          questionId: currentQuestion.id,
-          domainId: currentDomain.id,
-          response: response,
-          flag: currentQuestion.flag || "",
-          timestamp: new Date(),
-        };
+  // Helper to save a response and continue to the next question
+  const saveResponseAndContinue = (
+    response: string,
+    currentQuestion: any,
+    currentDomain: any
+  ): boolean => {
+    try {
+      // Create the response object
+      const questionnaireResponse = {
+        questionId: currentQuestion.id,
+        domainId: currentDomain.id,
+        response: response,
+        flag: currentQuestion.flag || "",
+        timestamp: new Date(),
+      };
 
-        // Add to context
-        dispatch({
-          type: "ADD_RESPONSE",
-          payload: questionnaireResponse,
-        });
+      // Add to context
+      dispatch({
+        type: "ADD_RESPONSE",
+        payload: questionnaireResponse,
+      });
 
-        // Notify parent
-        onResponseSaved(questionnaireResponse);
+      // Notify parent
+      onResponseSaved(questionnaireResponse);
 
-        // Move to next question
-        if (currentQuestion.followUp) {
-          // If followUp is defined, the existing logic in processQuestionResponse handles it
-          moveToNextQuestion(currentQuestion.id);
+      // Move to next question
+      if (currentQuestion.followUp) {
+        // If followUp is defined, the existing logic in processQuestionResponse handles it
+        moveToNextQuestion(currentQuestion.id);
+      } else {
+        // If no followUp, move to the next question by index
+        const nextQuestionIndex = context.currentQuestionIndex + 1;
+        if (nextQuestionIndex < currentDomain.questions.length) {
+          const nextQuestion = currentDomain.questions[nextQuestionIndex];
+          dispatch({
+            type: "SET_POSITION",
+            payload: {
+              currentQuestionIndex: nextQuestionIndex,
+            },
+          });
+
+          // Send next question after a short delay
+          setTimeout(() => {
+            console.log(
+              `Moving to next question at index ${nextQuestionIndex}`
+            );
+            sendNextQuestion();
+          }, 1000);
         } else {
-          // If no followUp, move to the next question by index
-          const nextQuestionIndex = context.currentQuestionIndex + 1;
-          if (nextQuestionIndex < currentDomain.questions.length) {
-            const nextQuestion = currentDomain.questions[nextQuestionIndex];
-            dispatch({
-              type: "SET_POSITION",
-              payload: {
-                currentQuestionIndex: nextQuestionIndex,
-              },
-            });
-
-            // Send next question after a short delay
-            setTimeout(() => {
-              console.log(
-                `Moving to next question at index ${nextQuestionIndex}`
-              );
-              sendNextQuestion();
-            }, 1000);
-          } else {
-            // End of domain, ask to continue
-            askToContinue();
-          }
+          // End of domain, ask to continue
+          askToContinue();
         }
-
-        return true;
-      } catch (error) {
-        console.error("Error in saveResponseAndContinue:", error);
-        return false;
       }
-    };
+
+      return true;
+    } catch (error) {
+      console.error("Error in saveResponseAndContinue:", error);
+      return false;
+    }
+  };
 
   // Move to the next question
   const moveToNextQuestion = (targetQuestionId: string) => {
@@ -1660,7 +1684,7 @@ const ConversationalQuestionnaire = ({
       // Submit each response individually to ensure all are saved
       for (const responseData of formattedResponses) {
         const response = await axios.post(
-          `https://crosscare-backends.onrender.com/api/user/${userId}/domain`,
+          `${CONFIG.API_BASE_URL}/user/${userId}/domain`,
           responseData,
           {
             headers: {
@@ -1785,20 +1809,23 @@ const ConversationalQuestionnaire = ({
   const pauseQuestionnaire = async (): Promise<any> => {
     try {
       console.log("Pausing questionnaire");
-      
+
       // Mark as manually paused if called directly (not from app state change)
-      if (appStateRef.current === 'active') {
+      if (appStateRef.current === "active") {
         wasManuallyPaused.current = true;
         await AsyncStorage.removeItem(`questionnaire_auto_paused_${userId}`);
       } else {
         // This is an auto-pause
         wasManuallyPaused.current = false;
-        await AsyncStorage.setItem(`questionnaire_auto_paused_${userId}`, "true");
+        await AsyncStorage.setItem(
+          `questionnaire_auto_paused_${userId}`,
+          "true"
+        );
       }
-      
+
       // Save the current state first
       await saveConversationState();
-      
+
       // Then mark as paused
       dispatch({
         type: "SET_PAUSED",
@@ -1956,44 +1983,52 @@ const ConversationalQuestionnaire = ({
   };
 
   const reloadContextFromStorage = async () => {
-  try {
-    console.log("Explicitly reloading context from storage for user:", userId);
-    const savedContext = await loadConversationContext(userId);
-    
-    if (savedContext) {
-      console.log("Found saved context with pause state:", savedContext.isPaused);
-      
-      // Always preserve the pause state exactly as it was saved
-      const wasPaused = savedContext.isPaused || false;
-      
-      // Directly apply the saved context
-      dispatch({
-        type: 'RESET',
-        payload: savedContext
-      });
-      
-      // If it was paused, ensure that state is preserved
-      if (wasPaused) {
+    try {
+      console.log(
+        "Explicitly reloading context from storage for user:",
+        userId
+      );
+      const savedContext = await loadConversationContext(userId);
+
+      if (savedContext) {
+        console.log(
+          "Found saved context with pause state:",
+          savedContext.isPaused
+        );
+
+        // Always preserve the pause state exactly as it was saved
+        const wasPaused = savedContext.isPaused || false;
+
+        // Directly apply the saved context
         dispatch({
-          type: 'SET_PAUSED',
-          payload: {}
+          type: "RESET",
+          payload: savedContext,
         });
+
+        // If it was paused, ensure that state is preserved
+        if (wasPaused) {
+          dispatch({
+            type: "SET_PAUSED",
+            payload: {},
+          });
+        }
+
+        // Check if it was auto-paused
+        const autoPaused = await AsyncStorage.getItem(
+          `questionnaire_auto_paused_${userId}`
+        );
+        wasManuallyPaused.current = autoPaused !== "true";
+
+        return true;
       }
 
-      // Check if it was auto-paused
-        const autoPaused = await AsyncStorage.getItem(`questionnaire_auto_paused_${userId}`);
-        wasManuallyPaused.current = autoPaused !== "true";
-        
-      return true;
+      console.log("No saved context found for reloading");
+      return false;
+    } catch (error) {
+      console.error("Error reloading context from storage:", error);
+      return false;
     }
-    
-    console.log("No saved context found for reloading");
-    return false;
-  } catch (error) {
-    console.error("Error reloading context from storage:", error);
-    return false;
-  }
-};
+  };
 
   // Return the public API for the questionnaire manager
   return {

@@ -31,6 +31,7 @@ import Terms from "@/assets/images/Svg/Terms";
 import Logout from "@/assets/images/Svg/Logout";
 import { width, height } from "../../../constants/helper";
 import { useTranslation } from "react-i18next";
+import { CONFIG } from "@/constants/config";
 
 const Profile = () => {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
@@ -52,7 +53,7 @@ const Profile = () => {
 
   const getProfile = async () => {
     const response = await fetch(
-      `https://crosscare-backends.onrender.com/api/user/${user?.user_id}/profile`,
+      `${CONFIG.API_BASE_URL}/user/${user?.user_id}/profile`,
       {
         method: "GET",
         headers: {

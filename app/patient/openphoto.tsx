@@ -14,6 +14,7 @@ import Pen from "@/assets/images/Svg/Pen";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
+import { CONFIG } from "@/constants/config";
 
 const openphoto = () => {
   const params = useLocalSearchParams();
@@ -22,17 +23,16 @@ const openphoto = () => {
   const [loading, setLoading] = useState(true);
   const item1 = details;
 
-  const {t} = useTranslation();
+  const { t } = useTranslation();
 
   // Parse the params.item (which is likely a string)
   const item = typeof params.item === "string" ? JSON.parse(params.item) : null;
-  
+
   console.log("Parsed Note Data:", item);
 
   // Safely get date parts - only try to split if createdAt exists
   const datePart = item1?.createdAt ? item1.createdAt.split(", ")[0] : null;
   const timePart = item1?.createdAt ? item1.createdAt.split(", ")[1] : null;
-
 
   function parseDateTime(dateTimeString: string): Date {
     if (!dateTimeString) return new Date();
@@ -60,13 +60,15 @@ const openphoto = () => {
       }
 
       // Create date in UTC
-      const date = new Date(Date.UTC(
-        parseInt(year, 10),
-        parseInt(month, 10) - 1, // Month is 0-indexed in JavaScript
-        parseInt(day, 10),
-        hours,
-        minutes
-      ));
+      const date = new Date(
+        Date.UTC(
+          parseInt(year, 10),
+          parseInt(month, 10) - 1, // Month is 0-indexed in JavaScript
+          parseInt(day, 10),
+          hours,
+          minutes
+        )
+      );
 
       return date;
     } catch (error) {
@@ -76,32 +78,31 @@ const openphoto = () => {
   }
 
   function formatDateTimeForDisplay(dateTimeString: string): {
-    formattedDate: string
-    formattedTime: string
+    formattedDate: string;
+    formattedTime: string;
   } {
-    const date = parseDateTime(dateTimeString)
-  
+    const date = parseDateTime(dateTimeString);
+
     // Format date as "DD/MM/YYYY"
-    const day = date.getDate().toString().padStart(2, "0")
-    const month = (date.getMonth() + 1).toString().padStart(2, "0")
-    const year = date.getFullYear()
-    const formattedDate = `${day}/${month}/${year}`
-  
+    const day = date.getDate().toString().padStart(2, "0");
+    const month = (date.getMonth() + 1).toString().padStart(2, "0");
+    const year = date.getFullYear();
+    const formattedDate = `${day}/${month}/${year}`;
+
     // Format time as "h:mm A"
-    let hours = date.getHours()
-    const ampm = hours >= 12 ? "PM" : "AM"
-    hours = hours % 12
-    hours = hours ? hours : 12 // Convert 0 to 12
-    const minutes = date.getMinutes().toString().padStart(2, "0")
-    const formattedTime = `${hours}:${minutes} ${ampm}`
-  
-    return { formattedDate, formattedTime }
+    let hours = date.getHours();
+    const ampm = hours >= 12 ? "PM" : "AM";
+    hours = hours % 12;
+    hours = hours ? hours : 12; // Convert 0 to 12
+    const minutes = date.getMinutes().toString().padStart(2, "0");
+    const formattedTime = `${hours}:${minutes} ${ampm}`;
+
+    return { formattedDate, formattedTime };
   }
-  
-  
+
   const formatDate = (dateString: string) => {
     if (!dateString) return "Unknown Date";
-    
+
     // Split the date into day, month, and year (expected format: dd/mm/yyyy)
     const [day, month, year] = dateString.split("/");
 
@@ -124,29 +125,34 @@ const openphoto = () => {
     const suffix = (dayOfMonth: number): string => {
       if (dayOfMonth > 3 && dayOfMonth < 21) return "th"; // For dates like 4th, 5th, etc. till 20th
       switch (dayOfMonth % 10) {
-        case 1: return "st";
-        case 2: return "nd";
-        case 3: return "rd";
-        default: return "th";
+        case 1:
+          return "st";
+        case 2:
+          return "nd";
+        case 3:
+          return "rd";
+        default:
+          return "th";
       }
     };
 
     return `${dayOfMonth}${suffix(dayOfMonth)} ${monthName}, ${fullYear}`;
   };
 
-  const times = item1?.createdAt ? formatDateTimeForDisplay(item1.createdAt).formattedTime : "Unknown Time"
-
+  const times = item1?.createdAt
+    ? formatDateTimeForDisplay(item1.createdAt).formattedTime
+    : "Unknown Time";
 
   const getdetails = async () => {
     if (!item?.id || !user?.user_id) {
       setLoading(false);
       return;
     }
-    
+
     setLoading(true);
     try {
       const response = await fetch(
-        `https://crosscare-backends.onrender.com/api/user/activity/${user.user_id}/journal/${item.id}`, 
+        `${CONFIG.API_BASE_URL}/user/activity/${user.user_id}/journal/${item.id}`,
         {
           method: "GET",
           headers: {
@@ -154,11 +160,11 @@ const openphoto = () => {
           },
         }
       );
-      
+
       if (!response.ok) {
         throw new Error(`Failed to fetch details: ${response.statusText}`);
       }
-      
+
       const data = await response.json();
       console.log("Fetched details:", data.data);
       setDetails(data.data);
@@ -174,14 +180,14 @@ const openphoto = () => {
     useCallback(() => {
       console.log("Screen focused, fetching details...");
       getdetails();
-      
+
       // Return a cleanup function
       return () => {
         // Any cleanup code if needed
       };
     }, [item?.id, user?.user_id])
   );
-    
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="dark" />
@@ -195,9 +201,11 @@ const openphoto = () => {
           <Ionicons name="chevron-back" size={20} color="black" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Journal</Text>
-        <View style={{
-          width:20,
-        }}/>
+        <View
+          style={{
+            width: 20,
+          }}
+        />
       </View>
 
       {loading ? (
@@ -209,14 +217,16 @@ const openphoto = () => {
         <>
           {/* Image Section */}
           <View style={styles.imageContainer}>
-            <Image 
-              source={{ 
-                uri: item1?.imageSource || item?.imageSource?.uri 
-              }} 
-              style={styles.image} 
-              resizeMode="cover" 
+            <Image
+              source={{
+                uri: item1?.imageSource || item?.imageSource?.uri,
+              }}
+              style={styles.image}
+              resizeMode="cover"
             />
-            <Text style={styles.title}>{item1?.title || item?.title || "Untitled Photo"}</Text>
+            <Text style={styles.title}>
+              {item1?.title || item?.title || "Untitled Photo"}
+            </Text>
             <View style={styles.detailsContainer}>
               <View
                 style={{
@@ -225,7 +235,7 @@ const openphoto = () => {
                   alignItems: "center",
                 }}
               >
-                <Text style={styles.text1}>{t('journal.takenon')}</Text>
+                <Text style={styles.text1}>{t("journal.takenon")}</Text>
                 <Text style={styles.text}>
                   {datePart ? formatDate(datePart) : "Unknown Date"}
                 </Text>
@@ -237,14 +247,14 @@ const openphoto = () => {
                   alignItems: "center",
                 }}
               >
-                <Text style={styles.text1}>{t('journal.at')}</Text>
+                <Text style={styles.text1}>{t("journal.at")}</Text>
                 <Text style={styles.text}> {times}</Text>
               </View>
             </View>
           </View>
 
           {/* Edit Icon */}
-          <TouchableOpacity 
+          <TouchableOpacity
             onPress={() =>
               router.push({
                 pathname: "/patient/editphoto",
@@ -257,10 +267,10 @@ const openphoto = () => {
                   }),
                 },
               })
-            } 
+            }
             style={styles.editIcon}
           >
-            <Pen/>
+            <Pen />
           </TouchableOpacity>
         </>
       )}
@@ -275,8 +285,8 @@ const styles = StyleSheet.create({
   },
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   loadingText: {
     marginTop: 10,
@@ -299,7 +309,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 47,
   },
   image: {
-    width: '100%',
+    width: "100%",
     height: 300,
     borderRadius: 10,
     // aspectRatio:1,
@@ -349,8 +359,8 @@ const styles = StyleSheet.create({
     color: "#7B7B7B",
   },
   editIcon: {
-    position:'absolute',
-    bottom: 20, 
+    position: "absolute",
+    bottom: 20,
     right: 20,
     marginTop: 20,
   },

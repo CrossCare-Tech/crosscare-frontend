@@ -24,6 +24,7 @@ import { router } from "expo-router";
 import { removeToken, setToken, setUser } from "@/store/userSlice";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTranslation } from "react-i18next";
+import { CONFIG } from "@/constants/config";
 
 const notification = () => {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
@@ -49,7 +50,7 @@ const notification = () => {
 
   const getProfile = async () => {
     const response = await fetch(
-      `https://crosscare-backends.onrender.com/api/user/${user?.user_id}/profile`,
+      `${CONFIG.API_BASE_URL}/user/${user?.user_id}/profile`,
       {
         method: "GET",
         headers: {
@@ -100,25 +101,25 @@ const notification = () => {
             ? Notifications.PermissionStatus.GRANTED
             : Notifications.PermissionStatus.DENIED
         );
-  
+
         if (permissionGranted) {
           setNotificationsEnabled(true);
           Alert.alert(
-            t('profile.notificationsEnabled'),
-            t('profile.notificationsMessage'),
+            t("profile.notificationsEnabled"),
+            t("profile.notificationsMessage"),
             [{ text: "OK" }]
           );
         } else {
           // If permission is denied, prompt the user to go to settings
           Alert.alert(
-            t('profile.permissionRequired'),
-            t('profile.permissionMessage'),
+            t("profile.permissionRequired"),
+            t("profile.permissionMessage"),
             [
               {
-                text: t('profile.goToSettings'),
+                text: t("profile.goToSettings"),
                 onPress: () => Linking.openSettings(),
               },
-              { text: t('profile.cancel') }
+              { text: t("profile.cancel") },
             ]
           );
         }
@@ -126,41 +127,41 @@ const notification = () => {
         // Simply disable notifications in the app
         setNotificationsEnabled(false);
         Alert.alert(
-          t('profile.notificationsDisabled'),
-        t('profile.notificationsDisabledMessage'),
+          t("profile.notificationsDisabled"),
+          t("profile.notificationsDisabledMessage"),
           [{ text: "OK" }]
         );
       }
     } catch (error) {
       console.error("Error toggling notifications:", error);
-      Alert.alert(
-         t('profile.error'),
-      t('profile.errorMessage'),
-        [{ text: "OK" }]
-      );
+      Alert.alert(t("profile.error"), t("profile.errorMessage"), [
+        { text: "OK" },
+      ]);
     }
   };
-  
+
   const { t } = useTranslation();
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={"white"} />
       <View style={styles.header}>
-              <TouchableOpacity onPress={() => router.back()}>
-                <Ionicons name="chevron-back" size={20} color="black" />
-              </TouchableOpacity>
-              <Text style={styles.headerTitle}>{t('profile.notifications')}</Text>
-              <View
-                style={{
-                  width: 20,
-                }}
-              />
-            </View>
+        <TouchableOpacity onPress={() => router.back()}>
+          <Ionicons name="chevron-back" size={20} color="black" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>{t("profile.notifications")}</Text>
+        <View
+          style={{
+            width: 20,
+          }}
+        />
+      </View>
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
           <View style={styles.notificationContainer}>
-            <Text style={styles.notificationText}>{t('allowNotification')}</Text>
+            <Text style={styles.notificationText}>
+              {t("allowNotification")}
+            </Text>
             <Switch
               trackColor={{ false: "#E5E5E5", true: "#F76CCF" }}
               thumbColor={"#fff"}
@@ -169,8 +170,6 @@ const notification = () => {
               value={notificationsEnabled}
             />
           </View>
-
-         
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -187,9 +186,9 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: 20,
     paddingVertical: 15,
-    justifyContent:'space-between',
-    flexDirection: 'row',
-    alignItems:'center',
+    justifyContent: "space-between",
+    flexDirection: "row",
+    alignItems: "center",
   },
   headerTitle: {
     fontSize: 18,

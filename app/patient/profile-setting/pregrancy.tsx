@@ -29,6 +29,7 @@ import Notification from "@/assets/images/Svg/Notification";
 import Help from "@/assets/images/Svg/Help";
 import Terms from "@/assets/images/Svg/Terms";
 import { useTranslation } from "react-i18next";
+import { CONFIG } from "@/constants/config";
 
 const ProfileField = ({
   label,
@@ -202,7 +203,7 @@ const name = () => {
 
   const getProfile = async () => {
     const response = await fetch(
-      `https://crosscare-backends.onrender.com/api/user/${user?.user_id}/profile`,
+      `${CONFIG.API_BASE_URL}/user/${user?.user_id}/profile`,
       {
         method: "GET",
         headers: {
@@ -257,7 +258,7 @@ const name = () => {
       updateData[fieldName] = value;
 
       const response = await fetch(
-        `https://crosscare-backends.onrender.com/api/user/${user.user_id}/profile`,
+        `${CONFIG.API_BASE_URL}/user/${user.user_id}/profile`,
         {
           method: "PUT",
           headers: {

@@ -1,5 +1,6 @@
 import axios from "axios";
 import { detectLogRequestWithPatterns } from "./logRequestWithPatterns";
+import { CONFIG } from "@/constants/config";
 
 // Define the function parameters and return type
 export interface LogRequestResult {
@@ -13,8 +14,8 @@ export const detectAndHandleLogRequest = async (
   extractMetricFromText: (text: string, metricType: string) => any,
   updateHealthData: () => Promise<void>,
   addResponseMessage: (content: string) => void,
-  shouldSpeak:boolean,
-  speakResponse: (text:string)=>void,
+  shouldSpeak: boolean,
+  speakResponse: (text: string) => void,
   t: (key: string) => string
 ): Promise<LogRequestResult> => {
   console.log(t);
@@ -30,7 +31,7 @@ export const detectAndHandleLogRequest = async (
 
     try {
       if (patternMatch.type === "water") {
-        endpoint = `https://crosscare-backends.onrender.com/api/user/activity/${userId}/water`;
+        endpoint = `${CONFIG.API_BASE_URL}/user/activity/${userId}/water`;
 
         const waterValue = patternMatch.isGlasses
           ? patternMatch.value
@@ -43,31 +44,37 @@ export const detectAndHandleLogRequest = async (
           isIncrement: isIncrement,
         };
 
-        const incrementText = isIncrement ? ` ${t('healthData.more')}` : "";
-        successMessage = `${t('healthData.ive_logged')} ${
+        const incrementText = isIncrement ? ` ${t("healthData.more")}` : "";
+        successMessage = `${t("healthData.ive_logged")} ${
           patternMatch.isGlasses
-            ? patternMatch.value + incrementText + ` ${t('healthData.glasses')}`
+            ? patternMatch.value + incrementText + ` ${t("healthData.glasses")}`
             : patternMatch.value + incrementText + "ml"
-        } ${t('healthData.of_water_for_you')}`;
+        } ${t("healthData.of_water_for_you")}`;
 
         console.log("Water logging request:", { waterValue, isIncrement });
       } else if (patternMatch.type === "weight") {
-        endpoint = `https://crosscare-backends.onrender.com/api/user/activity/${userId}/weight`;
+        endpoint = `${CONFIG.API_BASE_URL}/user/activity/${userId}/weight`;
         requestData = {
           weight: patternMatch.value,
           weight_unit: patternMatch.unit,
         };
-        successMessage = `${t('healthData.logged_weight')} ${patternMatch.value} ${patternMatch.unit}.`;
+        successMessage = `${t("healthData.logged_weight")} ${
+          patternMatch.value
+        } ${patternMatch.unit}.`;
       } else if (patternMatch.type === "steps") {
-        endpoint = `https://crosscare-backends.onrender.com/api/user/activity/${userId}/steps`;
+        endpoint = `${CONFIG.API_BASE_URL}/user/activity/${userId}/steps`;
         requestData = { steps: patternMatch.value };
-        successMessage = `${t('healthData.ive_logged')} ${patternMatch.value} ${t('healthData.steps_for_you')}`;
+        successMessage = `${t("healthData.ive_logged")} ${
+          patternMatch.value
+        } ${t("healthData.steps_for_you")}`;
       } else if (patternMatch.type === "heart") {
-        endpoint = `https://crosscare-backends.onrender.com/api/user/activity/${userId}/heart`;
+        endpoint = `${CONFIG.API_BASE_URL}/user/activity/${userId}/heart`;
         requestData = { heartRate: patternMatch.value };
-        successMessage = `${t('healthData.logged_heart_rate')} ${patternMatch.value} bpm.`;
+        successMessage = `${t("healthData.logged_heart_rate")} ${
+          patternMatch.value
+        } bpm.`;
       } else if (patternMatch.type === "sleep") {
-        endpoint = `https://crosscare-backends.onrender.com/api/user/activity/${userId}/sleep`;
+        endpoint = `${CONFIG.API_BASE_URL}/user/activity/${userId}/sleep`;
 
         // Format times to ensure they have AM/PM
         const formatTime = (timeStr: string) => {
@@ -107,7 +114,9 @@ export const detectAndHandleLogRequest = async (
           sleepStart: sleepStart,
           sleepEnd: sleepEnd,
         };
-        successMessage = `${t('healthData.logged_sleep_from')} ${sleepStart} ${t('healthData.to')} ${sleepEnd}.`;
+        successMessage = `${t(
+          "healthData.logged_sleep_from"
+        )} ${sleepStart} ${t("healthData.to")} ${sleepEnd}.`;
       }
 
       // If we have valid data and an endpoint, make the API call
@@ -120,7 +129,7 @@ export const detectAndHandleLogRequest = async (
           // Success - refresh health data
           await updateHealthData();
 
-           if (shouldSpeak) {
+          if (shouldSpeak) {
             console.log("Speaking pattern match success:", successMessage);
             speakResponse(successMessage);
           }
@@ -136,7 +145,7 @@ export const detectAndHandleLogRequest = async (
     } catch (error) {
       console.error("Error logging health metric:", error);
 
-       const errorMessage =   t('healthData.log_error');
+      const errorMessage = t("healthData.log_error");
 
       // ✅ FIX: Add missing speakResponse call for errors
       if (shouldSpeak) {
@@ -175,7 +184,7 @@ export const detectAndHandleLogRequest = async (
       extractedData = extractMetricFromText(query, "water");
 
       if (extractedData) {
-        endpoint = `https://crosscare-backends.onrender.com/api/user/activity/${userId}/water`;
+        endpoint = `${CONFIG.API_BASE_URL}/user/activity/${userId}/water`;
 
         // If the user specified glasses, send that value directly
         // Otherwise, convert ml to glasses (assuming 250ml per glass)
@@ -184,44 +193,50 @@ export const detectAndHandleLogRequest = async (
           : Math.round(extractedData.value ?? 0 / 250);
 
         requestData = { water: waterValue, isIncrement: true };
-        successMessage = `${t('healthData.ive_logged')} ${
+        successMessage = `${t("healthData.ive_logged")} ${
           extractedData.isGlasses
-            ? extractedData.value + ` ${t('healthData.glasses')}`
+            ? extractedData.value + ` ${t("healthData.glasses")}`
             : extractedData.value + "ml"
-        } ${t('healthData.of_water_for_you')}`;
+        } ${t("healthData.of_water_for_you")}`;
       }
     } else if (isWeightLog) {
       extractedData = extractMetricFromText(query, "weight");
 
       if (extractedData) {
-        endpoint = `https://crosscare-backends.onrender.com/api/user/activity/${userId}/weight`;
+        endpoint = `${CONFIG.API_BASE_URL}/user/activity/${userId}/weight`;
         requestData = {
           weight: extractedData.value,
           weight_unit: extractedData.unit,
         };
-        successMessage = `${t('healthData.logged_weight')} ${extractedData.value} ${extractedData.unit}.`;
+        successMessage = `${t("healthData.logged_weight")} ${
+          extractedData.value
+        } ${extractedData.unit}.`;
       }
     } else if (isStepsLog) {
       extractedData = extractMetricFromText(query, "steps");
 
       if (extractedData) {
-        endpoint = `https://crosscare-backends.onrender.com/api/user/activity/${userId}/steps`;
+        endpoint = `${CONFIG.API_BASE_URL}/user/activity/${userId}/steps`;
         requestData = { steps: extractedData.value };
-        successMessage = `${t('healthData.ive_logged')} ${extractedData.value} ${t('healthData.steps_for_you')}`;
+        successMessage = `${t("healthData.ive_logged")} ${
+          extractedData.value
+        } ${t("healthData.steps_for_you")}`;
       }
     } else if (isHeartLog) {
       extractedData = extractMetricFromText(query, "heart");
 
       if (extractedData) {
-        endpoint = `https://crosscare-backends.onrender.com/api/user/activity/${userId}/heart`;
+        endpoint = `${CONFIG.API_BASE_URL}/user/activity/${userId}/heart`;
         requestData = { heartRate: extractedData.value };
-        successMessage = `${t('healthData.logged_heart_rate')} ${extractedData.value} bpm.`;
+        successMessage = `${t("healthData.logged_heart_rate")} ${
+          extractedData.value
+        } bpm.`;
       }
     } else if (isSleepLog) {
       extractedData = extractMetricFromText(query, "sleep");
 
       if (extractedData) {
-        endpoint = `https://crosscare-backends.onrender.com/api/user/activity/${userId}/sleep`;
+        endpoint = `${CONFIG.API_BASE_URL}/user/activity/${userId}/sleep`;
 
         // Format times to ensure they have AM/PM
         const formatTime = (timeStr: string) => {
@@ -253,12 +268,12 @@ export const detectAndHandleLogRequest = async (
           sleepStart: sleepStart,
           sleepEnd: sleepEnd,
         };
-        successMessage = `${t('healthData.logged_sleep_from')} ${sleepStart} ${t('healthData.to')} ${sleepEnd}.`;
+        successMessage = `${t(
+          "healthData.logged_sleep_from"
+        )} ${sleepStart} ${t("healthData.to")} ${sleepEnd}.`;
       } else {
         // If we couldn't extract specific sleep times, provide guidance
-        addResponseMessage(
-          t('healthData.sleep_log_instruction')
-        );
+        addResponseMessage(t("healthData.sleep_log_instruction"));
         return { handled: true };
       }
     }
@@ -274,9 +289,8 @@ export const detectAndHandleLogRequest = async (
         await updateHealthData();
 
         if (shouldSpeak) {
-            speakResponse(successMessage);
-          }
-
+          speakResponse(successMessage);
+        }
 
         // Add response message
         addResponseMessage(successMessage);
@@ -289,15 +303,16 @@ export const detectAndHandleLogRequest = async (
   } catch (error) {
     console.error("Error logging health metric:", error);
 
-     const errorMessage = "I'm sorry, I couldn't log that health information. Please try again or use the tracking screens.";
+    const errorMessage =
+      "I'm sorry, I couldn't log that health information. Please try again or use the tracking screens.";
 
-      // ✅ FIX: Add missing speakResponse call for errors
-      if (shouldSpeak) {
-        console.log("Speaking error message:", errorMessage);
-        speakResponse(errorMessage);
-      }
+    // ✅ FIX: Add missing speakResponse call for errors
+    if (shouldSpeak) {
+      console.log("Speaking error message:", errorMessage);
+      speakResponse(errorMessage);
+    }
 
-      addResponseMessage(errorMessage);
+    addResponseMessage(errorMessage);
 
     return { handled: true };
   }

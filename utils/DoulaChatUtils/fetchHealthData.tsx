@@ -1,4 +1,5 @@
 import axios from "axios";
+import { CONFIG } from "@/constants/config";
 
 // Define types for health data
 export interface MealData {
@@ -90,7 +91,9 @@ interface FetchHealthDataResult {
   healthData: HealthData;
 }
 
-export const fetchHealthData = async (userId: string): Promise<FetchHealthDataResult> => {
+export const fetchHealthData = async (
+  userId: string
+): Promise<FetchHealthDataResult> => {
   // Initialize default meal data
   const defaultMealData: MealData = {
     today: {
@@ -102,15 +105,15 @@ export const fetchHealthData = async (userId: string): Promise<FetchHealthDataRe
         BREAKFAST: [],
         LUNCH: [],
         DINNER: [],
-        SNACK: []
-      }
+        SNACK: [],
+      },
     },
     weekly: {
       avgCaloriesConsumed: 0,
       avgCalorieGoal: 0,
       totalGoodFoods: 0,
-      totalBadFoods: 0
-    }
+      totalBadFoods: 0,
+    },
   };
 
   // Initialize default health stats
@@ -185,7 +188,7 @@ export const fetchHealthData = async (userId: string): Promise<FetchHealthDataRe
 
   try {
     // Use the specified endpoint format for activities
-    const apiUrl = `https://crosscare-backends.onrender.com/api/user/activity/${userId}`;
+    const apiUrl = `${CONFIG.API_BASE_URL}/user/activity/${userId}`;
     console.log(`Making API call to: ${apiUrl}`);
 
     // Make the API call for activities
@@ -195,7 +198,9 @@ export const fetchHealthData = async (userId: string): Promise<FetchHealthDataRe
     // Fetch meal data
     let mealData = null;
     try {
-      const mealResponse = await axios.get(`https://crosscare-backends.onrender.com/api/user/activity/${userId}/foodItem`);
+      const mealResponse = await axios.get(
+        `${CONFIG.API_BASE_URL}/user/activity/${userId}/foodItem`
+      );
       mealData = mealResponse.data;
       console.log("Meal data fetched:", mealData);
     } catch (mealError) {
@@ -205,7 +210,9 @@ export const fetchHealthData = async (userId: string): Promise<FetchHealthDataRe
     // Fetch calorie history for weekly meal stats
     let calorieHistory = null;
     try {
-      const historyResponse = await axios.get(`https://crosscare-backends.onrender.com/api/user/activity/${userId}/calorieHistory?timeRange=week`);
+      const historyResponse = await axios.get(
+        `${CONFIG.API_BASE_URL}/user/activity/${userId}/calorieHistory?timeRange=week`
+      );
       calorieHistory = historyResponse.data;
       console.log("Calorie history fetched:", calorieHistory);
     } catch (historyError) {
@@ -269,15 +276,24 @@ export const fetchHealthData = async (userId: string): Promise<FetchHealthDataRe
             calorieGoal: mealData.calorieGoal || 0,
             goodFoodCount: mealData.goodFoodCount || 0,
             badFoodCount: mealData.badFoodCount || 0,
-            meals: mealData.meals || { BREAKFAST: [], LUNCH: [], DINNER: [], SNACK: [] }
+            meals: mealData.meals || {
+              BREAKFAST: [],
+              LUNCH: [],
+              DINNER: [],
+              SNACK: [],
+            },
           },
           weekly: {
-            avgCaloriesConsumed: calorieHistory?.chartData ? 
-              calorieHistory.chartData.reduce((sum: number, day: any) => sum + day.calories, 0) / calorieHistory.chartData.length : 0,
+            avgCaloriesConsumed: calorieHistory?.chartData
+              ? calorieHistory.chartData.reduce(
+                  (sum: number, day: any) => sum + day.calories,
+                  0
+                ) / calorieHistory.chartData.length
+              : 0,
             avgCalorieGoal: mealData.calorieGoal || 0,
             totalGoodFoods: mealData.goodFoodCount || 0,
-            totalBadFoods: mealData.badFoodCount || 0
-          }
+            totalBadFoods: mealData.badFoodCount || 0,
+          },
         };
       }
 
@@ -448,8 +464,12 @@ export const fetchHealthData = async (userId: string): Promise<FetchHealthDataRe
         },
         meals: {
           today: mealData?.caloriesConsumed || 0,
-          weekly: calorieHistory?.chartData ? 
-            calorieHistory.chartData.reduce((sum: number, day: any) => sum + day.calories, 0) : 0,
+          weekly: calorieHistory?.chartData
+            ? calorieHistory.chartData.reduce(
+                (sum: number, day: any) => sum + day.calories,
+                0
+              )
+            : 0,
           goal: mealData?.calorieGoal || 0,
           goodFoodCount: mealData?.goodFoodCount || 0,
           badFoodCount: mealData?.badFoodCount || 0,
@@ -481,42 +501,57 @@ export const fetchHealthData = async (userId: string): Promise<FetchHealthDataRe
 
       return { healthStats: newHealthStats, healthData: newHealthData };
     } else {
-      console.log("No valid activity data in API response, but checking for meal data");
-      
+      console.log(
+        "No valid activity data in API response, but checking for meal data"
+      );
+
       // Even if no activity data, we might have meal data
       if (mealData) {
         const newHealthStats = { ...defaultHealthStats };
         const newHealthData = { ...defaultHealthData };
-        
+
         newHealthStats.meals = {
           today: {
             caloriesConsumed: mealData.caloriesConsumed || 0,
             calorieGoal: mealData.calorieGoal || 0,
             goodFoodCount: mealData.goodFoodCount || 0,
             badFoodCount: mealData.badFoodCount || 0,
-            meals: mealData.meals || { BREAKFAST: [], LUNCH: [], DINNER: [], SNACK: [] }
+            meals: mealData.meals || {
+              BREAKFAST: [],
+              LUNCH: [],
+              DINNER: [],
+              SNACK: [],
+            },
           },
           weekly: {
-            avgCaloriesConsumed: calorieHistory?.chartData ? 
-              calorieHistory.chartData.reduce((sum: number, day: any) => sum + day.calories, 0) / calorieHistory.chartData.length : 0,
+            avgCaloriesConsumed: calorieHistory?.chartData
+              ? calorieHistory.chartData.reduce(
+                  (sum: number, day: any) => sum + day.calories,
+                  0
+                ) / calorieHistory.chartData.length
+              : 0,
             avgCalorieGoal: mealData.calorieGoal || 0,
             totalGoodFoods: mealData.goodFoodCount || 0,
-            totalBadFoods: mealData.badFoodCount || 0
-          }
+            totalBadFoods: mealData.badFoodCount || 0,
+          },
         };
-        
+
         newHealthData.meals = {
           today: mealData.caloriesConsumed || 0,
-          weekly: calorieHistory?.chartData ? 
-            calorieHistory.chartData.reduce((sum: number, day: any) => sum + day.calories, 0) : 0,
+          weekly: calorieHistory?.chartData
+            ? calorieHistory.chartData.reduce(
+                (sum: number, day: any) => sum + day.calories,
+                0
+              )
+            : 0,
           goal: mealData.calorieGoal || 0,
           goodFoodCount: mealData.goodFoodCount || 0,
           badFoodCount: mealData.badFoodCount || 0,
         };
-        
+
         return { healthStats: newHealthStats, healthData: newHealthData };
       }
-      
+
       return { healthStats: defaultHealthStats, healthData: defaultHealthData };
     }
   } catch (error: any) {
