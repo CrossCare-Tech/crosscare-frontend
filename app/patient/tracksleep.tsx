@@ -1390,33 +1390,61 @@ export default function tracksleep() {
               >
                 {t('sleepScreen.mySleep')}
               </Text>
-              <TouchableOpacity
-                style={{
-                  backgroundColor: "#335C85",
-                  borderWidth: 2,
-                  borderColor: "#547698",
-                  flexDirection: "row",
-                  paddingHorizontal: 12,
-                  gap: 5,
-                  paddingVertical: 8,
-                  borderRadius: 32,
-                  justifyContent: "center",
-                  alignItems: "center",
-                  boxShadow: "0px 0px 4px 0px rgba(255, 255, 255, 0.25);",
-                }}
-                onPress={handleOpenModal}
-              >
-                <Ionicons name="add" size={14} color={"#FFF6ED"} />
-                <Text
+              {isConnected ? (
+                <View
                   style={{
-                    color: "#FFF6ED",
-                    fontSize: 12,
-                    fontFamily: "Inter500",
+                    backgroundColor: "#335C85",
+                    borderWidth: 2,
+                    borderColor: "#547698",
+                    flexDirection: "row",
+                    paddingHorizontal: 12,
+                    gap: 5,
+                    paddingVertical: 8,
+                    borderRadius: 32,
+                    justifyContent: "center",
+                    alignItems: "center",
+                    boxShadow: "0px 0px 4px 0px rgba(255, 255, 255, 0.25);",
                   }}
                 >
-                  {t('sleepScreen.addLog')}
-                </Text>
-              </TouchableOpacity>
+                  <Text
+                    style={{
+                      color: "#FFF6ED",
+                      fontSize: 12,
+                      fontFamily: "Inter500",
+                    }}
+                  >
+                    Log via Fitbit
+                  </Text>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={{
+                    backgroundColor: "#335C85",
+                    borderWidth: 2,
+                    borderColor: "#547698",
+                    flexDirection: "row",
+                    paddingHorizontal: 12,
+                    gap: 5,
+                    paddingVertical: 8,
+                    borderRadius: 32,
+                    justifyContent: "center",
+                    alignItems: "center",
+                    boxShadow: "0px 0px 4px 0px rgba(255, 255, 255, 0.25);",
+                  }}
+                  onPress={handleOpenModal}
+                >
+                  <Ionicons name="add" size={14} color={"#FFF6ED"} />
+                  <Text
+                    style={{
+                      color: "#FFF6ED",
+                      fontSize: 12,
+                      fontFamily: "Inter500",
+                    }}
+                  >
+                    {t('sleepScreen.addLog')}
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
 
             {loading ? (
@@ -1498,7 +1526,9 @@ export default function tracksleep() {
                           : formatDate(entry.date)}
                       </Text>
                     </View>
-                    <DeleteMenu onDelete={() => handleDeleteLog(entry.id)} />
+                    {!isConnected && (
+                      <DeleteMenu onDelete={() => handleDeleteLog(entry.id)} />
+                    )}
                   </View>
 
                   <View
