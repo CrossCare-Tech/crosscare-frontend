@@ -129,7 +129,7 @@ export default function askdoula() {
     },
     setIsPaused: (val: boolean) => setIsPaused(val),
     // You need to add your OpenAI API key here
-    openAIApiKey: process.env.EXPO_PUBLIC_OPENAI_API_KEY || "",
+    openAIApiKey: `${CONFIG.OPENAI_API_KEY}` || "",
   });
 
   const checkQuestionnaireCompletionStatus = async () => {
@@ -742,7 +742,8 @@ export default function askdoula() {
   const generateTranslation = async (text: string, targetLanguage: string) => {
     const apiUrl =
       "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
-    const apiKey = "AIzaSyDa4LHDX8SHeXNeKr6sZP5TCIrEIPnkjSU"; // Replace with your actual API key
+    const apiKey = `${CONFIG.GEMINI_API_KEY}`;
+    // Replace with your actual API key
 
     // Prepare the request body for translation
     const requestBody = {
@@ -886,7 +887,7 @@ export default function askdoula() {
         "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
 
       // Your API key should be stored in an environment variable in production
-      const apiKey = "AIzaSyDa4LHDX8SHeXNeKr6sZP5TCIrEIPnkjSU"; // Replace with your actual API key
+      const apiKey = `${CONFIG.GEMINI_API_KEY}`; // Replace with your actual API key
 
       // Create enhanced prompt with health data if available
       let enhancedPrompt = systemPrompt;

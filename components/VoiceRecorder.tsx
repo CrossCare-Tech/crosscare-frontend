@@ -39,7 +39,7 @@ interface FormatTimeProps {
 export default function VoiceRecorder({
   onSendAudio,
   systemPrompt = systemPrompts,
-  apiKey = "AIzaSyD0ISmMWP4_yDqEvlrjpNJB8TnuJBkhZPs",
+  apiKey = `${CONFIG.GEMINI_API_KEY}`,
   isMuted,
   isSpeaking,
   setIsSpeaking,
@@ -283,7 +283,7 @@ export default function VoiceRecorder({
         {
           method: "POST",
           headers: {
-            Authorization: "Token d7916ca82390f587e38b1a754aa6bc098e14004f", // Replace with your Deepgram API key
+            Authorization: `Token ${CONFIG.DEEPGRAM_API_KEY}`, // Replace with your Deepgram API key
             "Content-Type": "audio/wav",
           },
           body: audioBlob,
