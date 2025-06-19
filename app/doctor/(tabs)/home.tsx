@@ -4,9 +4,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { supabase } from "@/supabase/supabase";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 // import { GoogleSignin } from "@react-native-google-signin/google-signin";
-import { useDispatch, useSelector } from 'react-redux';
-import { removeToken } from '@/store/userSlice';
-import { useRouter } from 'expo-router';
+import { useDispatch, useSelector } from "react-redux";
+import { removeToken } from "@/store/userSlice";
+import { useRouter } from "expo-router";
 
 // GoogleSignin.configure({
 //   webClientId:
@@ -25,13 +25,13 @@ const Home = () => {
   useEffect(() => {
     const getUserData = async () => {
       try {
-        const userDataString = await AsyncStorage.getItem('user');
+        const userDataString = await AsyncStorage.getItem("user");
         if (userDataString) {
           const parsedUserData = JSON.parse(userDataString);
           setUserData(parsedUserData);
         }
       } catch (error) {
-        console.error('Error fetching user data:', error);
+        console.error("Error fetching user data:", error);
       }
     };
     getUserData();
@@ -50,7 +50,7 @@ const Home = () => {
       // Check if user signed in with Google
       // const providers = userData?.app_metadata?.providers;
       console.log("Auth providers:", user?.provider);
-      if (user?.provider?.[0] === 'google') {
+      if (user?.provider?.[0] === "google") {
         try {
           console.log("Signing out from Google...");
           // Remove Google sign out since it requires being signed in
@@ -59,23 +59,26 @@ const Home = () => {
           // console.log("Skipping Google sign out as it requires being signed in");
         } catch (googleError) {
           console.error("Google Sign-Out error:", googleError);
-          console.warn("Failed to log out from Google, continuing with app logout");
+          console.warn(
+            "Failed to log out from Google, continuing with app logout"
+          );
         }
       }
 
       // Dispatch logout action
-      await AsyncStorage.removeItem('token');
-      await AsyncStorage.removeItem('user');
-      await AsyncStorage.removeItem('role');
+      await AsyncStorage.removeItem("token");
+      await AsyncStorage.removeItem("user");
+      await AsyncStorage.removeItem("role");
       await AsyncStorage.removeItem("hasOnboarded");
+      await AsyncStorage.clear();
+
       dispatch(removeToken());
       // console.log("user", user);
-      const token = await AsyncStorage.getItem('token');
+      const token = await AsyncStorage.getItem("token");
       console.log("Token after removal:", token); // Should show null
-      
-      // Navigate to login screen
-      router.replace('/login');
 
+      // Navigate to login screen
+      router.replace("/login");
     } catch (err: any) {
       console.error("Logout error:", err);
       Alert.alert("Error", err.message || "An error occurred during logout.");
@@ -91,7 +94,7 @@ const Home = () => {
         backgroundColor: "white",
       }}
     >
-      <StatusBar barStyle={'dark-content'} />
+      <StatusBar barStyle={"dark-content"} />
       <Text
         style={{
           color: "black",
