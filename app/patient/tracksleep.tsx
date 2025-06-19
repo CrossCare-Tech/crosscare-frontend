@@ -722,6 +722,7 @@ export default function tracksleep() {
       let allSleepLogs: SleepEntry[] = [];
       let chartDataFromFitbit: any[] = [];
 
+      // Only process Fitbit data if actually connected
       if (isConnected) {
         console.log("Fetching sleep data from Fitbit...");
         // Get sleep data from Fitbit
@@ -744,9 +745,11 @@ export default function tracksleep() {
           
           console.log("Fitbit sleep logs:", sleepLogsFromFitbit);
         }
+      } else {
+        console.log("Not connected to Fitbit, skipping Fitbit data fetch");
       }
 
-      // Also fetch data from backend to combine with Fitbit data
+      // Fetch data from backend
       try {
         console.log("Fetching sleep data from backend...");
         const response = await fetch(
@@ -763,10 +766,42 @@ export default function tracksleep() {
           const data = await response.json();
           console.log("Backend sleep data:", data.sleepData);
           
-          // Combine backend data with Fitbit data
           if (data.sleepData && data.sleepData.length > 0) {
-            // Add backend logs to existing Fitbit logs
-            allSleepLogs = [...allSleepLogs, ...data.sleepData];
+            if (isConnected) {
+              // If connected to Fitbit, we need to merge data carefully to avoid duplicates
+              // Create a Set of dates that already exist in Fitbit data
+              const fitbitDates = new Set(allSleepLogs.map(log => {
+                // Convert display date back to YYYY-MM-DD format for comparison
+                const dateParts = log.date.split(' ');
+                if (dateParts.length >= 3) {
+                  const day = dateParts[0];
+                  const month = dateParts[1].replace(',', '');
+                  const year = dateParts[2];
+                  
+                  // Convert month name to number
+                  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                  const monthNum = monthNames.indexOf(month) + 1;
+                  
+                  if (monthNum > 0) {
+                    return `${year}-${monthNum.toString().padStart(2, '0')}-${day.padStart(2, '0')}`;
+                  }
+                }
+                return null;
+              }).filter(Boolean));
+
+              // Only add backend logs that don't exist in Fitbit data
+              const uniqueBackendLogs = data.sleepData.filter((backendLog: any) => 
+                !fitbitDates.has(backendLog.date)
+              );
+              
+              allSleepLogs = [...allSleepLogs, ...uniqueBackendLogs];
+              console.log(`Added ${uniqueBackendLogs.length} unique backend logs to ${allSleepLogs.length - uniqueBackendLogs.length} Fitbit logs`);
+            } else {
+              // If not connected to Fitbit, just use backend data
+              allSleepLogs = data.sleepData;
+              console.log(`Using ${allSleepLogs.length} backend logs only`);
+            }
             
             // Process backend data for chart if no Fitbit data
             if (chartDataFromFitbit.length === 0) {
@@ -778,7 +813,7 @@ export default function tracksleep() {
               // Create a map to store unique sleep data
               const sleepMap = new Map();
 
-              // Process backend data
+              // Process backend data for chart
               data.sleepData.forEach(
                 (entry: { date: string | number | Date; duration: string }) => {
                   const entryDate = new Date(entry.date);
@@ -822,10 +857,10 @@ export default function tracksleep() {
         }
       } catch (backendError) {
         console.error("Error fetching backend sleep data:", backendError);
-        // Continue with Fitbit data only
+        // Continue with Fitbit data only (if any)
       }
 
-      // Set all sleep logs (Fitbit + Backend)
+      // Set all sleep logs (Fitbit + Backend, with duplicates removed)
       setSleepLogs(allSleepLogs);
       setChartData(chartDataFromFitbit);
 
@@ -834,6 +869,7 @@ export default function tracksleep() {
       setFilteredData(filteredData);
       
       console.log("Final combined sleep data:", {
+        isConnected,
         logs: allSleepLogs.length,
         chartData: chartDataFromFitbit.length,
         filteredData: filteredData.length
