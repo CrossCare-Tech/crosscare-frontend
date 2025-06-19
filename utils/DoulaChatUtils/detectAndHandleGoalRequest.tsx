@@ -1,5 +1,6 @@
 import axios from "axios";
 import { detectGoalRequestWithPatterns } from "./goalRequestWithPatterns";
+import { CONFIG } from "@/constants/config";
 
 // Define the function parameters and return type
 export interface GoalRequestResult {
@@ -13,8 +14,8 @@ export const detectAndHandleGoalRequest = async (
   extractMetricFromText: (text: string, metricType: string) => any,
   updateHealthData: () => Promise<void>,
   addResponseMessage: (content: string) => void,
-  shouldSpeak:boolean,
-  speakResponse: (text: string) =>void,
+  shouldSpeak: boolean,
+  speakResponse: (text: string) => void,
   t: (key: string) => string
 ): Promise<GoalRequestResult> => {
   // First try pattern-based recognition
@@ -28,18 +29,22 @@ export const detectAndHandleGoalRequest = async (
 
     try {
       if (patternMatch.type === "water") {
-        endpoint = `https://crosscare-backends.onrender.com/api/user/activity/${userId}/waterGoal`;
+        endpoint = `${CONFIG.API_BASE_URL}/user/activity/${userId}/waterGoal`;
 
         const waterGoal = patternMatch.isGlasses
           ? patternMatch.value
           : Math.round(patternMatch.value / 250);
 
         requestData = { waterGoal: waterGoal };
-        successMessage = `${t('healthData.water_goal_set')} ${waterGoal} ${t('healthData.glasses_per_day')}`;
+        successMessage = `${t("healthData.water_goal_set")} ${waterGoal} ${t(
+          "healthData.glasses_per_day"
+        )}`;
       } else if (patternMatch.type === "steps") {
-        endpoint = `https://crosscare-backends.onrender.com/api/user/activity/${userId}/steps`;
+        endpoint = `${CONFIG.API_BASE_URL}/user/activity/${userId}/steps`;
         requestData = { stepsGoal: patternMatch.value };
-        successMessage = `${t('healthData.steps_goal_set')} ${patternMatch.value} ${t('healthData.steps_per_day')}`;
+        successMessage = `${t("healthData.steps_goal_set")} ${
+          patternMatch.value
+        } ${t("healthData.steps_per_day")}`;
       }
 
       // If we have valid data and an endpoint, make the API call
@@ -63,10 +68,8 @@ export const detectAndHandleGoalRequest = async (
       }
     } catch (error) {
       console.error("Error setting health goal:", error);
-      
-      addResponseMessage(
-         t('healthData.goal_set_error')
-      );
+
+      addResponseMessage(t("healthData.goal_set_error"));
     }
 
     return { handled: true }; // We had a pattern match, even if the API call failed
@@ -94,7 +97,7 @@ export const detectAndHandleGoalRequest = async (
       extractedData = extractMetricFromText(query, "water");
 
       if (extractedData) {
-        endpoint = `https://crosscare-backends.onrender.com/api/user/activity/${userId}/waterGoal`;
+        endpoint = `${CONFIG.API_BASE_URL}/user/activity/${userId}/waterGoal`;
 
         // If the user specified glasses, use that value directly
         // Otherwise, convert ml to glasses (assuming 250ml per glass)
@@ -103,15 +106,19 @@ export const detectAndHandleGoalRequest = async (
           : Math.round((extractedData.value ?? 0) / 250);
 
         requestData = { waterGoal: waterGoal };
-        successMessage = `${t('healthData.water_goal_set')} ${waterGoal} ${t('healthData.glasses_per_day')}`;
+        successMessage = `${t("healthData.water_goal_set")} ${waterGoal} ${t(
+          "healthData.glasses_per_day"
+        )}`;
       }
     } else if (isStepsGoal) {
       extractedData = extractMetricFromText(query, "steps");
 
       if (extractedData) {
-        endpoint = `https://crosscare-backends.onrender.com/api/user/activity/${userId}/steps`;
+        endpoint = `${CONFIG.API_BASE_URL}/user/activity/${userId}/steps`;
         requestData = { stepsGoal: extractedData.value };
-        successMessage = `${t('healthData.steps_goal_set')} ${extractedData.value} ${t('healthData.steps_per_day')}`;
+        successMessage = `${t("healthData.steps_goal_set")} ${
+          extractedData.value
+        } ${t("healthData.steps_per_day")}`;
       }
     }
 
@@ -135,10 +142,8 @@ export const detectAndHandleGoalRequest = async (
     }
   } catch (error) {
     console.error("Error setting health goal:", error);
-    
-    addResponseMessage(
-      t('healthData.goal_set_error')
-    );
+
+    addResponseMessage(t("healthData.goal_set_error"));
 
     return { handled: true };
   }

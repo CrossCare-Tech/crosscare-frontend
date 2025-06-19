@@ -8,7 +8,7 @@ import {
   Animated,
 } from "react-native";
 import { Audio } from "expo-av";
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from "expo-file-system";
 import { Feather, MaterialIcons } from "@expo/vector-icons";
 import * as Speech from "expo-speech";
 import axios from "axios";
@@ -16,20 +16,21 @@ import { systemPrompts } from "@/constants/systemPrompts";
 import { useSelector } from "react-redux";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTranslation } from "react-i18next";
+import { CONFIG } from "@/constants/config";
 
 interface VoiceRecorderProps {
   onSendAudio: (
     audioUri: string,
-    transcript?: string,
+    transcript?: string
     // assistantResponse?: string
   ) => void;
   systemPrompt?: string;
   apiKey?: string;
   isMuted?: boolean;
-  isSpeaking?: boolean
-  setIsSpeaking?: React.Dispatch<React.SetStateAction<boolean>>
-  isProcessing?: boolean
-  setIsProcessing?: React.Dispatch<React.SetStateAction<boolean>>
+  isSpeaking?: boolean;
+  setIsSpeaking?: React.Dispatch<React.SetStateAction<boolean>>;
+  isProcessing?: boolean;
+  setIsProcessing?: React.Dispatch<React.SetStateAction<boolean>>;
 }
 interface FormatTimeProps {
   seconds: number;
@@ -38,7 +39,7 @@ interface FormatTimeProps {
 export default function VoiceRecorder({
   onSendAudio,
   systemPrompt = systemPrompts,
-  apiKey = "AIzaSyD0ISmMWP4_yDqEvlrjpNJB8TnuJBkhZPs",
+  apiKey = `${CONFIG.GEMINI_API_KEY}`,
   isMuted,
   isSpeaking,
   setIsSpeaking,
@@ -56,31 +57,30 @@ export default function VoiceRecorder({
   const [transcript, setTranscript] = useState("");
   const [audioUri, setAudioUri] = useState("");
   const [femaleVoice, setFemaleVoice] = useState<Speech.Voice | null>(null);
-  const [localMuted, setLocalMuted] = useState(false)
-  const [sound, setSound] = useState<Audio.Sound | null>(null)
-  const [useElevenLabs, setUseElevenLabs] = useState(true)
+  const [localMuted, setLocalMuted] = useState(false);
+  const [sound, setSound] = useState<Audio.Sound | null>(null);
+  const [useElevenLabs, setUseElevenLabs] = useState(true);
 
-
-    const { t, i18n } = useTranslation()
-    const currentLanguage = i18n.language
+  const { t, i18n } = useTranslation();
+  const currentLanguage = i18n.language;
 
   // Use either external or local mute state
-  const effectiveMuted = isMuted !== undefined ? isMuted : localMuted
+  const effectiveMuted = isMuted !== undefined ? isMuted : localMuted;
 
   useEffect(() => {
     const loadMuteState = async () => {
       try {
-        const savedMuteState = await AsyncStorage.getItem("isMuted")
+        const savedMuteState = await AsyncStorage.getItem("isMuted");
         if (savedMuteState !== null) {
-          setLocalMuted(savedMuteState === "true")
+          setLocalMuted(savedMuteState === "true");
         }
       } catch (error) {
-        console.error("Error loading mute state:", error)
+        console.error("Error loading mute state:", error);
       }
-    }
+    };
 
-    loadMuteState()
-  }, [])
+    loadMuteState();
+  }, []);
 
   // Use a ref to track if recording is being unloaded to prevent double unloading
   const isUnloading = useRef(false);
@@ -249,7 +249,7 @@ export default function VoiceRecorder({
 
       // Process the audio with Deepgram instead of just sending the URI
       if (uri) {
-        if(setIsProcessing) setIsProcessing(true);
+        if (setIsProcessing) setIsProcessing(true);
         await processAudioWithDeepgram(uri);
       }
     } catch (error) {
@@ -259,7 +259,7 @@ export default function VoiceRecorder({
       setIsRecording(false);
       setRecordingDuration(0);
       isUnloading.current = false;
-      if(setIsProcessing) setIsProcessing(false);
+      if (setIsProcessing) setIsProcessing(false);
     }
   };
 
@@ -283,7 +283,7 @@ export default function VoiceRecorder({
         {
           method: "POST",
           headers: {
-            Authorization: "Token d7916ca82390f587e38b1a754aa6bc098e14004f", // Replace with your Deepgram API key
+            Authorization: `Token ${CONFIG.DEEPGRAM_API_KEY}`, // Replace with your Deepgram API key
             "Content-Type": "audio/wav",
           },
           body: audioBlob,
@@ -313,7 +313,7 @@ export default function VoiceRecorder({
           // We're passing the transcript as a hidden property for processing
           // but it won't be displayed separately
           onSendAudio(audioUri, transcriptText);
-          if (setIsSpeaking) setIsSpeaking(true)
+          if (setIsSpeaking) setIsSpeaking(true);
 
           // Send the transcript to Gemini API and speak the response
           // await processUserInput(transcriptText);
@@ -326,7 +326,7 @@ export default function VoiceRecorder({
       }
     } catch (error) {
       console.error("Error transcribing audio:", error);
-      if(setIsProcessing) setIsProcessing(false);
+      if (setIsProcessing) setIsProcessing(false);
       Alert.alert(
         "Speech Recognition Error",
         "I'm having trouble understanding. Please try again."
@@ -422,7 +422,6 @@ export default function VoiceRecorder({
   //     const languageCode = currentLanguage.split("-")[0]
 
   //     const voiceId =  "21m00Tcm4TlvDq8ikWAM"// Default to English Rachel voice if language not found
-
 
   //     // Log detailed information for debugging
   //     console.log(`Language setting: "${currentLanguage}, ${languageCode}"`)
@@ -578,122 +577,146 @@ export default function VoiceRecorder({
   // }
 
   const wordToNumberMap = {
-    "one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10,
-    "eleven": 11, "twelve": 12, "thirteen": 13, "fourteen": 14, "fifteen": 15, "sixteen": 16, "seventeen": 17,
-    "eighteen": 18, "nineteen": 19, "twenty": 20, "thirty": 30, "forty": 40, "fifty": 50, "sixty": 60, "seventy": 70,
-    "eighty": 80, "ninety": 90, "hundred": 100, "half": 0.5, "quarter": 0.25
-};
+    one: 1,
+    two: 2,
+    three: 3,
+    four: 4,
+    five: 5,
+    six: 6,
+    seven: 7,
+    eight: 8,
+    nine: 9,
+    ten: 10,
+    eleven: 11,
+    twelve: 12,
+    thirteen: 13,
+    fourteen: 14,
+    fifteen: 15,
+    sixteen: 16,
+    seventeen: 17,
+    eighteen: 18,
+    nineteen: 19,
+    twenty: 20,
+    thirty: 30,
+    forty: 40,
+    fifty: 50,
+    sixty: 60,
+    seventy: 70,
+    eighty: 80,
+    ninety: 90,
+    hundred: 100,
+    half: 0.5,
+    quarter: 0.25,
+  };
 
-// const wordsToNumber = (words: string): number | null => {
-//     const parts = words.split(/[-\s]+/); // Split by space or hyphen
-//     let total = 0;
-//     let current = 0;
+  // const wordsToNumber = (words: string): number | null => {
+  //     const parts = words.split(/[-\s]+/); // Split by space or hyphen
+  //     let total = 0;
+  //     let current = 0;
 
-//     for (const word of parts) {
-//         if (wordToNumberMap[word as keyof typeof wordToNumberMap] !== undefined) {
-//             let num = wordToNumberMap[word as keyof typeof wordToNumberMap];
-//             if (num === 100) {
-//                 current *= 100; // Handle "one hundred", "two hundred", etc.
-//             } else {
-//                 current += num;
-//             }
-//         } else if (current > 0) {
-//             total += current;
-//             current = 0;
-//         }
-//     }
-//     total += current;
-//     return total > 0 ? total : null;
-// };
+  //     for (const word of parts) {
+  //         if (wordToNumberMap[word as keyof typeof wordToNumberMap] !== undefined) {
+  //             let num = wordToNumberMap[word as keyof typeof wordToNumberMap];
+  //             if (num === 100) {
+  //                 current *= 100; // Handle "one hundred", "two hundred", etc.
+  //             } else {
+  //                 current += num;
+  //             }
+  //         } else if (current > 0) {
+  //             total += current;
+  //             current = 0;
+  //         }
+  //     }
+  //     total += current;
+  //     return total > 0 ? total : null;
+  // };
 
-// const convertWordsToNumbers = (text: string): string => {
-//     return text.replace(/\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|half|quarter)([-\s]?(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety))?\b/gi, (match) => {
-//         const num = wordsToNumber(match.toLowerCase());
-//         return num !== null ? num.toString() : match;
-//     });
-// };
+  // const convertWordsToNumbers = (text: string): string => {
+  //     return text.replace(/\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|half|quarter)([-\s]?(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety))?\b/gi, (match) => {
+  //         const num = wordsToNumber(match.toLowerCase());
+  //         return num !== null ? num.toString() : match;
+  //     });
+  // };
 
-// const processUserInput = async (userText: string) => {
-//     console.log("Processing input:", userText);
+  // const processUserInput = async (userText: string) => {
+  //     console.log("Processing input:", userText);
 
-//     // Convert words like "fifty-six kg" → "56 kg"
-//     userText = convertWordsToNumbers(userText);
-//     console.log("Converted input:", userText);
+  //     // Convert words like "fifty-six kg" → "56 kg"
+  //     userText = convertWordsToNumbers(userText);
+  //     console.log("Converted input:", userText);
 
-//     // Updated regex to capture water/weight inputs
-//     const waterMatch = userText.match(/([\d]+(?:\.\d+)?)\s*(ml|milliliters|liters|litres|l)/i);
-//     const weightMatch = userText.match(/([\d]+(?:\.\d+)?)\s*(kg|pounds)/i);
+  //     // Updated regex to capture water/weight inputs
+  //     const waterMatch = userText.match(/([\d]+(?:\.\d+)?)\s*(ml|milliliters|liters|litres|l)/i);
+  //     const weightMatch = userText.match(/([\d]+(?:\.\d+)?)\s*(kg|pounds)/i);
 
-//     let logDetails = null;
+  //     let logDetails = null;
 
-//     if (waterMatch) {
-//         let value = parseFloat(waterMatch[1]);
-//         let unit = waterMatch[2].toLowerCase();
+  //     if (waterMatch) {
+  //         let value = parseFloat(waterMatch[1]);
+  //         let unit = waterMatch[2].toLowerCase();
 
-//         if (unit.startsWith("l")) {
-//             value *= 1000;
-//         }
+  //         if (unit.startsWith("l")) {
+  //             value *= 1000;
+  //         }
 
-//         logDetails = { category: "water", value, unit: "ml" };
-//     } else if (weightMatch) {
-//         let value = parseFloat(weightMatch[1]);
-//         let unit = weightMatch[2].toLowerCase();
+  //         logDetails = { category: "water", value, unit: "ml" };
+  //     } else if (weightMatch) {
+  //         let value = parseFloat(weightMatch[1]);
+  //         let unit = weightMatch[2].toLowerCase();
 
-//         logDetails = { category: "weight", value, unit };
-//     }
+  //         logDetails = { category: "weight", value, unit };
+  //     }
 
-//     if (logDetails && logDetails.value > 0) {
-//         console.log("✅ Extracted log:", logDetails);
-//         await logData(logDetails);
-//     } else {
-//         console.log("❌ No valid data extracted.");
-//     }
-// };
+  //     if (logDetails && logDetails.value > 0) {
+  //         console.log("✅ Extracted log:", logDetails);
+  //         await logData(logDetails);
+  //     } else {
+  //         console.log("❌ No valid data extracted.");
+  //     }
+  // };
 
-// const getSystemPrompt = (language: string) => {
-//     // Map language codes to full language names
-//     const languageNames: Record<string, string> = {
-//       'en': 'English',
-//       'es': 'Spanish',
-//       'pt': 'Portuguese',
-//       'ht': 'Haitian creole'
-//     };
-    
-//     // Get base language code (e.g., 'es' from 'es-ES')
-//     const baseLanguage = language.split('-')[0];
-//     const languageName = languageNames[baseLanguage];
-    
-//     return `${systemPrompt}\n\nPlease respond in ${languageName}. Your response should be natural and conversational in ${languageName}.`;
-//   };
+  // const getSystemPrompt = (language: string) => {
+  //     // Map language codes to full language names
+  //     const languageNames: Record<string, string> = {
+  //       'en': 'English',
+  //       'es': 'Spanish',
+  //       'pt': 'Portuguese',
+  //       'ht': 'Haitian creole'
+  //     };
 
-// const logData = async ({ category, value, unit }) => {
-//     const userId = user.user_id;
-//     const waterCount = value / 250;
-//     console.log(waterCount);
+  //     // Get base language code (e.g., 'es' from 'es-ES')
+  //     const baseLanguage = language.split('-')[0];
+  //     const languageName = languageNames[baseLanguage];
 
-//     try {
-//         let responseMessage = "";
+  //     return `${systemPrompt}\n\nPlease respond in ${languageName}. Your response should be natural and conversational in ${languageName}.`;
+  //   };
 
-//         if (category === "water") {
-//             await axios.post(`https://crosscare-backends.onrender.com/api/user/activity/${userId}/water`, { water: waterCount });
-//             console.log("✅ Water intake logged.");
-//             responseMessage = `I have logged your water intake of ${value} milliliters. Keep staying hydrated!`;
-//         } else if (category === "weight") {
-//             await axios.post(`https://crosscare-backends.onrender.com/api/user/activity/${userId}/weight`, { weight: value, weight_unit: unit });
-//             console.log("✅ Weight logged.");
-//             responseMessage = `Your weight of ${value} ${unit} has been recorded.`;
-//         }
+  // const logData = async ({ category, value, unit }) => {
+  //     const userId = user.user_id;
+  //     const waterCount = value / 250;
+  //     console.log(waterCount);
 
-//         // Speak the response aloud
-//         if (responseMessage) {
-//             speakResponse(responseMessage);
-//         }
-//     } catch (error: any) {
-//         console.error("❌ Error logging:", error.response ? error.response.data : error.message);
-//     }
-// };
+  //     try {
+  //         let responseMessage = "";
 
+  //         if (category === "water") {
+  //             await axios.post(`${CONFIG.API_BASE_URL}/user/activity/${userId}/water`, { water: waterCount });
+  //             console.log("✅ Water intake logged.");
+  //             responseMessage = `I have logged your water intake of ${value} milliliters. Keep staying hydrated!`;
+  //         } else if (category === "weight") {
+  //             await axios.post(`${CONFIG.API_BASE_URL}/user/activity/${userId}/weight`, { weight: value, weight_unit: unit });
+  //             console.log("✅ Weight logged.");
+  //             responseMessage = `Your weight of ${value} ${unit} has been recorded.`;
+  //         }
 
+  //         // Speak the response aloud
+  //         if (responseMessage) {
+  //             speakResponse(responseMessage);
+  //         }
+  //     } catch (error: any) {
+  //         console.error("❌ Error logging:", error.response ? error.response.data : error.message);
+  //     }
+  // };
 
   // const processUserQuery = async (query: string) => {
   //   try {
@@ -718,7 +741,7 @@ export default function VoiceRecorder({
   //         ],
   //         generationConfig: {
   //           maxOutputTokens: 100,
-  //           temperature: 1.0, 
+  //           temperature: 1.0,
   //         },
   //       },
   //     });
@@ -756,50 +779,50 @@ export default function VoiceRecorder({
   //   }
   // };
 
-//   const speakResponse = (text: string) => {
-//     // Check if muted - if so, don't speak but still process
-//     if (effectiveMuted) {
-//       console.log("Voice is muted, not speaking response:", text)
-//       setIsProcessing(false)
-//       return
-//     }
+  //   const speakResponse = (text: string) => {
+  //     // Check if muted - if so, don't speak but still process
+  //     if (effectiveMuted) {
+  //       console.log("Voice is muted, not speaking response:", text)
+  //       setIsProcessing(false)
+  //       return
+  //     }
 
-//     // If speech is already happening, stop it before starting new speech
-//     if (isSpeaking) {
-//       Speech.stop();
-//       console.log("Speech interrupted.");
-//     }
+  //     // If speech is already happening, stop it before starting new speech
+  //     if (isSpeaking) {
+  //       Speech.stop();
+  //       console.log("Speech interrupted.");
+  //     }
 
-//     setIsSpeaking(true)
+  //     setIsSpeaking(true)
 
-//     // Create speech options with the female voice if available
-//     const speechOptions: Speech.SpeechOptions = {
-//       language: currentLanguage,
-//       pitch: 1.0,
-//       rate: 0.9,
-//       onDone: () => {
-//         setIsSpeaking(false)
-//         setIsProcessing(false)
-//       },
-//       onStopped: () => {
-//         setIsSpeaking(false)
-//         setIsProcessing(false)
-//       },
-//       onError: (error) => {
-//         console.error("Speech error:", error)
-//         setIsSpeaking(false)
-//         setIsProcessing(false)
-//       },
-//     }
+  //     // Create speech options with the female voice if available
+  //     const speechOptions: Speech.SpeechOptions = {
+  //       language: currentLanguage,
+  //       pitch: 1.0,
+  //       rate: 0.9,
+  //       onDone: () => {
+  //         setIsSpeaking(false)
+  //         setIsProcessing(false)
+  //       },
+  //       onStopped: () => {
+  //         setIsSpeaking(false)
+  //         setIsProcessing(false)
+  //       },
+  //       onError: (error) => {
+  //         console.error("Speech error:", error)
+  //         setIsSpeaking(false)
+  //         setIsProcessing(false)
+  //       },
+  //     }
 
-//     // Add the voice if we found a female one
-//     if (femaleVoice) {
-//       speechOptions.voice = femaleVoice.identifier
-//     }
+  //     // Add the voice if we found a female one
+  //     if (femaleVoice) {
+  //       speechOptions.voice = femaleVoice.identifier
+  //     }
 
-//     // Start speaking the text
-//     Speech.speak(text, speechOptions)
-// }
+  //     // Start speaking the text
+  //     Speech.speak(text, speechOptions)
+  // }
 
   return (
     <View style={styles.container}>

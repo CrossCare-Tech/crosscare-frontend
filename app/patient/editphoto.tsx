@@ -18,11 +18,12 @@ import { router, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
+import { CONFIG } from "@/constants/config";
 
 export default function editphoto() {
   const user = useSelector((state: any) => state.user); // Assuming you have a Redux store set up
   const params = useLocalSearchParams();
-  const {t}= useTranslation();
+  const { t } = useTranslation();
 
   // Parse the params.item (which is likely a string)
   const item = typeof params.item === "string" ? JSON.parse(params.item) : null;
@@ -30,7 +31,9 @@ export default function editphoto() {
   console.log("Parsed Note Data:", item);
 
   const [title, setTitle] = useState(item.title || ""); // Initialize title with the passed data
-  const [imageUri, setImageUri] = useState<string | null>(item?.imageSource || null); // To store the selected image URI
+  const [imageUri, setImageUri] = useState<string | null>(
+    item?.imageSource || null
+  ); // To store the selected image URI
   const [hasPermission, setHasPermission] = useState<boolean | null>(null); // For camera permission
   const [saved, setSaved] = useState(false);
 
@@ -51,47 +54,47 @@ export default function editphoto() {
   }, []);
 
   const handleSave = async () => {
-      const formData = new FormData();
-  
-      // Add title to the FormData
-      formData.append("title", title);
-  
-      // Check if imageUri exists, and append the image to FormData
-      formData.append('imageUrl', {
-        uri: imageUri,
-        type: 'image/jpeg', // or the appropriate MIME type
-        name: 'upload.jpg'
-      });
-  
-      try {
-        const response = await fetch(
-          `https://crosscare-backends.onrender.com/api/user/activity/${user.user_id}/journal/${item.id}`,
-          {
-            method: "PUT",
-            headers: {
-              "Content-Type": "multipart/form-data", // Set correct content type for form data
-            },
-            body: formData,
-          }
-        );
-  
-        if (!response.ok) {
-          throw new Error(`Failed to save note: ${response.statusText}`);
+    const formData = new FormData();
+
+    // Add title to the FormData
+    formData.append("title", title);
+
+    // Check if imageUri exists, and append the image to FormData
+    formData.append("imageUrl", {
+      uri: imageUri,
+      type: "image/jpeg", // or the appropriate MIME type
+      name: "upload.jpg",
+    });
+
+    try {
+      const response = await fetch(
+        `${CONFIG.API_BASE_URL}/user/activity/${user.user_id}/journal/${item.id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "multipart/form-data", // Set correct content type for form data
+          },
+          body: formData,
         }
-  
-        const data = await response.json();
-        console.log("Note saved successfully:", data);
-        if (data.success) {
-          setSaved(true);
-        }
-      } catch (error: any) {
-        console.error("Error saving note:", error.message);
-        alert("Failed to save the note. Please try again.");
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to save note: ${response.statusText}`);
       }
-    };
+
+      const data = await response.json();
+      console.log("Note saved successfully:", data);
+      if (data.success) {
+        setSaved(true);
+      }
+    } catch (error: any) {
+      console.error("Error saving note:", error.message);
+      alert("Failed to save the note. Please try again.");
+    }
+  };
 
   const handleCancel = () => {
-   // Reset image on cancel
+    // Reset image on cancel
     router.back();
     console.log("Cancelled Entry");
   };
@@ -133,11 +136,11 @@ export default function editphoto() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={handleCancel}>
-          <Text style={styles.cancelText}>{t('cancel')}</Text>
+          <Text style={styles.cancelText}>{t("cancel")}</Text>
         </TouchableOpacity>
-        <Text style={styles.headerText}>{t('new_entry')}</Text>
+        <Text style={styles.headerText}>{t("new_entry")}</Text>
         <TouchableOpacity onPress={handleSave}>
-          <Text style={styles.createText}>{t('create')}</Text>
+          <Text style={styles.createText}>{t("create")}</Text>
         </TouchableOpacity>
       </View>
 
@@ -180,13 +183,13 @@ export default function editphoto() {
             )}
 
             <TouchableOpacity style={styles.addPhotoButton} onPress={pickImage}>
-              <Text style={styles.addPhotoText}>{t('changephoto')}</Text>
+              <Text style={styles.addPhotoText}>{t("changephoto")}</Text>
             </TouchableOpacity>
           </View>
 
           <TextInput
             style={styles.titleInput}
-            placeholder={t('journal.addtitle')}
+            placeholder={t("journal.addtitle")}
             value={title}
             onChangeText={setTitle}
             placeholderTextColor="#E5E5E5"

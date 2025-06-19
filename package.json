@@ -66,6 +66,7 @@
     "react-i18next": "^15.5.2",
     "react-native": "0.76.9",
     "react-native-chart-kit": "^6.12.0",
+    "react-native-config": "^1.5.5",
     "react-native-date-picker": "^5.0.10",
     "react-native-gesture-handler": "~2.20.2",
     "react-native-google-fit": "^0.21.0",

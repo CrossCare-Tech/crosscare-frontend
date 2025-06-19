@@ -17,6 +17,7 @@ import { useNavigation, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import LogoSvg from "@/assets/images/Svg/LogoSvg";
 import { LinearGradient } from "expo-linear-gradient";
+import { CONFIG } from "@/constants/config";
 
 const ForgetScreen: FC = () => {
   const [email, setEmail] = useState("");
@@ -43,16 +44,13 @@ const ForgetScreen: FC = () => {
 
     setLoading(true);
     try {
-      const response = await fetch(
-        `https://crosscare-backends.onrender.com/api/forgot-password`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ email }),
-        }
-      );
+      const response = await fetch(`${CONFIG.API_BASE_URL}/forgot-password`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email }),
+      });
 
       const data = await response.json();
       if (!response.ok) {
@@ -81,16 +79,13 @@ const ForgetScreen: FC = () => {
 
     setLoading(true);
     try {
-      const response = await fetch(
-        `https://crosscare-backends.onrender.com/api/reset-password`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ email, otp, newPassword }),
-        }
-      );
+      const response = await fetch(`${CONFIG.API_BASE_URL}/reset-password`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, otp, newPassword }),
+      });
 
       const data = await response.json();
       if (!response.ok) {
@@ -98,7 +93,7 @@ const ForgetScreen: FC = () => {
       }
 
       Alert.alert("Success", "Password reset successfully", [
-        { text: "OK", onPress: () => router.push("/login") }
+        { text: "OK", onPress: () => router.push("/login") },
       ]);
     } catch (error: any) {
       Alert.alert("Error", error.message);
@@ -117,19 +112,17 @@ const ForgetScreen: FC = () => {
           <View style={styles.logoContainer}>
             <LogoSvg />
           </View>
-          
+
           <Text style={styles.title}>
-            {step === 1 
-              ? "Forgot Password" 
-              : "Reset Password"
-            }
+            {step === 1 ? "Forgot Password" : "Reset Password"}
           </Text>
-          
+
           <View style={styles.formContainer}>
             {step === 1 ? (
               <>
                 <Text style={styles.subtitle}>
-                  Enter your email address and we'll send you a verification code
+                  Enter your email address and we'll send you a verification
+                  code
                 </Text>
                 <CustomTextInput
                   placeholder="Email"
@@ -151,7 +144,7 @@ const ForgetScreen: FC = () => {
                   value={otp}
                   onChangeText={setOtp}
                 />
-                
+
                 <CustomTextInput
                   type="password"
                   placeholder="New Password"
@@ -160,7 +153,7 @@ const ForgetScreen: FC = () => {
                   onChangeText={setNewPassword}
                   secureTextEntry
                 />
-                
+
                 <CustomTextInput
                   type="password"
                   placeholder="Confirm Password"
@@ -171,7 +164,7 @@ const ForgetScreen: FC = () => {
                 />
               </>
             )}
-            
+
             <TouchableOpacity
               style={styles.button}
               onPress={step === 1 ? handleSendOTP : handleResetPassword}
@@ -179,8 +172,14 @@ const ForgetScreen: FC = () => {
             >
               <LinearGradient
                 colors={["#EF99D9", "#E35ABB"]}
-                start={{ x: Math.cos((117 * Math.PI) / 180), y: Math.sin((117 * Math.PI) / 180) }}
-                end={{ x: Math.cos(((117 + 180) * Math.PI) / 180), y: Math.sin(((117 + 180) * Math.PI) / 180) }}
+                start={{
+                  x: Math.cos((117 * Math.PI) / 180),
+                  y: Math.sin((117 * Math.PI) / 180),
+                }}
+                end={{
+                  x: Math.cos(((117 + 180) * Math.PI) / 180),
+                  y: Math.sin(((117 + 180) * Math.PI) / 180),
+                }}
                 style={styles.gradient}
               >
                 {loading ? (
@@ -193,20 +192,17 @@ const ForgetScreen: FC = () => {
               </LinearGradient>
             </TouchableOpacity>
           </View>
-          
-          <TouchableOpacity 
+
+          <TouchableOpacity
             onPress={() => router.push("/login")}
             style={styles.loginLinkContainer}
           >
             <Text style={styles.loginText}>
-              Back to{" "}
-              <Text style={styles.loginLink}>
-                Login
-              </Text>
+              Back to <Text style={styles.loginLink}>Login</Text>
             </Text>
           </TouchableOpacity>
         </View>
-        
+
         <Text style={styles.footerText}>
           Terms & Conditions | Privacy Policy | Contact Us
         </Text>
@@ -217,7 +213,7 @@ const ForgetScreen: FC = () => {
 
 const styles = StyleSheet.create({
   safeArea: {
-    flex: 1, 
+    flex: 1,
     backgroundColor: "#fff",
   },
   container: {

@@ -36,6 +36,7 @@ import * as ImagePicker from "expo-image-picker";
 import { Linking } from "react-native";
 import PregnancyModal from "../modal/preagnancyModal";
 import { useMealStore } from "@/zustandStore/mealStore";
+import { CONFIG } from "@/constants/config";
 
 interface Progress {
   progressPercentage: number;
@@ -300,7 +301,7 @@ const Home = () => {
 
       // Make API call using fetch with error handling
       const response = await fetch(
-        `https://crosscare-backends.onrender.com/api/user/${userId}/badges/award`,
+        `${CONFIG.API_BASE_URL}/user/${userId}/badges/award`,
         {
           method: "POST",
           headers: {
@@ -344,7 +345,7 @@ const Home = () => {
   const getProfile = async () => {
     // Then fetch fresh data from API
     const response = await fetch(
-      `https://crosscare-backends.onrender.com/api/user/${user?.user_id}/profile`,
+      `${CONFIG.API_BASE_URL}/user/${user?.user_id}/profile`,
       {
         method: "GET",
         headers: {
@@ -679,7 +680,7 @@ const Home = () => {
           });
 
           const response = await fetch(
-            `https://crosscare-backends.onrender.com/api/user/${user?.user_id}/profile/image`,
+            `${CONFIG.API_BASE_URL}/user/${user?.user_id}/profile/image`,
             {
               method: "POST",
               body: formData,
@@ -718,7 +719,7 @@ const Home = () => {
           });
 
           const response1 = await fetch(
-            `https://crosscare-backends.onrender.com/api/user/activity/${user.user_id}/journal/upload`,
+            `${CONFIG.API_BASE_URL}/user/activity/${user.user_id}/journal/upload`,
             {
               method: "POST",
               headers: {

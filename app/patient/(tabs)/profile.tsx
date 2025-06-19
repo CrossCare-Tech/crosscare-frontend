@@ -29,8 +29,9 @@ import Notification from "@/assets/images/Svg/Notification";
 import Help from "@/assets/images/Svg/Help";
 import Terms from "@/assets/images/Svg/Terms";
 import Logout from "@/assets/images/Svg/Logout";
-import { width, height } from '../../../constants/helper';
+import { width, height } from "../../../constants/helper";
 import { useTranslation } from "react-i18next";
+import { CONFIG } from "@/constants/config";
 
 const Profile = () => {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
@@ -46,13 +47,13 @@ const Profile = () => {
   console.log("token", token);
   console.log("userData1", user);
   const dispatch = useDispatch();
-  const {t } = useTranslation();
+  const { t } = useTranslation();
 
   // State for edit modes
 
   const getProfile = async () => {
     const response = await fetch(
-      `https://crosscare-backends.onrender.com/api/user/${user?.user_id}/profile`,
+      `${CONFIG.API_BASE_URL}/user/${user?.user_id}/profile`,
       {
         method: "GET",
         headers: {
@@ -95,20 +96,22 @@ const Profile = () => {
 
   const logout = async () => {
     Alert.alert(
-      t('profile.confirmLogout'),
-      t('profile.logoutMessage'),
+      t("profile.confirmLogout"),
+      t("profile.logoutMessage"),
       [
         {
-          text: t('profile.no'),
+          text: t("profile.no"),
           onPress: () => console.log("Logout Cancelled"),
-          style: "cancel"
+          style: "cancel",
         },
         {
-          text: t('profile.logoutSuccess'),
+          text: t("profile.logoutSuccess"),
           onPress: async () => {
             await AsyncStorage.removeItem("userToken");
             await AsyncStorage.removeItem("user");
-            await AsyncStorage.removeItem('explorerBadgeAwarded');
+            await AsyncStorage.removeItem("explorerBadgeAwarded");
+            await AsyncStorage.clear();
+
             setToken(null);
             setUser(null);
             dispatch(removeToken());
@@ -123,8 +126,8 @@ const Profile = () => {
             // const stepVisited = await AsyncStorage.getItem('step_6');
             // const sleepVisited = await AsyncStorage.getItem('sleep_7');
             router.replace("/login");
-          }
-        }
+          },
+        },
       ],
       { cancelable: false } // Makes the alert non-dismissible unless they confirm or cancel
     );
@@ -146,7 +149,9 @@ const Profile = () => {
         <View style={styles.iconContainer}>{icon}</View>
         <View style={styles.menuTextContainer}>
           <Text style={styles.menuTitle}>{title}</Text>
-          <Text style={styles.menuSubtitle} numberOfLines={1}>{subtitle}</Text>
+          <Text style={styles.menuSubtitle} numberOfLines={1}>
+            {subtitle}
+          </Text>
         </View>
       </TouchableOpacity>
     );
@@ -161,63 +166,71 @@ const Profile = () => {
             width: 20,
           }}
         />
-        <Text style={styles.headerTitle}>{t('profile.title')}</Text>
+        <Text style={styles.headerTitle}>{t("profile.title")}</Text>
         <TouchableOpacity onPress={logout}>
-          <Logout width={20} height={20}/>
+          <Logout width={20} height={20} />
         </TouchableOpacity>
       </View>
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
           <MenuItem
             icon={<Person />}
-            title={t('profile.account')}
-            subtitle={`${t('profile.name')}, ${t('profile.age')}, ${t('profile.email')}`}
-            onPress={()=>router.push('/patient/profile-setting/name')}
+            title={t("profile.account")}
+            subtitle={`${t("profile.name")}, ${t("profile.age")}, ${t(
+              "profile.email"
+            )}`}
+            onPress={() => router.push("/patient/profile-setting/name")}
           />
           <MenuItem
             icon={<PregrantWomen />}
-            title={t('profile.yourpregnancy')}
-            subtitle={`${t('profile.weekofpregnancy')}, ${t('profile.progresstracking')}`}
-            onPress={() =>router.push('/patient/profile-setting/pregrancy')}
+            title={t("profile.yourpregnancy")}
+            subtitle={`${t("profile.weekofpregnancy")}, ${t(
+              "profile.progresstracking"
+            )}`}
+            onPress={() => router.push("/patient/profile-setting/pregrancy")}
           />
           <MenuItem
-            icon={<AvatarIcon/>}
-            title={t('profile.customizeyourdoula')}
-            subtitle={`${t('profile.voicetone')}, ${t('profile.hair')}, ${t('profile.dress')}, ${t('profile.language')}, ${t('profile.skintone')}`}
-            onPress={() =>router.push('/avatar')}
+            icon={<AvatarIcon />}
+            title={t("profile.customizeyourdoula")}
+            subtitle={`${t("profile.voicetone")}, ${t("profile.hair")}, ${t(
+              "profile.dress"
+            )}, ${t("profile.language")}, ${t("profile.skintone")}`}
+            onPress={() => router.push("/avatar")}
           />
           <MenuItem
-            icon={<Badge/>}
-            title={t('profile.halloffame')}
-            subtitle={`${t('profile.earnbadge')}, ${t('profile.rewards')}`}
-            onPress={() => router.push('/patient/profile-setting/earnbadge')}
+            icon={<Badge />}
+            title={t("profile.halloffame")}
+            subtitle={`${t("profile.earnbadge")}, ${t("profile.rewards")}`}
+            onPress={() => router.push("/patient/profile-setting/earnbadge")}
           />
           <MenuItem
-            icon={<Globe/>}
-            title={t('profile.language')}
-            subtitle={`${t('profile.changedoulalanguage')}`}
-            onPress={() => router.push('/patient/profile-setting/language')}
-          />
-
-          <MenuItem
-            icon={<Notification/>}
-            title={t('profile.notifications')}
-            subtitle={`${t('profile.messages')}, ${t('profile.alerts')}`}
-            onPress={() => router.push('/patient/profile-setting/notification')}
+            icon={<Globe />}
+            title={t("profile.language")}
+            subtitle={`${t("profile.changedoulalanguage")}`}
+            onPress={() => router.push("/patient/profile-setting/language")}
           />
 
           <MenuItem
-            icon={<Help/>}
-            title={`${t('profile.help')}`}
-            subtitle={`${t('profile.helpcenter')}, ${t('profile.support')}, ${t('profile.contactus')}`}
-            onPress={() => router.push('/patient/profile-setting/help')}
+            icon={<Notification />}
+            title={t("profile.notifications")}
+            subtitle={`${t("profile.messages")}, ${t("profile.alerts")}`}
+            onPress={() => router.push("/patient/profile-setting/notification")}
           />
 
           <MenuItem
-            icon={<Terms/>}
-            title={`${t('profile.tnc')}`}
-            subtitle={`${t('profile.privacy')}, ${t('profile.Termsofuse')}`}
-            onPress={() => router.push('/patient/profile-setting/tnc')}
+            icon={<Help />}
+            title={`${t("profile.help")}`}
+            subtitle={`${t("profile.helpcenter")}, ${t("profile.support")}, ${t(
+              "profile.contactus"
+            )}`}
+            onPress={() => router.push("/patient/profile-setting/help")}
+          />
+
+          <MenuItem
+            icon={<Terms />}
+            title={`${t("profile.tnc")}`}
+            subtitle={`${t("profile.privacy")}, ${t("profile.Termsofuse")}`}
+            onPress={() => router.push("/patient/profile-setting/tnc")}
           />
         </View>
       </ScrollView>
@@ -266,13 +279,13 @@ const styles = StyleSheet.create({
   },
   menuTitle: {
     fontSize: 16,
-    fontFamily:'DMSans600',
+    fontFamily: "DMSans600",
     color: "#F66DCE", // Magenta/purple color from the image
     marginBottom: 4,
   },
   menuSubtitle: {
     fontSize: 14,
-    fontFamily:'DMSans500',
+    fontFamily: "DMSans500",
     color: "#7B7B7B",
   },
   fieldContainer: {

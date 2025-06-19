@@ -28,6 +28,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFitbit } from "@/zustandStore/useFitbitStore";
 import { Alert } from "react-native";
 import { useTranslation } from "react-i18next";
+import { CONFIG } from "@/constants/config";
 
 const { width } = Dimensions.get("window");
 const BAR_WIDTH = 20;
@@ -64,8 +65,6 @@ type TimeRangeOption = {
   id: string;
   label: string;
 };
-
-
 
 // Custom Progress Bar Component
 const CustomProgressBar = ({ progress }: { progress: number }) => {
@@ -117,14 +116,14 @@ const step = () => {
   // Calculate progress based on goal (if set)
   const progress = stepGoal ? stepsWalked / stepGoal : 0;
 
-  const {t} = useTranslation();
+  const { t } = useTranslation();
 
   const timeRangeOptions: TimeRangeOption[] = [
-  { id: "today", label: t('stepScreen.today') },
-  { id: "week", label: t('stepScreen.last7Days') },
-  { id: "month", label: t('stepScreen.thisMonth')},
-  { id: "lastMonth", label: t('stepScreen.lastMonth') },
-];
+    { id: "today", label: t("stepScreen.today") },
+    { id: "week", label: t("stepScreen.last7Days") },
+    { id: "month", label: t("stepScreen.thisMonth") },
+    { id: "lastMonth", label: t("stepScreen.lastMonth") },
+  ];
 
   const userId = user?.user_id;
   useEffect(() => {
@@ -159,7 +158,7 @@ const step = () => {
     getStepsData,
     getDataForRange,
     getStepsGoal,
-    syncStepsGoalWithBackend
+    syncStepsGoalWithBackend,
   } = useFitbit();
 
   const [initialCheckDone, setInitialCheckDone] = useState(false);
@@ -191,13 +190,13 @@ const step = () => {
             console.log("Steps goal synced:", syncedGoal);
           }
         } catch (error) {
-          console.error('Error fetching and syncing steps goal:', error);
+          console.error("Error fetching and syncing steps goal:", error);
         }
       }
-    }
+    };
 
     fetchAndSyncStepsGoal();
-  }, [isConnected, user?.user_id])
+  }, [isConnected, user?.user_id]);
 
   const handleFitbitConnection = async () => {
     if (isConnected) {
@@ -282,7 +281,7 @@ const step = () => {
   const sendStepsToBackend = async (steps: number) => {
     try {
       const userId = user?.user_id;
-      const apiUrl = `https://crosscare-backends.onrender.com/api/user/activity/${userId}/steps`;
+      const apiUrl = `${CONFIG.API_BASE_URL}/user/activity/${userId}/steps`;
 
       console.log(`Sending ${steps} steps to backend API: ${apiUrl}`);
 
@@ -541,7 +540,7 @@ const step = () => {
           {
             id: `today-${todayStr}`,
             date: todayStr,
-            day: t('stepScreen.today'),
+            day: t("stepScreen.today"),
             steps: todayData.steps || 0,
             stepsGoal: todayData.stepsGoal || 0,
           },
@@ -640,7 +639,7 @@ const step = () => {
 
       const userId = user?.user_id;
       const response = await fetch(
-        `https://crosscare-backends.onrender.com/api/user/activity/${userId}/stepsStatus`,
+        `${CONFIG.API_BASE_URL}/user/activity/${userId}/stepsStatus`,
         {
           method: "GET",
           headers: {
@@ -1073,7 +1072,7 @@ const step = () => {
         >
           <Ionicons name="chevron-back" size={20} color="black" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{t('stepScreen.steps')}</Text>
+        <Text style={styles.headerTitle}>{t("stepScreen.steps")}</Text>
         <TouchableOpacity style={styles.menuButton}>
           <Feather name="more-vertical" size={20} color="#E5E5E5" />
         </TouchableOpacity>
@@ -1104,7 +1103,9 @@ const step = () => {
                   color: "black",
                 }}
               >
-                {stepGoal ? `of ${stepGoal} ${t('stepScreen.stepsWalked')}` : t('stepScreen.stepsWalked')}
+                {stepGoal
+                  ? `of ${stepGoal} ${t("stepScreen.stepsWalked")}`
+                  : t("stepScreen.stepsWalked")}
                 {isConnected && stepGoal && (
                   <Text style={{ fontSize: 12, color: "#5E4FA2" }}></Text>
                 )}
@@ -1114,42 +1115,48 @@ const step = () => {
         </View>
 
         {/* Connect to Application Section */}
-        {Platform.OS === 'ios' && (
-        <View style={styles.sectionContainer}>
-          <Text style={styles.sectionTitle}>{t('stepScreen.connectToApplication')}</Text>
-          <View style={styles.connectItem}>
-            <Image
-              source={require("../../assets/images/applehealth.png")}
-              style={{ width: 24, height: 24 }}
-            />
-            <Text style={styles.connectText}>
-            {t('stepScreen.appleHealth')}
+        {Platform.OS === "ios" && (
+          <View style={styles.sectionContainer}>
+            <Text style={styles.sectionTitle}>
+              {t("stepScreen.connectToApplication")}
             </Text>
-            <TouchableOpacity>
-              <Text style={styles.connectButton}>{t('stepScreen.connect')}</Text>
-            </TouchableOpacity>
+            <View style={styles.connectItem}>
+              <Image
+                source={require("../../assets/images/applehealth.png")}
+                style={{ width: 24, height: 24 }}
+              />
+              <Text style={styles.connectText}>
+                {t("stepScreen.appleHealth")}
+              </Text>
+              <TouchableOpacity>
+                <Text style={styles.connectButton}>
+                  {t("stepScreen.connect")}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
         )}
-        
+
         {/* Connect to Device Section */}
         <View style={styles.sectionContainer}>
-          <Text style={styles.sectionTitle}>{t('stepScreen.connectToDevice')}</Text>
+          <Text style={styles.sectionTitle}>
+            {t("stepScreen.connectToDevice")}
+          </Text>
           <View style={styles.connectItem}>
             <Image
               source={require("../../assets/images/fitbit.png")}
               style={{ width: 24, height: 24 }}
             />
-            <Text style={styles.connectText}>{t('stepScreen.fitbit')}</Text>
+            <Text style={styles.connectText}>{t("stepScreen.fitbit")}</Text>
             <TouchableOpacity onPress={handleFitbitConnection}>
               <Text style={styles.connectButton}>
                 {!initialCheckDone
-                  ? t('stepScreen.checkConnection')
+                  ? t("stepScreen.checkConnection")
                   : fitbitLoading
                   ? "CONNECTING..."
                   : isConnected
-                  ? t('stepScreen.disconnect')
-                  : t('stepScreen.connect')}
+                  ? t("stepScreen.disconnect")
+                  : t("stepScreen.connect")}
               </Text>
             </TouchableOpacity>
           </View>
@@ -1159,7 +1166,9 @@ const step = () => {
           <View style={styles.analysisHeader}>
             <View style={styles.analysisTab}>
               <MaterialIcons name="bar-chart" size={18} color="#CDC8E2" />
-              <Text style={styles.analysisTabText}>{t('stepScreen.stepAnalysis')}</Text>
+              <Text style={styles.analysisTabText}>
+                {t("stepScreen.stepAnalysis")}
+              </Text>
             </View>
             <TouchableOpacity
               ref={periodSelectorRef}

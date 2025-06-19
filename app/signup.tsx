@@ -23,8 +23,9 @@ import CustomTextInput from "@/components/ui/CustomTextInput";
 import LogoSvg from "@/assets/images/Svg/LogoSvg";
 import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { FontAwesome5 } from '@expo/vector-icons';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import { FontAwesome5 } from "@expo/vector-icons";
+import DateTimePicker from "@react-native-community/datetimepicker";
+import { CONFIG } from "@/constants/config";
 
 const screenHeight = Dimensions.get("window").height;
 
@@ -61,7 +62,7 @@ const SignUp: FC = () => {
   };
 
   const handleDateChange = (event: any, selectedDate?: Date) => {
-    setShowDatePicker(Platform.OS === 'ios');
+    setShowDatePicker(Platform.OS === "ios");
     if (selectedDate) {
       setDateOfBirth(selectedDate);
       if (dobError) {
@@ -71,10 +72,10 @@ const SignUp: FC = () => {
   };
 
   const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
     });
   };
 
@@ -82,8 +83,11 @@ const SignUp: FC = () => {
     const today = new Date();
     const age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
-    
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+
+    if (
+      monthDiff < 0 ||
+      (monthDiff === 0 && today.getDate() < birthDate.getDate())
+    ) {
       return age - 1;
     }
     return age;
@@ -114,7 +118,7 @@ const SignUp: FC = () => {
       newError.email = "Invalid email format.";
     }
 
-    if (phoneNumber && !phoneRegex.test(phoneNumber.replace(/\s/g, ''))) {
+    if (phoneNumber && !phoneRegex.test(phoneNumber.replace(/\s/g, ""))) {
       newError.phoneNumber = "Invalid phone number format.";
     }
 
@@ -137,23 +141,20 @@ const SignUp: FC = () => {
     setLoading(true);
 
     try {
-      const response = await fetch(
-        `https://crosscare-backends.onrender.com/api/signup`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            firstName: firstName.trim(),
-            lastName: lastName.trim(),
-            dateOfBirth: dateOfBirth.toISOString(),
-            email: email.toLowerCase().trim(),
-            phoneNumber: phoneNumber.trim() || null,
-            password: password,
-          }),
-        }
-      );
+      const response = await fetch(`${CONFIG.API_BASE_URL}/signup`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          dateOfBirth: dateOfBirth.toISOString(),
+          email: email.toLowerCase().trim(),
+          phoneNumber: phoneNumber.trim() || null,
+          password: password,
+        }),
+      });
 
       const data = await response.json();
       console.log("This is the signup data", data);
@@ -164,9 +165,8 @@ const SignUp: FC = () => {
       // Navigate to email verification screen
       router.push({
         pathname: "/verify-email",
-        params: { email: email.toLowerCase().trim() }
+        params: { email: email.toLowerCase().trim() },
       });
-
     } catch (error: any) {
       Alert.alert("Signup Failed", error.message);
       console.log(JSON.stringify(error, null, 2));
@@ -214,15 +214,17 @@ const SignUp: FC = () => {
   };
 
   return (
-    <SafeAreaView style={{
-      flex: 1,
-      backgroundColor: "#fff",
-    }}>
+    <SafeAreaView
+      style={{
+        flex: 1,
+        backgroundColor: "#fff",
+      }}
+    >
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
-        <ScrollView 
+        <ScrollView
           contentContainerStyle={styles.scrollContainer}
           showsVerticalScrollIndicator={false}
         >
@@ -231,7 +233,7 @@ const SignUp: FC = () => {
               <LogoSvg />
             </View>
             <Text style={styles.title}>Create Your Account</Text>
-            
+
             <View style={styles.formContainer}>
               {/* First Name */}
               <CustomTextInput
@@ -255,17 +257,32 @@ const SignUp: FC = () => {
 
               {/* Date of Birth */}
               <View style={styles.inputContainer}>
-                <TouchableOpacity 
-                  style={[styles.dateInput, dobError ? styles.errorInput : null]} 
+                <TouchableOpacity
+                  style={[
+                    styles.dateInput,
+                    dobError ? styles.errorInput : null,
+                  ]}
                   onPress={() => setShowDatePicker(true)}
                 >
-                  <FontAwesome5 name="calendar" size={16} color="#777" style={styles.dateIcon} />
-                  <Text style={[styles.dateText, !dateOfBirth && styles.placeholderText]}>
+                  <FontAwesome5
+                    name="calendar"
+                    size={16}
+                    color="#777"
+                    style={styles.dateIcon}
+                  />
+                  <Text
+                    style={[
+                      styles.dateText,
+                      !dateOfBirth && styles.placeholderText,
+                    ]}
+                  >
                     {formatDate(dateOfBirth)}
                   </Text>
                   <FontAwesome5 name="chevron-down" size={14} color="#777" />
                 </TouchableOpacity>
-                {dobError ? <Text style={styles.errorText}>{dobError}</Text> : null}
+                {dobError ? (
+                  <Text style={styles.errorText}>{dobError}</Text>
+                ) : null}
               </View>
 
               {/* Email */}
@@ -307,8 +324,14 @@ const SignUp: FC = () => {
               >
                 <LinearGradient
                   colors={["#EF99D9", "#E35ABB"]}
-                  start={{ x: Math.cos((117 * Math.PI) / 180), y: Math.sin((117 * Math.PI) / 180) }}
-                  end={{ x: Math.cos(((117 + 180) * Math.PI) / 180), y: Math.sin(((117 + 180) * Math.PI) / 180) }}
+                  start={{
+                    x: Math.cos((117 * Math.PI) / 180),
+                    y: Math.sin((117 * Math.PI) / 180),
+                  }}
+                  end={{
+                    x: Math.cos(((117 + 180) * Math.PI) / 180),
+                    y: Math.sin(((117 + 180) * Math.PI) / 180),
+                  }}
                   style={styles.gradient}
                 >
                   {loading ? (
@@ -340,7 +363,7 @@ const SignUp: FC = () => {
           <DateTimePicker
             value={dateOfBirth}
             mode="date"
-            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            display={Platform.OS === "ios" ? "spinner" : "default"}
             onChange={handleDateChange}
             maximumDate={new Date()}
           />
@@ -390,17 +413,17 @@ const styles = StyleSheet.create({
     marginBottom: 0,
   },
   dateInput: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: "#ddd",
     borderRadius: 10,
     paddingHorizontal: 15,
     paddingVertical: 15,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
   },
   errorInput: {
-    borderColor: '#FF6B6B',
+    borderColor: "#FF6B6B",
   },
   dateIcon: {
     marginRight: 12,
@@ -415,7 +438,7 @@ const styles = StyleSheet.create({
     color: "#999",
   },
   errorText: {
-    color: '#FF6B6B',
+    color: "#FF6B6B",
     fontSize: 12,
     marginTop: 5,
     fontFamily: "DMSans400",

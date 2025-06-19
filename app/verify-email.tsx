@@ -55,19 +55,16 @@ const VerifyEmail: FC = () => {
     setLoading(true);
 
     try {
-      const response = await fetch(
-        `https://crosscare-backends.onrender.com/api/verify-email`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            email: email,
-            otp: otp.trim(),
-          }),
-        }
-      );
+      const response = await fetch(`${CONFIG.API_BASE_URL}/verify-email`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: email,
+          otp: otp.trim(),
+        }),
+      });
 
       const data = await response.json();
       console.log("This is the verify data", data);
@@ -101,7 +98,7 @@ const VerifyEmail: FC = () => {
 
     try {
       const response = await fetch(
-        `https://crosscare-backends.onrender.com/api/resend-verification`,
+        `${CONFIG.API_BASE_URL}/resend-verification`,
         {
           method: "POST",
           headers: {
@@ -131,7 +128,7 @@ const VerifyEmail: FC = () => {
 
   const handleChangeOTP = (text: string) => {
     // Only allow numbers and limit to 6 digits
-    const numericText = text.replace(/[^0-9]/g, '').slice(0, 6);
+    const numericText = text.replace(/[^0-9]/g, "").slice(0, 6);
     setOtp(numericText);
     if (otpError) {
       setOtpError("");
@@ -148,14 +145,14 @@ const VerifyEmail: FC = () => {
           <View style={styles.logoContainer}>
             <LogoSvg />
           </View>
-          
+
           <Text style={styles.title}>Verify Your Email</Text>
-          
+
           <Text style={styles.subtitle}>
             We've sent a 6-digit verification code to{"\n"}
             <Text style={styles.emailText}>{email}</Text>
           </Text>
-          
+
           <View style={styles.formContainer}>
             <CustomTextInput
               type="number"
@@ -167,7 +164,7 @@ const VerifyEmail: FC = () => {
               maxLength={6}
               keyboardType="numeric"
             />
-            
+
             <TouchableOpacity
               style={styles.button}
               onPress={handleVerifyOTP}
@@ -175,8 +172,14 @@ const VerifyEmail: FC = () => {
             >
               <LinearGradient
                 colors={["#EF99D9", "#E35ABB"]}
-                start={{ x: Math.cos((117 * Math.PI) / 180), y: Math.sin((117 * Math.PI) / 180) }}
-                end={{ x: Math.cos(((117 + 180) * Math.PI) / 180), y: Math.sin(((117 + 180) * Math.PI) / 180) }}
+                start={{
+                  x: Math.cos((117 * Math.PI) / 180),
+                  y: Math.sin((117 * Math.PI) / 180),
+                }}
+                end={{
+                  x: Math.cos(((117 + 180) * Math.PI) / 180),
+                  y: Math.sin(((117 + 180) * Math.PI) / 180),
+                }}
                 style={styles.gradient}
               >
                 {loading ? (
@@ -187,10 +190,10 @@ const VerifyEmail: FC = () => {
               </LinearGradient>
             </TouchableOpacity>
           </View>
-          
+
           <View style={styles.resendContainer}>
             <Text style={styles.resendText}>Didn't receive the code?</Text>
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={handleResendOTP}
               disabled={countdown > 0 || resendLoading}
               style={styles.resendButton}
@@ -198,17 +201,19 @@ const VerifyEmail: FC = () => {
               {resendLoading ? (
                 <ActivityIndicator size="small" color="#E05FA0" />
               ) : (
-                <Text style={[
-                  styles.resendLink,
-                  (countdown > 0) && styles.disabledLink
-                ]}>
+                <Text
+                  style={[
+                    styles.resendLink,
+                    countdown > 0 && styles.disabledLink,
+                  ]}
+                >
                   {countdown > 0 ? `Resend in ${countdown}s` : "Resend Code"}
                 </Text>
               )}
             </TouchableOpacity>
           </View>
         </View>
-        
+
         <Text style={styles.footerText}>
           Terms & Conditions | Privacy Policy | Contact Us
         </Text>
@@ -219,7 +224,7 @@ const VerifyEmail: FC = () => {
 
 const styles = StyleSheet.create({
   safeArea: {
-    flex: 1, 
+    flex: 1,
     backgroundColor: "#fff",
   },
   container: {
@@ -313,4 +318,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default VerifyEmail; 
+export default VerifyEmail;
