@@ -1,5 +1,3 @@
-//
-
 import {
   View,
   Text,
@@ -21,6 +19,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { LinearGradient } from "expo-linear-gradient";
 import MoonIcon from "@/assets/images/Svg/MoonIcon";
 import SleepLogModal from "./modal/sleepmodal";
+import SleepConflictModal from "./modal/sleepconflictmodal";
 import { MenuProvider } from "react-native-popup-menu";
 import DeleteMenu from "./modal/deletemodal";
 import MoonIcon1 from "@/assets/images/Svg/MoonIcon1";
@@ -129,7 +128,7 @@ export default function tracksleep() {
 
   // Dropdown state
   const [dropdownVisible, setDropdownVisible] = useState(false);
-  const periodSelectorRef = useRef(null);
+  const periodSelectorRef = useRef<View>(null);
   const [dropdownPosition, setDropdownPosition] = useState({
     top: 0,
     right: 0,
@@ -141,10 +140,20 @@ export default function tracksleep() {
     isLoading: fitbitLoading,
     connect,
     disconnect,
+    getSleepData,
+    getSleepDataForRange,
     getDataForRange,
   } = useFitbit();
 
   const [initialCheckDone, setInitialCheckDone] = useState(false);
+
+  // Conflict modal state
+  const [conflictModalVisible, setConflictModalVisible] = useState(false);
+  const [conflictingLog, setConflictingLog] = useState<SleepEntry | null>(null);
+  const [newLogTime, setNewLogTime] = useState<{sleepStart: string; sleepEnd: string}>({
+    sleepStart: '',
+    sleepEnd: ''
+  });
 
   useEffect(() => {
     const checkInitialConnection = async () => {
@@ -160,6 +169,18 @@ export default function tracksleep() {
 
     checkInitialConnection();
   }, []);
+
+  useEffect(() => {
+    const fetchSleepData = async () => {
+      console.log(`Time range changed to: ${timeRange}`);
+      if (isConnected) {
+        // Refresh Fitbit data when time range changes
+        await getSleepStatus();
+      }
+    };
+
+    fetchSleepData();
+  }, [timeRange, isConnected]);
 
   const handleFitbitConnection = async () => {
     if (isConnected) {
@@ -180,36 +201,35 @@ export default function tracksleep() {
 
   const user = useSelector((state: any) => state.user);
 
+  // Helper function to format time in the exact format the backend expects
+  const formatTimeForBackend = (date: Date) => {
+    let hours = date.getHours();
+    const minutes = date.getMinutes();
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    
+    // Convert to 12-hour format
+    hours = hours % 12;
+    hours = hours ? hours : 12; // 0 should be 12
+    
+    // Format minutes with leading zero if needed
+    const minutesStr = minutes < 10 ? `0${minutes}` : `${minutes}`;
+    
+    return `${hours}:${minutesStr} ${ampm}`;
+  };
+
   const fetchFitbitSleepData = async () => {
     try {
-      // Determine date range based on timeRange
-      const today = new Date();
-      let startDate = new Date();
-
-      if (timeRange === "today") {
-        // Just today
-      } else if (timeRange === "week") {
-        startDate.setDate(today.getDate() - 7);
-      } else if (timeRange === "month") {
-        startDate.setMonth(today.getMonth() - 1);
-      } else if (timeRange === "lastMonth") {
-        startDate.setMonth(today.getMonth() - 2);
-        const endDate = new Date();
-        endDate.setMonth(today.getMonth() - 1);
-        today.setTime(endDate.getTime());
-      }
-
-      // Format dates for Fitbit API (yyyy-MM-dd)
-      const startDateStr = startDate.toISOString().split("T")[0];
-      const endDateStr = today.toISOString().split("T")[0];
-
-      // Get data for date range
-      const data = await getDataForRange("sleep", startDateStr, endDateStr);
+      console.log(`Fetching sleep data for time range: ${timeRange}`);
+      
+      // Use the new function that handles different time ranges
+      const data = await getSleepDataForRange(timeRange);
 
       if (!data) {
-        throw new Error("Failed to fetch Fitbit sleep data");
+        console.error("Failed to fetch Fitbit sleep data - API returned null/undefined");
+        return null;
       }
 
+      console.log("Fitbit sleep response received successfully");
       return processFitbitSleepData(data);
     } catch (error) {
       console.error("Error fetching Fitbit sleep data:", error);
@@ -219,11 +239,21 @@ export default function tracksleep() {
 
   // Process Fitbit sleep data
   const processFitbitSleepData = async (fitbitData: any) => {
-    if (!fitbitData || !fitbitData.sleep) {
+    console.log("Raw Fitbit sleep data received:", JSON.stringify(fitbitData, null, 2));
+    
+    if (!fitbitData) {
+      console.log("No Fitbit data received");
+      return [];
+    }
+
+    if (!fitbitData.sleep) {
+      console.log("No sleep property in Fitbit data. Available properties:", Object.keys(fitbitData));
       return [];
     }
 
     const sleepData = fitbitData.sleep;
+    console.log(`Processing ${sleepData.length} sleep records`);
+    
     const fixedWeekdays = ["S", "M", "T", "W", "T", "F", "S"];
     const processedData = [];
 
@@ -260,17 +290,17 @@ export default function tracksleep() {
           continue; // Skip this record
         }
 
-        // Format times for display in 12-hour format
-        const formattedSleepStart = sleepStart.toLocaleTimeString("en-US", {
-          hour: "numeric",
-          minute: "2-digit",
-          hour12: true,
-        });
+        // Format times for display in 12-hour format using our reliable formatter
+        const formattedSleepStart = formatTimeForBackend(sleepStart);
+        const formattedSleepEnd = formatTimeForBackend(sleepEnd);
 
-        const formattedSleepEnd = sleepEnd.toLocaleTimeString("en-US", {
-          hour: "numeric",
-          minute: "2-digit",
-          hour12: true,
+        console.log("Formatted times:", {
+          original_start: sleepRecord.startTime,
+          original_end: sleepRecord.endTime,
+          formatted_start: formattedSleepStart,
+          formatted_end: formattedSleepEnd,
+          start_parts: formattedSleepStart.split(" "),
+          end_parts: formattedSleepEnd.split(" ")
         });
 
         // Calculate sleep duration in hours
@@ -295,14 +325,14 @@ export default function tracksleep() {
           // Prepare data in the format your API expects
           const sleepDataForAPI = {
             date: dateStr, // Format: YYYY-MM-DD
-            displayDate: formattedDate, // Add formatted date for display
             sleepStart: formattedSleepStart, // Format: "9:00 PM"
             sleepEnd: formattedSleepEnd, // Format: "7:29 AM"
+            // Note: Don't send duration - backend calculates it automatically
           };
 
           console.log("Sending sleep data to API:", sleepDataForAPI);
 
-          // Make POST request to your API - use sleepAttachment endpoint
+          // Make POST request to your API - use the correct sleep endpoint
           const response = await fetch(
             `https://crosscare-backends.onrender.com/api/user/activity/${user.user_id}/sleep`,
             {
@@ -315,14 +345,18 @@ export default function tracksleep() {
           );
 
           if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`API Error Response: ${errorText}`);
             throw new Error(
-              `Failed to save sleep data: ${response.statusText}`
+              `Failed to save sleep data: ${response.status} ${response.statusText}`
             );
           }
 
-          console.log(`Successfully saved sleep data for ${dateStr}`);
+          const responseData = await response.json();
+          console.log(`Successfully saved sleep data for ${dateStr}:`, responseData);
         } catch (error) {
           console.error("Error saving sleep data to database:", error);
+          // Continue processing even if API call fails
         }
 
         // Continue with your existing code for processing the data for the UI
@@ -567,6 +601,20 @@ export default function tracksleep() {
       hour12: true,
     });
 
+    // Check for overlaps with existing logs
+    const conflictingLog = detectSleepOverlap(sleepTime, wakeTime, sleepLogs);
+    
+    if (conflictingLog) {
+      // Show conflict modal
+      setConflictingLog(conflictingLog);
+      setNewLogTime({
+        sleepStart: formattedSleepTime,
+        sleepEnd: formattedWakeTime
+      });
+      setConflictModalVisible(true);
+      return; // Don't save the log
+    }
+
     // Calculate duration (this is a simple calculation, might need adjustment)
     const sleepMs = sleepTime.getTime();
     const wakeMs = wakeTime.getTime();
@@ -669,15 +717,19 @@ export default function tracksleep() {
       // If we just reset the data, we might want to show empty chart initially
       if (wasReset) {
         console.log("Chart was reset, showing empty data");
-        // You could choose to return early here if you want to show empty chart
-        // return;
       }
 
+      let allSleepLogs: SleepEntry[] = [];
+      let chartDataFromFitbit: any[] = [];
+
       if (isConnected) {
+        console.log("Fetching sleep data from Fitbit...");
         // Get sleep data from Fitbit
         const fitbitData = await fetchFitbitSleepData();
 
         if (fitbitData && fitbitData.length > 0) {
+          console.log("Processing Fitbit sleep data:", fitbitData);
+          
           // Extract sleep logs from the processed data
           const sleepLogsFromFitbit: SleepEntry[] = [];
           fitbitData.forEach((item) => {
@@ -686,96 +738,107 @@ export default function tracksleep() {
             }
           });
 
-          // Set sleep logs from Fitbit
-          if (sleepLogsFromFitbit.length > 0) {
-            setSleepLogs(sleepLogsFromFitbit);
-          }
-
           // Set chart data from Fitbit
-          setChartData(fitbitData);
-
-          // Process data for current time range
-          const filteredData = processDataForTimeRange(fitbitData, timeRange);
-          setFilteredData(filteredData);
-          setLoading(false);
-          return;
+          chartDataFromFitbit = fitbitData;
+          allSleepLogs = sleepLogsFromFitbit;
+          
+          console.log("Fitbit sleep logs:", sleepLogsFromFitbit);
         }
       }
 
-      const response = await fetch(
-        `https://crosscare-backends.onrender.com/api/user/activity/${user.user_id}/sleepstatus`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      // Also fetch data from backend to combine with Fitbit data
+      try {
+        console.log("Fetching sleep data from backend...");
+        const response = await fetch(
+          `https://crosscare-backends.onrender.com/api/user/activity/${user.user_id}/sleepstatus`,
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
 
-      const data = await response.json();
-      console.log("API data:", data.sleepData);
-      setSleepLogs(data.sleepData);
+        if (response.ok) {
+          const data = await response.json();
+          console.log("Backend sleep data:", data.sleepData);
+          
+          // Combine backend data with Fitbit data
+          if (data.sleepData && data.sleepData.length > 0) {
+            // Add backend logs to existing Fitbit logs
+            allSleepLogs = [...allSleepLogs, ...data.sleepData];
+            
+            // Process backend data for chart if no Fitbit data
+            if (chartDataFromFitbit.length === 0) {
+              const fixedWeekdays = ["S", "M", "T", "W", "T", "F", "S"];
+              const fullWeekdays = [
+                "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday",
+              ];
 
-      const fixedWeekdays = ["S", "M", "T", "W", "T", "F", "S"];
-      const fullWeekdays = [
-        "Sunday",
-        "Monday",
-        "Tuesday",
-        "Wednesday",
-        "Thursday",
-        "Friday",
-        "Saturday",
-      ];
+              // Create a map to store unique sleep data
+              const sleepMap = new Map();
 
-      // Create a map to store unique sleep data
-      const sleepMap = new Map();
+              // Process backend data
+              data.sleepData.forEach(
+                (entry: { date: string | number | Date; duration: string }) => {
+                  const entryDate = new Date(entry.date);
+                  const fullDay = entryDate.toLocaleString("en-US", {
+                    weekday: "long",
+                  });
+                  const dayIndex = fullWeekdays.indexOf(fullDay);
 
-      // Process all data regardless of time range
-      data.sleepData.forEach(
-        (entry: { date: string | number | Date; duration: string }) => {
-          const entryDate = new Date(entry.date);
-          const fullDay = entryDate.toLocaleString("en-US", {
-            weekday: "long",
-          }); // Get full weekday name
-          const dayIndex = fullWeekdays.indexOf(fullDay); // Get unique index
+                  if (dayIndex === -1) return;
 
-          if (dayIndex === -1) return; // Skip invalid dates
+                  const dayLetter = fixedWeekdays[dayIndex];
 
-          const dayLetter = fixedWeekdays[dayIndex]; // Get S, M, T, W...
+                  // Extract sleep duration
+                  let hours = 0;
+                  let minutes = 0;
 
-          // Extract sleep duration
-          let hours = 0;
-          let minutes = 0;
+                  if (entry.duration) {
+                    const durationParts = entry.duration.split(" ");
+                    if (durationParts.length >= 1) {
+                      hours = Number.parseFloat(durationParts[0]) || 0;
+                    }
+                    if (durationParts.length >= 3) {
+                      minutes = Number.parseFloat(durationParts[2]) || 0;
+                    }
+                  }
 
-          if (entry.duration) {
-            const durationParts = entry.duration.split(" ");
-            if (durationParts.length >= 1) {
-              hours = Number.parseFloat(durationParts[0]) || 0;
-            }
-            if (durationParts.length >= 3) {
-              minutes = Number.parseFloat(durationParts[2]) || 0;
+                  const totalHours = hours + minutes / 60;
+                  const dateString = entryDate.toISOString().split("T")[0];
+
+                  sleepMap.set(dateString, {
+                    day: dayLetter,
+                    hours: totalHours,
+                    date: dateString,
+                  });
+                }
+              );
+
+              chartDataFromFitbit = Array.from(sleepMap.values());
             }
           }
-
-          const totalHours = hours + minutes / 60;
-          const dateString = entryDate.toISOString().split("T")[0];
-
-          // Store data with ISO date string as key
-          sleepMap.set(dateString, {
-            day: dayLetter,
-            hours: totalHours,
-            date: dateString,
-          });
         }
-      );
+      } catch (backendError) {
+        console.error("Error fetching backend sleep data:", backendError);
+        // Continue with Fitbit data only
+      }
 
-      // Convert map to array
-      const processedData = Array.from(sleepMap.values());
-      setChartData(processedData);
+      // Set all sleep logs (Fitbit + Backend)
+      setSleepLogs(allSleepLogs);
+      setChartData(chartDataFromFitbit);
 
       // Process data for current time range
-      const filteredData = processDataForTimeRange(processedData, timeRange);
+      const filteredData = processDataForTimeRange(chartDataFromFitbit, timeRange);
       setFilteredData(filteredData);
+      
+      console.log("Final combined sleep data:", {
+        logs: allSleepLogs.length,
+        chartData: chartDataFromFitbit.length,
+        filteredData: filteredData.length
+      });
+      
     } catch (error) {
       console.error("Error fetching sleep data:", error);
 
@@ -1109,6 +1172,82 @@ export default function tracksleep() {
     );
   };
 
+  // Function to detect overlapping sleep times
+  const detectSleepOverlap = (newSleepStart: Date, newSleepEnd: Date, existingLogs: SleepEntry[]) => {
+    for (const log of existingLogs) {
+      try {
+        // Parse existing log times
+        const existingSleepStart = parseTimeString(log.sleepStart, log.date);
+        const existingSleepEnd = parseTimeString(log.sleepEnd, log.date);
+        
+        if (!existingSleepStart || !existingSleepEnd) {
+          continue; // Skip invalid entries
+        }
+
+        // Check for overlap
+        // Overlap occurs if: (start1 < end2) AND (start2 < end1)
+        const hasOverlap = (newSleepStart < existingSleepEnd) && (existingSleepStart < newSleepEnd);
+        
+        if (hasOverlap) {
+          return log; // Return the conflicting log
+        }
+      } catch (error) {
+        console.error("Error checking overlap for log:", log, error);
+        continue;
+      }
+    }
+    
+    return null; // No overlap found
+  };
+
+  // Helper function to parse time strings with date context
+  const parseTimeString = (timeString: string, dateString: string) => {
+    try {
+      // Parse the base date
+      const baseDate = new Date(dateString);
+      if (isNaN(baseDate.getTime())) {
+        return null;
+      }
+
+      // Parse time (e.g., "11:30 PM" or "7:30 AM")
+      const timeParts = timeString.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+      if (!timeParts) {
+        return null;
+      }
+
+      let hours = parseInt(timeParts[1]);
+      const minutes = parseInt(timeParts[2]);
+      const period = timeParts[3].toUpperCase();
+
+      // Convert to 24-hour format
+      if (period === 'PM' && hours !== 12) {
+        hours += 12;
+      } else if (period === 'AM' && hours === 12) {
+        hours = 0;
+      }
+
+      // Create the full datetime
+      const fullDateTime = new Date(baseDate);
+      fullDateTime.setHours(hours, minutes, 0, 0);
+
+      // If it's a sleep end time and it's earlier in the day than typical sleep start,
+      // assume it's the next day (e.g., sleep at 11 PM, wake at 7 AM next day)
+      if (hours < 12 && timeString.includes('AM')) {
+        // Check if this might be a wake-up time (typically early morning)
+        // If the time is before noon, it might be the next day
+        const sleepStartHour = 18; // Assume sleep typically starts after 6 PM
+        if (hours < sleepStartHour) {
+          fullDateTime.setDate(fullDateTime.getDate() + 1);
+        }
+      }
+
+      return fullDateTime;
+    } catch (error) {
+      console.error("Error parsing time string:", timeString, dateString, error);
+      return null;
+    }
+  };
+
   return (
     <MenuProvider>
       <SafeAreaView style={styles.container}>
@@ -1185,50 +1324,6 @@ export default function tracksleep() {
                     marginTop: 6,
                   }}
                 >
-                  <TouchableOpacity
-                    style={{
-                      paddingHorizontal: 27,
-                      paddingVertical: 6,
-                      backgroundColor: "#547698",
-                      borderWidth: 2,
-                      borderColor: "#E6EBF0",
-                      borderRadius: 99,
-                      boxShadow: "0px 0px 4px 0px rgba(255, 255, 255, 0.25);",
-                    }}
-                    onPress={() => setIsModalVisible(true)}
-                  >
-                    <Text
-                      style={{
-                        color: "#E5E5E5",
-                        fontFamily: "Inter400",
-                        fontSize: 14,
-                      }}
-                    >
-                      {t('customize.edit')}
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={{
-                      paddingHorizontal: 27,
-                      paddingVertical: 6,
-                      backgroundColor: "#547698",
-                      borderWidth: 2,
-                      borderColor: "#E6EBF0",
-                      borderRadius: 99,
-                      boxShadow: "0px 0px 4px 0px rgba(255, 255, 255, 0.25);",
-                    }}
-                    onPress={() => setLogAdded(true)}
-                  >
-                    <Text
-                      style={{
-                        color: "#E5E5E5",
-                        fontFamily: "Inter400",
-                        fontSize: 14,
-                      }}
-                    >
-                      {t('yes')}
-                    </Text>
-                  </TouchableOpacity>
                 </View>
               </View>
             )}
@@ -1677,6 +1772,13 @@ export default function tracksleep() {
           onClose={handleCloseModal}
           onSave={handleSaveSleepLog}
           reload={getSleepStatus}
+        />
+
+        <SleepConflictModal
+          isVisible={conflictModalVisible}
+          onClose={() => setConflictModalVisible(false)}
+          conflictingLog={conflictingLog}
+          newLogTime={newLogTime}
         />
       </SafeAreaView>
     </MenuProvider>

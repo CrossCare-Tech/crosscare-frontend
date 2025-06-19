@@ -129,33 +129,52 @@ export function useFitbit() {
   const getFitbitData = async (endpoint: string) => {
     try {
       const token = await AsyncStorage.getItem('fitbitAccessToken');
-      if (!token) return null;
+      if (!token) {
+        console.error('No Fitbit access token found');
+        return null;
+      }
       
-      const response = await fetch(`https://api.fitbit.com/${endpoint}`, {
+      const fullUrl = `https://api.fitbit.com/${endpoint}`;
+      console.log(`Making Fitbit API call to: ${fullUrl}`);
+      
+      const response = await fetch(fullUrl, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
       
+      console.log(`Fitbit API response status: ${response.status} ${response.statusText}`);
+      
       if (response.ok) {
         const data = await response.json();
-        console.log("Raw Fitbit data:", JSON.stringify(data));
+        console.log(`Fitbit API success for ${endpoint}:`, JSON.stringify(data, null, 2));
         return data;
       }
       
+      // Log the error response
+      const errorText = await response.text();
+      console.error(`Fitbit API error for ${endpoint}:`, {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorText
+      });
       
       // If unauthorized, token might be expired
       if (response.status === 401) {
+        console.log('Token expired, attempting to refresh...');
         const refreshed = await refreshToken();
         if (refreshed) {
+          console.log('Token refreshed successfully, retrying API call...');
           // Try again with new token
           return await getFitbitData(endpoint);
+        } else {
+          console.error('Failed to refresh token');
         }
       }
       
       return null;
     } catch (error) {
-      console.error('Error fetching Fitbit data:', error);
+      console.error(`Error fetching Fitbit data from ${endpoint}:`, error);
       return null;
     }
   };
@@ -297,6 +316,57 @@ export function useFitbit() {
     }
   };
   
+  // Add a new function specifically for sleep data with time ranges
+  const getSleepDataForRange = async (timeRange: string) => {
+    const today = new Date();
+    let startDate = new Date();
+    let endDate = new Date(today);
+    
+    switch (timeRange) {
+      case 'today':
+        // For today, get just today's data
+        startDate = new Date(today);
+        endDate = new Date(today);
+        break;
+      case 'week':
+        // Get last 7 days
+        startDate.setDate(today.getDate() - 7);
+        break;
+      case 'month':
+        // Get last 30 days
+        startDate.setDate(today.getDate() - 30);
+        break;
+      case 'lastMonth':
+        // Get previous month
+        startDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        endDate = new Date(today.getFullYear(), today.getMonth(), 0);
+        break;
+      default:
+        // Default to last 7 days
+        startDate.setDate(today.getDate() - 7);
+    }
+    
+    // Format dates for Fitbit API (yyyy-MM-dd)
+    const startDateStr = startDate.toISOString().split('T')[0];
+    const endDateStr = endDate.toISOString().split('T')[0];
+    
+    console.log(`Fetching sleep data from ${startDateStr} to ${endDateStr}`);
+    
+    // Use the correct Fitbit sleep API endpoint
+    return getFitbitData(`1.2/user/-/sleep/date/${startDateStr}/${endDateStr}.json`);
+  };
+
+  // Get sleep data for a specific date range
+  const getSleepData = async (startDate: string, endDate?: string) => {
+    // If no end date provided, use start date (single day)
+    const end = endDate || startDate;
+    
+    console.log(`Fetching sleep data from ${startDate} to ${end}`);
+    
+    // Use the correct Fitbit sleep API endpoint
+    return getFitbitData(`1.2/user/-/sleep/date/${startDate}/${end}.json`);
+  };
+  
   return {
     isConnected,
     isLoading,
@@ -304,6 +374,8 @@ export function useFitbit() {
     disconnect,
     getHeartRateData,
     getHeartRateDataForRange,
+    getSleepData,
+    getSleepDataForRange,
     getStepsData,
     getDataForRange,
     getStepsGoal,
