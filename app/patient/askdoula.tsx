@@ -50,6 +50,7 @@ interface Message {
   timestamp: Date
   type: "text" | "audio"
   content: string // text content or audio URI
+  isEducational?: boolean
 }
 
 export default function askdoula() {
@@ -93,7 +94,7 @@ export default function askdoula() {
   // Initialize questionnaire manager
   const questionnaireManager = ConversationalQuestionnaire({
     userId: user?.user_id,
-    onQuestionReady: (question) => {
+    onQuestionReady: (question, isEducational = false) => {
       // Add the question as a message from the assistant
       setMessages((prevMessages) => [
         ...prevMessages,
@@ -103,6 +104,7 @@ export default function askdoula() {
           content: question,
           isUser: false,
           timestamp: new Date(),
+          isEducational: isEducational,
         },
       ])
     },
@@ -599,33 +601,6 @@ useEffect(() => {
       }
     }, []),
   )
-
-
-  const calculateProgress = useCallback(() => {
-    // Debug log to see the state values when calculating progress
-    console.log("Calculate progress called with state:", {
-      isActive: questionnaireManager.isActive,
-      isPaused: questionnaireManager.isPaused,
-      responseCount: questionnaireManager.context?.responses?.length || 0,
-      domainIdx: questionnaireManager.context?.currentDomainIndex,
-    })
-
-    // If questionnaire manager isn't available yet, return 0
-    if (!questionnaireManager) return 0
-
-    // Get total questions across all domains
-    const totalQuestions = QUESTIONNAIRE_DOMAINS.reduce((sum, domain) => sum + domain.questions.length, 0)
-
-    // Get completed questions count - safely access responses
-    const responses = questionnaireManager.context?.responses || []
-    const completedCount = responses.length
-
-    // Log calculation details for debugging
-    const percentage = Math.min(Math.round((completedCount / totalQuestions) * 100), 100)
-    console.log(`Progress bar calculation: ${completedCount}/${totalQuestions} = ${percentage}%`)
-
-    return percentage
-  }, [questionnaireManager])
 
   // Get current domain title
   const getCurrentDomainIndex = () => {
@@ -1874,7 +1849,7 @@ useEffect(() => {
               </Text>
 
               <Text style={styles.title}>
-                {t('askDoula.description')} <Text style={styles.highlight}>Doula</Text>
+                {t('askDoula.description')} <Text style={styles.highlight}>{t('askDoula.doula')}</Text>
               </Text>
 
               <Text style={styles.subtitle}>{t('askDoula.subtitle')}</Text>
@@ -2284,6 +2259,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "600",
     marginTop: 8,
+    textAlign: "center",
   },
   highlight: {
     color: "#F66DCE",

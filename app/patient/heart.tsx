@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from "react"
+import React, { useState, useEffect, useMemo, useRef } from "react"
 import {
   View,
   Text,
@@ -57,8 +57,6 @@ type TimeRangeOption = {
   label: string
 }
 
-
-
 // Default empty chart data
 const emptyChartData = [
   { day: "S", bpm: 0, date: "" },
@@ -100,37 +98,6 @@ const safeParseDate = (dateString: string | number | Date): Date | null => {
   }
 };
 
-// Sample data for the heart rate
-// Replace the existing DUMMY_HEART_DATA constant with this function
-const generateRealtimeHeartData = () => {
-  const today = new Date()
-  const result = []
-
-  // Generate data for the past 7 days
-  for (let i = 6; i >= 0; i--) {
-    const date = new Date(today)
-    date.setDate(today.getDate() - i)
-    const dateString = date.toISOString().split("T")[0]
-
-    // Get day abbreviation (S, M, T, W, T, F, S)
-    const dayIndex = date.getDay() // 0 = Sunday, 1 = Monday, etc.
-    const dayAbbr = "SMTWTFS"[dayIndex]
-
-    // Generate a random BPM between 70-85
-    const bpm = Math.floor(Math.random() * 15) + 80
-
-    result.push({
-      day: dayAbbr,
-      bpm: bpm,
-      date: dateString,
-    })
-  }
-
-  console.log(result)
-
-  return result
-}
-
 export default function HeartRateScreen() {
   const [timeRange, setTimeRange] = useState("week") // "today", "week", "month", "lastMonth"
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
@@ -138,11 +105,11 @@ export default function HeartRateScreen() {
   const tooltipTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const [dropdownVisible, setDropdownVisible] = useState(false)
   const user = useSelector((state: any) => state.user)
-  const [heartRateData, setHeartRateData] = useState<DataItem[]>(emptyChartData)
+  const [heartRateData, setHeartRateData] = useState<DataItem[]>([])
   const [lastResetDate, setLastResetDate] = useState<Date | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [filteredData, setFilteredData] = useState<DataItem[]>([])
-  const [currentHeartRate, setCurrentHeartRate] = useState<number>(75)
+  const [currentHeartRate, setCurrentHeartRate] = useState<number>(0)
 
   const userId = user?.user_id;
 
@@ -165,42 +132,25 @@ export default function HeartRateScreen() {
     }, [userId]);
 
   // Add a ref for the period selector button
-  const periodSelectorRef = useRef<TouchableOpacity>(null)
+  const periodSelectorRef = useRef<View>(null)
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, right: 0 })
 
   // Use the simplified Fitbit hook
-  const { isConnected, isLoading: fitbitLoading, connect, disconnect, getHeartRateData, getDataForRange, } = useFitbit();
+  const { isConnected, isLoading: fitbitLoading, connect, disconnect, getHeartRateData, getHeartRateDataForRange, getDataForRange, } = useFitbit();
 
   // Function to fetch heart rate data from Fitbit
   const fetchFitbitHeartRateData = async () => {
     try {
-      // Determine date range based on timeRange
-      const today = new Date();
-      let startDate = new Date();
-      let endDate = new Date(today); // Create a copy to avoid modifying 'today'
+      console.log(`Fetching heart rate data for time range: ${timeRange}`);
       
-      if (timeRange === 'today') {
-        // Just today - no changes needed
-      } else if (timeRange === 'week') {
-        startDate.setDate(today.getDate() - 7);
-      } else if (timeRange === 'month') {
-        startDate.setMonth(today.getMonth() - 1);
-      } else if (timeRange === 'lastMonth') {
-        // FIXED: Create proper date objects for last month
-        startDate = new Date(today.getFullYear(), today.getMonth() - 2, 1);
-        endDate = new Date(today.getFullYear(), today.getMonth() - 1, 0);
-      }
-      
-      // Format dates for Fitbit API (yyyy-MM-dd)
-      const startDateStr = startDate.toISOString().split('T')[0];
-      const endDateStr = endDate.toISOString().split('T')[0];
-      
-      // Get data for date range
-      const data = await getDataForRange('activities/heart', startDateStr, endDateStr);
+      // Use the new function that handles different time ranges
+      const data = await getHeartRateDataForRange(timeRange);
       
       if (!data) {
         throw new Error('Failed to fetch Fitbit data');
       }
+      
+      console.log("Fitbit heart rate response:", JSON.stringify(data, null, 2));
       
       return processFitbitHeartRateData(data);
     } catch (error) {
@@ -212,33 +162,43 @@ export default function HeartRateScreen() {
   // Function to get current heart rate
   const getCurrentHeartRate = async () => {
     try {
-      // Get today's date in yyyy-MM-dd format
-      const today = new Date().toISOString().split('T')[0];
+      // Get today's heart rate data
+      const data = await getHeartRateData(new Date().toISOString().split('T')[0], '1d');
+      console.log("Today's heart rate data:", JSON.stringify(data, null, 2));
       
-      // Get heart rate data for today
-      const data = await getHeartRateData(today);
-      console.log("this is the data", JSON.stringify(data));
-      if (!data) {
-        return 0; // Default value if no data
-      } 
-       
-      
-      // Try to get the most recent heart rate value
-      const intradayData = data['activities-heart-intraday']?.dataset;
-      if (intradayData && intradayData.length > 0) {
-        return intradayData[intradayData.length - 1].value;
+      if (!data || !data['activities-heart'] || data['activities-heart'].length === 0) {
+        return 0;
       }
       
-      // If no intraday data, try to get resting heart rate
-      const restingHR = data['activities-heart'][0]?.value?.restingHeartRate;
-      if (restingHR) {
-        return restingHR;
+      const todayData = data['activities-heart'][0];
+      
+      // Try resting heart rate first
+      if (todayData.value?.restingHeartRate) {
+        return todayData.value.restingHeartRate;
       }
       
-      return 0; // Default value if no specific data
+      // If no resting HR, calculate from zones
+      if (todayData.value?.heartRateZones && todayData.value.heartRateZones.length > 0) {
+        let totalMinutes = 0;
+        let weightedSum = 0;
+        
+        todayData.value.heartRateZones.forEach((zone: any) => {
+          if (zone.minutes && zone.minutes > 0 && zone.min && zone.max) {
+            const avgZoneRate = (zone.min + zone.max) / 2;
+            weightedSum += avgZoneRate * zone.minutes;
+            totalMinutes += zone.minutes;
+          }
+        });
+        
+        if (totalMinutes > 0) {
+          return Math.round(weightedSum / totalMinutes);
+        }
+      }
+      
+      return 0;
     } catch (error) {
       console.error('Error fetching current heart rate:', error);
-      return 0; // Default value on error
+      return 0;
     }
   };
 
@@ -250,6 +210,8 @@ export default function HeartRateScreen() {
     
     const heartRateData = fitbitData['activities-heart'];
     const fixedWeekdays = ["S", "M", "T", "W", "T", "F", "S"];
+    
+    console.log("Processing heart rate data:", heartRateData);
     
     // Map Fitbit data to app format with error handling
     return heartRateData
@@ -270,8 +232,39 @@ export default function HeartRateScreen() {
           const dayIndex = date.getDay(); // 0 = Sunday, 1 = Monday, etc.
           const dayAbbr = fixedWeekdays[dayIndex];
           
-          // Get the resting heart rate or default to 0
-          const bpm = item.value?.restingHeartRate || 0;
+          // Try to get heart rate value in this order of preference:
+          let bpm = 0;
+          
+          // 1. Try resting heart rate (most reliable daily average)
+          if (item.value?.restingHeartRate) {
+            bpm = item.value.restingHeartRate;
+            console.log(`Found resting heart rate for ${item.dateTime}: ${bpm}`);
+          }
+          // 2. If no resting HR, try to calculate average from heart rate zones
+          else if (item.value?.heartRateZones && item.value.heartRateZones.length > 0) {
+            // Calculate weighted average based on time spent in each zone
+            let totalMinutes = 0;
+            let weightedSum = 0;
+            
+            item.value.heartRateZones.forEach((zone: any) => {
+              if (zone.minutes && zone.minutes > 0 && zone.min && zone.max) {
+                const avgZoneRate = (zone.min + zone.max) / 2;
+                weightedSum += avgZoneRate * zone.minutes;
+                totalMinutes += zone.minutes;
+              }
+            });
+            
+            if (totalMinutes > 0) {
+              bpm = Math.round(weightedSum / totalMinutes);
+              console.log(`Calculated average heart rate for ${item.dateTime}: ${bpm} (from zones)`);
+            }
+          }
+          
+          // Only include days with actual heart rate data
+          if (bpm === 0) {
+            console.log(`No heart rate data for ${item.dateTime}`);
+            return null;
+          }
           
           return {
             day: dayAbbr,
@@ -292,6 +285,10 @@ export default function HeartRateScreen() {
       // Disconnect from Fitbit
       await disconnect();
       Alert.alert('Disconnected', 'Successfully disconnected from Fitbit');
+      // Clear data when disconnected
+      setHeartRateData([]);
+      setFilteredData([]);
+      setCurrentHeartRate(0);
     } else {
       // Connect to Fitbit
       const success = await connect();
@@ -304,7 +301,7 @@ export default function HeartRateScreen() {
     }
   };
 
-  // Function to get the current week number
+  // Function to get the current week number (kept for potential future use)
   const getWeekNumber = (date: Date) => {
     const firstDayOfYear = new Date(date.getFullYear(), 0, 1)
     const pastDaysOfYear = (date.getTime() - firstDayOfYear.getTime()) / 86400000
@@ -409,126 +406,6 @@ export default function HeartRateScreen() {
     return days
   }
 
-  // Function to check if we need to reset the chart data
-  const checkAndResetWeeklyData = async () => {
-    try {
-      // Get current date
-      const currentDate = new Date()
-
-      if (isNaN(currentDate.getTime())) {
-        console.error("Invalid current date", currentDate);
-        return false;
-      }
-
-      const currentWeek = getWeekNumber(currentDate)
-      const currentYear = currentDate.getFullYear()
-
-      // Get the stored last reset info from AsyncStorage
-      const lastResetInfo = await AsyncStorage.getItem("lastHeartRateResetInfo")
-      let lastResetWeek = 0
-      let lastResetYear = 0
-
-      if (lastResetInfo) {
-        const parsedInfo = JSON.parse(lastResetInfo)
-        lastResetWeek = parsedInfo.week
-        lastResetYear = parsedInfo.year
-         const lastResetDate = safeParseDate(parsedInfo.date);
-        if (lastResetDate) {
-          setLastResetDate(lastResetDate);
-        }
-      }
-
-      console.log("Current week/year:", currentWeek, currentYear)
-      console.log("Last reset week/year:", lastResetWeek, lastResetYear)
-
-      // Reset if it's a new week or a new year
-      if (!lastResetInfo || lastResetWeek !== currentWeek || lastResetYear !== currentYear) {
-        console.log("Resetting heart rate data for new week")
-
-        // Store the current heart rate as the starting point for the new week
-        const lastHeartRate = currentHeartRate
-
-        // Reset chart data but keep the last heart rate if available
-        const resetData = emptyChartData.map((item) => ({
-          ...item,
-          bpm: 0, // Reset all heart rates to 0
-        }))
-
-        // If we have a current heart rate, set it for today
-        if (lastHeartRate) {
-          const today = new Date()
-          const dayIndex = today.getDay() // 0 = Sunday, 1 = Monday, etc.
-
-          if (resetData[dayIndex]) {
-            resetData[dayIndex].bpm = lastHeartRate
-            resetData[dayIndex].date = today
-              .toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-              })
-              .toUpperCase()
-          }
-        }
-
-        setHeartRateData(resetData)
-
-        // Store the current week info
-        const resetInfo = {
-          week: currentWeek,
-          year: currentYear,
-          date: currentDate.toISOString(),
-        }
-
-        await AsyncStorage.setItem("lastHeartRateResetInfo", JSON.stringify(resetInfo))
-        setLastResetDate(currentDate)
-
-        return true // Indicate that we reset the data
-      }
-
-      return false // No reset needed
-    } catch (error) {
-      console.error("Error in checkAndResetWeeklyData:", error)
-      return false
-    }
-  }
-
-  // Generate past week dates with proper day abbreviations
-  const generatePastWeekDates = () => {
-    const today = new Date()
-    const pastWeek = []
-
-    // Generate dates for the past 7 days (including today)
-    for (let i = 6; i >= 0; i--) {
-      const date = new Date()
-      date.setDate(today.getDate() - i)
-
-      // Format the date as "MMM DD, YYYY"
-      const formattedDate = date
-        .toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-          year: "numeric",
-        })
-        .toUpperCase()
-
-      // Get day abbreviation (S, M, T, W, T, F, S)
-      const dayIndex = date.getDay() // 0 = Sunday, 1 = Monday, etc.
-      const dayAbbr = "SMTWTFS"[dayIndex] // Get the corresponding letter
-
-      pastWeek.push({
-        day: dayAbbr,
-        bpm: 0,
-        date: formattedDate,
-      })
-    }
-
-    return pastWeek
-  }
-
-  // Replace your DUMMY constant with this function
-  const DUMMY = generatePastWeekDates()
-
   // Process and filter data based on time range
   const processDataForTimeRange = (data: DataItem[], timeRange: string) => {
     const allDays = generateAllDays(timeRange);
@@ -601,102 +478,49 @@ export default function HeartRateScreen() {
   const getHeartRateStatus = async () => {
     setIsLoading(true)
     try {
-      // First check if we need to reset weekly data
-      const wasReset = await checkAndResetWeeklyData();
-
-      // If connected to Fitbit, get data from there
+      // Only show data if connected to Fitbit
       if (isConnected) {
-        // Get heart rate data from Fitbit
+        console.log(`Getting heart rate status for time range: ${timeRange}`);
+        
+        // Get heart rate data from Fitbit for the selected time range
         const fitbitData = await fetchFitbitHeartRateData();
         
         if (fitbitData && fitbitData.length > 0) {
-          // Get current heart rate from Fitbit
+          console.log("Processed Fitbit data:", fitbitData);
+          
+          // Get current heart rate from today's data
           const latestHeartRate = await getCurrentHeartRate();
           setCurrentHeartRate(latestHeartRate);
           
-          console.log(latestHeartRate);
+          console.log("Latest heart rate:", latestHeartRate);
+          
           // Set heart rate data from Fitbit
           setHeartRateData(fitbitData);
           
           // Process data for current time range
           const filteredData = processDataForTimeRange(fitbitData, timeRange);
           setFilteredData(filteredData);
-          console.log(filteredData);
-          setIsLoading(false);
-          return;
+          console.log("Filtered data for display:", filteredData);
+        } else {
+          // No Fitbit data available
+          console.log("No Fitbit heart rate data available");
+          setHeartRateData([]);
+          setFilteredData([]);
+          setCurrentHeartRate(0);
         }
-      }
-      
-      const userId = user?.user_id;
-
-      const response  = await fetch(`https://crosscare-backends.onrender.com/api/user/activity/${userId}/heartstatus`,{
-        method:'GET',
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-      const data1 = await response.json();
-      console.log("Heart Rate",data1);
-
-      // If not connected to Fitbit or no Fitbit data, use simulated data
-      const data = {
-        data: {
-          lastHeartRate: currentHeartRate,
-          heartRateData: generateRealtimeHeartData(),
-        },
-      };
-      
-      setCurrentHeartRate(data1.heartRate);
-      
-      if (data.data.heartRateData && data.data.heartRateData.length > 0) {
-        // Process the heart rate data from the API
-        const fixedWeekdays = ["S", "M", "T", "W", "T", "F", "S"]
-        const fullWeekdays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
-
-        // Create a map to store unique heart rate data for each day
-        const heartRateMap = new Map()
-
-        // Process all data regardless of time range
-        data.data.heartRateData.forEach((entry: { date: string | number | Date; bpm: any }) => {
-          const entryDate = new Date(entry.date)
-          const fullDay = entryDate.toLocaleString("en-US", { weekday: "long" }) // Get full weekday name
-          const dayIndex = fullWeekdays.indexOf(fullDay) // Get unique index
-
-          if (dayIndex === -1) return // Skip invalid dates
-
-          const dayLetter = fixedWeekdays[dayIndex] // Get S, M, T, W...
-          const dateString = entryDate.toISOString().split("T")[0]
-
-          // Store data with ISO date string as key
-          heartRateMap.set(dateString, {
-            day: dayLetter,
-            bpm: entry.bpm,
-            date: dateString,
-          })
-        })
-
-        // Convert map to array
-        const processedData = Array.from(heartRateMap.values())
-        setHeartRateData(processedData)
-
-        // Process data for current time range
-        const filteredData = processDataForTimeRange(processedData, timeRange)
-        setFilteredData(filteredData)
       } else {
-        // Use default days with zero heart rate
-        setHeartRateData(DUMMY)
-
-        // Process data for current time range
-        const filteredData = processDataForTimeRange(DUMMY, timeRange)
-        setFilteredData(filteredData)
+        // Not connected to Fitbit - show no data
+        console.log("Not connected to Fitbit");
+        setHeartRateData([]);
+        setFilteredData([]);
+        setCurrentHeartRate(0);
       }
     } catch (error) {
       console.error("Error fetching heart rate status:", error)
-      setHeartRateData(DUMMY)
-
-      // If there's an error, still set filtered data based on time range
-      const filteredData = processDataForTimeRange(DUMMY, timeRange)
-      setFilteredData(filteredData)
+      // On error, clear all data
+      setHeartRateData([]);
+      setFilteredData([]);
+      setCurrentHeartRate(0);
     } finally {
       setIsLoading(false)
     }
@@ -713,100 +537,12 @@ export default function HeartRateScreen() {
 
   // Initialize data when component mounts
   useEffect(() => {
-    const initializeData = async () => {
-      // Load the last reset date from storage
-      const lastResetInfo = await AsyncStorage.getItem("lastHeartRateResetInfo")
-      if (lastResetInfo) {
-        const parsedInfo = JSON.parse(lastResetInfo)
-        setLastResetDate(new Date(parsedInfo.date))
-      }
+    getHeartRateStatus()
+  }, [isConnected, timeRange])
 
-      // Check for reset and fetch data
-      await getHeartRateStatus()
-    }
-
-    initializeData()
-
-    // Set up a check that runs when the app is opened or comes to foreground
-    const checkInterval = setInterval(() => {
-      checkAndResetWeeklyData().then((wasReset) => {
-        if (wasReset) {
-          // If data was reset, refresh the heart rate status
-          getHeartRateStatus()
-        }
-      })
-    }, 3600000) // Check every hour
-
-    return () => clearInterval(checkInterval)
-  }, [])
-
-  // Simulate changing heart rate for the live display if not connected to Fitbit
+  // Refresh current heart rate if connected to Fitbit
   useEffect(() => {
-    // Only simulate heart rate if not connected to Fitbit
-    if (!isConnected) {
-      const interval = setInterval(() => {
-        setCurrentHeartRate((prevRate) => {
-          // Random fluctuation between 70-85
-          const newRate = prevRate + (Math.random() * 2 - 1); // Random fluctuation
-          // Round to the nearest integer and clamp between 70 and 85
-          const updatedRate = Math.min(Math.max(Math.round(newRate), 70), 85);
-  
-          // Update today's heart rate in the chart data
-          try {
-            const today = new Date();
-            const todayStr = today.toISOString().split("T")[0];
-  
-            // Update the heart rate data for today
-            setHeartRateData((prevData) => {
-              try {
-                const updatedData = [...prevData];
-                
-                // Find today's entry using safe date parsing
-                const todayIndex = updatedData.findIndex(item => {
-                  if (!item.date) return false;
-                  
-                  const itemDate = safeParseDate(item.date);
-                  if (!itemDate) return false;
-                  
-                  return itemDate.toISOString().split("T")[0] === todayStr;
-                });
-  
-                if (todayIndex >= 0) {
-                  // Update existing entry
-                  updatedData[todayIndex] = {
-                    ...updatedData[todayIndex],
-                    bpm: updatedRate,
-                  };
-                } else {
-                  // Add new entry for today
-                  const dayIndex = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
-                  const dayAbbr = "SMTWTFS"[dayIndex];
-  
-                  updatedData.push({
-                    day: dayAbbr,
-                    bpm: updatedRate,
-                    date: todayStr,
-                  });
-                }
-  
-                return updatedData;
-              } catch (error) {
-                console.error("Error updating heart rate data", error);
-                return prevData; // Return unchanged data on error
-              }
-            });
-  
-            return updatedRate;
-          } catch (error) {
-            console.error("Error in heart rate simulation", error);
-            return prevRate; // Return unchanged rate on error
-          }
-        });
-      }, 1000);
-  
-      return () => clearInterval(interval);
-    } else {
-      // If connected to Fitbit, periodically refresh the current heart rate
+    if (isConnected) {
       const interval = setInterval(async () => {
         try {
           const latestHeartRate = await getCurrentHeartRate();
@@ -842,7 +578,7 @@ export default function HeartRateScreen() {
 
   // Calculate y-axis values using useMemo to prevent recalculation on every render
   const { yAxisLabels, roundedMax, roundedMin } = useMemo(() => {
-    if (!filteredData.length) {
+    if (!filteredData.length || !isConnected) {
       return { yAxisLabels: [100, 90, 80, 70, 60], roundedMax: 100, roundedMin: 60 }
     }
 
@@ -888,7 +624,7 @@ export default function HeartRateScreen() {
       roundedMax,
       roundedMin,
     }
-  }, [filteredData]) // Only recalculate when data changes
+  }, [filteredData, isConnected]) // Only recalculate when data changes
 
   // Function to hide tooltip after a delay
   const hideTooltipAfterDelay = () => {
@@ -1112,16 +848,18 @@ export default function HeartRateScreen() {
         </View>
 
         {/* Connect to Application */}
+        {Platform.OS === 'ios' && (
         <View style={styles.sectionContainer}>
           <Text style={styles.sectionTitle}>{t('hearts.ConnectToApplication')}</Text>
           <View style={styles.connectItem}>
             <Image source={require("../../assets/images/applehealth.png")} style={{ width: 24, height: 24 }} />
-            <Text style={styles.connectText}>{Platform.OS === 'ios' ? 'Health App' : 'Samsung Health'}</Text>
+            <Text style={styles.connectText}>Health app</Text>
             <TouchableOpacity>
               <Text style={styles.connectButton}>{t('actions.Connect')}</Text>
             </TouchableOpacity>
           </View>
         </View>
+        )}
 
         {/* Connect to Device Section */}
         <View style={styles.sectionContainer}>
@@ -1137,170 +875,166 @@ export default function HeartRateScreen() {
               </Text>
             </TouchableOpacity>
           </View>
-          
-          {/* Test connect button - can be removed in production */}
-          {/* {!isConnected && (
-            <View style={styles.connectItem}>
-              <Image source={require("../../assets/images/fitbit.png")} style={{ width: 24, height: 24 }} />
-              <Text style={styles.connectText}>Test Mode</Text>
-              <TouchableOpacity 
-                onPress={async () => {
-                  const success = await testConnect();
-                  if (success) {
-                    Alert.alert('Test Mode', 'Connected with test data');
-                    getHeartRateStatus();
-                  }
-                }}
-              >
-                <Text style={styles.connectButton}>TEST DATA</Text>
-              </TouchableOpacity>
-            </View>
-          )} */}
         </View>
 
-        {/* Analysis Section */}
-        <View style={styles.analysisSection}>
-          <View style={styles.analysisHeader}>
-            <View style={styles.analysisTab}>
-              <MaterialIcons name="bar-chart" size={18} color="#F2C3C8" />
-              <Text style={styles.analysisTabText}>{t('hearts.Analysis')}</Text>
-            </View>
-            {/* Update the TouchableOpacity for the period selector to include the ref and measure its position */}
-            <TouchableOpacity
-              ref={periodSelectorRef}
-              style={styles.periodSelector}
-              onPress={() => {
-                // Measure the position of the period selector button
-                if (periodSelectorRef.current) {
-                  periodSelectorRef.current.measure((x: any, y: any, width: number, height: any, pageX: any, pageY: any) => {
-                    setDropdownPosition({
-                      top: pageY + height-8, // Position below the button with a small gap
-                      right: width > 0 ? Dimensions.get("window").width - (pageX + width) : 20,
-                    })
-                    setDropdownVisible(true)
-                  })
-                } else {
-                  setDropdownVisible(true)
-                }
-              }}
-            >
-              <Text style={styles.periodText}>{getTimeRangeLabel()}</Text>
-              <Ionicons name="chevron-down" size={14} color="#D53E4F" />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Chart */}
-        <View style={styles.customChartContainer}>
-          {/* Y-axis labels */}
-          <View style={styles.yAxisContainer}>
-            {yAxisLabels.map((label, index) => (
-              <Text key={index} style={styles.yAxisLabel}>
-                {label}
-              </Text>
-            ))}
-          </View>
-
-          {/* Chart area */}
-          <View style={styles.chartContainer}>
-            {/* Horizontal grid lines */}
-            {yAxisLabels.map((_, index) => (
-              <View key={index} style={[styles.gridLine, { top: (index / (yAxisLabels.length - 1)) * MAX_HEIGHT }]} />
-            ))}
-
-            {/* For month views, render date labels at the bottom */}
-            {timeRange !== "week" && timeRange !== "today" && (
-              <View style={styles.dateLabelsContainer}>
-                {filteredData
-                  .filter((item) => item.isRangeLabel)
-                  .map((item, index) => (
-                    <Text key={index} style={styles.monthDateLabel}>
-                      {item.day}
-                    </Text>
-                  ))}
+        {/* Analysis Section - Only show if connected */}
+        {isConnected && (
+          <>
+            <View style={styles.analysisSection}>
+              <View style={styles.analysisHeader}>
+                <View style={styles.analysisTab}>
+                  <MaterialIcons name="bar-chart" size={18} color="#F2C3C8" />
+                  <Text style={styles.analysisTabText}>{t('hearts.Analysis')}</Text>
+                </View>
+                {/* Update the TouchableOpacity for the period selector to include the ref and measure its position */}
+                <TouchableOpacity
+                  ref={periodSelectorRef}
+                  style={styles.periodSelector}
+                  onPress={() => {
+                    // Measure the position of the period selector button
+                    if (periodSelectorRef.current) {
+                      periodSelectorRef.current.measure((x: any, y: any, width: number, height: any, pageX: any, pageY: any) => {
+                        setDropdownPosition({
+                          top: pageY + height-8, // Position below the button with a small gap
+                          right: width > 0 ? Dimensions.get("window").width - (pageX + width) : 20,
+                        })
+                        setDropdownVisible(true)
+                      })
+                    } else {
+                      setDropdownVisible(true)
+                    }
+                  }}
+                >
+                  <Text style={styles.periodText}>{getTimeRangeLabel()}</Text>
+                  <Ionicons name="chevron-down" size={14} color="#D53E4F" />
+                </TouchableOpacity>
               </View>
-            )}
-
-            {/* Bars */}
-            <View
-              style={[
-                styles.barsContainer,
-                timeRange === "today" && styles.todayBarsContainer,
-                timeRange !== "week" && timeRange !== "today" && { paddingHorizontal: 10 },
-              ]}
-            >
-              {isLoading ? (
-                <View style={styles.loadingContainer}>
-                  <ActivityIndicator size="large" color="#D53E4F" />
-                </View>
-              ) : filteredData.length === 0 ? (
-                <View style={styles.noDataContainer}>
-                  <Text style={styles.noDataText}>No data available</Text>
-                </View>
-              ) : (
-                // For month views, filter out the range labels as they're shown separately
-                filteredData
-                  .filter((item) => timeRange === "week" || timeRange === "today" || !item.isRangeLabel)
-                  .map((item, index) => (
-                    <CustomBar
-                      key={index}
-                      item={item}
-                      index={filteredData.findIndex((d) => d.date === item.date)} // Use original index for reference
-                      isSelected={selectedIndex === filteredData.findIndex((d) => d.date === item.date)}
-                      roundedMax={roundedMax}
-                      roundedMin={roundedMin}
-                      timeRange={timeRange}
-                    />
-                  ))
-              )}
             </View>
-          </View>
-        </View>
+
+            {/* Chart */}
+            <View style={styles.customChartContainer}>
+              {/* Y-axis labels */}
+              <View style={styles.yAxisContainer}>
+                {yAxisLabels.map((label, index) => (
+                  <Text key={index} style={styles.yAxisLabel}>
+                    {label}
+                  </Text>
+                ))}
+              </View>
+
+              {/* Chart area */}
+              <View style={styles.chartContainer}>
+                {/* Horizontal grid lines */}
+                {yAxisLabels.map((_, index) => (
+                  <View key={index} style={[styles.gridLine, { top: (index / (yAxisLabels.length - 1)) * MAX_HEIGHT }]} />
+                ))}
+
+                {/* For month views, render date labels at the bottom */}
+                {timeRange !== "week" && timeRange !== "today" && (
+                  <View style={styles.dateLabelsContainer}>
+                    {filteredData
+                      .filter((item) => item.isRangeLabel)
+                      .map((item, index) => (
+                        <Text key={index} style={styles.monthDateLabel}>
+                          {item.day}
+                        </Text>
+                      ))}
+                  </View>
+                )}
+
+                {/* Bars */}
+                <View
+                  style={[
+                    styles.barsContainer,
+                    timeRange === "today" && styles.todayBarsContainer,
+                    timeRange !== "week" && timeRange !== "today" && { paddingHorizontal: 10 },
+                  ]}
+                >
+                  {isLoading ? (
+                    <View style={styles.loadingContainer}>
+                      <ActivityIndicator size="large" color="#D53E4F" />
+                    </View>
+                  ) : filteredData.length === 0 || !isConnected ? (
+                    <View style={styles.noDataContainer}>
+                      <Text style={styles.noDataText}>
+                        {!isConnected ? "Connect to Fitbit to view heart rate data" : "No data available"}
+                      </Text>
+                    </View>
+                  ) : (
+                    // For month views, filter out the range labels as they're shown separately
+                    filteredData
+                      .filter((item) => timeRange === "week" || timeRange === "today" || !item.isRangeLabel)
+                      .map((item, index) => (
+                        <CustomBar
+                          key={index}
+                          item={item}
+                          index={filteredData.findIndex((d) => d.date === item.date)} // Use original index for reference
+                          isSelected={selectedIndex === filteredData.findIndex((d) => d.date === item.date)}
+                          roundedMax={roundedMax}
+                          roundedMin={roundedMin}
+                          timeRange={timeRange}
+                        />
+                      ))
+                  )}
+                </View>
+              </View>
+            </View>
+          </>
+        )}
 
         {/* Bottom Section */}
         <View style={styles.bottomContainer}>
           <View style={styles.messageContainer}>
             <Text style={styles.messageTitle}>{t('hearts.MonitorYourHeartHealth')}</Text>
-            <Text style={styles.messageSubtitle} numberOfLines={1}>{t('hearts.SetReminderSubtitle')}</Text>
+            <Text style={styles.messageSubtitle} numberOfLines={1}>
+              {!isConnected 
+                ? "Connect to Fitbit to start monitoring your heart rate" 
+                : t('hearts.SetReminderSubtitle')
+              }
+            </Text>
           </View>
-          <TouchableOpacity style={styles.reminderButton} onPress={()=>router.push({
-                        pathname: '/patient/settings/reminder',
-                        params: { type: 'heart' }
-                      })}>
-            <Ionicons name="alarm" size={16} color="white" />
-            <Text style={styles.reminderButtonText} numberOfLines={1}>{t('hearts.SetReminder')}</Text>
-          </TouchableOpacity>
+          {isConnected && (
+            <TouchableOpacity style={styles.reminderButton} onPress={()=>router.push({
+                          pathname: '/patient/settings/reminder',
+                          params: { type: 'heart' }
+                        })}>
+              <Ionicons name="alarm" size={16} color="white" />
+              <Text style={styles.reminderButtonText} numberOfLines={1}>{t('hearts.SetReminder')}</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </ScrollView>
 
-      {/* Time Range Dropdown Modal */}
-      <Modal
-        transparent={true}
-        visible={dropdownVisible}
-        animationType="fade"
-        onRequestClose={() => setDropdownVisible(false)}
-      >
-        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setDropdownVisible(false)}>
-          {/* Update the dropdown container style to use the measured position */}
-          <View style={[styles.dropdownContainer, { top: dropdownPosition.top, right: dropdownPosition.right }]}>
-            {timeRangeOptions.map((option) => (
-              <TouchableOpacity
-                key={option.id}
-                style={[styles.dropdownItem, timeRange === option.id && styles.dropdownItemSelected]}
-                onPress={() => {
-                  setTimeRange(option.id)
-                  setDropdownVisible(false)
-                }}
-              >
-                <Text style={[styles.dropdownItemText, timeRange === option.id && styles.dropdownItemTextSelected]}>
-                  {option.label}
-                </Text>
-                {timeRange === option.id && <Ionicons name="checkmark" size={16} color="#D53E4F" />}
-              </TouchableOpacity>
-            ))}
-          </View>
-        </TouchableOpacity>
-      </Modal>
+      {/* Time Range Dropdown Modal - Only show if connected */}
+      {isConnected && (
+        <Modal
+          transparent={true}
+          visible={dropdownVisible}
+          animationType="fade"
+          onRequestClose={() => setDropdownVisible(false)}
+        >
+          <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setDropdownVisible(false)}>
+            {/* Update the dropdown container style to use the measured position */}
+            <View style={[styles.dropdownContainer, { top: dropdownPosition.top, right: dropdownPosition.right }]}>
+              {timeRangeOptions.map((option) => (
+                <TouchableOpacity
+                  key={option.id}
+                  style={[styles.dropdownItem, timeRange === option.id && styles.dropdownItemSelected]}
+                  onPress={() => {
+                    setTimeRange(option.id)
+                    setDropdownVisible(false)
+                  }}
+                >
+                  <Text style={[styles.dropdownItemText, timeRange === option.id && styles.dropdownItemTextSelected]}>
+                    {option.label}
+                  </Text>
+                  {timeRange === option.id && <Ionicons name="checkmark" size={16} color="#D53E4F" />}
+                </TouchableOpacity>
+              ))}
+            </View>
+          </TouchableOpacity>
+        </Modal>
+      )}
     </SafeAreaView>
   )
 }
@@ -1575,6 +1309,8 @@ const styles = StyleSheet.create({
     color: "#999",
     fontFamily: "Inter400",
     fontSize: 14,
+    textAlign: "center",
+    paddingHorizontal: 20,
   },
   dateRangeContainer: {
     alignItems: "center",

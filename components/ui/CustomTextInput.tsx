@@ -11,7 +11,7 @@ interface CustomTextInputProps extends TextInputProps {
   onChangeText: (text: string) => void;
   placeholder: string;
   secureTextEntry?: boolean;
-  type: 'email' | 'password' | 'username'| 'number'; // Add other types if necessary
+  type: 'email' | 'password' | 'username'| 'number' | 'phone'; // Add phone type
   errorMessage?: string;
 }
 

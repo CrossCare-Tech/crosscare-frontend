@@ -58,6 +58,7 @@
     "account": "Kont",
     "name": "Non",
     "age": "Laj",
+    "phoneNumber": "Non telefòn",
     "email": "Imèl",
     "yourpregnancy": "Gravidity ou",
     "weekofpregnancy": "Semèn nan Gravidity",
@@ -161,7 +162,7 @@
   },
   "cards": {
     "askDoula": {
-      "title": "Mande Doula",
+      "title": "CrossCare Concierge",
       "description": "Pèsonalize pou gravidity ou"
     },
     "calendar": {
@@ -440,6 +441,7 @@
     "hr": "èd"
   },
   "weeksRemaining": "Semèn ki rete",
+  "weeksComplete": "Semèn ki kòmplete",
   "baby": "Bebè",
   "babyDescription": "Nan semèn 8, anbyon an sanble plis ak yon moun olye ke yon etranje. Tèt la reprezante apeprè mwatye nan longè kò a.",
   "mom": "Manman",

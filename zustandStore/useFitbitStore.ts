@@ -3,21 +3,18 @@ import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Buffer } from 'buffer';
-import { router } from 'expo-router';
 
 // Ensure the browser can complete the auth session
 WebBrowser.maybeCompleteAuthSession();
 
 // Fitbit API configuration - replace with your values
-const FITBIT_CLIENT_ID = "23QC62";
-const FITBIT_CLIENT_SECRET = "8424a72f8e691b958ab909fd833e2b9f";
+const FITBIT_CLIENT_ID = process.env.EXPO_PUBLIC_FITBIT_CLIENT_ID;
+const FITBIT_CLIENT_SECRET = process.env.EXPO_PUBLIC_FITBIT_CLIENT_SECRET;
 const FITBIT_AUTH_ENDPOINT = "https://www.fitbit.com/oauth2/authorize";
 const FITBIT_TOKEN_ENDPOINT = "https://api.fitbit.com/oauth2/token";
 const REDIRECT_URI = AuthSession.makeRedirectUri({
   native: "com.crosscare.tech://auth"
 });
-
-
 
 
 export function useFitbit() {
@@ -49,7 +46,7 @@ export function useFitbit() {
       
       // Create auth request
       const request = new AuthSession.AuthRequest({
-        clientId: FITBIT_CLIENT_ID,
+        clientId: FITBIT_CLIENT_ID || '',
         scopes: ['activity', 'heartrate', 'weight', 'profile', 'settings', 'sleep'],
         redirectUri: REDIRECT_URI,
         responseType: AuthSession.ResponseType.Code,
@@ -204,10 +201,44 @@ export function useFitbit() {
   };
   
   // Get heart rate data
-  const getHeartRateData = async (dateStr: string) => {
+  const getHeartRateData = async (dateStr: string, period: string = '1d') => {
     // Default to today if no date specified
     const date = dateStr || new Date().toISOString().split('T')[0];
-    return getFitbitData(`1/user/-/activities/heart/date/${date}/1d.json`);
+    // Use the period parameter for different time ranges
+    return getFitbitData(`1/user/-/activities/heart/date/${date}/${period}.json`);
+  };
+
+  // Add a new function specifically for heart rate with time ranges
+  const getHeartRateDataForRange = async (timeRange: string) => {
+    const today = new Date().toISOString().split('T')[0];
+    
+    let period;
+    switch (timeRange) {
+      case 'today':
+        period = '1d';
+        break;
+      case 'week':
+        period = '7d';
+        break;
+      case 'month':
+        period = '30d';
+        break;
+      case 'lastMonth':
+        // For last month, we need to use date range instead
+        const lastMonthStart = new Date();
+        lastMonthStart.setMonth(lastMonthStart.getMonth() - 1, 1);
+        const lastMonthEnd = new Date();
+        lastMonthEnd.setMonth(lastMonthEnd.getMonth(), 0);
+        
+        const startDate = lastMonthStart.toISOString().split('T')[0];
+        const endDate = lastMonthEnd.toISOString().split('T')[0];
+        
+        return getFitbitData(`1/user/-/activities/heart/date/${startDate}/${endDate}.json`);
+      default:
+        period = '7d';
+    }
+    
+    return getFitbitData(`1/user/-/activities/heart/date/${today}/${period}.json`);
   };
   
   // Get steps data
@@ -221,6 +252,50 @@ export function useFitbit() {
   const getDataForRange = async (endpoint: string, startDate: string, endDate: string) => {
     return getFitbitData(`1/user/-/${endpoint}/date/${startDate}/${endDate}.json`);
   };
+
+  const getStepsGoal = async () => {
+    try {
+      const data = await getFitbitData(`1/user/-/activities/goals/daily.json`);
+      if (data && data.goals && data.goals.steps) {
+        return data.goals.steps;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error fetching steps goal:', error);
+      return null;
+    }
+  }
+
+  // New function to sync steps goal with backend
+  const syncStepsGoalWithBackend = async (userId: string) => {
+    try {
+      const stepsGoal = await getStepsGoal();
+      if (stepsGoal) {
+        const response = await fetch(
+          `https://crosscare-backends.onrender.com/api/user/activity/${userId}/stepsGoal`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ stepsGoal: stepsGoal }),
+          }
+        );
+
+        if (response.ok) {
+          console.log(`Steps goal ${stepsGoal} synced with backend`);
+          return stepsGoal;
+        } else {
+          console.error('Failed to sync steps goal with backend');
+          return null;
+        }
+      }
+      return null;
+    } catch (error) {
+      console.error('Error syncing steps goal with backend:', error);
+      return null;
+    }
+  };
   
   return {
     isConnected,
@@ -228,7 +303,10 @@ export function useFitbit() {
     connect,
     disconnect,
     getHeartRateData,
+    getHeartRateDataForRange,
     getStepsData,
-    getDataForRange
+    getDataForRange,
+    getStepsGoal,
+    syncStepsGoalWithBackend
   };
 }

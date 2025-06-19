@@ -56,7 +56,7 @@ const VerifyEmail: FC = () => {
 
     try {
       const response = await fetch(
-        `http://10.0.2.2:8000/api/verify-email`,
+        `https://crosscare-backends.onrender.com/api/verify-email`,
         {
           method: "POST",
           headers: {
@@ -70,6 +70,7 @@ const VerifyEmail: FC = () => {
       );
 
       const data = await response.json();
+      console.log("This is the verify data", data);
 
       if (!response.ok) {
         throw new Error(data.message || "Verification failed");
@@ -106,11 +107,12 @@ const VerifyEmail: FC = () => {
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ email }),
+          body: JSON.stringify({ email: email.toLowerCase().trim() }),
         }
       );
 
       const data = await response.json();
+      console.log("This is the resend data", data);
 
       if (!response.ok) {
         throw new Error(data.message || "Failed to resend code");

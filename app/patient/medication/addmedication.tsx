@@ -15,6 +15,7 @@ import { router } from "expo-router";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
+import { scheduleMedicationReminder, areMedicationRemindersEnabled } from "@/utils/NotificationManager";
 
 interface MedicationState {
   setMedicationName: string;
@@ -149,7 +150,6 @@ export default function addmedication() {
   
     try {
       const apiUrl = `https://crosscare-backends.onrender.com/api/user/activity/${user.user_id}/addMedication`;
-
   
       const payload = {
         medicationName: state.setMedicationName,
@@ -171,9 +171,83 @@ export default function addmedication() {
   
       const data = await response.json();
   
-      if (response.ok) { // Changed from response.success to response.ok
+      if (response.ok) {
         console.log("Success:", data);
-        // alert("Medication added successfully!");
+        
+        // Schedule reminders for the new medication
+        try {
+          const remindersEnabled = await areMedicationRemindersEnabled();
+          console.log('Medication reminders enabled:', remindersEnabled);
+          
+          if (remindersEnabled) {
+            // Map day abbreviations to numbers
+            const dayMapping: { [key: string]: number } = {
+              SU: 0, M: 1, T: 2, W: 3, TH: 4, F: 5, SA: 6,
+            };
+
+            const allowedDays = state.selectedDays.map((d: string) => dayMapping[d]);
+            console.log('Allowed days:', allowedDays);
+            console.log('Selected times:', state.selectedTimes);
+            
+            // For each day in the date range that matches selected days
+            const currentDate = new Date(state.startDate);
+            const endDate = new Date(state.endDate);
+            
+            while (currentDate <= endDate) {
+              if (allowedDays.includes(currentDate.getDay())) {
+                console.log(`Processing date: ${currentDate.toDateString()}`);
+                
+                // For each selected time, schedule reminders
+                for (const timeString of state.selectedTimes) {
+                  try {
+                    // Parse the time string (format: "HH:MM")
+                    const [hours, minutes] = timeString.split(':').map(Number);
+                    
+                    // Create a new date object for this medication time
+                    const medicationDateTime = new Date(currentDate);
+                    medicationDateTime.setHours(hours, minutes, 0, 0);
+
+                    console.log(`Medication time: ${medicationDateTime}`);
+                    console.log(`Current time: ${new Date()}`);
+
+                    // Only schedule if it's in the future
+                    if (medicationDateTime > new Date()) {
+                      const medicationId = data.data?.id || data.id || 'new-medication';
+                      const uniqueId = `${medicationId}-${currentDate.toISOString().split('T')[0]}-${timeString}`;
+                      
+                      console.log(`Scheduling reminder for: ${state.setMedicationName} at ${medicationDateTime} with ID: ${uniqueId}`);
+                      
+                      const reminderIds = await scheduleMedicationReminder(
+                        medicationDateTime,
+                        state.setMedicationName,
+                        uniqueId
+                      );
+
+                      if (reminderIds && reminderIds.length > 0) {
+                        console.log(`✅ Scheduled ${reminderIds.length} reminders for ${state.setMedicationName} on ${currentDate.toDateString()} at ${timeString}`);
+                      } else {
+                        console.log(`⚠️ No reminders scheduled for ${state.setMedicationName} on ${currentDate.toDateString()} at ${timeString}`);
+                      }
+                    } else {
+                      console.log(`⏭️ Skipping past time: ${medicationDateTime}`);
+                    }
+                  } catch (error) {
+                    console.error('Error scheduling individual medication reminder:', error);
+                  }
+                }
+              }
+              // Move to next day
+              currentDate.setDate(currentDate.getDate() + 1);
+            }
+          } else {
+            console.log('Medication reminders are disabled, skipping reminder scheduling');
+          }
+        } catch (reminderError) {
+          console.error('Error scheduling medication reminders:', reminderError);
+          // Don't fail the entire operation if reminder scheduling fails
+        }
+        
+        // Navigate back regardless of reminder scheduling success/failure
         router.back();
       } else {
         console.log("Error:", data);

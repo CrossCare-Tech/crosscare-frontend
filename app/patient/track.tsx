@@ -52,7 +52,7 @@ export default function track() {
   // Calculate weeks remaining
   const calculateWeeksRemaining = (week: number) => {
     const weeksRemaining = 40 - week
-    return `${weeksRemaining} weeks`
+    return `${weeksRemaining} ${t("weeksRemaining")}`
   }
 
 
@@ -94,7 +94,7 @@ export default function track() {
   const sections = [
     {
       id: 1,
-      title: `${selectedWeek} ${t("weeksRemaining")}`,
+      title: `${selectedWeek} ${t("weeksComplete")}`,
       backgroundColor: "#6ED7E9",
     },
     
@@ -177,6 +177,7 @@ export default function track() {
         <ScrollView
           style={styles.scrollView}
           showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ flexGrow: 1 }}
         >
           <View style={styles.statsContainer}>
             <View style={styles.statBox}>
@@ -237,7 +238,8 @@ export default function track() {
               </View>
             )}
             keyExtractor={(item, index) => index.toString()}
-            contentContainerStyle={{ marginTop: 30 }}
+            contentContainerStyle={{ marginTop: 30, flexGrow: 1 }}
+            style={{ flex: 1 }}
           />
         </ScrollView>
       </LinearGradient>
@@ -269,12 +271,12 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: "#FFFFFF5B",
-    // borderRadius:13,
     borderTopLeftRadius: 23,
     borderTopRightRadius: 23,
     paddingHorizontal: 30,
     paddingVertical: 30,
-    marginTop: -14,
+    flex: 1, // Add this to make it expand
+    minHeight: '100%', // Add this to ensure it fills the available space
   },
   progressText: {
     fontSize: 20,

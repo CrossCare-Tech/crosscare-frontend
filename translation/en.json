@@ -58,6 +58,7 @@
     "account": "Account",
     "name": "Name",
     "age": "Age",
+    "phoneNumber": "Phone Number",
     "email": "Email",
     "yourpregnancy": "Your Pregnancy",
     "weekofpregnancy": "Week of Pregnancy",
@@ -161,7 +162,7 @@
   },
   "cards": {
     "askDoula": {
-      "title": "Ask Doula",
+      "title": "CrossCare Concierge",
       "description": "Personalised to your pregnancy"
     },
     "calendar": {
@@ -189,9 +190,9 @@
   "askDoula": {
     "title": "Ask Your Doula",
     "hi": "Hi",
-    "description": "I'm your Digital",
-    "doula": "Doula",
-    "subtitle": "How can I assist you today?",
+    "description": "I'm your",
+    "doula": "CrossCare Concierge",
+    "subtitle": "Above you would find a questionnaire you can pause/resume anytime you like. This would help me get to know you, your situation and medical history better. In case of questions, feel free to ask!",
     "title1": "Chat History Cleared",
     "message": "Your conversation history has been deleted. Would you like to start the health questionnaire now?",
     "yes": "Yes",
@@ -439,6 +440,7 @@
     "cycles": "cycles",
     "hr": "hr"
   },
+  "weeksComplete": "weeks complete",
   "weeksRemaining": "weeks remaining",
   "baby": "Baby",
   "babyDescription": "In week 8, the embryo looks more and more like a human, instead of an alien. The head is about half of the entire body length.",

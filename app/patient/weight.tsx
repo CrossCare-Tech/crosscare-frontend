@@ -1,6 +1,4 @@
-//
-
-import { useState, useEffect, useMemo, useRef, useCallback } from "react"
+import React, { useState, useEffect, useMemo, useRef, useCallback } from "react"
 import {
   View,
   Text,
@@ -23,6 +21,7 @@ import WeightModal from "./modal/weightmodal"
 import { useSelector } from "react-redux"
 import AsyncStorage from "@react-native-async-storage/async-storage"
 import { useTranslation } from "react-i18next"
+import { useUnitStore, convertWeight, formatWeightAmount } from "@/zustandStore/unitStore"
 
 const { width } = Dimensions.get("window")
 const BAR_WIDTH = 20
@@ -54,8 +53,6 @@ type TimeRangeOption = {
   label: string
 }
 
-
-
 // Default empty chart data
 const emptyChartData = [
   { day: "S", weight: 0, date: "" },
@@ -70,25 +67,12 @@ const emptyChartData = [
 // Default empty today data
 const emptyTodayData = [{ day: "Today", weight: 0, date: new Date().toISOString().split("T")[0] }]
 
-const convertWeight = (weight: number, fromUnit: string, toUnit: string): number => {
-  if (fromUnit === toUnit) return weight;
-
-  if (fromUnit === "kg" && toUnit === "lbs") {
-    return weight * 2.20462; // kg to lbs
-  } else if (fromUnit === "lbs" && toUnit === "kg") {
-    return weight / 2.20462; // lbs to kg
-  }
-
-  return weight; // Default case
-};
-
-
 const WeightScreen = () => {
   const [timeRange, setTimeRange] = useState("week") // "today", "week", "month", "lastMonth"
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
   const [tooltipAnim] = useState(new Animated.Value(0)) // Start with 0 opacity
   const tooltipTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const periodSelectorRef = useRef<TouchableOpacity>(null)
+  const periodSelectorRef = useRef<View>(null)
   const [modalVisible, setModalVisible] = useState(false)
   const [currentWeight, setCurrentWeight] = useState<number | null>(null)
   const [dropdownVisible, setDropdownVisible] = useState(false)
@@ -98,9 +82,8 @@ const WeightScreen = () => {
   const [isLoading, setIsLoading] = useState(true)
   const [filteredData, setFilteredData] = useState<DataItem[]>([])
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, right: 0 })
-  const [weightUnit, setWeightUnit] = useState("kg")
-  const [lastKnownUnit, setLastKnownUnit] = useState("kg");
-
+  
+  const { weightUnit } = useUnitStore()
   const {t} = useTranslation();
 
   const timeRangeOptions: TimeRangeOption[] = [
@@ -119,47 +102,16 @@ const WeightScreen = () => {
       setWeightVisited();
     }, [userId]);
 
-  // Load weight unit on initial mount
-  useEffect(() => {
-    loadWeightUnit()
-  }, [])
-
   // Use useFocusEffect to reload data when screen comes into focus
   useFocusEffect(
     useCallback(() => {
-      const checkAndReloadWeightUnit = async () => {
-        try {
-          const storedUnit = await AsyncStorage.getItem("weightUnit")
-          if (storedUnit && storedUnit !== lastKnownUnit) {
-            console.log("Weight unit changed from", lastKnownUnit, "to", storedUnit)
-            setWeightUnit(storedUnit)
-            setLastKnownUnit(storedUnit)
-            // Reload weight data with new unit
-            getWeightStatus()
-          }
-        } catch (error) {
-          console.error("Error checking weight unit:", error)
-        }
-      }
-
-      checkAndReloadWeightUnit()
+      // Reload weight data when screen comes into focus
+      getWeightStatus()
 
       // Return cleanup function
       return () => {}
-    }, [lastKnownUnit]),
+    }, [weightUnit]),
   )
-
-  const loadWeightUnit = async () => {
-    try {
-      const storedUnit = await AsyncStorage.getItem("weightUnit")
-      if (storedUnit) {
-        setWeightUnit(storedUnit)
-        setLastKnownUnit(storedUnit)
-      }
-    } catch (error) {
-      console.error("Error loading weight unit:", error)
-    }
-  }
 
   // Function to get the current week number
   const getWeekNumber = (date: Date) => {
@@ -485,7 +437,7 @@ const WeightScreen = () => {
           const weightMap = new Map()
 
           // Process all data regardless of time range
-          data.data.weightData.forEach((entry) => {
+          data.data.weightData.forEach((entry: any) => {
             if (!entry.date || !entry.weight) return // Skip invalid entries
 
             const entryDate = new Date(entry.date)
@@ -880,7 +832,7 @@ const WeightScreen = () => {
                     color: "#FFA44C",
                   }}
                 >
-                  {weightUnit.toUpperCase()}
+                  {weightUnit}
                 </Text>
               </Text>
               <Text style={styles.tooltipDate}>{formatDate(item.date)}</Text>
@@ -926,7 +878,7 @@ const WeightScreen = () => {
                       fontFamily: "Inter500",
                     }}
                   >
-                    {t('weightUnit')}
+                    {weightUnit}
                   </Text>
                 </>
               ) : (

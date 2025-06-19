@@ -322,9 +322,7 @@ export const useStepsStore = create<StepsState>()(
 
           // Initial fetch
           get().fetchStepData(userId)
-
-          // Set up interval for auto-refresh every 20 seconds
-          const intervalId = setInterval(() => {
+          
             // console.log("Auto-refreshing steps data...")
             get().fetchStepData(userId)
 
@@ -332,13 +330,6 @@ export const useStepsStore = create<StepsState>()(
             if (get().isFitbitConnected) {
               get().fetchFitbitStepData(userId, "today")
             }
-          }, 10000000) // 20 seconds
-
-          // Return cleanup function to clear interval
-          return () => {
-            // console.log("Stopping auto-refresh for steps data")
-            clearInterval(intervalId)
-          }
         },
 
         // Fitbit actions

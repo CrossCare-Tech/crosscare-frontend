@@ -1,5 +1,5 @@
 import {
-  ActivityIndicator,
+ActivityIndicator,
   Alert,
   FlatList,
   ScrollView,
@@ -31,9 +31,8 @@ import {
   useStepsStore,
   useStepsWithAutoRefresh,
 } from "@/zustandStore/useStepsStore";
-import * as ImagePicker from "expo-image-picker";
-import { useBadge } from "@/context/BadgeContext";
 import User from "@/assets/images/Svg/User";
+import * as ImagePicker from "expo-image-picker";
 import { Linking } from "react-native";
 import PregnancyModal from "../modal/preagnancyModal";
 import { useMealStore } from "@/zustandStore/mealStore";
@@ -163,7 +162,7 @@ const Home = () => {
       // ✅ Use the user's avatar if available, otherwise fall back to doulaImg.png
       image1: user?.avatar_url && user.avatar_url.trim() !== '' 
         ? { uri: user.avatar_url }
-        : require("../../../assets/images/hairs/h1/face/c1.png"),
+        : { uri: "https://sfpyewutvgmsmlywgcor.supabase.co/storage/v1/object/public/crosscare/avatars/avatar-1f454ac3-fcc6-48c1-a5b8-9f7c77bb2bb0-ed0c26a3-ba05-43cc-a6bd-6b875fa99687.jpg"},
       onPress: () => {
         router.push({
           pathname: "/patient/askdoula",
@@ -357,6 +356,7 @@ const cardData = cardData1.map((item) => ({
     }
 
     const data = await response.json();
+    console.log("Profile data:", data);
     // console.log("Profile data:", data.week);
 
     // Save the fresh profile data to AsyncStorage
@@ -518,6 +518,12 @@ const cardData = cardData1.map((item) => ({
             shadowOpacity: 0.8,
             shadowRadius: 10,
             elevation: 2,
+          }}
+          onPress={() => {
+            router.push({
+              pathname: "/patient/settings/reminder",
+              
+            });
           }}
         >
           <Ionicons name="notifications-outline" size={18} color="#666" />
@@ -692,6 +698,8 @@ const cardData = cardData1.map((item) => ({
     }
   };
 
+  const userName = user.user_name.split(" ")[0]
+
   return (
     <SafeAreaView
       style={{
@@ -780,7 +788,7 @@ const cardData = cardData1.map((item) => ({
             paddingBottom: 10,
           }}
         >
-          <Text style={styles.userName}>{user.user_name}</Text>
+          <Text style={styles.userName}>{userName}</Text>
           <Text style={styles.weekText}>  {t("home.week")} {weeksComplete}</Text>
         </View>
 

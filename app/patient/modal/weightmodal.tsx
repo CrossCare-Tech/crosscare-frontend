@@ -11,6 +11,7 @@ import {
   Alert,
 } from "react-native";
 import { useSelector } from "react-redux";
+import { useUnitStore, convertWeight } from "@/zustandStore/unitStore";
 
 interface WeightModalProps {
   visible: boolean;
@@ -23,6 +24,7 @@ const WeightModal = ({ visible, onClose, onSave, reload }: WeightModalProps) => 
   const [weight, setWeight] = useState("");
   const [loading, setLoading] = useState(false);
   const user = useSelector((state: any) => state.user);
+  const { weightUnit } = useUnitStore();
   // console.log(user.user_id);
 
   const {t} = useTranslation();
@@ -35,9 +37,12 @@ const WeightModal = ({ visible, onClose, onSave, reload }: WeightModalProps) => 
 
     setLoading(true);
 
+    // Convert weight to kg for storage if user entered in lbs
+    const weightInKg = weightUnit === "lbs" ? convertWeight(parseFloat(weight), "lbs", "kg") : parseFloat(weight);
+
     const weightData = {
-      weight: parseFloat(weight),
-      weight_unit: "kg",
+      weight: weightInKg,
+      weight_unit: "kg", // Always store in kg
     };
 
     try {
@@ -93,7 +98,7 @@ const WeightModal = ({ visible, onClose, onSave, reload }: WeightModalProps) => 
               value={weight}
               onChangeText={setWeight}
               keyboardType="numeric"
-              placeholder={t('weightScreen.weightPlaceholder')}
+              placeholder={`-- ${weightUnit}`}
               placeholderTextColor="#ccc"
             />
           </View>

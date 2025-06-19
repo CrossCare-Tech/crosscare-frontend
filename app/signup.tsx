@@ -34,12 +34,14 @@ const SignUp: FC = () => {
   const [dateOfBirth, setDateOfBirth] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [email, setEmail] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [role, setRole] = useState("patient");
   const navigation = useNavigation();
   const router = useRouter();
   const [emailError, setEmailError] = useState("");
+  const [phoneNumberError, setPhoneNumberError] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const redirectTo = makeRedirectUri();
 
@@ -89,6 +91,7 @@ const SignUp: FC = () => {
 
   const handleSignUp = async () => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/; // Basic international phone number regex
     const newError: any = {};
 
     // Validation
@@ -111,6 +114,10 @@ const SignUp: FC = () => {
       newError.email = "Invalid email format.";
     }
 
+    if (phoneNumber && !phoneRegex.test(phoneNumber.replace(/\s/g, ''))) {
+      newError.phoneNumber = "Invalid phone number format.";
+    }
+
     if (!password) {
       newError.password = "Password is required.";
     } else if (password.length < 6) {
@@ -122,6 +129,7 @@ const SignUp: FC = () => {
       setLastNameError(newError.lastName || "");
       setDobError(newError.dob || "");
       setEmailError(newError.email || "");
+      setPhoneNumberError(newError.phoneNumber || "");
       setPasswordError(newError.password || "");
       return;
     }
@@ -141,13 +149,14 @@ const SignUp: FC = () => {
             lastName: lastName.trim(),
             dateOfBirth: dateOfBirth.toISOString(),
             email: email.toLowerCase().trim(),
+            phoneNumber: phoneNumber.trim() || null,
             password: password,
           }),
         }
       );
 
       const data = await response.json();
-
+      console.log("This is the signup data", data);
       if (!response.ok) {
         throw new Error(data.message || "Signup failed");
       }
@@ -187,6 +196,13 @@ const SignUp: FC = () => {
     setEmail(text);
     if (emailError) {
       setEmailError("");
+    }
+  };
+
+  const handleChangePhoneNumber = (text: string) => {
+    setPhoneNumber(text);
+    if (phoneNumberError) {
+      setPhoneNumberError("");
     }
   };
 
@@ -260,6 +276,16 @@ const SignUp: FC = () => {
                 onChangeText={handleChangeEmail}
                 placeholder="Email Address"
                 errorMessage={emailError}
+              />
+
+              {/* Phone Number */}
+              <CustomTextInput
+                icon="phone"
+                type="phone"
+                value={phoneNumber}
+                onChangeText={handleChangePhoneNumber}
+                placeholder="Phone Number"
+                errorMessage={phoneNumberError}
               />
 
               {/* Password */}

@@ -1,14 +1,13 @@
-import React, { useEffect, useState } from "react"
+import React, { useCallback, useEffect, useState } from "react"
 import { StyleSheet, Text, View, StatusBar, TouchableOpacity, ScrollView, ActivityIndicator } from "react-native"
 import { Feather, Ionicons } from "@expo/vector-icons"
 import { SafeAreaView } from "react-native-safe-area-context"
-import { router } from "expo-router"
+import { router, useFocusEffect } from "expo-router"
 import MedicationIcon from "@/assets/images/Svg/MedicationIcon"
-import DateRangePicker from "@/components/DateRangePicker"
-import DateRangeButton from "@/components/DateRangeButton"
 import { useSelector } from "react-redux"
 import AsyncStorage from "@react-native-async-storage/async-storage"
 import { useTranslation } from "react-i18next"
+import { scheduleMedicationReminder, cancelMedicationReminders, areMedicationRemindersEnabled, setMedicationRemindersEnabled } from "@/utils/NotificationManager"
 
 // First, let's update the interfaces to include dates
 interface MedicationTime {
@@ -23,6 +22,7 @@ interface Medication {
   originalDate: string
   times: MedicationTime[]
 }
+
 function AlertDialog({ visible, onClose, onConfirm, medicationName }: { visible: boolean, onClose: () => void, onConfirm: () => void, medicationName: string }) {
   const user = useSelector((state: any) => state.user)
   const [userName, setUserName] = useState(user?.user_name || "")
@@ -127,6 +127,7 @@ export default function medications() {
   const [isLoading, setIsLoading] = useState(true)
   const userId = user?.user_id;
   const {t} = useTranslation();
+  const [remindersEnabled, setRemindersEnabled] = useState(true);
 
   useEffect(() => {
     const setMedicationVisited = async () => {
@@ -136,22 +137,39 @@ export default function medications() {
     setMedicationVisited();
   }, [userId]);
 
+  // Load reminder preference on mount
+  useEffect(() => {
+    const loadReminderPreference = async () => {
+      try {
+        const enabled = await areMedicationRemindersEnabled();
+        console.log('Medication Reminders Enabled:', enabled);
+        setRemindersEnabled(enabled);
+      } catch (error) {
+        console.error('Error loading medication reminder preference:', error);
+      }
+    };
+    
+    loadReminderPreference();
+  }, []);
+
+  // Toggle reminder setting
+  const toggleReminders = async () => {
+    try {
+      const newValue = !remindersEnabled;
+      setRemindersEnabled(newValue);
+      await setMedicationRemindersEnabled(newValue);
+    } catch (error) {
+      console.error('Error saving medication reminder preference:', error);
+    }
+  };
+
   // Update the medications data structure
   const [medications, setMedications] = useState<Medication[]>([])
-  const [allMedications, setAllMedications] = useState<Medication[]>([])
 
   const [alertVisible, setAlertVisible] = useState(false)
   const [pendingMedication, setPendingMedication] = useState({
     id: "",
     time: "",
-  })
-
-  // Add this state variable to track the button position
-  const [buttonPosition, setButtonPosition] = useState({
-    x: 0,
-    y: 0,
-    width: 0,
-    height: 0,
   })
 
   const handleToggleComplete = (medicationId: string, timeToToggle: string) => {
@@ -246,24 +264,6 @@ export default function medications() {
         }),
       )
 
-      // Also update allMedications state to keep them in sync
-      setAllMedications((prevMedications) =>
-        prevMedications.map((medication) => {
-          if (medication.id === medicationId) {
-            return {
-              ...medication,
-              times: medication.times.map((time) => {
-                if (time.time === timeToToggle) {
-                  return { ...time, isCompleted: newCompletionStatus }
-                }
-                return time
-              }),
-            }
-          }
-          return medication
-        }),
-      )
-
       return true // Return success
     } catch (error) {
       console.error("Error updating medication status:", error)
@@ -302,60 +302,42 @@ export default function medications() {
     )
   }
 
-  // Filter medications with missed doses (not completed)
-  const getMissedMedications = () => {
+  // Get upcoming medications (future dates/times that haven't been taken)
+  const getUpcomingMedications = () => {
     if (!medications || !Array.isArray(medications)) {
       return []
     }
-    return medications.filter((medication) => medication.times.some((time) => !time.isCompleted))
-  }
-
-  const [isVisible, setIsVisible] = useState(false)
-  const [startDate, setStartDate] = useState<Date | null>(null)
-  const [endDate, setEndDate] = useState<Date | null>(null)
-
-  // Update the handleSelectRange function to filter medications by date range
-  const handleSelectRange = (start: Date | null, end: Date | null) => {
-    setStartDate(start)
-    setEndDate(end)
-    setIsVisible(false)
-
-    if (start || end) {
-      // Filter medications by date range
-      filterMedicationsByDateRange(start, end)
-    } else {
-      // If both dates are null, show all medications
-      setMedications(allMedications)
-    }
-  }
-
-  // Add a function to filter medications by date range
-  const filterMedicationsByDateRange = (start: Date | null, end: Date | null) => {
-    if (!start && !end) {
-      // If no date range is selected, show all medications
-      setMedications(allMedications)
-      return
-    }
-
-    // Convert start and end dates to timestamps for comparison
-    const startTimestamp = start ? start.setHours(0, 0, 0, 0) : 0
-    const endTimestamp = end ? end.setHours(23, 59, 59, 999) : Date.now() + 1000 * 60 * 60 * 24 * 365 // Default to a year from now
-
-    // Filter medications by date range
-    const filteredMedications = allMedications.filter((medication) => {
-      // Convert medication date to timestamp
+    
+    const now = new Date()
+    return medications.filter((medication) => {
       const medicationDate = new Date(medication.originalDate)
-      const medicationTimestamp = medicationDate.getTime()
-
-      // Check if medication date is within the selected range
-      return medicationTimestamp >= startTimestamp && medicationTimestamp <= endTimestamp
+      
+      // Check if the medication date is in the future
+      if (medicationDate.toDateString() === now.toDateString()) {
+        // If it's today, check if any times are incomplete and in the future
+        return medication.times.some((time) => {
+          if (time.isCompleted) return false
+          
+          // Parse the time and create a date object for today
+          const [timeStr, period] = time.time.split(' ')
+          const [hours, minutes] = timeStr.split(':').map(Number)
+          let hour24 = hours
+          
+          if (period === 'PM' && hours !== 12) hour24 += 12
+          if (period === 'AM' && hours === 12) hour24 = 0
+          
+          const timeToday = new Date()
+          timeToday.setHours(hour24, minutes, 0, 0)
+          
+          return timeToday > now
+        })
+      } else if (medicationDate > now) {
+        // If it's a future date, include if not all times are completed
+        return medication.times.some((time) => !time.isCompleted)
+      }
+      
+      return false
     })
-
-    setMedications(filteredMedications)
-
-    // Log for debugging
-    console.log(`Filtered medications: ${filteredMedications.length} of ${allMedications.length}`)
-    console.log(`Date range: ${start?.toDateString()} to ${end?.toDateString()}`)
   }
 
   // Add this helper function at the top of your component (before the return statement)
@@ -435,7 +417,7 @@ export default function medications() {
               const isCompleted = isDateCompleted || isDayOfWeekCompleted || item.completed
 
               // Create a medication object for the allowed day
-              formattedMedications.push({
+              const medicationEntry = {
                 id: `${item.id}-${originalDateStr}`, // Unique ID
                 name: item.medicationName,
                 date: formattedDate, // Display formatted date
@@ -446,7 +428,44 @@ export default function medications() {
                       isCompleted: isCompleted,
                     }))
                   : [],
-              })
+              }
+
+              formattedMedications.push(medicationEntry)
+
+              // Schedule reminders for this medication if reminders are enabled
+              if (remindersEnabled) {
+                // Schedule reminders for each time
+                item.times.forEach(async (timeString: string) => {
+                  try {
+                    // Parse the time string to create a proper date object
+                    const [timeStr, period] = timeString.split(' ');
+                    const [hours, minutes] = timeStr.split(':').map(Number);
+                    let hour24 = hours;
+                    
+                    if (period === 'PM' && hours !== 12) hour24 += 12;
+                    if (period === 'AM' && hours === 12) hour24 = 0;
+
+                    // Create date object for this medication time
+                    const medicationDateTime = new Date(currentDate);
+                    medicationDateTime.setHours(hour24, minutes, 0, 0);
+
+                    // Only schedule if it's in the future
+                    if (medicationDateTime > new Date()) {
+                      const reminderIds = await scheduleMedicationReminder(
+                        medicationDateTime,
+                        item.medicationName,
+                        `${item.id}-${originalDateStr}-${timeString}`
+                      );
+
+                      if (reminderIds && reminderIds.length > 0) {
+                        console.log(`✅ Scheduled ${reminderIds.length} reminders for ${item.medicationName} on ${formattedDate} at ${timeString}`);
+                      }
+                    }
+                  } catch (error) {
+                    console.error('Error scheduling individual medication reminder:', error);
+                  }
+                });
+              }
             }
             // Move to next day
             currentDate.setDate(currentDate.getDate() + 1)
@@ -456,35 +475,29 @@ export default function medications() {
         // Sort medications by originalDate (which is still "YYYY-MM-DD")
         formattedMedications.sort((a, b) => new Date(a.originalDate).getTime() - new Date(b.originalDate).getTime())
 
-        // Store all medications
-        setAllMedications(formattedMedications)
-
-        // Apply date filtering if dates are selected
-        if (startDate || endDate) {
-          filterMedicationsByDateRange(startDate, endDate)
-        } else {
-          setMedications(formattedMedications)
-        }
+        setMedications(formattedMedications)
       } else {
         console.error("API did not return expected data structure:", responseData)
-        setAllMedications([])
         setMedications([])
       }
     } catch (error: any) {
       console.log("Error fetching medications:", error.message)
-      setAllMedications([])
       setMedications([])
     } finally {
       setIsLoading(false)
     }
   }
 
-  // Add this useEffect hook after your state declarations
-  useEffect(() => {
-    getMedicationList()
-  }, [user])
+  useFocusEffect(
+    useCallback(() => {
+      console.log("Medications screen focused")
+      getMedicationList()
 
-  const missedMedications = getMissedMedications()
+    }, [user, remindersEnabled])
+  )
+
+
+  const upcomingMedications = getUpcomingMedications()
 
   // Add a function to group medications by date
   const groupMedicationsByDate = (meds: Medication[]) => {
@@ -505,32 +518,6 @@ export default function medications() {
 
     return Object.entries(grouped)
   }
-
-  // Update the render section for medications
-  const renderMedicationsByDate = () => {
-    const groupedMedications = groupMedicationsByDate(activeTab === "All" ? medications : getMissedMedications())
-
-    return groupedMedications.map(([date, meds], dateIndex) => (
-      <View key={date} style={styles.dateGroup}>
-        <Text style={styles.dateHeader}>{date}</Text>
-        {meds.map((medication, medIndex) => (
-          <View key={medication.id}>
-            <View style={styles.medicationItemContainer}>
-              <View style={[styles.medicationNameContainer, medIndex === 0 && styles.firstMedicationNameContainer]}>
-                <Text style={styles.medicationName}>{medication.name}</Text>
-              </View>
-              {medication.times.map((time) => (
-                <React.Fragment key={`${medication.id}-${time.time}`}>
-                  {renderMedicationTime(time, medication.id)}
-                </React.Fragment>
-              ))}
-            </View>
-          </View>
-        ))}
-      </View>
-    ))
-  }
-
 
   return (
     <SafeAreaView style={styles.container}>
@@ -565,22 +552,6 @@ export default function medications() {
           </TouchableOpacity>
         </View>
 
-        <DateRangeButton
-          onPress={() => setIsVisible(true)}
-          startDate={startDate}
-          endDate={endDate}
-          // onLayout={handleButtonLayout}
-        />
-
-        <DateRangePicker
-          visible={isVisible}
-          onClose={() => setIsVisible(false)}
-          onSelectRange={handleSelectRange}
-          initialStartDate={startDate || undefined}
-          initialEndDate={endDate || undefined}
-          // buttonPosition={buttonPosition}
-        />
-
         {/* Medication List */}
         <View style={styles.tabContainer}>
           <TouchableOpacity
@@ -590,10 +561,10 @@ export default function medications() {
             <Text style={[styles.tabText, activeTab === "All" && styles.activeTabText]}>{t('all')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.tab, activeTab === "Missed" && styles.activeTab]}
-            onPress={() => setActiveTab("Missed")}
+            style={[styles.tab, activeTab === "Upcoming" && styles.activeTab]}
+            onPress={() => setActiveTab("Upcoming")}
           >
-            <Text style={[styles.tabText, activeTab === "Missed" && styles.activeTabText]}>{t('missed')}</Text>
+            <Text style={[styles.tabText, activeTab === "Upcoming" && styles.activeTabText]}>Upcoming</Text>
           </TouchableOpacity>
         </View>
 
@@ -638,11 +609,11 @@ export default function medications() {
               </View>
             )}
 
-            {/* Missed medications tab */}
-            {activeTab === "Missed" && (
+            {/* Upcoming medications tab */}
+            {activeTab === "Upcoming" && (
               <View style={styles.medicationsContainer}>
-                {missedMedications.length > 0 ? (
-                  groupMedicationsByDate(missedMedications).map(([date, meds]) => (
+                {upcomingMedications.length > 0 ? (
+                  groupMedicationsByDate(upcomingMedications).map(([date, meds]) => (
                     <View key={date} style={styles.dateGroup}>
                       <Text style={styles.dateHeader}>{date}</Text>
                       {meds.map((medication, index) => (
@@ -669,7 +640,7 @@ export default function medications() {
                     </View>
                   ))
                 ) : (
-                  <Text style={styles.emptyText}>{t('noMissedMedications')}</Text>
+                  <Text style={styles.emptyText}>No upcoming medications</Text>
                 )}
               </View>
             )}
@@ -680,8 +651,13 @@ export default function medications() {
       {/* Footer */}
       <View style={styles.footer}>
         <Text style={styles.footerText}>
-          {t('reminderOnByDefault')}
-          <Text style={styles.footerLink}> {t('turnOffReminder')}</Text>
+          Reminder {remindersEnabled ? 'On' : 'Off'} By Default, {' '}
+          <Text 
+            style={styles.footerLink} 
+            onPress={toggleReminders}
+          >
+            {remindersEnabled ? 'Turn Off Reminder' : 'Turn On Reminder'}
+          </Text>
         </Text>
       </View>
 
@@ -1027,4 +1003,3 @@ const styles = StyleSheet.create({
     fontFamily: "Inter500",
   },
 })
-

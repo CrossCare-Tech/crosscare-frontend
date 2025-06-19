@@ -36,7 +36,7 @@ export const detectAndHandleLogRequest = async (
           ? patternMatch.value
           : Math.round((patternMatch.value ?? 0) / 250);
 
-        const isIncrement = patternMatch.isIncremental || false;
+        const isIncrement = true;
 
         requestData = {
           water: waterValue,
@@ -183,7 +183,7 @@ export const detectAndHandleLogRequest = async (
           ? extractedData.value
           : Math.round(extractedData.value ?? 0 / 250);
 
-        requestData = { water: waterValue };
+        requestData = { water: waterValue, isIncrement: true };
         successMessage = `${t('healthData.ive_logged')} ${
           extractedData.isGlasses
             ? extractedData.value + ` ${t('healthData.glasses')}`

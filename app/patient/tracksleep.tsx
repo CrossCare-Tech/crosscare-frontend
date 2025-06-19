@@ -1178,31 +1178,6 @@ export default function tracksleep() {
               >
                 <View
                   style={{
-                    gap: 14,
-                  }}
-                >
-                  <Text
-                    style={{
-                      color: "#E5E5E5",
-                      fontFamily: "Inter400",
-                      fontSize: 14,
-                    }}
-                  >
-                    {t('sleepScreen.didYouSleepAt11_30PM')}
-                  </Text>
-                  <Text
-                    style={{
-                      color: "#E5E5E5",
-                      fontFamily: "Inter400",
-                      fontSize: 14,
-                    }}
-                  >
-                   {t('sleepScreen.didYouWakeUpAt07_30AM')}
-                  </Text>
-                </View>
-
-                <View
-                  style={{
                     flexDirection: "row",
                     justifyContent: "space-between",
                     alignItems: "center",
@@ -1461,19 +1436,22 @@ export default function tracksleep() {
           </View>
 
           {/* Connect to Application */}
-          <View style={styles.sectionContainer}>
+          {Platform.OS === 'ios' && (
+
+            <View style={styles.sectionContainer}>
             <Text style={styles.sectionTitle}>{t('sleepScreen.connectToApplication')}</Text>
             <View style={styles.connectItem}>
               <Image
                 source={require("../../assets/images/applehealth.png")}
                 style={{ width: 24, height: 24 }}
-              />
-              <Text style={styles.connectText}>{Platform.OS === 'ios' ? 'Health App' : 'Samsung Health'}</Text>
+                />
+              <Text style={styles.connectText}>Health App</Text>
               <TouchableOpacity>
                 <Text style={styles.connectButton}>{t('sleepScreen.connect')}</Text>
               </TouchableOpacity>
             </View>
           </View>
+          )}
 
           {/* Connect to Device Section */}
           <View style={styles.sectionContainer}>

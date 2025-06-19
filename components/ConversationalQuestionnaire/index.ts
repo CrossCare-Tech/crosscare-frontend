@@ -45,6 +45,7 @@ import {
 } from "../../utils/ConversationalSystem/EmpathyResponses/generator";
 import axios from "axios";
 import { AppState, type AppStateStatus } from "react-native"
+import { generateEducationalContent } from "@/utils/ConversationalSystem/EducationalContent/generator";
 // Default OpenAI API key (you'll want to store this securely)
 const DEFAULT_API_KEY = process.env.EXPO_PUBLIC_OPENAI_API_KEY || ""
 
@@ -891,6 +892,147 @@ const ConversationalQuestionnaire = ({
 
       console.log("Processing response to question:", currentQuestion.id);
 
+      // Check if this is an educational information question
+      const educationalQuestions = [
+        'q1-smoke-info',
+        'q1-chemicals-info', 
+        'q1-exhaust-info',
+        'q1-lead-info',
+        'q1-filter-info',
+        'q1-no-filter-info',
+        'q4-14'
+      ];
+
+      if (educationalQuestions.includes(currentQuestion.id)) {
+        console.log('Detected educational information question:', currentQuestion.id);
+        
+        // Save the original response FIRST
+        const questionnaireResponse = {
+          questionId: currentQuestion.id,
+          domainId: currentDomain.id,
+          response: response,
+          flag: currentQuestion.flag || "",
+          timestamp: new Date(),
+        };
+      
+        dispatch({
+          type: "ADD_RESPONSE",
+          payload: questionnaireResponse,
+        });
+      
+        onResponseSaved(questionnaireResponse);
+        
+        try {
+          // Generate AI-powered educational content
+          const educationalContent = await generateEducationalContent({
+            topic: currentQuestion.text,
+            questionId: currentQuestion.id,
+            userResponse: response,
+          }, openAIApiKey);
+      
+          // Send the educational content
+          const educationKey = `education_${currentQuestion.id}`;
+          if (!sentMessages.has(educationKey)) {
+            sentMessages.add(educationKey);
+            
+            // Save as educational response
+            saveLastQuestion(
+              currentDomain.id,
+              currentQuestion.id,
+              educationalContent.content
+            );
+      
+            // Send the educational content with the isEducational flag
+            onQuestionReady(educationalContent.content, true);
+          }
+      
+          // Auto-progress logic - ALWAYS execute regardless of sentMessages
+          console.log('Auto-progressing after educational content');
+          
+          setTimeout(() => {
+            // Handle follow-up logic
+            if (currentQuestion.followUp) {
+              let followUpId = null;
+              
+              if (currentQuestion.followUp["*"]) {
+                followUpId = currentQuestion.followUp["*"];
+              }
+              
+              if (followUpId) {
+                if (followUpId.startsWith("domain[")) {
+                  // Handle domain transition
+                  const targetQuestionId = followUpId.match(/domain\[([^\]]+)\]/)?.[1];
+                  if (targetQuestionId) {
+                    for (let i = 0; i < QUESTIONNAIRE_DOMAINS.length; i++) {
+                      if (QUESTIONNAIRE_DOMAINS[i].questions.some(q => q.id === targetQuestionId)) {
+                        setNextDomainIndex(i);
+                        setWaitingForDomainTransition(true);
+                        askToContinue();
+                        return;
+                      }
+                    }
+                  }
+                } else {
+                  // Regular follow-up within domain
+                  const targetQuestionIndex = currentDomain.questions.findIndex(
+                    q => q.id === followUpId
+                  );
+                  
+                  if (targetQuestionIndex !== -1) {
+                    dispatch({
+                      type: "SET_POSITION",
+                      payload: {
+                        currentQuestionIndex: targetQuestionIndex,
+                      },
+                    });
+                    
+                    setTimeout(() => sendNextQuestion(), 500);
+                    return;
+                  }
+                }
+              }
+            }
+            
+            // Default: move to next question
+            const nextQuestionIndex = context.currentQuestionIndex + 1;
+            if (nextQuestionIndex < currentDomain.questions.length) {
+              dispatch({
+                type: "SET_POSITION",
+                payload: {
+                  currentQuestionIndex: nextQuestionIndex,
+                },
+              });
+              
+              setTimeout(() => sendNextQuestion(), 500);
+            } else {
+              askToContinue();
+            }
+          }, 2000); // 2 seconds delay
+      
+          return true;
+          
+        } catch (error) {
+          console.error('Error generating educational content:', error);
+          // Even on error, still progress to next question
+          setTimeout(() => {
+            const nextQuestionIndex = context.currentQuestionIndex + 1;
+            if (nextQuestionIndex < currentDomain.questions.length) {
+              dispatch({
+                type: "SET_POSITION",
+                payload: {
+                  currentQuestionIndex: nextQuestionIndex,
+                },
+              });
+              setTimeout(() => sendNextQuestion(), 500);
+            } else {
+              askToContinue();
+            }
+          }, 1000);
+          
+          return true;
+        }
+      }
+
       // Use enhanced classification with full context
       const classification = await classifyIntentWithAI(
         response,
@@ -904,39 +1046,6 @@ const ConversationalQuestionnaire = ({
       );
 
       console.log("Response classification:", classification);
-
-      // // First, check if this is a pause request (can happen at any time)
-      // if (classification.isPauseRequest) {
-      //   console.log("Detected pause request during questionnaire");
-
-      //   // Send confirmation and pause
-      //   const pauseKey = `pause_request`;
-      //   if (!sentMessages.has(pauseKey)) {
-      //     sentMessages.add(pauseKey);
-      //     const pauseMessage = "I understand you'd like to take a break. I've saved your progress, and we can continue whenever you're ready.";
-
-      //     // Save the context
-      //     saveLastQuestion("pause", pauseKey, pauseMessage);
-
-      //     // Set the state to paused
-      //     dispatch({
-      //       type: 'SET_PAUSED',
-      //       payload: {}
-      //     });
-
-      //     await saveConversationState();
-
-      //     // Send the message
-      //     onQuestionReady(pauseMessage);
-      //   }
-      //   return true;
-      // }
-
-      // if (classification.isResumeRequest) {
-      //   console.log("Detected resume request")
-      //   await resumeQuestionnaire();
-      //   return true;
-      // }
 
       // Check if the response needs empathy
       if (
@@ -1077,7 +1186,6 @@ const ConversationalQuestionnaire = ({
       }
 
       // ADD THIS SECTION - handle unclear responses to branching questions
-
       if (
         (classification.intent === "unclear" ||
           (classification.intent === "specific_option" &&
@@ -1338,66 +1446,66 @@ const ConversationalQuestionnaire = ({
     }
   };
 
-  // Helper to save a response and continue to the next question
-  const saveResponseAndContinue = (
-    response: string,
-    currentQuestion: any,
-    currentDomain: any
-  ): boolean => {
-    try {
-      // Create the response object
-      const questionnaireResponse = {
-        questionId: currentQuestion.id,
-        domainId: currentDomain.id,
-        response: response,
-        flag: currentQuestion.flag || "",
-        timestamp: new Date(),
-      };
+    // Helper to save a response and continue to the next question
+    const saveResponseAndContinue = (
+      response: string,
+      currentQuestion: any,
+      currentDomain: any
+    ): boolean => {
+      try {
+        // Create the response object
+        const questionnaireResponse = {
+          questionId: currentQuestion.id,
+          domainId: currentDomain.id,
+          response: response,
+          flag: currentQuestion.flag || "",
+          timestamp: new Date(),
+        };
 
-      // Add to context
-      dispatch({
-        type: "ADD_RESPONSE",
-        payload: questionnaireResponse,
-      });
+        // Add to context
+        dispatch({
+          type: "ADD_RESPONSE",
+          payload: questionnaireResponse,
+        });
 
-      // Notify parent
-      onResponseSaved(questionnaireResponse);
+        // Notify parent
+        onResponseSaved(questionnaireResponse);
 
-      // Move to next question
-      if (currentQuestion.followUp) {
-        // If followUp is defined, the existing logic in processQuestionResponse handles it
-        moveToNextQuestion(currentQuestion.id);
-      } else {
-        // If no followUp, move to the next question by index
-        const nextQuestionIndex = context.currentQuestionIndex + 1;
-        if (nextQuestionIndex < currentDomain.questions.length) {
-          const nextQuestion = currentDomain.questions[nextQuestionIndex];
-          dispatch({
-            type: "SET_POSITION",
-            payload: {
-              currentQuestionIndex: nextQuestionIndex,
-            },
-          });
-
-          // Send next question after a short delay
-          setTimeout(() => {
-            console.log(
-              `Moving to next question at index ${nextQuestionIndex}`
-            );
-            sendNextQuestion();
-          }, 1000);
+        // Move to next question
+        if (currentQuestion.followUp) {
+          // If followUp is defined, the existing logic in processQuestionResponse handles it
+          moveToNextQuestion(currentQuestion.id);
         } else {
-          // End of domain, ask to continue
-          askToContinue();
-        }
-      }
+          // If no followUp, move to the next question by index
+          const nextQuestionIndex = context.currentQuestionIndex + 1;
+          if (nextQuestionIndex < currentDomain.questions.length) {
+            const nextQuestion = currentDomain.questions[nextQuestionIndex];
+            dispatch({
+              type: "SET_POSITION",
+              payload: {
+                currentQuestionIndex: nextQuestionIndex,
+              },
+            });
 
-      return true;
-    } catch (error) {
-      console.error("Error in saveResponseAndContinue:", error);
-      return false;
-    }
-  };
+            // Send next question after a short delay
+            setTimeout(() => {
+              console.log(
+                `Moving to next question at index ${nextQuestionIndex}`
+              );
+              sendNextQuestion();
+            }, 1000);
+          } else {
+            // End of domain, ask to continue
+            askToContinue();
+          }
+        }
+
+        return true;
+      } catch (error) {
+        console.error("Error in saveResponseAndContinue:", error);
+        return false;
+      }
+    };
 
   // Move to the next question
   const moveToNextQuestion = (targetQuestionId: string) => {

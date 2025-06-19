@@ -31,6 +31,7 @@ import { useSelector } from "react-redux";
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTranslation } from "react-i18next";
+import { useUnitStore, formatWaterAmount, formatWaterAmountForChart, convertMlToFlOz } from "@/zustandStore/unitStore";
 
 const MAX_HEIGHT = 200;
 const BAR_WIDTH = 20;
@@ -55,6 +56,7 @@ interface CustomBarProps {
 
 export default function water() {
   const { glassCount, setGlassCount, maxGlasses, setMaxGlasses } = useWaterStore();
+  const { waterUnit } = useUnitStore();
   const user = useSelector((state:any)=>state.user);
   const [goalSet, setGoalSet] = useState(false);
   const [tooltipAnim] = useState(new Animated.Value(0));
@@ -465,39 +467,61 @@ export default function water() {
     return mergedData;
   }, [waterData, timeRange, isLoading]);
 
-  // Modify the y-axis calculation to have a more appropriate range
+  // Modify the y-axis calculation to handle both ml and fl oz
   const { yAxisLabels, roundedMax, roundedMin } = useMemo(() => {
     const dataToUse = getFilteredData;
     
-    // Find the maximum water intake in liters
-    const maxWater = Math.max(...dataToUse.map((item) => item.waterL || 0));
+    // Convert data to the appropriate unit for chart display
+    const convertedData = dataToUse.map(item => ({
+      ...item,
+      convertedValue: formatWaterAmountForChart(item.waterMl, waterUnit)
+    }));
     
-    // Set a minimum max value of 3L for better visualization
-    const effectiveMax = Math.max(maxWater, 3);
+    // Find the maximum water intake in the selected unit
+    const maxWater = Math.max(...convertedData.map((item) => item.convertedValue || 0));
     
-    // Round up to the nearest 0.5L
-    const roundedMax = Math.ceil(effectiveMax * 2) / 2;
-    const roundedMin = 0; // Start from 0L
+    let effectiveMax: number;
+    let step: number;
     
-    // Create y-axis labels with appropriate steps
-    const step = roundedMax > 3 ? 1 : 0.5; // Use 0.5L steps for smaller ranges, 1L for larger
-    
-    const labels = [];
-    for (let value = 0; value <= roundedMax; value += step) {
-      labels.push(Number(value.toFixed(1)));
+    if (waterUnit === 'fl.oz') {
+      // For fluid ounces, set minimum max of 100 fl oz
+      effectiveMax = Math.max(maxWater, 100);
+      // Round up to nearest 20 fl oz
+      const roundedMax = Math.ceil(effectiveMax / 20) * 20;
+      step = roundedMax > 100 ? 40 : 20;
+      
+      const labels = [];
+      for (let value = 0; value <= roundedMax; value += step) {
+        labels.push(Number(value.toFixed(0)));
+      }
+      
+      return {
+        yAxisLabels: labels.reverse(),
+        roundedMax,
+        roundedMin: 0,
+      };
+    } else {
+      // For ml/L, use existing logic
+      effectiveMax = Math.max(maxWater, 3);
+      const roundedMax = Math.ceil(effectiveMax * 2) / 2;
+      step = roundedMax > 3 ? 1 : 0.5;
+      
+      const labels = [];
+      for (let value = 0; value <= roundedMax; value += step) {
+        labels.push(Number(value.toFixed(1)));
+      }
+      
+      if (labels[labels.length - 1] < roundedMax) {
+        labels.push(Number(roundedMax.toFixed(1)));
+      }
+      
+      return {
+        yAxisLabels: labels.reverse(),
+        roundedMax,
+        roundedMin: 0,
+      };
     }
-    
-    // Make sure max value is included
-    if (labels[labels.length - 1] < roundedMax) {
-      labels.push(Number(roundedMax.toFixed(1)));
-    }
-    
-    return {
-      yAxisLabels: labels.reverse(), // Reverse for top-to-bottom display
-      roundedMax,
-      roundedMin,
-    };
-  }, [getFilteredData]);
+  }, [getFilteredData, waterUnit]);
 
   // Function to open the goal setting modal
   const openGoalModal = () => {
@@ -608,11 +632,11 @@ export default function water() {
     };
   }, []);
 
-  // Update the CustomBar component to handle date ranges with multiple bars
+  // Update the CustomBar component to handle unit conversion
   const CustomBar = ({ item, index, isSelected }: CustomBarProps) => {
     // Check if this is a month view
     const isMonthView = timeRange !== "week";
-     const isTodayView = timeRange === "today"
+    const isTodayView = timeRange === "today"
     
     // Skip rendering for range labels in month view - they're just for organization
     if (isMonthView && item.isRangeLabel) {
@@ -623,18 +647,23 @@ export default function water() {
       );
     }
     
+    // Convert water amount to chart units
+    const chartValue = formatWaterAmountForChart(item.waterMl, waterUnit);
+    
     // For regular bars (weekly view) or individual day bars (monthly view)
     const dataRange = roundedMax - roundedMin;
-    const normalizedWeight = item.waterL - roundedMin;
+    const normalizedWeight = chartValue - roundedMin;
     
     const calculatedHeight = (normalizedWeight / dataRange) * MAX_HEIGHT;
-    const barHeight = item.waterL > 0 ? Math.max(calculatedHeight, 2) : 2
+    const barHeight = chartValue > 0 ? Math.max(calculatedHeight, 2) : 2
 
-  // Use wider bars for today view
+    // Use wider bars for today view
     const barWidth = isTodayView ? BAR_WIDTH * 2 : isMonthView ? 4 : BAR_WIDTH
     
-    // Calculate glasses from ml (250ml per glass)
-    const glassCount = Math.round(item.waterMl / 250);
+    // Calculate display values based on unit
+    const displayAmount = waterUnit === 'fl.oz' 
+      ? `${convertMlToFlOz(item.waterMl).toFixed(1)} fl oz`
+      : `${Math.round(item.waterMl / 250)} ${Math.round(item.waterMl / 250) === 1 ? t('waterScreen.glass') : t('waterScreen.Glasses')}`;
     
     return (
       <TouchableOpacity
@@ -694,10 +723,7 @@ export default function water() {
             <View style={styles.tooltipContent}>
               <Text style={styles.tooltipTitle}>{t('water')}</Text>
               <Text style={styles.tooltipWeight}>
-                {glassCount}{" "}
-                <Text style={{ fontSize: 16, color: "#67B6FF" }}>
-                  {glassCount === 1 ? t('waterScreen.glass') : t('waterScreen.Glasses')}
-                </Text>
+                {displayAmount}
               </Text>
               <Text style={styles.tooltipDate}>{item.date}</Text>
             </View>
@@ -743,9 +769,7 @@ export default function water() {
         {/* Glass Info */}
         <Text style={styles.glassInfo}>
           {glassCount} {t('waterScreen.glass')} is{" "}
-          {glassCount * 250 >= 1000
-            ? ((glassCount * 250) / 1000).toFixed(2) + "L"
-            : glassCount * 250 + "ml"}
+          {formatWaterAmount(glassCount * 250, waterUnit)}
         </Text>
 
         {/* Slider */}
@@ -869,7 +893,10 @@ export default function water() {
           <View style={styles.yAxisContainer}>
             {yAxisLabels.map((label, index) => (
               <Text key={index} style={styles.yAxisLabel}>
-                {label}
+                {waterUnit === 'fl.oz' ? `${label}` : label}
+                <Text style={styles.yAxisUnit}>
+                  {waterUnit === 'fl.oz' ? ' oz' : 'L'}
+                </Text>
               </Text>
             ))}
           </View>
@@ -1154,6 +1181,12 @@ const styles = StyleSheet.create({
     color: "#AAAAAA",
     fontSize: 12,
     fontFamily: "Inter400",
+    flexDirection: 'row',
+    alignItems: 'baseline',
+  },
+  yAxisUnit: {
+    fontSize: 10,
+    color: "#CCCCCC",
   },
   chartContainer: {
     flex: 1,

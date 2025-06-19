@@ -252,6 +252,7 @@ const name = () => {
   const [age, setAge] = useState(0);
   const [updating, setUpdating] = useState(false);
   const [email, setEmail] = useState(user?.user_email);
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [pregnancyWeek, setPregnancyWeek] = useState(0);
   const [permissionStatus, setPermissionStatus] =
     useState<Notifications.PermissionStatus | null>(null);
@@ -265,6 +266,7 @@ const name = () => {
   const [isEditingName, setIsEditingName] = useState(false);
   const [isEditingAge, setIsEditingAge] = useState(false);
   const [isEditingEmail, setIsEditingEmail] = useState(false);
+  const [isEditingPhoneNumber, setIsEditingPhoneNumber] = useState(false);
   const [isEditingPregnancyWeek, setIsEditingPregnancyWeek] = useState(false);
 
   const getProfile = async () => {
@@ -284,6 +286,7 @@ const name = () => {
     setAge(data.age || 0);
     setName(data.name || "");
     setEmail(data.email || "");
+    setPhoneNumber(data.phoneNumber || "");
     setPregnancyWeek(data.week || 0);
 
     // Extract and log question responses
@@ -354,6 +357,8 @@ const name = () => {
         updatedUserData.user_name = value as string;
       } else if (fieldName === "email") {
         updatedUserData.user_email = value as string;
+      } else if (fieldName === "phoneNumber") {
+        updatedUserData.phoneNumber = value as string;
       }
 
       // Update Redux state with the updated user data
@@ -368,49 +373,6 @@ const name = () => {
     }
   };
 
-  const toggleNotifications = async () => {
-    try {
-      if (!notificationsEnabled) {
-        // Request permissions if notifications are being enabled
-        const permissionGranted = await requestNotificationPermissions();
-        setPermissionStatus(
-          permissionGranted
-            ? Notifications.PermissionStatus.GRANTED
-            : Notifications.PermissionStatus.DENIED
-        );
-
-        if (permissionGranted) {
-          // Fixed: using permissionGranted instead of status
-          setNotificationsEnabled(true);
-          Alert.alert(
-            "Notifications Enabled",
-            "You will now receive notifications from the app.",
-            [{ text: "OK" }]
-          );
-        } else {
-          // Show alert if permission denied
-          // Alert.alert(
-          //   "Permission Required",
-          //   "Notification permission is required. Please enable notifications in your device settings.",
-          //   [{ text: "OK" }],
-          // )
-        }
-      } else {
-        // Simply disable notifications in the app
-        setNotificationsEnabled(false);
-        // Alert.alert("Notifications Disabled", "You will no longer receive notifications from the app.", [
-        //   { text: "OK" },
-        // ])
-      }
-    } catch (error) {
-      console.error("Error toggling notifications:", error);
-      Alert.alert(
-        "Error",
-        "There was a problem updating your notification settings.",
-        [{ text: "OK" }]
-      );
-    }
-  };
 
   // Name handlers
   const handleSaveName = async (newName: string) => {
@@ -419,13 +381,6 @@ const name = () => {
       await updateProfile("name", newName);
     }
     setIsEditingName(false);
-  };
-
-  // Pregnancy week handlers
-  const handleSavePregnancyWeek = async (newWeek: number) => {
-    setPregnancyWeek(newWeek);
-    await updateProfile("week", newWeek);
-    setIsEditingPregnancyWeek(false);
   };
 
   // Email handlers
@@ -442,6 +397,38 @@ const name = () => {
     setAge(newAge);
     await updateProfile("age", newAge);
     setIsEditingAge(false);
+  };
+
+  // Phone Number handlers
+  const handleSavePhoneNumber = async (newPhoneNumber: string) => {
+    if (newPhoneNumber.trim()) {
+      setPhoneNumber(newPhoneNumber);
+      await updateProfile("phoneNumber", newPhoneNumber);
+    }
+    setIsEditingPhoneNumber(false);
+  };
+
+  // Pregnancy Week handlers
+  const handleSavePregnancyWeek = async (newWeek: number) => {
+    setPregnancyWeek(newWeek);
+    await updateProfile("week", newWeek);
+    setIsEditingPregnancyWeek(false);
+  };
+
+  // Notification handlers
+  const toggleNotifications = async () => {
+    try {
+      if (notificationsEnabled) {
+        // Disable notifications
+        setNotificationsEnabled(false);
+      } else {
+        // Request permission and enable notifications
+        const hasPermission = await requestNotificationPermissions();
+        setNotificationsEnabled(hasPermission);
+      }
+    } catch (error) {
+      console.error("Error toggling notifications:", error);
+    }
   };
 
   const logout = async () => {
@@ -541,16 +528,31 @@ const name = () => {
             />
           )}
 
+          {isEditingPhoneNumber ? (
+            <EditableNameField
+              label={t('profile.phoneNumber')}
+              value={phoneNumber}
+              onSave={handleSavePhoneNumber}
+              onCancel={() => setIsEditingPhoneNumber(false)}
+            />
+          ) : (
+            <ProfileField
+              label={t('profile.phoneNumber')}
+              value={phoneNumber}
+              onEdit={() => setIsEditingPhoneNumber(true)}
+            />
+          )}
+
           {/* {isEditingPregnancyWeek ? (
-            <EditablePregnancyWeekField
-              label="Week of Pregnancy"
-              week={pregnancyWeek}
+            <EditableAgeField
+              label={t('profile.pregnancyWeek')}
+              age={pregnancyWeek}
               onSave={handleSavePregnancyWeek}
               onCancel={() => setIsEditingPregnancyWeek(false)}
             />
           ) : (
             <ProfileField
-              label="Week of Pregnancy"
+              label={t('profile.pregnancyWeek')}
               value={`Week ${pregnancyWeek}`}
               onEdit={() => setIsEditingPregnancyWeek(true)}
             />

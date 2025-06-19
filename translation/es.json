@@ -114,7 +114,7 @@
   },
   "cards": {
     "askDoula": {
-      "title": "Pregunta a tu Doula",
+      "title": "CrossCare Concierge",
       "description": "Personalizada para tu embarazo"
     },
     "calendar": {
@@ -175,6 +175,7 @@
     "name": "Nombre",
     "email": "Correo electrónico",
     "age": "Edad",
+    "phoneNumber": "Número de teléfono",
     "yourpregnancy": "Tu embarazo",
     "weekofpregnancy": "Semana de embarazo",
     "progresstracking": "Seguimiento de progreso",
@@ -445,6 +446,7 @@
   },
   "allowNotification": "Permitir notificaciones",
   "weeksRemaining": "semanas restantes",
+  "weeksComplete": "semanas completas",
   "baby": "Bebé",
   "babyDescription": "En la semana 8, el embrión se parece cada vez más a un ser humano, en lugar de un alienígena. La cabeza es aproximadamente la mitad de la longitud total del cuerpo.",
   "mom": "Mamá",

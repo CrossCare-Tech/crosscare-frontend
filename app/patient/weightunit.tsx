@@ -1,44 +1,27 @@
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "react-native";
 import { router } from "expo-router";
 import { Feather, Ionicons } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTranslation } from "react-i18next";
+import { useUnitStore, WeightUnit } from "@/zustandStore/unitStore";
 
 const weightunit = () => {
-
   const {t} = useTranslation();
+  const { weightUnit, setWeightUnit } = useUnitStore();
+  const [selectedUnit, setSelectedUnit] = useState<WeightUnit>(weightUnit);
 
-    const [selectedUnit, setSelectedUnit] = useState('kg');
+  useEffect(() => {
+    setSelectedUnit(weightUnit);
+  }, [weightUnit]);
 
-    useEffect(() => {
-      const loadWeightUnit = async () => {
-          try {
-              const storedUnit = await AsyncStorage.getItem('weightUnit');
-              if (storedUnit) {
-                  setSelectedUnit(storedUnit);
-              }
-          } catch (error) {
-              console.error("Error loading weight unit:", error);
-          }
-      };
-      
-      loadWeightUnit();
-  }, []);
-
-  const handleSave = async () => {
-      try {
-          // Save the selected unit to AsyncStorage
-          await AsyncStorage.setItem('weightUnit', selectedUnit);
-          // Go back to the previous screen
-          router.back();
-          
-      } catch (error) {
-          console.error("Error saving weight unit:", error);
-      }
+  const handleSave = () => {
+    // Save the selected unit to the store
+    setWeightUnit(selectedUnit);
+    router.back();
   };
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
@@ -52,7 +35,7 @@ const weightunit = () => {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{t('title')}</Text>
         <TouchableOpacity onPress={handleSave}>
-            <Text>{t('save')}</Text>
+            <Text style={styles.saveText}>{t('save')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -66,11 +49,9 @@ const weightunit = () => {
           >
             <Text style={styles.optionText}>{t('kg')}</Text>
             {selectedUnit === 'kg' && (
-              <Ionicons name="checkmark" size={16} color="#E89545" />
+              <Ionicons name="checkmark" size={16} color="#007AFF" />
             )}
           </TouchableOpacity>
-          
-          {/* <View style={styles.separator} /> */}
           
           <TouchableOpacity 
             style={styles.optionRow}
@@ -78,7 +59,7 @@ const weightunit = () => {
           >
             <Text style={styles.optionText}>{t('lbs')}</Text>
             {selectedUnit === 'lbs' && (
-              <Ionicons name="checkmark" size={16} color="#E89545" />
+              <Ionicons name="checkmark" size={16} color="#007AFF" />
             )}
           </TouchableOpacity>
         </View>
@@ -108,6 +89,11 @@ const styles = StyleSheet.create({
   backButton: {
     padding: 8,
   },
+  saveText: {
+    fontSize: 14,
+    fontFamily: "Inter500",
+    color: "#007AFF",
+  },
   content: {
     flex: 1,
     paddingTop: 20,
@@ -121,8 +107,6 @@ const styles = StyleSheet.create({
   optionsContainer: {
     backgroundColor: '#fff',
     paddingHorizontal:10,
-    // borderTopWidth: StyleSheet.hairlineWidth,
-    // borderBottomWidth: StyleSheet.hairlineWidth,
     borderColor: '#C8C7CC',
   },
   optionRow: {

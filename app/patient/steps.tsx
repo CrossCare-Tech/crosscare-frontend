@@ -23,7 +23,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import StepsIcon from "@/assets/images/Svg/StepsIcon";
 import { LinearGradient } from "expo-linear-gradient";
-import StepsModal from "./modal/stepsmodal";
 import { useSelector } from "react-redux";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFitbit } from "@/zustandStore/useFitbitStore";
@@ -106,7 +105,6 @@ const emptyTodayData = [
 
 const step = () => {
   const [stepGoal, setStepGoal] = useState<number | null>(null);
-  const [modalVisible, setModalVisible] = useState(false);
   const [stepsWalked, setStepsWalked] = useState(0); // This can be dynamic based on actual step count
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const user = useSelector((state: any) => state.user);
@@ -146,7 +144,7 @@ const step = () => {
   const [dropdownVisible, setDropdownVisible] = useState(false);
 
   // Ref for the period selector button to measure its position
-  const periodSelectorRef = useRef<TouchableOpacity>(null);
+  const periodSelectorRef = useRef<View>(null);
   // State to store the dropdown position
   const [dropdownPosition, setDropdownPosition] = useState({
     top: 0,
@@ -160,6 +158,8 @@ const step = () => {
     disconnect,
     getStepsData,
     getDataForRange,
+    getStepsGoal,
+    syncStepsGoalWithBackend
   } = useFitbit();
 
   const [initialCheckDone, setInitialCheckDone] = useState(false);
@@ -178,6 +178,26 @@ const step = () => {
 
     checkInitialConnection();
   }, []);
+
+  // Update the steps goal fetching effect
+  useEffect(() => {
+    const fetchAndSyncStepsGoal = async () => {
+      if (isConnected && user?.user_id) {
+        try {
+          // Get steps goal from Fitbit and sync with backend
+          const syncedGoal = await syncStepsGoalWithBackend(user.user_id);
+          if (syncedGoal) {
+            setStepGoal(syncedGoal);
+            console.log("Steps goal synced:", syncedGoal);
+          }
+        } catch (error) {
+          console.error('Error fetching and syncing steps goal:', error);
+        }
+      }
+    }
+
+    fetchAndSyncStepsGoal();
+  }, [isConnected, user?.user_id])
 
   const handleFitbitConnection = async () => {
     if (isConnected) {
@@ -288,19 +308,10 @@ const step = () => {
     }
   };
 
+  // Refresh step data when Fitbit connection status changes
   useEffect(() => {
     if (isConnected) {
-      console.log("Setting up 1-minute refresh interval for Fitbit data");
-      // Set up interval to refresh data every 1 minute when connected to Fitbit
-      const refreshInterval = setInterval(() => {
-        console.log("Refreshing Fitbit data...");
-        getStepStatus();
-      }, 10000); // 1 minute (60000 milliseconds)
-
-      return () => {
-        console.log("Clearing Fitbit refresh interval");
-        clearInterval(refreshInterval);
-      };
+      getStepStatus();
     }
   }, [isConnected]);
 
@@ -772,14 +783,6 @@ const step = () => {
     return () => clearInterval(checkInterval);
   }, []);
 
-  const handleSaveGoal = async (steps: string) => {
-    const parsedSteps = Number.parseInt(steps, 10);
-    if (!isNaN(parsedSteps) && parsedSteps > 0) {
-      setStepGoal(parsedSteps);
-      setModalVisible(false);
-    }
-  };
-
   // Calculate y-axis values using useMemo to prevent recalculation on every render
   const { yAxisLabels, roundedMax, roundedMin } = useMemo(() => {
     // Step values are divided by 1000 to represent in thousands
@@ -1102,18 +1105,16 @@ const step = () => {
                 }}
               >
                 {stepGoal ? `of ${stepGoal} ${t('stepScreen.stepsWalked')}` : t('stepScreen.stepsWalked')}
+                {isConnected && stepGoal && (
+                  <Text style={{ fontSize: 12, color: "#5E4FA2" }}></Text>
+                )}
               </Text>
             </Text>
-            <TouchableOpacity
-              style={styles.editButton}
-              onPress={() => setModalVisible(true)}
-            >
-              <FontAwesome5 name="pen" size={15} color="#707070" />
-            </TouchableOpacity>
           </View>
         </View>
 
         {/* Connect to Application Section */}
+        {Platform.OS === 'ios' && (
         <View style={styles.sectionContainer}>
           <Text style={styles.sectionTitle}>{t('stepScreen.connectToApplication')}</Text>
           <View style={styles.connectItem}>
@@ -1122,14 +1123,15 @@ const step = () => {
               style={{ width: 24, height: 24 }}
             />
             <Text style={styles.connectText}>
-              {Platform.OS === "ios" ? t('stepScreen.appleHealth') : t('stepScreen.samsungHealth')}
+            {t('stepScreen.appleHealth')}
             </Text>
             <TouchableOpacity>
               <Text style={styles.connectButton}>{t('stepScreen.connect')}</Text>
             </TouchableOpacity>
           </View>
         </View>
-
+        )}
+        
         {/* Connect to Device Section */}
         <View style={styles.sectionContainer}>
           <Text style={styles.sectionTitle}>{t('stepScreen.connectToDevice')}</Text>
@@ -1302,13 +1304,6 @@ const step = () => {
           </View>
         </TouchableOpacity>
       </Modal>
-
-      <StepsModal
-        visible={modalVisible}
-        onClose={() => setModalVisible(false)}
-        onSave={handleSaveGoal}
-        reload={getStepStatus}
-      />
     </SafeAreaView>
   );
 };

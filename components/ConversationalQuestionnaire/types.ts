@@ -4,7 +4,7 @@ import { ConversationContext } from '../../utils/ConversationalSystem/Conversati
 
 export interface ConversationalQuestionnaireProps {
   userId: string;
-  onQuestionReady: (question: string) => void;
+  onQuestionReady: (question: string, isEducational?: boolean) => void;
   onQuestionnaireComplete: () => void;
   onResponseSaved: (response: QuestionnaireResponse) => void;
   setIsPaused: (val: boolean) => void,
