@@ -887,8 +887,8 @@ export default function askdoula() {
         "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
 
       // Your API key should be stored in an environment variable in production
-      const apiKey = `${CONFIG.GEMINI_API_KEY}`; // Replace with your actual API key
-
+      const apiKey = `${CONFIG.GEMINI_API_KEY}` || process.env.GEMINI_API; // Replace with your actual API key
+      console.log("API KEY %%%",apiKey,process.env.GEMINI_API);
       // Create enhanced prompt with health data if available
       let enhancedPrompt = systemPrompt;
 
@@ -2055,11 +2055,11 @@ export default function askdoula() {
                 >
                   {!message.isUser && (
                     <Image
-                      source={{
-                        uri:
-                          user?.avatar_url ||
-                          "https://tskzddfyjazcirdvloch.supabase.co/storage/v1/object/public/cross-care/avatars/avatar-660e8400-e29b-41d4-a716-446655440014-46d376a4-820f-45d8-82cb-82766db041fa.jpg",
-                      }}
+                      source={user.avatar_url?
+                        {uri:
+                        user.avatar_url} :
+                          require("../../assets/images/doulaImg.png")
+                      }
                       style={styles.doulaAvatar}
                     />
                   )}

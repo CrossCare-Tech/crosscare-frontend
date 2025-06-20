@@ -15,7 +15,7 @@ interface FloatingContextType {
   hideMessage: () => void
 }
 
-const EXCLUDED_ROUTES = ["/login", "/signup", "/forget-password", "/patient/askdoula", '/avatar', '/patient/profile-setting/earnbadge']
+const EXCLUDED_ROUTES = ["/login", "/signup", "/forget-password", "/patient/askdoula", '/avatar', '/patient/profile-setting/earnbadge','/verify-email']
 
 const FloatingContext = createContext<FloatingContextType | undefined>(undefined)
 

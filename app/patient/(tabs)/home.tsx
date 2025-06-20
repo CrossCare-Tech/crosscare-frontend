@@ -154,19 +154,17 @@ const Home = () => {
   const userId = user?.user_id;
 
   const cardData1 = [
+    
     {
-      id: "1",
+      id: "0",
       title: t("cards.askDoula.title"),
       description: t("cards.askDoula.description"),
       bg1: "#FBBBE9", // Light pink
       bg2: "#E162BC", // Deep pink
-      // ✅ Use the user's avatar if available, otherwise fall back to doulaImg.png
       image1:
         user?.avatar_url && user.avatar_url.trim() !== ""
           ? { uri: user.avatar_url }
-          : {
-              uri: "https://sfpyewutvgmsmlywgcor.supabase.co/storage/v1/object/public/crosscare/avatars/avatar-1f454ac3-fcc6-48c1-a5b8-9f7c77bb2bb0-ed0c26a3-ba05-43cc-a6bd-6b875fa99687.jpg",
-            },
+          : require("../../../assets/images/doulaImg.png"),
       onPress: () => {
         router.push({
           pathname: "/patient/askdoula",
@@ -199,7 +197,7 @@ const Home = () => {
     id: String(item.id), // Ensure id is a number
     onPress: item.onPress || (() => {}),
   }));
-
+  
   useEffect(() => {
     const setAllVisited = async () => {
       if (userId) {
@@ -1062,6 +1060,10 @@ const Home = () => {
           contentContainerStyle={styles.cardContainer}
           showsVerticalScrollIndicator={false}
         />
+        {/* Copyright Notice */}
+<View style={styles.copyrightContainer}>
+  <Text style={styles.copyrightText}>© 2024 Cross Care Tech</Text>
+</View>
       </ScrollView>
 
       <PregnancyModal
@@ -1076,6 +1078,18 @@ const Home = () => {
 export default Home;
 
 const styles = StyleSheet.create({
+  copyrightContainer: {
+  alignItems: "center",
+  paddingVertical: 20,
+  paddingHorizontal: 20,
+  
+},
+copyrightText: {
+  fontSize: 12,
+  color: "#888",
+  fontFamily: "DMSans400",
+  textAlign: "center",
+},
   cardContainer: {
     // padding: 20,
     marginTop: 10,

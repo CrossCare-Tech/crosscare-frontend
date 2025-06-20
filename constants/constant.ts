@@ -37,63 +37,6 @@ export const onBoardingData: onBoardingDataType[] = [
  * @param sleepTime The target time to sleep
  * @returns An array of optimal wake-up times
  */
-export const calculateWakeupTimes = (
-  wakeUpTime: Date
-): Array<{
-  time: string;
-  cycles: number;
-  hours: number;
-  mood: "happy" | "neutral" | "sad";
-  color: string;
-}> => {
-  const times = [];
-  const cycleLength = 90; // Sleep cycle duration in minutes
-
-  const adjustedSleepTime = new Date(wakeUpTime.getTime())
-  adjustedSleepTime.setMinutes(adjustedSleepTime.getMinutes())
-
-  for (let cycles = 6; cycles >= 1; cycles--) {
-    // Create a new Date object to avoid mutating wakeUpTime
-    const wakeUpTime = new Date(adjustedSleepTime.getTime())
-    wakeUpTime.setMinutes(wakeUpTime.getMinutes() + cycles * cycleLength)
-
-    // Format sleep time correctly
-    const formattedTime = wakeUpTime.toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    });
-
-    // Calculate sleep duration in hours
-    const hours = (cycles * cycleLength) / 60;
-
-    // Determine mood & color
-    let mood: "happy" | "neutral" | "sad";
-    let color: string;
-
-    if (cycles >= 5) {
-      mood = "happy";
-      color = "#52E186";
-    } else if (cycles >= 3) {
-      mood = "neutral";
-      color = "#FFD764";
-    } else {
-      mood = "sad";
-      color = "#FF7575";
-    }
-
-    times.push({
-      time: formattedTime,
-      cycles,
-      hours,
-      mood,
-      color,
-    });
-  }
-
-  return times;
-};
-
 export const calculateBedtimes = (
   wakeUpTime: Date,
 ): Array<{
@@ -105,16 +48,17 @@ export const calculateBedtimes = (
 }> => {
   const times = [];
   const cycleLength = 90; // Sleep cycle duration in minutes
+  const fallAsleepBuffer = 15; // 15 minutes to fall asleep
   
   // Loop through the cycles to generate different bedtime options
   for (let cycles = 6; cycles >= 1; cycles--) {
-    const sleepTime = new Date(wakeUpTime.getTime());
+    const bedTime = new Date(wakeUpTime.getTime());
 
-    // Subtract cycle length from the wake-up time to get the bedtime
-    sleepTime.setMinutes(sleepTime.getMinutes() + (cycles * cycleLength));
+    // Subtract cycle length and fall asleep buffer from wake-up time to get bedtime
+    bedTime.setMinutes(bedTime.getMinutes() - (cycles * cycleLength) - fallAsleepBuffer);
 
     // Format the bedtime into a 12-hour time format
-    const formattedTime = sleepTime.toLocaleTimeString("en-US", {
+    const formattedTime = bedTime.toLocaleTimeString("en-US", {
       hour: "numeric",
       minute: "2-digit",
       hour12: true,
@@ -150,6 +94,62 @@ export const calculateBedtimes = (
   return times;
 };
 
+export const calculateWakeupTimes = (
+  bedTime: Date
+): Array<{
+  time: string;
+  cycles: number;
+  hours: number;
+  mood: "happy" | "neutral" | "sad";
+  color: string;
+}> => {
+  const times = [];
+  const cycleLength = 90; // Sleep cycle duration in minutes
+  const fallAsleepBuffer = 15; // 15 minutes to fall asleep
+
+  for (let cycles = 1; cycles <= 6; cycles++) {
+    // Create a new Date object to avoid mutating bedTime
+    const wakeUpTime = new Date(bedTime.getTime());
+    
+    // Add cycle length and fall asleep buffer to bedtime to get wake up time
+    wakeUpTime.setMinutes(wakeUpTime.getMinutes() + (cycles * cycleLength) + fallAsleepBuffer);
+
+    // Format wake up time correctly
+    const formattedTime = wakeUpTime.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+
+    // Calculate sleep duration in hours
+    const hours = (cycles * cycleLength) / 60;
+
+    // Determine mood & color
+    let mood: "happy" | "neutral" | "sad";
+    let color: string;
+
+    if (cycles >= 5) {
+      mood = "happy";
+      color = "#52E186";
+    } else if (cycles >= 3) {
+      mood = "neutral";
+      color = "#FFD764";
+    } else {
+      mood = "sad";
+      color = "#FF7575";
+    }
+
+    times.push({
+      time: formattedTime,
+      cycles,
+      hours,
+      mood,
+      color,
+    });
+  }
+
+  return times;
+};
 
 
 /**
