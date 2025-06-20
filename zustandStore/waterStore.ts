@@ -80,8 +80,11 @@ export const useWaterStore = create<WaterStore>()(
       },
 
       setGlassCount: (count) => {
-        // Check for new day before setting glass count
-        get().checkAndResetForNewDay();
+        // Only check for new day if significantly different or first time
+        const currentCount = get().glassCount;
+        if (currentCount === 0 || Math.abs(currentCount - count) > 2) {
+          get().checkAndResetForNewDay();
+        }
 
         set({
           glassCount: Number(count),
