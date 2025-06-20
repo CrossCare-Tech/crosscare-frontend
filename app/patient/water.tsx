@@ -38,6 +38,7 @@ import {
   convertMlToFlOz,
 } from "@/zustandStore/unitStore";
 import { CONFIG } from "@/constants/config";
+import { useCallback } from "react";
 
 const MAX_HEIGHT = 200;
 const BAR_WIDTH = 20;
@@ -445,14 +446,44 @@ export default function water() {
       console.error("Error updating water intake:", error);
     }
   };
+  // Add this debounce utility with proper TypeScript types
+  const debounce = <T extends (...args: any[]) => any>(
+    func: T,
+    wait: number
+  ): ((...args: Parameters<T>) => void) => {
+    let timeout: NodeJS.Timeout | null = null;
 
+    return function executedFunction(...args: Parameters<T>): void {
+      const later = () => {
+        if (timeout) {
+          clearTimeout(timeout);
+        }
+        func(...args);
+      };
+
+      if (timeout) {
+        clearTimeout(timeout);
+      }
+      timeout = setTimeout(later, wait);
+    };
+  };
   // Update the glassCount useEffect to use the modified postWaterIntake function
-  useEffect(() => {
-    // Skip the initial render when glassCount is 0
-    if (glassCount === 0) return;
+  const debouncedPostWaterIntake = useCallback(
+    debounce((count) => {
+      if (count >= 0) {
+        postWaterIntake(count);
+      }
+    }, 500), // 500ms debounce
+    [user.user_id]
+  );
 
-    postWaterIntake();
-  }, [glassCount, user.user_id]);
+  // Replace the existing useEffect with this
+  useEffect(() => {
+    // Skip the initial render when glassCount is 0 and no previous data
+    if (glassCount === 0 && !waterData.length) return;
+
+    debouncedPostWaterIntake(glassCount);
+  }, [glassCount, debouncedPostWaterIntake]);
 
   // Modify the getFilteredData function to better handle date matching
   const getFilteredData = useMemo(() => {
@@ -849,7 +880,7 @@ export default function water() {
           <Slider
             style={styles.slider}
             minimumValue={0}
-            maximumValue={maxGlasses}
+            maximumValue={Math.max(maxGlasses, 1)}
             step={1}
             value={Number(glassCount)}
             onValueChange={(value) => setGlassCount(Number(value))}
@@ -859,7 +890,7 @@ export default function water() {
           />
           <View style={styles.sliderLabelContainer}>
             <Text style={styles.sliderLabel}>
-              {glassCount}
+              {glassCount || 0}
               <Text
                 style={{
                   fontSize: 14,
@@ -869,11 +900,12 @@ export default function water() {
                 }}
               >
                 {" "}
-                {glassCount
-                  ? ` of ${maxGlasses}  ${t("waterScreen.Glasses")}`
-                  : t("waterScreen.glass")}
+                {glassCount === 1
+                  ? ` of ${maxGlasses} ${t("waterScreen.glass")}`
+                  : ` of ${maxGlasses} ${t("waterScreen.Glasses")}`}
               </Text>
             </Text>
+
             <TouchableOpacity onPress={openGoalModal}>
               <FontAwesome5 name="pen" size={15} color="#777" />
             </TouchableOpacity>
