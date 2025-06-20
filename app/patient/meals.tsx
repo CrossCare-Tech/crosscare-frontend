@@ -1159,7 +1159,7 @@ const meals = () => {
 
         <View style={styles.bottomContainer}>
           <View style={styles.messageContainer}>
-            <Text style={styles.messageTitle} numberOfLines={1}>{t('meals.trackWeightProgress')}</Text>
+            <Text style={styles.messageTitle} numberOfLines={1}>{t('meals.getYourDailyIntake')}</Text>
             <Text style={styles.messageSubtitle} numberOfLines={1}>{t('meals.setReminder')}</Text>
           </View>
           <TouchableOpacity style={styles.reminderButton}>

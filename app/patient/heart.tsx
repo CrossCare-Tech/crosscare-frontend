@@ -16,7 +16,7 @@ import {
 } from "react-native"
 import { Ionicons, Feather, MaterialIcons } from "@expo/vector-icons"
 import { SafeAreaView } from "react-native-safe-area-context"
-import { router } from "expo-router"
+import { useRouter } from "expo-router"
 import { LinearGradient } from "expo-linear-gradient"
 import HeartCard from "@/components/HeartCard"
 import { useSelector } from "react-redux"
@@ -87,6 +87,7 @@ const safeParseDate = (dateString: string | number | Date): Date | null => {
 };
 
 export default function HeartRateScreen() {
+  const router = useRouter();
   const [timeRange, setTimeRange] = useState("week") // "today", "week", "month", "lastMonth"
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
   const [tooltipAnim] = useState(new Animated.Value(0)) // Start with 0 opacity
