@@ -32,7 +32,7 @@ import Help from "@/assets/images/Svg/Help";
 import Terms from "@/assets/images/Svg/Terms";
 import { useTranslation } from "react-i18next";
 import { CONFIG } from "@/constants/config";
-import { CONFIG } from "@/constants/config";
+
 
 const ProfileField = ({
   label,

@@ -107,7 +107,7 @@ export const useWaterStore = create<WaterStore>()(
 
         try {
           const response = await fetch(
-            `${get().baseUrl}/api/user/activity/${userId}/goals`
+            `${get().baseUrl}/user/activity/${userId}/goals`
           );
           const data = await response.json();
 
