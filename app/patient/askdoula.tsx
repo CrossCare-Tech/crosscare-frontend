@@ -1462,10 +1462,15 @@ export default function askdoula() {
 
   const loadPauseState = async () => {
     try {
+      console.log("=== DEBUG loadPauseState ===");
+      console.log("User ID:", user?.user_id);
+
       // First check dedicated storage
       const state = await AsyncStorage.getItem(
         `questionnaire_paused_${user?.user_id}`
       );
+      console.log("Dedicated storage value:", state);
+
       if (state !== null) {
         const isPaused = state === "true";
         console.log(`Loaded pause state from dedicated storage: ${isPaused}`);
@@ -1476,6 +1481,8 @@ export default function askdoula() {
       const contextString = await AsyncStorage.getItem(
         `conversation_context_${user?.user_id}`
       );
+      console.log("Context string:", contextString);
+
       if (contextString) {
         const context = JSON.parse(contextString);
         const isPaused = context?.isPaused ?? true;
@@ -1483,7 +1490,8 @@ export default function askdoula() {
         return isPaused;
       }
 
-      console.log("No pause state found, defaulting to false");
+      console.log("No pause state found, defaulting to true");
+      console.log("=== END DEBUG loadPauseState ===");
       return true;
     } catch (error) {
       console.error("Error loading pause state:", error);
