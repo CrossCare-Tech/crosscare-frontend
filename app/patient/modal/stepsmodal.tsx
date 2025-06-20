@@ -1,19 +1,33 @@
-import { useState } from "react"
-import { useTranslation } from "react-i18next"
-import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput, Alert } from "react-native"
-import { useSelector } from "react-redux"
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Modal,
+  TextInput,
+  Alert,
+} from "react-native";
+import { useSelector } from "react-redux";
+import { CONFIG } from "@/constants/config";
 
 interface StepGoalModalProps {
-  visible: boolean
-  onClose: () => void
+  visible: boolean;
+  onClose: () => void;
   onSave: (steps: string) => void;
-  reload: ()=>void;
+  reload: () => void;
 }
 
-const StepsModal = ({ visible, onClose, onSave, reload }: StepGoalModalProps) => {
-  const [steps, setSteps] = useState("")
+const StepsModal = ({
+  visible,
+  onClose,
+  onSave,
+  reload,
+}: StepGoalModalProps) => {
+  const [steps, setSteps] = useState("");
   const [loading, setLoading] = useState(false);
-  const user = useSelector((state:any)=>state.user);
+  const user = useSelector((state: any) => state.user);
 
   // const handleSave = () => {
   //   onSave(steps)
@@ -34,7 +48,7 @@ const StepsModal = ({ visible, onClose, onSave, reload }: StepGoalModalProps) =>
 
     try {
       const response = await fetch(
-        `https://crosscare-backends.onrender.com/api/user/activity/${user.user_id}/stepsGoal`,
+        `${CONFIG.API_BASE_URL}/user/activity/${user.user_id}/stepsGoal`,
         {
           method: "POST",
           headers: {
@@ -45,7 +59,6 @@ const StepsModal = ({ visible, onClose, onSave, reload }: StepGoalModalProps) =>
       );
 
       const responseData = await response.json();
-
 
       console.log("API Response:", responseData);
       onSave(steps);
@@ -61,17 +74,22 @@ const StepsModal = ({ visible, onClose, onSave, reload }: StepGoalModalProps) =>
   };
 
   const handleCancel = () => {
-    setSteps("")
-    onClose()
-  }
+    setSteps("");
+    onClose();
+  };
 
-  const {t} = useTranslation();
+  const { t } = useTranslation();
 
   return (
-    <Modal transparent={true} visible={visible} animationType="fade" onRequestClose={onClose}>
+    <Modal
+      transparent={true}
+      visible={visible}
+      animationType="fade"
+      onRequestClose={onClose}
+    >
       <View style={styles.modalOverlay}>
         <View style={styles.modalContainer}>
-          <Text style={styles.modalTitle}>{t('stepScreen.setGoal')}</Text>
+          <Text style={styles.modalTitle}>{t("stepScreen.setGoal")}</Text>
 
           <View style={styles.inputContainer}>
             <TextInput
@@ -79,25 +97,30 @@ const StepsModal = ({ visible, onClose, onSave, reload }: StepGoalModalProps) =>
               value={steps}
               onChangeText={setSteps}
               keyboardType="numeric"
-              placeholder={t('steps')}
+              placeholder={t("steps")}
               placeholderTextColor="#ccc"
             />
           </View>
 
           <View style={styles.buttonContainer}>
-            <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
-              <Text style={styles.cancelButtonText}>{t('cancel')}</Text>
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={handleCancel}
+            >
+              <Text style={styles.cancelButtonText}>{t("cancel")}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-              <Text style={styles.saveButtonText} numberOfLines={1}>{t('stepScreen.saveGoal')}</Text>
+              <Text style={styles.saveButtonText} numberOfLines={1}>
+                {t("stepScreen.saveGoal")}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
       </View>
     </Modal>
-  )
-}
+  );
+};
 
 const styles = StyleSheet.create({
   modalOverlay: {
@@ -135,8 +158,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E0E0E0",
     borderRadius: 10,
-    paddingHorizontal:32,
-    paddingVertical:12,
+    paddingHorizontal: 32,
+    paddingVertical: 12,
     fontSize: 14,
     textAlign: "center",
     fontFamily: "Inter500",
@@ -160,17 +183,17 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 32,
-    borderWidth:2,
-    boxShadow:'0px 0px 4px 0px rgba(0, 0, 0, 0.25) inset, 0px 0px 2.6px 0px rgba(0, 0, 0, 0.32);',
-    borderColor:'#7E72B5'
+    borderWidth: 2,
+    boxShadow:
+      "0px 0px 4px 0px rgba(0, 0, 0, 0.25) inset, 0px 0px 2.6px 0px rgba(0, 0, 0, 0.32);",
+    borderColor: "#7E72B5",
   },
   saveButtonText: {
     color: "white",
     fontSize: 14,
-    maxWidth:130,
+    maxWidth: 130,
     fontFamily: "Inter500",
   },
-})
+});
 
-export default StepsModal
-
+export default StepsModal;

@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { CONFIG } from "@/constants/config";
 
 // Helper function to get today's date in YYYY-MM-DD format
 const getTodayDate = () => new Date().toISOString().split("T")[0];
@@ -23,7 +24,7 @@ interface WaterStore {
 export const useWaterStore = create<WaterStore>()(
   persist(
     (set, get) => ({
-      baseUrl: "https://crosscare-backends.onrender.com",
+      baseUrl: `${CONFIG.API_BASE_URL}`,
       glassCount: 0,
       maxGlasses: 0,
       lastAccessedDate: null,

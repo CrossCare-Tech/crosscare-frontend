@@ -15,7 +15,11 @@ import { router } from "expo-router";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
-import { scheduleMedicationReminder, areMedicationRemindersEnabled } from "@/utils/NotificationManager";
+import {
+  scheduleMedicationReminder,
+  areMedicationRemindersEnabled,
+} from "@/utils/NotificationManager";
+import { CONFIG } from "@/constants/config";
 
 interface MedicationState {
   setMedicationName: string;
@@ -40,7 +44,7 @@ export default function addmedication() {
     selectedTimes: [],
   });
 
-  const user = useSelector((state:any)=>state.user);
+  const user = useSelector((state: any) => state.user);
 
   const days = ["SU", "M", "T", "W", "TH", "F", "SA"];
 
@@ -127,30 +131,30 @@ export default function addmedication() {
       alert("Please enter the medication name.");
       return;
     }
-  
+
     if (!state.startDate) {
       alert("Please select a start date.");
       return;
     }
-  
+
     if (!state.endDate) {
       alert("Please select an end date.");
       return;
     }
-  
+
     if (state.selectedDays.length === 0) {
       alert("Please select at least one day.");
       return;
     }
-  
+
     if (state.selectedTimes.length === 0) {
       alert("Please add at least one time.");
       return;
     }
-  
+
     try {
-      const apiUrl = `https://crosscare-backends.onrender.com/api/user/activity/${user.user_id}/addMedication`;
-  
+      const apiUrl = `${CONFIG.API_BASE_URL}/user/activity/${user.user_id}/addMedication`;
+
       const payload = {
         medicationName: state.setMedicationName,
         days: state.selectedDays,
@@ -158,9 +162,9 @@ export default function addmedication() {
         endDate: state.endDate.toISOString().split("T")[0],
         times: state.selectedTimes,
       };
-  
+
       console.log("Submitting Data: ", payload);
-  
+
       const response = await fetch(apiUrl, {
         method: "POST",
         headers: {
@@ -168,41 +172,49 @@ export default function addmedication() {
         },
         body: JSON.stringify(payload),
       });
-  
+
       const data = await response.json();
-  
+
       if (response.ok) {
         console.log("Success:", data);
-        
+
         // Schedule reminders for the new medication
         try {
           const remindersEnabled = await areMedicationRemindersEnabled();
-          console.log('Medication reminders enabled:', remindersEnabled);
-          
+          console.log("Medication reminders enabled:", remindersEnabled);
+
           if (remindersEnabled) {
             // Map day abbreviations to numbers
             const dayMapping: { [key: string]: number } = {
-              SU: 0, M: 1, T: 2, W: 3, TH: 4, F: 5, SA: 6,
+              SU: 0,
+              M: 1,
+              T: 2,
+              W: 3,
+              TH: 4,
+              F: 5,
+              SA: 6,
             };
 
-            const allowedDays = state.selectedDays.map((d: string) => dayMapping[d]);
-            console.log('Allowed days:', allowedDays);
-            console.log('Selected times:', state.selectedTimes);
-            
+            const allowedDays = state.selectedDays.map(
+              (d: string) => dayMapping[d]
+            );
+            console.log("Allowed days:", allowedDays);
+            console.log("Selected times:", state.selectedTimes);
+
             // For each day in the date range that matches selected days
             const currentDate = new Date(state.startDate);
             const endDate = new Date(state.endDate);
-            
+
             while (currentDate <= endDate) {
               if (allowedDays.includes(currentDate.getDay())) {
                 console.log(`Processing date: ${currentDate.toDateString()}`);
-                
+
                 // For each selected time, schedule reminders
                 for (const timeString of state.selectedTimes) {
                   try {
                     // Parse the time string (format: "HH:MM")
-                    const [hours, minutes] = timeString.split(':').map(Number);
-                    
+                    const [hours, minutes] = timeString.split(":").map(Number);
+
                     // Create a new date object for this medication time
                     const medicationDateTime = new Date(currentDate);
                     medicationDateTime.setHours(hours, minutes, 0, 0);
@@ -212,11 +224,16 @@ export default function addmedication() {
 
                     // Only schedule if it's in the future
                     if (medicationDateTime > new Date()) {
-                      const medicationId = data.data?.id || data.id || 'new-medication';
-                      const uniqueId = `${medicationId}-${currentDate.toISOString().split('T')[0]}-${timeString}`;
-                      
-                      console.log(`Scheduling reminder for: ${state.setMedicationName} at ${medicationDateTime} with ID: ${uniqueId}`);
-                      
+                      const medicationId =
+                        data.data?.id || data.id || "new-medication";
+                      const uniqueId = `${medicationId}-${
+                        currentDate.toISOString().split("T")[0]
+                      }-${timeString}`;
+
+                      console.log(
+                        `Scheduling reminder for: ${state.setMedicationName} at ${medicationDateTime} with ID: ${uniqueId}`
+                      );
+
                       const reminderIds = await scheduleMedicationReminder(
                         medicationDateTime,
                         state.setMedicationName,
@@ -224,15 +241,28 @@ export default function addmedication() {
                       );
 
                       if (reminderIds && reminderIds.length > 0) {
-                        console.log(`✅ Scheduled ${reminderIds.length} reminders for ${state.setMedicationName} on ${currentDate.toDateString()} at ${timeString}`);
+                        console.log(
+                          `✅ Scheduled ${reminderIds.length} reminders for ${
+                            state.setMedicationName
+                          } on ${currentDate.toDateString()} at ${timeString}`
+                        );
                       } else {
-                        console.log(`⚠️ No reminders scheduled for ${state.setMedicationName} on ${currentDate.toDateString()} at ${timeString}`);
+                        console.log(
+                          `⚠️ No reminders scheduled for ${
+                            state.setMedicationName
+                          } on ${currentDate.toDateString()} at ${timeString}`
+                        );
                       }
                     } else {
-                      console.log(`⏭️ Skipping past time: ${medicationDateTime}`);
+                      console.log(
+                        `⏭️ Skipping past time: ${medicationDateTime}`
+                      );
                     }
                   } catch (error) {
-                    console.error('Error scheduling individual medication reminder:', error);
+                    console.error(
+                      "Error scheduling individual medication reminder:",
+                      error
+                    );
                   }
                 }
               }
@@ -240,13 +270,18 @@ export default function addmedication() {
               currentDate.setDate(currentDate.getDate() + 1);
             }
           } else {
-            console.log('Medication reminders are disabled, skipping reminder scheduling');
+            console.log(
+              "Medication reminders are disabled, skipping reminder scheduling"
+            );
           }
         } catch (reminderError) {
-          console.error('Error scheduling medication reminders:', reminderError);
+          console.error(
+            "Error scheduling medication reminders:",
+            reminderError
+          );
           // Don't fail the entire operation if reminder scheduling fails
         }
-        
+
         // Navigate back regardless of reminder scheduling success/failure
         router.back();
       } else {
@@ -259,8 +294,7 @@ export default function addmedication() {
     }
   };
 
-  const {t} = useTranslation();
-  
+  const { t } = useTranslation();
 
   return (
     <SafeAreaView style={styles.container}>
@@ -272,17 +306,17 @@ export default function addmedication() {
         >
           <Ionicons name="chevron-back" size={20} color="black" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{t('addNewMedication')}</Text>
+        <Text style={styles.headerTitle}>{t("addNewMedication")}</Text>
         <View style={{ width: 25, height: 1 }} />
       </View>
 
       <ScrollView style={styles.content}>
         <View style={{ flexDirection: "column", gap: 36 }}>
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{t('medicationName')}</Text>
+            <Text style={styles.sectionTitle}>{t("medicationName")}</Text>
             <TextInput
               placeholderTextColor={"#7B7B7B"}
-              placeholder={t('medicationName')}
+              placeholder={t("medicationName")}
               style={styles.input}
               value={state.setMedicationName}
               onChangeText={(text) =>
@@ -295,7 +329,7 @@ export default function addmedication() {
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{t('startAndEndDate')}</Text>
+            <Text style={styles.sectionTitle}>{t("startAndEndDate")}</Text>
             <View style={styles.dateContainer}>
               <TouchableOpacity
                 style={styles.dateButton}
@@ -307,7 +341,9 @@ export default function addmedication() {
                     !state.startDate && styles.dateButtonPlaceholder,
                   ]}
                 >
-                  {state.startDate ? formatDate(state.startDate) : t('startDate')}
+                  {state.startDate
+                    ? formatDate(state.startDate)
+                    : t("startDate")}
                 </Text>
                 <Ionicons name="calendar-outline" size={16} color="#00A884" />
               </TouchableOpacity>
@@ -320,9 +356,10 @@ export default function addmedication() {
                   style={[
                     styles.dateButtonText,
                     !state.endDate && styles.dateButtonPlaceholder,
-                  ]} numberOfLines={1}
+                  ]}
+                  numberOfLines={1}
                 >
-                  {state.endDate ? formatDate(state.endDate) :  t('endDate')}
+                  {state.endDate ? formatDate(state.endDate) : t("endDate")}
                 </Text>
                 <Ionicons name="calendar-outline" size={16} color="#00A884" />
               </TouchableOpacity>
@@ -351,7 +388,7 @@ export default function addmedication() {
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{t('days')}</Text>
+            <Text style={styles.sectionTitle}>{t("days")}</Text>
             <View style={styles.daysContainer}>
               {days.map((day) => (
                 <Pressable
@@ -378,7 +415,7 @@ export default function addmedication() {
 
           {/* Time Selection */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{t('time')}</Text>
+            <Text style={styles.sectionTitle}>{t("time")}</Text>
 
             {state.selectedTimes.length === 0 ? (
               // Show this when no times are added
@@ -389,7 +426,7 @@ export default function addmedication() {
                 }
               >
                 <Ionicons name="add" size={16} color="#00A991" />
-                <Text style={styles.addTimeText}>{t('addTime')}</Text>
+                <Text style={styles.addTimeText}>{t("addTime")}</Text>
               </TouchableOpacity>
             ) : (
               // Show this when times are added
@@ -432,7 +469,7 @@ export default function addmedication() {
             style={styles.addMedicationButton}
             onPress={handleSubmit}
           >
-            <Text style={styles.addMedicationText}>{t('saveAndContinue')}</Text>
+            <Text style={styles.addMedicationText}>{t("saveAndContinue")}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

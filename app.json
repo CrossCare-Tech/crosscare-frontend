@@ -35,14 +35,13 @@
       "package": "com.crosscare.tech"
     },
     "plugins": [
-      
       "expo-router",
       [
         "expo-splash-screen",
         {
           "image": "./assets/images/app-logo.png",
-          "width":300,
-          "height":300,
+          "width": 300,
+          "height": 300,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
@@ -61,7 +60,8 @@
           "icon": "./assets/images/app-splash.png",
           "color": "#ffffff"
         }
-      ]
+      ],
+      "react-native-health"
     ],
     "experiments": {
       "typedRoutes": true

@@ -28,10 +28,10 @@ import BottomSheet, { BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import { ActivityIndicator } from "react-native";
 import UpArrow from "@/assets/images/Svg/UpArrow";
 import { LinearGradient } from "expo-linear-gradient";
-import PaginationDot from "react-native-insta-pagination-dots"
+import PaginationDot from "react-native-insta-pagination-dots";
 import Lock from "@/assets/images/Svg/Lock";
 import { useTranslation } from "react-i18next";
-
+import { CONFIG } from "@/constants/config";
 
 // Badge types constants
 const REGULAR_BADGE_TYPES = [
@@ -180,7 +180,7 @@ const NOT_EARNED_BADGE: Record<string, any> = {
 const ALL_BADGE = [...REGULAR_BADGE_TYPES, ...STREAK_BADGE_TYPES];
 
 const BADGE_TIPS: Record<string, string> = {
-  HOT_MAMA: 'badgeTips.HOT_MAMA',
+  HOT_MAMA: "badgeTips.HOT_MAMA",
   HYDRATED_QUEEN: "badgeTips.HYDRATED_QUEEN",
   RESTED_DIVA: "badgeTips.RESTED_DIVA",
   HEART_SCRIBE: "badgeTips.HEART_SCRIBE",
@@ -192,19 +192,19 @@ const BADGE_TIPS: Record<string, string> = {
   SLEEP_WIZARD_III: "badgeTips.SLEEP_WIZARD_III",
   SLEEP_WIZARD_IV: "badgeTips.SLEEP_WIZARD_IV",
   SLEEP_WIZARD_V: "badgeTips.SLEEP_WIZARD_V",
-  SLEEP_WIZARD_VI:"badgeTips.SLEEP_WIZARD_VI",
+  SLEEP_WIZARD_VI: "badgeTips.SLEEP_WIZARD_VI",
   SLEEP_WIZARD_VII: "badgeTips.SLEEP_WIZARD_VII",
-  SLEEP_WIZARD_VIII:"badgeTips.SLEEP_WIZARD_VIII",
-  SLEEP_WIZARD_IX:"badgeTips.SLEEP_WIZARD_IX",
-  WATER_WIZARD_I:"badgeTips.WATER_WIZARD_I",
-  WATER_WIZARD_II:"badgeTips.WATER_WIZARD_II",
-  WATER_WIZARD_III:"badgeTips.WATER_WIZARD_III",
-  WATER_WIZARD_IV:"badgeTips.WATER_WIZARD_IV",
-  WATER_WIZARD_V:"badgeTips.WATER_WIZARD_V",
-  WATER_WIZARD_VI:"badgeTips.WATER_WIZARD_VI",
-  WATER_WIZARD_VII:"badgeTips.WATER_WIZARD_VII",
-  WATER_WIZARD_VIII:"badgeTips.WATER_WIZARD_VIII",
-  WATER_WIZARD_IX:"badgeTips.WATER_WIZARD_IX",
+  SLEEP_WIZARD_VIII: "badgeTips.SLEEP_WIZARD_VIII",
+  SLEEP_WIZARD_IX: "badgeTips.SLEEP_WIZARD_IX",
+  WATER_WIZARD_I: "badgeTips.WATER_WIZARD_I",
+  WATER_WIZARD_II: "badgeTips.WATER_WIZARD_II",
+  WATER_WIZARD_III: "badgeTips.WATER_WIZARD_III",
+  WATER_WIZARD_IV: "badgeTips.WATER_WIZARD_IV",
+  WATER_WIZARD_V: "badgeTips.WATER_WIZARD_V",
+  WATER_WIZARD_VI: "badgeTips.WATER_WIZARD_VI",
+  WATER_WIZARD_VII: "badgeTips.WATER_WIZARD_VII",
+  WATER_WIZARD_VIII: "badgeTips.WATER_WIZARD_VIII",
+  WATER_WIZARD_IX: "badgeTips.WATER_WIZARD_IX",
   HEALTH_QUEEN_I: "badgeTips.HEALTH_QUEEN_I",
   HEALTH_QUEEN_II: "badgeTips.HEALTH_QUEEN_II",
   HEALTH_QUEEN_III: "badgeTips.HEALTH_QUEEN_III",
@@ -214,43 +214,43 @@ const BADGE_TIPS: Record<string, string> = {
   HEALTH_QUEEN_VII: "badgeTips.HEALTH_QUEEN_VII",
   HEALTH_QUEEN_VIII: "badgeTips.HEALTH_QUEEN_VIII",
   HEALTH_QUEEN_IX: "badgeTips.HEALTH_QUEEN_IX",
-  ON_THE_MOVE_I:"badgeTips.ON_THE_MOVE_I",
-  ON_THE_MOVE_II:"badgeTips.ON_THE_MOVE_II",
-  ON_THE_MOVE_III:"badgeTips.ON_THE_MOVE_III",
-  ON_THE_MOVE_IV:"badgeTips.ON_THE_MOVE_IV",
-  ON_THE_MOVE_V:"badgeTips.ON_THE_MOVE_V",
-  ON_THE_MOVE_VI:"badgeTips.ON_THE_MOVE_VI",
-  ON_THE_MOVE_VII:"badgeTips.ON_THE_MOVE_VII",
-  ON_THE_MOVE_VIII:"badgeTips.ON_THE_MOVE_VIII",
-  ON_THE_MOVE_IX:"badgeTips.ON_THE_MOVE_IX",
+  ON_THE_MOVE_I: "badgeTips.ON_THE_MOVE_I",
+  ON_THE_MOVE_II: "badgeTips.ON_THE_MOVE_II",
+  ON_THE_MOVE_III: "badgeTips.ON_THE_MOVE_III",
+  ON_THE_MOVE_IV: "badgeTips.ON_THE_MOVE_IV",
+  ON_THE_MOVE_V: "badgeTips.ON_THE_MOVE_V",
+  ON_THE_MOVE_VI: "badgeTips.ON_THE_MOVE_VI",
+  ON_THE_MOVE_VII: "badgeTips.ON_THE_MOVE_VII",
+  ON_THE_MOVE_VIII: "badgeTips.ON_THE_MOVE_VIII",
+  ON_THE_MOVE_IX: "badgeTips.ON_THE_MOVE_IX",
 };
 
 const BADGE_DESCRIPTION: Record<string, string> = {
   HOT_MAMA: "badgeDescription.HOT_MAMA",
   HYDRATED_QUEEN: "badgeDescription.HYDRATED_QUEEN",
-  RESTED_DIVA:"badgeDescription.RESTED_DIVA",
-  HEART_SCRIBE:"badgeDescription.HEART_SCRIBE",
-  GETTING_TO_KNOW_YOU:"badgeDescription.TRIVIA_QUEEN",
-  SNAPSHOT:"badgeDescription.SNAPSHOT",
-  EXPLORER:"badgeDescription.EXPLORER",
-  SLEEP_WIZARD_I:"badgeDescription.SLEEP_WIZARD_I",
-  SLEEP_WIZARD_II:"badgeDescription.SLEEP_WIZARD_II",
-  SLEEP_WIZARD_III:"badgeDescription.SLEEP_WIZARD_III",
-  SLEEP_WIZARD_IV:"badgeDescription.SLEEP_WIZARD_IV",
-  SLEEP_WIZARD_V:"badgeDescription.SLEEP_WIZARD_V",
-  SLEEP_WIZARD_VI:"badgeDescription.SLEEP_WIZARD_VI",
-  SLEEP_WIZARD_VII:"badgeDescription.SLEEP_WIZARD_VII",
-  SLEEP_WIZARD_VIII:"badgeDescription.SLEEP_WIZARD_VIII",
-  SLEEP_WIZARD_IX:"badgeDescription.SLEEP_WIZARD_IX",
-  WATER_WIZARD_I:"badgeDescription.WATER_WIZARD_I",
-  WATER_WIZARD_II:"badgeDescription.WATER_WIZARD_II",
-  WATER_WIZARD_III:"badgeDescription.WATER_WIZARD_III",
-  WATER_WIZARD_IV:"badgeDescription.WATER_WIZARD_IV",
-  WATER_WIZARD_V:"badgeDescription.WATER_WIZARD_V",
-  WATER_WIZARD_VI:"badgeDescription.WATER_WIZARD_VI",
-  WATER_WIZARD_VII:"badgeDescription.WATER_WIZARD_VII",
-  WATER_WIZARD_VIII:"badgeDescription.WATER_WIZARD_VIII",
-  WATER_WIZARD_IX:"badgeDescription.WATER_WIZARD_IX",
+  RESTED_DIVA: "badgeDescription.RESTED_DIVA",
+  HEART_SCRIBE: "badgeDescription.HEART_SCRIBE",
+  GETTING_TO_KNOW_YOU: "badgeDescription.TRIVIA_QUEEN",
+  SNAPSHOT: "badgeDescription.SNAPSHOT",
+  EXPLORER: "badgeDescription.EXPLORER",
+  SLEEP_WIZARD_I: "badgeDescription.SLEEP_WIZARD_I",
+  SLEEP_WIZARD_II: "badgeDescription.SLEEP_WIZARD_II",
+  SLEEP_WIZARD_III: "badgeDescription.SLEEP_WIZARD_III",
+  SLEEP_WIZARD_IV: "badgeDescription.SLEEP_WIZARD_IV",
+  SLEEP_WIZARD_V: "badgeDescription.SLEEP_WIZARD_V",
+  SLEEP_WIZARD_VI: "badgeDescription.SLEEP_WIZARD_VI",
+  SLEEP_WIZARD_VII: "badgeDescription.SLEEP_WIZARD_VII",
+  SLEEP_WIZARD_VIII: "badgeDescription.SLEEP_WIZARD_VIII",
+  SLEEP_WIZARD_IX: "badgeDescription.SLEEP_WIZARD_IX",
+  WATER_WIZARD_I: "badgeDescription.WATER_WIZARD_I",
+  WATER_WIZARD_II: "badgeDescription.WATER_WIZARD_II",
+  WATER_WIZARD_III: "badgeDescription.WATER_WIZARD_III",
+  WATER_WIZARD_IV: "badgeDescription.WATER_WIZARD_IV",
+  WATER_WIZARD_V: "badgeDescription.WATER_WIZARD_V",
+  WATER_WIZARD_VI: "badgeDescription.WATER_WIZARD_VI",
+  WATER_WIZARD_VII: "badgeDescription.WATER_WIZARD_VII",
+  WATER_WIZARD_VIII: "badgeDescription.WATER_WIZARD_VIII",
+  WATER_WIZARD_IX: "badgeDescription.WATER_WIZARD_IX",
   HEALTH_QUEEN_I: "badgeDescription.HEALTH_QUEEN_I",
   HEALTH_QUEEN_II: "badgeDescription.HEALTH_QUEEN_II",
   HEALTH_QUEEN_III: "badgeDescription.HEALTH_QUEEN_III",
@@ -260,15 +260,15 @@ const BADGE_DESCRIPTION: Record<string, string> = {
   HEALTH_QUEEN_VII: "badgeDescription.HEALTH_QUEEN_VII",
   HEALTH_QUEEN_VIII: "badgeDescription.HEALTH_QUEEN_VIII",
   HEALTH_QUEEN_IX: "badgeDescription.HEALTH_QUEEN_IX",
-  ON_THE_MOVE_I:"badgeDescription.ON_THE_MOVE_I",
+  ON_THE_MOVE_I: "badgeDescription.ON_THE_MOVE_I",
   ON_THE_MOVE_II: "badgeDescription.ON_THE_MOVE_II",
-  ON_THE_MOVE_III:"badgeDescription.ON_THE_MOVE_III",
-  ON_THE_MOVE_IV:"badgeDescription.ON_THE_MOVE_IV",
+  ON_THE_MOVE_III: "badgeDescription.ON_THE_MOVE_III",
+  ON_THE_MOVE_IV: "badgeDescription.ON_THE_MOVE_IV",
   ON_THE_MOVE_V: "badgeDescription.ON_THE_MOVE_V",
   ON_THE_MOVE_VI: "badgeDescription.ON_THE_MOVE_VI",
   ON_THE_MOVE_VII: "badgeDescription.ON_THE_MOVE_VII",
-  ON_THE_MOVE_VIII:"badgeDescription.ON_THE_MOVE_VIII",
-  ON_THE_MOVE_IX:"badgeDescription.ON_THE_MOVE_IX",
+  ON_THE_MOVE_VIII: "badgeDescription.ON_THE_MOVE_VIII",
+  ON_THE_MOVE_IX: "badgeDescription.ON_THE_MOVE_IX",
 };
 
 const getBadgeDescription = (badgeType: string): string => {
@@ -413,7 +413,7 @@ const BadgeCarousel: React.FC<BadgeCarouselProps> = ({
     currentBadgeIndex < badges.length ? currentBadgeIndex : 0
   );
 
-  const {t} = useTranslation();
+  const { t } = useTranslation();
 
   // Get current badge information with safety check
   const currentBadge =
@@ -425,14 +425,14 @@ const BadgeCarousel: React.FC<BadgeCarouselProps> = ({
       : null;
 
   const getTranslatedBadgeTip = (badgeType: string): string => {
-    const tipKey = BADGE_TIPS[badgeType] || DEFAULT_TIP
-    return t(tipKey)
-  }
+    const tipKey = BADGE_TIPS[badgeType] || DEFAULT_TIP;
+    return t(tipKey);
+  };
 
   const getTranslatedBadgeDescription = (badgeType: string): string => {
-    const descriptionKey = BADGE_DESCRIPTION[badgeType] || DEFAULT_TIP
-    return t(descriptionKey)
-  }
+    const descriptionKey = BADGE_DESCRIPTION[badgeType] || DEFAULT_TIP;
+    return t(descriptionKey);
+  };
 
   // Handle scroll event to update current page
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -452,7 +452,6 @@ const BadgeCarousel: React.FC<BadgeCarouselProps> = ({
       });
     }
   };
-
 
   const panResponder = useRef(
     PanResponder.create({
@@ -600,7 +599,7 @@ const BadgeCarousel: React.FC<BadgeCarouselProps> = ({
                         </View>
                       )}
                       <View style={styles.carouselLockIconContainer}>
-                        <Lock/>
+                        <Lock />
                       </View>
                     </View>
                   )}
@@ -622,8 +621,8 @@ const BadgeCarousel: React.FC<BadgeCarouselProps> = ({
         <PaginationDot
           maxPage={badges.length}
           curPage={currentPage}
-          activeDotColor='rgba(247, 108, 207, 1)'
-          inactiveDotColor='rgba(123, 123, 123, 0.8)'
+          activeDotColor="rgba(247, 108, 207, 1)"
+          inactiveDotColor="rgba(123, 123, 123, 0.8)"
         />
       </View>
 
@@ -643,15 +642,19 @@ const BadgeCarousel: React.FC<BadgeCarouselProps> = ({
           {!isEarned && (
             <View style={styles.tipContainer}>
               <Text style={styles.tipLabel}>
-                {t('tip')}: {" "}
-                <Text style={styles.tipText}>{getTranslatedBadgeTip(badgeType)}</Text>
+                {t("tip")}:{" "}
+                <Text style={styles.tipText}>
+                  {getTranslatedBadgeTip(badgeType)}
+                </Text>
               </Text>
             </View>
           )}
 
           {isEarned && (
             <TouchableOpacity style={styles.badgeButton}>
-              <Text style={styles.badgeButtonText}>{t('earnBagdes.badgeRewarded')}</Text>
+              <Text style={styles.badgeButtonText}>
+                {t("earnBagdes.badgeRewarded")}
+              </Text>
             </TouchableOpacity>
           )}
         </>
@@ -683,17 +686,17 @@ const EarnBadge = () => {
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: (_, gestureState) => {
         // Only respond to significant upward swipes
-        return Math.abs(gestureState.dy) > 10 && gestureState.dy < 0
+        return Math.abs(gestureState.dy) > 10 && gestureState.dy < 0;
       },
       onPanResponderMove: (_, gestureState) => {
         // Only respond to upward swipes
         if (gestureState.dy < 0) {
-          handleChevronSlide(gestureState)
+          handleChevronSlide(gestureState);
         }
       },
       onPanResponderRelease: () => {},
-    }),
-  ).current
+    })
+  ).current;
 
   const handleChevronSlide = useCallback((gestureState: any) => {
     // If sliding up with enough velocity or distance, open the bottom sheet
@@ -741,17 +744,17 @@ const EarnBadge = () => {
   //   }
   // };
 
-  const {t} = useTranslation();
+  const { t } = useTranslation();
 
-   const getTranslatedBadgeTip = (badgeType: string): string => {
-    const tipKey = BADGE_TIPS[badgeType] || DEFAULT_TIP
-    return t(tipKey)
-  }
+  const getTranslatedBadgeTip = (badgeType: string): string => {
+    const tipKey = BADGE_TIPS[badgeType] || DEFAULT_TIP;
+    return t(tipKey);
+  };
 
   const getTranslatedBadgeDescription = (badgeType: string): string => {
-    const descriptionKey = BADGE_DESCRIPTION[badgeType] || DEFAULT_TIP
-    return t(descriptionKey)
-  }
+    const descriptionKey = BADGE_DESCRIPTION[badgeType] || DEFAULT_TIP;
+    return t(descriptionKey);
+  };
 
   // Fetch badges from API
   const fetchBadges = async () => {
@@ -769,7 +772,7 @@ const EarnBadge = () => {
 
     try {
       const response = await fetch(
-        `https://crosscare-backends.onrender.com/api/user/${user.user_id}`,
+        `${CONFIG.API_BASE_URL}/user/${user.user_id}`,
         {
           method: "GET",
           headers: {
@@ -822,7 +825,6 @@ const EarnBadge = () => {
         // Combine earned and unearned badges, with earned ones first
         setAllBadges([...earnedBadgesData, ...unearnedBadgesData]);
       } else {
-
         const badgeTypes = data.map((badge) => badge.badge.type);
         setEarnedBadges(badgeTypes.length);
         setBadgeData(data);
@@ -899,14 +901,14 @@ const EarnBadge = () => {
         <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={20} color="black" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{t('earnBagdes.hallOfFame')}</Text>
+        <Text style={styles.headerTitle}>{t("earnBagdes.hallOfFame")}</Text>
         <View style={{ width: 20 }} />
       </View>
 
       {/* Badge count display */}
       <View style={styles.badgeCountContainer}>
         <Text style={styles.badgeCountText}>
-          {t('earnBagdes.badgesEarned')}{" "}
+          {t("earnBagdes.badgesEarned")}{" "}
           <Text style={styles.badgeCountNumber}>{earnedBadges}</Text>
         </Text>
       </View>
@@ -927,13 +929,13 @@ const EarnBadge = () => {
         />
       ) : (
         <BadgeCarousel
-        badges={allBadges}
-        // onPageChange={handlePageChange}
-        currentBadgeIndex={currentBadgeIndex}
-        badgeTranslateY={badgeTranslateY}
-        onChevronSlide={handleChevronSlide}
-        earnedBadgeTypes={earnedBadgeTypes}
-      />
+          badges={allBadges}
+          // onPageChange={handlePageChange}
+          currentBadgeIndex={currentBadgeIndex}
+          badgeTranslateY={badgeTranslateY}
+          onChevronSlide={handleChevronSlide}
+          earnedBadgeTypes={earnedBadgeTypes}
+        />
       )}
 
       <BottomSheet
@@ -1016,7 +1018,7 @@ const EarnBadge = () => {
                                 </View>
                               )}
                               <View style={styles.lockIconContainer}>
-                                <Lock width={12} height={12}/>
+                                <Lock width={12} height={12} />
                               </View>
                             </View>
                           ) : // Use the earned badge image
@@ -1193,7 +1195,7 @@ const styles = StyleSheet.create({
   },
   expandButton: {
     padding: 5,
-    width: '100%',
+    width: "100%",
     height: 50,
     alignItems: "center",
     justifyContent: "center",
@@ -1343,7 +1345,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     marginBottom: 16,
     shadowColor: "#000",
-    width: width * 0.85,  // 90% of the screen width
+    width: width * 0.85, // 90% of the screen width
     alignSelf: "center",
     boxShadow: "0px 0px 4px 0px rgba(0, 0, 0, 0.25)",
   },
@@ -1359,5 +1361,3 @@ const styles = StyleSheet.create({
     color: "#7B7B7B",
   },
 });
-
-

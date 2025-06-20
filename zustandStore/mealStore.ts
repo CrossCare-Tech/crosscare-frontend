@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { devtools } from "zustand/middleware";
 import { Platform } from "react-native";
+import { CONFIG } from "@/constants/config";
 
 // Type definitions
 export type FoodClassification = "GOOD" | "BAD";
@@ -124,8 +125,8 @@ export const useMealStore = create<MealStore>()(
         error: null,
         baseUrl:
           Platform.OS === "android"
-            ? "https://crosscare-backends.onrender.com/api"
-            : "https://crosscare-backends.onrender.com/api",
+            ? `${CONFIG.API_BASE_URL}`
+            : `${CONFIG.API_BASE_URL}`,
         chartData: [],
         currentTimeRange: "week",
 

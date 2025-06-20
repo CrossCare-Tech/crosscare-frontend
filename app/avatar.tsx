@@ -23,6 +23,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useAvatarStore } from "@/zustandStore/contentfulStores/avatarStore";
 import Lock from "@/assets/images/Svg/Lock";
 import { useTranslation } from "react-i18next";
+import { CONFIG } from "@/constants/config";
 
 // List of regular badge types
 const REGULAR_BADGE_TYPES = [
@@ -98,9 +99,9 @@ interface UnlockResult {
 
 export default function AvatarSelectionScreen() {
   // Get avatar data from the Contentful store
-  const { 
-    hairstyles, 
-    outfits, 
+  const {
+    hairstyles,
+    outfits,
     combinations,
     isLoadingHairstyles,
     isLoadingOutfits,
@@ -110,13 +111,17 @@ export default function AvatarSelectionScreen() {
     downloadOutfitImage,
     downloadCombinationImages,
     updateUnlockedItems,
-    getCombination
+    getCombination,
   } = useAvatarStore();
 
   const [activeTab, setActiveTab] = useState("Hairstyle");
-  const [selectedHairstyleId, setSelectedHairstyleId] = useState<string | null>(null);
+  const [selectedHairstyleId, setSelectedHairstyleId] = useState<string | null>(
+    null
+  );
   const [selectedOutfitId, setSelectedOutfitId] = useState<string | null>(null);
-  const [previewHairstyleId, setPreviewHairstyleId] = useState<string | null>(null);
+  const [previewHairstyleId, setPreviewHairstyleId] = useState<string | null>(
+    null
+  );
   const [previewOutfitId, setPreviewOutfitId] = useState<string | null>(null);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [lockedHairstyleSelected, setLockedHairstyleSelected] = useState(false);
@@ -126,14 +131,22 @@ export default function AvatarSelectionScreen() {
   const [earnedBadges, setEarnedBadges] = useState<string[]>([]);
   const [unlockResult, setUnlockResult] = useState<UnlockResult | null>(null);
 
-  const {t} = useTranslation();
-  
+  const { t } = useTranslation();
+
   // Track image URLs
-  const [previewFaceImageUrl, setPreviewFaceImageUrl] = useState<string | null>(null);
-  const [previewCombinedImageUrl, setPreviewCombinedImageUrl] = useState<string | null>(null);
-  const [finalFaceImageUrl, setFinalFaceImageUrl] = useState<string | null>(null);
-  const [finalCombinedImageUrl, setFinalCombinedImageUrl] = useState<string | null>(null);
-  
+  const [previewFaceImageUrl, setPreviewFaceImageUrl] = useState<string | null>(
+    null
+  );
+  const [previewCombinedImageUrl, setPreviewCombinedImageUrl] = useState<
+    string | null
+  >(null);
+  const [finalFaceImageUrl, setFinalFaceImageUrl] = useState<string | null>(
+    null
+  );
+  const [finalCombinedImageUrl, setFinalCombinedImageUrl] = useState<
+    string | null
+  >(null);
+
   const token = useSelector((state: any) => state.user.token);
   const user = useSelector((state: any) => state.user);
   const dispatch = useDispatch();
@@ -150,12 +163,12 @@ export default function AvatarSelectionScreen() {
   const previewOpacityAnim = useRef(new Animated.Value(0)).current;
 
   // Loading state
-  const isLoading = isLoadingHairstyles || isLoadingOutfits || isLoadingCombinations;
-
+  const isLoading =
+    isLoadingHairstyles || isLoadingOutfits || isLoadingCombinations;
 
   // useEffect(()=>{
   //   const Avatar = async ()=>{
-  //     const response = await fetch(`https://crosscare-backends.onrender.com/api/user/${user?.user_id}/profile`, {
+  //     const response = await fetch(`${CONFIG.API_BASE_URL}/user/${user?.user_id}/profile`, {
   //       method: "GET",
   //       headers: {
   //         "Content-Type": "application/json",
@@ -182,22 +195,22 @@ export default function AvatarSelectionScreen() {
   // Initialize default selections once data is loaded
   useEffect(() => {
     if (hairstyles.length > 0 && !selectedHairstyleId) {
-      const defaultHairstyle = hairstyles.find(h => !h.locked);
+      const defaultHairstyle = hairstyles.find((h) => !h.locked);
       if (defaultHairstyle) {
         setSelectedHairstyleId(defaultHairstyle.id);
         setPreviewHairstyleId(defaultHairstyle.id);
-        
+
         // Pre-download the hairstyle image
         downloadHairstyleImage(defaultHairstyle.id);
       }
     }
-    
+
     if (outfits.length > 0 && !selectedOutfitId) {
-      const defaultOutfit = outfits.find(o => !o.locked);
+      const defaultOutfit = outfits.find((o) => !o.locked);
       if (defaultOutfit) {
         setSelectedOutfitId(defaultOutfit.id);
         setPreviewOutfitId(defaultOutfit.id);
-        
+
         // Pre-download the outfit image
         downloadOutfitImage(defaultOutfit.id);
       }
@@ -207,22 +220,24 @@ export default function AvatarSelectionScreen() {
   // Download combination images when both selections are made
   useEffect(() => {
     if (previewHairstyleId && previewOutfitId) {
-      downloadCombinationImages(previewHairstyleId, previewOutfitId)
-        .then(({combinedImage, faceImage}) => {
+      downloadCombinationImages(previewHairstyleId, previewOutfitId).then(
+        ({ combinedImage, faceImage }) => {
           if (combinedImage) setPreviewCombinedImageUrl(combinedImage);
           if (faceImage) setPreviewFaceImageUrl(faceImage);
-        });
+        }
+      );
     }
   }, [previewHairstyleId, previewOutfitId]);
 
   // Download final images for the preview modal
   useEffect(() => {
     if (selectedHairstyleId && selectedOutfitId && showPreviewModal) {
-      downloadCombinationImages(selectedHairstyleId, selectedOutfitId)
-        .then(({combinedImage, faceImage}) => {
+      downloadCombinationImages(selectedHairstyleId, selectedOutfitId).then(
+        ({ combinedImage, faceImage }) => {
           if (combinedImage) setFinalCombinedImageUrl(combinedImage);
           if (faceImage) setFinalFaceImageUrl(faceImage);
-        });
+        }
+      );
     }
   }, [selectedHairstyleId, selectedOutfitId, showPreviewModal]);
 
@@ -303,7 +318,7 @@ export default function AvatarSelectionScreen() {
 
     try {
       const response = await fetch(
-        `https://crosscare-backends.onrender.com/api/user/${user.user_id}`,
+        `${CONFIG.API_BASE_URL}/user/${user.user_id}`,
         {
           method: "GET",
           headers: {
@@ -343,61 +358,82 @@ export default function AvatarSelectionScreen() {
 
   const calculateUnlockableItems = (badges: Badge[]): UnlockResult => {
     // Count regular badges and streak badges
-    const regularBadges = badges.filter((badge) => REGULAR_BADGE_TYPES.includes(badge.badge.type));
-    const streakBadges = badges.filter((badge) => STREAK_BADGE_TYPES.includes(badge.badge.type));
-  
-    console.log("Regular badges:", regularBadges.length, regularBadges.map((b) => b.badge.type));
-    console.log("Streak badges:", streakBadges.length, streakBadges.map((b) => b.badge.type));
-  
+    const regularBadges = badges.filter((badge) =>
+      REGULAR_BADGE_TYPES.includes(badge.badge.type)
+    );
+    const streakBadges = badges.filter((badge) =>
+      STREAK_BADGE_TYPES.includes(badge.badge.type)
+    );
+
+    console.log(
+      "Regular badges:",
+      regularBadges.length,
+      regularBadges.map((b) => b.badge.type)
+    );
+    console.log(
+      "Streak badges:",
+      streakBadges.length,
+      streakBadges.map((b) => b.badge.type)
+    );
+
     // Calculate unlockable items based on rules:
     // - 1 hair OR 1 outfit for every 3 regular badges
     // - 1 hair OR 1 outfit for every streak badge
-  
+
     // Number of unlocks for regular badges (1 unlock per 3 regular badges)
     const regularUnlocks = Math.floor(regularBadges.length / 3);
     console.log("Regular unlocks:", regularUnlocks);
-  
+
     // Number of unlocks for streak badges (1 unlock per streak badge)
     const streakUnlocks = streakBadges.length;
     console.log("Streak unlocks:", streakUnlocks);
-  
+
     // For regular unlocks: Alternate between hair and outfit
     let regularHairs = Math.floor(regularUnlocks / 2); // Half for hair
     let regularOutfits = regularUnlocks - regularHairs; // Remaining for outfits
-  
+
     // For streak unlocks: Alternate between hair and outfit
     let streakHairs = Math.floor(streakUnlocks / 2); // Half for hair
     let streakOutfits = streakUnlocks - streakHairs; // Remaining for outfits
-  
-    console.log("Regular hairs:", regularHairs, "Regular outfits:", regularOutfits);
+
+    console.log(
+      "Regular hairs:",
+      regularHairs,
+      "Regular outfits:",
+      regularOutfits
+    );
     console.log("Streak hairs:", streakHairs, "Streak outfits:", streakOutfits);
-  
+
     // Calculate the total hairs and outfits to unlock
     const totalHairsToUnlock = regularHairs + streakHairs;
     const totalOutfitsToUnlock = regularOutfits + streakOutfits;
-  
-    console.log("Total hairs to unlock:", totalHairsToUnlock, "Total outfits to unlock:", totalOutfitsToUnlock);
-  
+
+    console.log(
+      "Total hairs to unlock:",
+      totalHairsToUnlock,
+      "Total outfits to unlock:",
+      totalOutfitsToUnlock
+    );
+
     // Get locked hairstyles and outfits from Contentful data
     const lockedHairstyleIds = hairstyles
       .filter((h) => h.locked)
       .map((h) => h.id)
       .slice(0, totalHairsToUnlock);
-  
+
     const lockedOutfitIds = outfits
       .filter((o) => o.locked)
       .map((o) => o.id)
       .slice(0, totalOutfitsToUnlock);
-  
+
     console.log("Hairstyles to unlock:", lockedHairstyleIds);
     console.log("Outfits to unlock:", lockedOutfitIds);
-  
+
     return {
       hairstyles: lockedHairstyleIds,
       outfits: lockedOutfitIds,
     };
   };
-  
 
   const handleHairstyleSelect = (hairstyleId: string): void => {
     // Always update the preview hairstyle
@@ -519,7 +555,7 @@ export default function AvatarSelectionScreen() {
 
       // Make the API request
       const response = await fetch(
-        `https://crosscare-backends.onrender.com/api/user/${user.user_id}/avatar`,
+        `${CONFIG.API_BASE_URL}/user/${user.user_id}/avatar`,
         {
           method: "POST",
           headers: {
@@ -662,7 +698,7 @@ export default function AvatarSelectionScreen() {
     previewHairstyleId,
     previewOutfitId,
     previewFaceImageUrl,
-    previewCombinedImageUrl
+    previewCombinedImageUrl,
   ]);
   return (
     <SafeAreaView style={styles.container}>
@@ -671,9 +707,9 @@ export default function AvatarSelectionScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.cancelButton}>{t('cancel')}</Text>
+          <Text style={styles.cancelButton}>{t("cancel")}</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}> {t('customize.avatar')}</Text>
+        <Text style={styles.headerTitle}> {t("customize.avatar")}</Text>
         <TouchableOpacity
           onPress={handleDonePress}
           disabled={isAnySelectedItemLocked()}
@@ -684,7 +720,7 @@ export default function AvatarSelectionScreen() {
               isAnySelectedItemLocked() && styles.disabledButton,
             ]}
           >
-            {t('customize.done')}
+            {t("customize.done")}
           </Text>
         </TouchableOpacity>
       </View>
@@ -702,7 +738,7 @@ export default function AvatarSelectionScreen() {
           >
             {getCurrentAvatarImage() ? (
               <Image
-                source={{ uri: getCurrentAvatarImage() || ""}}
+                source={{ uri: getCurrentAvatarImage() || "" }}
                 style={[
                   styles.avatarImage,
                   isPreviewLocked() && styles.grayscaleImage,
@@ -714,7 +750,7 @@ export default function AvatarSelectionScreen() {
                 <ActivityIndicator size="small" color="#FF69B4" />
               </View>
             )}
-            
+
             {isPreviewLocked() && (
               <View style={styles.lockBadgeContainer}>
                 <View style={styles.lockBadge}>
@@ -724,7 +760,10 @@ export default function AvatarSelectionScreen() {
             )}
             {isPreviewLocked() && (
               <View style={styles.levelUpContainer}>
-                <Text style={styles.levelUpText}> {t('customize.levelUpToUnlock')}</Text>
+                <Text style={styles.levelUpText}>
+                  {" "}
+                  {t("customize.levelUpToUnlock")}
+                </Text>
               </View>
             )}
           </Animated.View>
@@ -743,7 +782,7 @@ export default function AvatarSelectionScreen() {
               activeTab === "Hairstyle" && styles.activeTabText,
             ]}
           >
-             {t('customize.hairstyle')}
+            {t("customize.hairstyle")}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -756,7 +795,7 @@ export default function AvatarSelectionScreen() {
               activeTab === "Outfit" && styles.activeTabText,
             ]}
           >
-            {t('customize.outfit')}
+            {t("customize.outfit")}
           </Text>
         </TouchableOpacity>
       </View>
@@ -860,451 +899,457 @@ export default function AvatarSelectionScreen() {
                     />
                   ) : (
                     <Image
-                    source={{ uri: outfit.image }}
-                    style={[
-                      styles.outfitImage,
-                      outfit.grayScale && styles.grayscaleImage,
-                    ]}
-                    resizeMode="contain"
-                    onLoad={() => downloadOutfitImage(outfit.id)}
-                  />
-                )}
-                {outfit.locked && (
-                  <View style={styles.lockIconContainer}>
-                    <Lock width={12} height={12} />
+                      source={{ uri: outfit.image }}
+                      style={[
+                        styles.outfitImage,
+                        outfit.grayScale && styles.grayscaleImage,
+                      ]}
+                      resizeMode="contain"
+                      onLoad={() => downloadOutfitImage(outfit.id)}
+                    />
+                  )}
+                  {outfit.locked && (
+                    <View style={styles.lockIconContainer}>
+                      <Lock width={12} height={12} />
+                    </View>
+                  )}
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+      </ScrollView>
+
+      {/* Preview Modal */}
+      <Modal
+        visible={showPreviewModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowPreviewModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}> {t("customize.title")}</Text>
+
+            {/* Hidden ViewShot for capturing the avatar with face */}
+            <View style={styles.hiddenViewShot}>
+              <ViewShot
+                ref={avatarViewShotRef}
+                options={{ format: "jpg", quality: 0.9 }}
+                style={styles.viewShotContainer}
+              >
+                <View style={styles.conicGradientContainer}>
+                  <View style={styles.avatarImageContainer}>
+                    {finalFaceImageUrl ? (
+                      <Image
+                        source={{ uri: finalFaceImageUrl }}
+                        style={styles.capturedAvatarImage}
+                        resizeMode="contain"
+                      />
+                    ) : (
+                      <ActivityIndicator size="small" color="#FF69B4" />
+                    )}
                   </View>
-                )}
-              </View>
-            </TouchableOpacity>
-          ))}
-        </View>
-      )}
-    </ScrollView>
+                </View>
+              </ViewShot>
+            </View>
 
-    {/* Preview Modal */}
-    <Modal
-      visible={showPreviewModal}
-      transparent={true}
-      animationType="fade"
-      onRequestClose={() => setShowPreviewModal(false)}
-    >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}> {t('customize.title')}</Text>
-
-          {/* Hidden ViewShot for capturing the avatar with face */}
-          <View style={styles.hiddenViewShot}>
+            {/* Visible avatar preview */}
             <ViewShot
-              ref={avatarViewShotRef}
+              ref={viewShotRef}
               options={{ format: "jpg", quality: 0.9 }}
               style={styles.viewShotContainer}
             >
-              <View style={styles.conicGradientContainer}>
-                <View style={styles.avatarImageContainer}>
-                  {finalFaceImageUrl ? (
-                    <Image
-                      source={{ uri: finalFaceImageUrl }}
-                      style={styles.capturedAvatarImage}
-                      resizeMode="contain"
-                    />
-                  ) : (
-                    <ActivityIndicator size="small" color="#FF69B4" />
-                  )}
-                </View>
-              </View>
+              <Animated.View
+                style={{
+                  transform: [{ scale: previewScaleAnim }],
+                  opacity: previewOpacityAnim,
+                }}
+              >
+                {finalCombinedImageUrl ? (
+                  <Image
+                    source={{ uri: finalCombinedImageUrl }}
+                    style={styles.previewAvatarImage}
+                    resizeMode="contain"
+                  />
+                ) : (
+                  <View style={styles.previewAvatarLoading}>
+                    <ActivityIndicator size="large" color="#FF69B4" />
+                    <Text style={styles.loadingText}>Loading avatar...</Text>
+                  </View>
+                )}
+              </Animated.View>
             </ViewShot>
-          </View>
 
-          {/* Visible avatar preview */}
-          <ViewShot
-            ref={viewShotRef}
-            options={{ format: "jpg", quality: 0.9 }}
-            style={styles.viewShotContainer}
-          >
-            <Animated.View
-              style={{
-                transform: [{ scale: previewScaleAnim }],
-                opacity: previewOpacityAnim,
-              }}
-            >
-              {finalCombinedImageUrl ? (
-                <Image
-                  source={{ uri: finalCombinedImageUrl }}
-                  style={styles.previewAvatarImage}
-                  resizeMode="contain"
-                />
-              ) : (
-                <View style={styles.previewAvatarLoading}>
-                  <ActivityIndicator size="large" color="#FF69B4" />
-                  <Text style={styles.loadingText}>Loading avatar...</Text>
-                </View>
-              )}
-            </Animated.View>
-          </ViewShot>
+            <View style={styles.modalButtonsContainer}>
+              <TouchableOpacity
+                style={styles.modalButton}
+                onPress={() => setShowPreviewModal(false)}
+                disabled={isSaving}
+              >
+                <Text style={styles.modalButtonText}>
+                  {t("customize.edit")}
+                </Text>
+              </TouchableOpacity>
 
-          <View style={styles.modalButtonsContainer}>
-            <TouchableOpacity
-              style={styles.modalButton}
-              onPress={() => setShowPreviewModal(false)}
-              disabled={isSaving}
-            >
-              <Text style={styles.modalButtonText}>{t('customize.edit')}</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.modalButton, styles.saveButton]}
-              onPress={saveAvatarToStorage}
-              disabled={isSaving || !finalFaceImageUrl}
-            >
-              {isSaving ? (
-                <Text style={styles.saveButtonText}>{t('customize.saving')}</Text>
-              ) : (
-                <Text style={styles.saveButtonText}>{t('customize.save')}</Text>
-              )}
-            </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.saveButton]}
+                onPress={saveAvatarToStorage}
+                disabled={isSaving || !finalFaceImageUrl}
+              >
+                {isSaving ? (
+                  <Text style={styles.saveButtonText}>
+                    {t("customize.saving")}
+                  </Text>
+                ) : (
+                  <Text style={styles.saveButtonText}>
+                    {t("customize.save")}
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
-      </View>
-    </Modal>
-  </SafeAreaView>
-);
+      </Modal>
+    </SafeAreaView>
+  );
 }
 
 const styles = StyleSheet.create({
-container: {
-  flex: 1,
-  backgroundColor: "#FFFFFF",
-},
-header: {
-  flexDirection: "row",
-  justifyContent: "space-between",
-  alignItems: "center",
-  paddingHorizontal: 16,
-  paddingVertical: 15,
-},
-skeletonContainer: {
-  backgroundColor: "#F7F7F780",
-  justifyContent: "center",
-  alignItems: "center",
-},
-cancelButton: {
-  fontSize: 15,
-  fontFamily: "OpenSans500",
-  color: "#F76CCFCC",
-},
-headerTitle: {
-  fontSize: 16,
-  color: "#373737",
-  fontFamily: "OpenSans700",
-},
-doneButton: {
-  fontSize: 16,
-  color: "#FF69B4",
-  fontFamily: "OpenSans600",
-},
-disabledButton: {
-  color: "#CACACA", // Gray color for disabled state
-},
-avatarContainer: {
-  alignItems: "center",
-  justifyContent: "center",
-  marginVertical: 12,
-  height: 240, // Fixed height to prevent layout shift
-},
-avatarImage: {
-  width: 200,
-  height: 240,
-},
-capturedAvatarImage: {
-  width: 180, // Smaller size for the captured image
-  height: 200,
-},
-placeholderImage: {
-  width: 200,
-  height: 240,
-  backgroundColor: "#F7F7F720",
-  justifyContent: "center",
-  alignItems: "center",
-  borderRadius: 12,
-},
-lockBadgeContainer: {
-  position: "absolute",
-  bottom: 30,
-  right: 20,
-  zIndex: 10,
-},
-lockedOptionItem: {
-  borderWidth: 2,
-  backgroundColor: "#F7F7F780",
-  borderColor: "rgba(247, 108, 207, 0.5)",
-},
-lockBadge: {
-  width: 32,
-  height: 32,
-  borderRadius: 20,
-  backgroundColor: "#FFEAF9",
-  alignItems: "center",
-  justifyContent: "center",
-  shadowColor: "#000",
-  shadowOffset: { width: 0, height: 2 },
-  shadowOpacity: 0.25,
-  shadowRadius: 3.84,
-  elevation: 5,
-},
-levelUpContainer: {
-  alignItems: "center",
-},
-levelUpText: {
-  fontSize: 13,
-  color: "#7B7B7B",
-  fontFamily: "Inter500",
-},
-shadowContainer: {
-  position: "absolute",
-  bottom: 5,
-  left: 0,
-  right: 0,
-  alignItems: "center",
-  zIndex: -1,
-},
-shadow: {
-  width: 100, // Wider to create the elliptical effect
-  height: 20, // Smaller height for the ellipse
-  backgroundColor: "#FFB4EA",
-  borderRadius: 50, // Rounded edges for the elliptical shadow
-  opacity: 0.15, // Soft opacity for the shadow
-},
-tabContainer: {
-  flexDirection: "row",
-  borderBottomWidth: 1,
-  marginTop:5,
-  borderBottomColor: "#F76CCF4D",
-},
-tab: {
-  flex: 1,
-  height: 40,
-  justifyContent: "center",
-  alignItems: "center",
-},
-activeTab: {
-  borderBottomWidth: 2,
-  borderTopLeftRadius: 5,
-  borderBottomColor: "#F76CCF",
-  backgroundColor: "#FFD4F3",
-},
-activeTab1: {
-  borderBottomWidth: 2,
-  borderTopRightRadius: 5,
-  borderBottomColor: "#F76CCF",
-  backgroundColor: "#FFD4F3",
-},
-tabText: {
-  fontSize: 14,
-  fontFamily: "Inter400",
-  color: "#373737",
-},
-activeTabText: {
-  color: "#373737",
-  fontFamily: "Inter700",
-},
-optionsContainer: {
-  flex: 1,
-},
-optionsGrid: {
-  flexDirection: "row",
-  flexWrap: "wrap",
-  padding: 10,
-},
-optionItem: {
-  width: "33.33%",
-  padding: 8,
-},
-selectedOptionItem: {
-  // No background color change, just the border on the inner container
-},
-optionItem1: {
-  width: "50%",
-  padding: 8,
-},
-optionImageContainer: {
-  width: "100%",
-  height: 122,
-  borderRadius: 12,
-  alignItems: "center",
-  justifyContent: "center",
-  overflow: "hidden",
-  backgroundColor: "white",
-},
-optionImageContainer1: {
-  width: "100%",
-  aspectRatio: 3 / 4,
-  borderRadius: 12,
-  alignItems: "center",
-  justifyContent: "center",
-  overflow: "hidden",
-  backgroundColor: "white",
-},
-selectedImageContainer: {
-  borderWidth: 2,
-  backgroundColor: "rgba(255, 240, 251, 0.15)",
-  borderColor: "rgba(247, 108, 207, 0.5)",
-},
-lockedImageContainer: {
-  backgroundColor: "#F7F7F780",
-  borderWidth: 0.5,
-  borderColor: "#CCCCCC52",
-},
-optionImage: {
-  aspectRatio: 1,
-  width: "100%",
-  height: 72,
-},
-outfitImage: {
-  width: "90%", 
-  height: "90%",
-},
-grayscaleImage: {
-  opacity: 0.8,
-},
-lockIconContainer: {
-  position: "absolute",
-  top: 5,
-  right: 5,
-  backgroundColor: "#FFECF5",
-  borderRadius: 15,
-  width: 20,
-  height: 20,
-  alignItems: "center",
-  justifyContent: "center",
-},
-previewLockContainer: {
-  position: "absolute",
-  top: "50%",
-  left: "50%",
-  transform: [{ translateX: -50 }, { translateY: -50 }],
-  backgroundColor: "rgba(255, 236, 245, 0.8)",
-  borderRadius: 20,
-  padding: 10,
-  alignItems: "center",
-  justifyContent: "center",
-},
-unlockText: {
-  marginTop: 5,
-  fontSize: 12,
-  color: "#F76CCF",
-  fontFamily: "OpenSans600",
-},
-// Modal styles
-modalOverlay: {
-  flex: 1,
-  backgroundColor: "rgba(0, 0, 0, 0.5)",
-  justifyContent: "center",
-  alignItems: "center",
-},
-modalContent: {
-  width: "80%",
-  backgroundColor: "white",
-  borderRadius: 20,
-  padding: 20,
-  alignItems: "center",
-  shadowColor: "#000",
-  shadowOffset: {
-    width: 0,
-    height: 2,
+  container: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
   },
-  shadowOpacity: 0.25,
-  shadowRadius: 3.84,
-  elevation: 5,
-},
-modalTitle: {
-  fontSize: 20,
-  fontFamily: "OpenSans700",
-  color: "#373737",
-  marginBottom: 20,
-},
-viewShotContainer: {
-  alignItems: "center",
-  justifyContent: "center",
-},
-conicGradientContainer: {
-  width: 200,
-  height: 200,
-  borderRadius: 100,
-  overflow: "hidden",
-  backgroundColor: "#FA9DDF", // Fallback color
-  shadowColor: "#000",
-  shadowOffset: {
-    width: 0,
-    height: 0,
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 15,
   },
-  shadowOpacity: 0.3,
-  shadowRadius: 2,
-  elevation: 5,
-},
-previewConicGradientContainer: {
-  width: 200,
-  height: 200,
-  overflow: "hidden",
-  marginBottom: 20,
-},
-avatarImageContainer: {
-  width: "100%",
-  height: "100%",
-  justifyContent: "center",
-  alignItems: "center",
-  backgroundColor: "transparent",
-},
-hiddenViewShot: {
-  position: "absolute",
-  width: 200,
-  height: 200,
-  opacity: 0,
-  zIndex: -1,
-  overflow: "hidden",
-},
-previewAvatarImage: {
-  width: 180, // Smaller size for preview
-  height: 220,
-},
-previewAvatarLoading: {
-  width: 180,
-  height: 220,
-  justifyContent: "center",
-  alignItems: "center",
-},
-loadingText: {
-  marginTop: 10,
-  color: "#FF69B4",
-  fontFamily: "DMSans400",
-  fontSize: 14,
-},
-modalButtonsContainer: {
-  flexDirection: "row",
-  justifyContent: "space-between",
-  width: "100%",
-},
-modalButton: {
-  flex: 1,
-  padding: 12,
-  borderRadius: 10,
-  marginHorizontal: 5,
-  marginTop: 10,
-  alignItems: "center",
-  borderWidth: 1,
-  borderColor: "#F76CCF",
-},
-modalButtonText: {
-  color: "#F76CCF",
-  fontSize: 14,
-  fontFamily: "DMSans500",
-},
-saveButton: {
-  backgroundColor: "#F76CCF",
-  borderColor: "#FFD4F3",
-},
-saveButtonText: {
-  color: "white",
-  fontSize: 14,
-  fontFamily: "DMSans500",
-},
+  skeletonContainer: {
+    backgroundColor: "#F7F7F780",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  cancelButton: {
+    fontSize: 15,
+    fontFamily: "OpenSans500",
+    color: "#F76CCFCC",
+  },
+  headerTitle: {
+    fontSize: 16,
+    color: "#373737",
+    fontFamily: "OpenSans700",
+  },
+  doneButton: {
+    fontSize: 16,
+    color: "#FF69B4",
+    fontFamily: "OpenSans600",
+  },
+  disabledButton: {
+    color: "#CACACA", // Gray color for disabled state
+  },
+  avatarContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginVertical: 12,
+    height: 240, // Fixed height to prevent layout shift
+  },
+  avatarImage: {
+    width: 200,
+    height: 240,
+  },
+  capturedAvatarImage: {
+    width: 180, // Smaller size for the captured image
+    height: 200,
+  },
+  placeholderImage: {
+    width: 200,
+    height: 240,
+    backgroundColor: "#F7F7F720",
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 12,
+  },
+  lockBadgeContainer: {
+    position: "absolute",
+    bottom: 30,
+    right: 20,
+    zIndex: 10,
+  },
+  lockedOptionItem: {
+    borderWidth: 2,
+    backgroundColor: "#F7F7F780",
+    borderColor: "rgba(247, 108, 207, 0.5)",
+  },
+  lockBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 20,
+    backgroundColor: "#FFEAF9",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  levelUpContainer: {
+    alignItems: "center",
+  },
+  levelUpText: {
+    fontSize: 13,
+    color: "#7B7B7B",
+    fontFamily: "Inter500",
+  },
+  shadowContainer: {
+    position: "absolute",
+    bottom: 5,
+    left: 0,
+    right: 0,
+    alignItems: "center",
+    zIndex: -1,
+  },
+  shadow: {
+    width: 100, // Wider to create the elliptical effect
+    height: 20, // Smaller height for the ellipse
+    backgroundColor: "#FFB4EA",
+    borderRadius: 50, // Rounded edges for the elliptical shadow
+    opacity: 0.15, // Soft opacity for the shadow
+  },
+  tabContainer: {
+    flexDirection: "row",
+    borderBottomWidth: 1,
+    marginTop: 5,
+    borderBottomColor: "#F76CCF4D",
+  },
+  tab: {
+    flex: 1,
+    height: 40,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  activeTab: {
+    borderBottomWidth: 2,
+    borderTopLeftRadius: 5,
+    borderBottomColor: "#F76CCF",
+    backgroundColor: "#FFD4F3",
+  },
+  activeTab1: {
+    borderBottomWidth: 2,
+    borderTopRightRadius: 5,
+    borderBottomColor: "#F76CCF",
+    backgroundColor: "#FFD4F3",
+  },
+  tabText: {
+    fontSize: 14,
+    fontFamily: "Inter400",
+    color: "#373737",
+  },
+  activeTabText: {
+    color: "#373737",
+    fontFamily: "Inter700",
+  },
+  optionsContainer: {
+    flex: 1,
+  },
+  optionsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    padding: 10,
+  },
+  optionItem: {
+    width: "33.33%",
+    padding: 8,
+  },
+  selectedOptionItem: {
+    // No background color change, just the border on the inner container
+  },
+  optionItem1: {
+    width: "50%",
+    padding: 8,
+  },
+  optionImageContainer: {
+    width: "100%",
+    height: 122,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+    backgroundColor: "white",
+  },
+  optionImageContainer1: {
+    width: "100%",
+    aspectRatio: 3 / 4,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+    backgroundColor: "white",
+  },
+  selectedImageContainer: {
+    borderWidth: 2,
+    backgroundColor: "rgba(255, 240, 251, 0.15)",
+    borderColor: "rgba(247, 108, 207, 0.5)",
+  },
+  lockedImageContainer: {
+    backgroundColor: "#F7F7F780",
+    borderWidth: 0.5,
+    borderColor: "#CCCCCC52",
+  },
+  optionImage: {
+    aspectRatio: 1,
+    width: "100%",
+    height: 72,
+  },
+  outfitImage: {
+    width: "90%",
+    height: "90%",
+  },
+  grayscaleImage: {
+    opacity: 0.8,
+  },
+  lockIconContainer: {
+    position: "absolute",
+    top: 5,
+    right: 5,
+    backgroundColor: "#FFECF5",
+    borderRadius: 15,
+    width: 20,
+    height: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  previewLockContainer: {
+    position: "absolute",
+    top: "50%",
+    left: "50%",
+    transform: [{ translateX: -50 }, { translateY: -50 }],
+    backgroundColor: "rgba(255, 236, 245, 0.8)",
+    borderRadius: 20,
+    padding: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  unlockText: {
+    marginTop: 5,
+    fontSize: 12,
+    color: "#F76CCF",
+    fontFamily: "OpenSans600",
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalContent: {
+    width: "80%",
+    backgroundColor: "white",
+    borderRadius: 20,
+    padding: 20,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontFamily: "OpenSans700",
+    color: "#373737",
+    marginBottom: 20,
+  },
+  viewShotContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  conicGradientContainer: {
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    overflow: "hidden",
+    backgroundColor: "#FA9DDF", // Fallback color
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 0,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 2,
+    elevation: 5,
+  },
+  previewConicGradientContainer: {
+    width: 200,
+    height: 200,
+    overflow: "hidden",
+    marginBottom: 20,
+  },
+  avatarImageContainer: {
+    width: "100%",
+    height: "100%",
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "transparent",
+  },
+  hiddenViewShot: {
+    position: "absolute",
+    width: 200,
+    height: 200,
+    opacity: 0,
+    zIndex: -1,
+    overflow: "hidden",
+  },
+  previewAvatarImage: {
+    width: 180, // Smaller size for preview
+    height: 220,
+  },
+  previewAvatarLoading: {
+    width: 180,
+    height: 220,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    marginTop: 10,
+    color: "#FF69B4",
+    fontFamily: "DMSans400",
+    fontSize: 14,
+  },
+  modalButtonsContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    width: "100%",
+  },
+  modalButton: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 10,
+    marginHorizontal: 5,
+    marginTop: 10,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#F76CCF",
+  },
+  modalButtonText: {
+    color: "#F76CCF",
+    fontSize: 14,
+    fontFamily: "DMSans500",
+  },
+  saveButton: {
+    backgroundColor: "#F76CCF",
+    borderColor: "#FFD4F3",
+  },
+  saveButtonText: {
+    color: "white",
+    fontSize: 14,
+    fontFamily: "DMSans500",
+  },
 });

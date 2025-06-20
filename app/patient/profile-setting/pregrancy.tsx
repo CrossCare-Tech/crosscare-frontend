@@ -29,6 +29,7 @@ import Notification from "@/assets/images/Svg/Notification";
 import Help from "@/assets/images/Svg/Help";
 import Terms from "@/assets/images/Svg/Terms";
 import { useTranslation } from "react-i18next";
+import { CONFIG } from "@/constants/config";
 
 const ProfileField = ({
   label,
@@ -123,7 +124,7 @@ const EditablePregnancyWeekField = ({
   onCancel: () => void;
 }) => {
   const [inputValue, setInputValue] = useState(week.toString());
- const {t} = useTranslation();
+  const { t } = useTranslation();
   const handleSave = () => {
     Keyboard.dismiss();
     const newWeek = Number.parseInt(inputValue);
@@ -157,7 +158,7 @@ const EditablePregnancyWeekField = ({
                 fontFamily: "DMSans600",
               }}
             >
-                {t('save')}
+              {t("save")}
             </Text>
           </TouchableOpacity>
         </View>
@@ -198,11 +199,11 @@ const name = () => {
   const [isEditingAge, setIsEditingAge] = useState(false);
   const [isEditingEmail, setIsEditingEmail] = useState(false);
   const [isEditingPregnancyWeek, setIsEditingPregnancyWeek] = useState(false);
-  const {t} = useTranslation();
+  const { t } = useTranslation();
 
   const getProfile = async () => {
     const response = await fetch(
-      `https://crosscare-backends.onrender.com/api/user/${user?.user_id}/profile`,
+      `${CONFIG.API_BASE_URL}/user/${user?.user_id}/profile`,
       {
         method: "GET",
         headers: {
@@ -257,7 +258,7 @@ const name = () => {
       updateData[fieldName] = value;
 
       const response = await fetch(
-        `https://crosscare-backends.onrender.com/api/user/${user.user_id}/profile`,
+        `${CONFIG.API_BASE_URL}/user/${user.user_id}/profile`,
         {
           method: "PUT",
           headers: {
@@ -380,6 +381,8 @@ const name = () => {
   const logout = async () => {
     await AsyncStorage.removeItem("userToken");
     await AsyncStorage.removeItem("user");
+    await AsyncStorage.clear();
+
     setToken(null);
     setUser(null);
     dispatch(removeToken());
@@ -390,10 +393,10 @@ const name = () => {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={"white"} />
       <View style={styles.header}>
-        <TouchableOpacity onPress={()=>router.back()}>
-            <Ionicons name="chevron-back" size={20} color="black" />
+        <TouchableOpacity onPress={() => router.back()}>
+          <Ionicons name="chevron-back" size={20} color="black" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{t('profile.yourpregnancy')}</Text>
+        <Text style={styles.headerTitle}>{t("profile.yourpregnancy")}</Text>
         <View
           style={{
             width: 20,
@@ -402,18 +405,16 @@ const name = () => {
       </View>
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
-         
-
           {isEditingPregnancyWeek ? (
             <EditablePregnancyWeekField
-              label={t('profile.weekofpregnancy')}
+              label={t("profile.weekofpregnancy")}
               week={pregnancyWeek}
               onSave={handleSavePregnancyWeek}
               onCancel={() => setIsEditingPregnancyWeek(false)}
             />
           ) : (
             <ProfileField
-              label={t('profile.weekofpregnancy')}
+              label={t("profile.weekofpregnancy")}
               value={`Week ${pregnancyWeek}`}
               onEdit={() => setIsEditingPregnancyWeek(true)}
             />
@@ -496,13 +497,13 @@ const styles = StyleSheet.create({
   },
   menuTitle: {
     fontSize: 16,
-    fontFamily:'DMSans600',
+    fontFamily: "DMSans600",
     color: "#AF4D93", // Magenta/purple color from the image
     marginBottom: 4,
   },
   menuSubtitle: {
     fontSize: 14,
-    fontFamily:'DMSans500',
+    fontFamily: "DMSans500",
     color: "#7B7B7B",
   },
   fieldContainer: {

@@ -31,6 +31,8 @@ import Notification from "@/assets/images/Svg/Notification";
 import Help from "@/assets/images/Svg/Help";
 import Terms from "@/assets/images/Svg/Terms";
 import { useTranslation } from "react-i18next";
+import { CONFIG } from "@/constants/config";
+import { CONFIG } from "@/constants/config";
 
 const ProfileField = ({
   label,
@@ -66,7 +68,7 @@ const EditableNameField = ({
   onSave: (value: string) => void;
   onCancel: () => void;
 }) => {
-  const {t} = useTranslation();
+  const { t } = useTranslation();
   const [inputValue, setInputValue] = useState(value);
 
   return (
@@ -98,7 +100,7 @@ const EditableNameField = ({
                 fontFamily: "DMSans600",
               }}
             >
-              {t('save')}
+              {t("save")}
             </Text>
           </TouchableOpacity>
         </View>
@@ -126,7 +128,7 @@ const EditableAgeField = ({
   onSave: (age: number) => void;
   onCancel: () => void;
 }) => {
-  const {t} = useTranslation();
+  const { t } = useTranslation();
   const [inputValue, setInputValue] = useState(age.toString());
 
   const handleSave = () => {
@@ -162,7 +164,7 @@ const EditableAgeField = ({
                 fontFamily: "DMSans600",
               }}
             >
-                {t('save')}
+              {t("save")}
             </Text>
           </TouchableOpacity>
         </View>
@@ -193,7 +195,7 @@ const EditableEmailField = ({
   onSave: (value: string) => void;
   onCancel: () => void;
 }) => {
- const {t} = useTranslation();
+  const { t } = useTranslation();
   const [inputValue, setInputValue] = useState(value);
 
   return (
@@ -225,7 +227,7 @@ const EditableEmailField = ({
                 fontFamily: "DMSans600",
               }}
             >
-              {t('save')}
+              {t("save")}
             </Text>
           </TouchableOpacity>
         </View>
@@ -260,7 +262,7 @@ const name = () => {
   console.log("token", token);
   console.log("userData1", user);
   const dispatch = useDispatch();
-  const {t} = useTranslation();
+  const { t } = useTranslation();
 
   // State for edit modes
   const [isEditingName, setIsEditingName] = useState(false);
@@ -271,7 +273,7 @@ const name = () => {
 
   const getProfile = async () => {
     const response = await fetch(
-      `https://crosscare-backends.onrender.com/api/user/${user?.user_id}/profile`,
+      `${CONFIG.API_BASE_URL}/user/${user?.user_id}/profile`,
       {
         method: "GET",
         headers: {
@@ -327,7 +329,7 @@ const name = () => {
       updateData[fieldName] = value;
 
       const response = await fetch(
-        `https://crosscare-backends.onrender.com/api/user/${user.user_id}/profile`,
+        `${CONFIG.API_BASE_URL}/user/${user.user_id}/profile`,
         {
           method: "PUT",
           headers: {
@@ -372,7 +374,6 @@ const name = () => {
       setUpdating(false);
     }
   };
-
 
   // Name handlers
   const handleSaveName = async (newName: string) => {
@@ -434,6 +435,8 @@ const name = () => {
   const logout = async () => {
     await AsyncStorage.removeItem("userToken");
     await AsyncStorage.removeItem("user");
+    await AsyncStorage.clear();
+
     setToken(null);
     setUser(null);
     dispatch(removeToken());
@@ -456,7 +459,9 @@ const name = () => {
         <View style={styles.iconContainer}>{icon}</View>
         <View style={styles.menuTextContainer}>
           <Text style={styles.menuTitle}>{title}</Text>
-          <Text style={styles.menuSubtitle} numberOfLines={1}>{subtitle}</Text>
+          <Text style={styles.menuSubtitle} numberOfLines={1}>
+            {subtitle}
+          </Text>
         </View>
       </TouchableOpacity>
     );
@@ -466,15 +471,18 @@ const name = () => {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={"white"} />
       <View style={styles.header}>
-        <TouchableOpacity onPress={()=>router.back()} style={{
-          width: 20,
-          height: 20,
-          justifyContent: "center",
-          alignItems: "center",
-        }}>
-            <Ionicons name="chevron-back" size={20} color="black" />
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={{
+            width: 20,
+            height: 20,
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
+          <Ionicons name="chevron-back" size={20} color="black" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{t('profile.account')}</Text>
+        <Text style={styles.headerTitle}>{t("profile.account")}</Text>
         <View
           style={{
             width: 20,
@@ -485,14 +493,14 @@ const name = () => {
         <View style={styles.content}>
           {isEditingName ? (
             <EditableNameField
-              label={t('profile.name')}
+              label={t("profile.name")}
               value={name || ""}
               onSave={handleSaveName}
               onCancel={() => setIsEditingName(false)}
             />
           ) : (
             <ProfileField
-              label={t('profile.name')}
+              label={t("profile.name")}
               value={name || ""}
               onEdit={() => setIsEditingName(true)}
             />
@@ -500,14 +508,14 @@ const name = () => {
 
           {isEditingAge ? (
             <EditableAgeField
-              label={t('profile.age')}
+              label={t("profile.age")}
               age={age}
               onSave={handleSaveAge}
               onCancel={() => setIsEditingAge(false)}
             />
           ) : (
             <ProfileField
-              label={t('profile.age')}
+              label={t("profile.age")}
               value={`${age} Years`}
               onEdit={() => setIsEditingAge(true)}
             />
@@ -515,14 +523,14 @@ const name = () => {
 
           {isEditingEmail ? (
             <EditableEmailField
-              label={t('profile.email')}
+              label={t("profile.email")}
               value={email}
               onSave={handleSaveEmail}
               onCancel={() => setIsEditingEmail(false)}
             />
           ) : (
             <ProfileField
-              label={t('profile.email')}
+              label={t("profile.email")}
               value={email}
               onEdit={() => setIsEditingEmail(true)}
             />
@@ -530,14 +538,14 @@ const name = () => {
 
           {isEditingPhoneNumber ? (
             <EditableNameField
-              label={t('profile.phoneNumber')}
+              label={t("profile.phoneNumber")}
               value={phoneNumber}
               onSave={handleSavePhoneNumber}
               onCancel={() => setIsEditingPhoneNumber(false)}
             />
           ) : (
             <ProfileField
-              label={t('profile.phoneNumber')}
+              label={t("profile.phoneNumber")}
               value={phoneNumber}
               onEdit={() => setIsEditingPhoneNumber(true)}
             />
@@ -635,13 +643,13 @@ const styles = StyleSheet.create({
   },
   menuTitle: {
     fontSize: 16,
-    fontFamily:'DMSans600',
+    fontFamily: "DMSans600",
     color: "#AF4D93", // Magenta/purple color from the image
     marginBottom: 4,
   },
   menuSubtitle: {
     fontSize: 14,
-    fontFamily:'DMSans500',
+    fontFamily: "DMSans500",
     color: "#7B7B7B",
   },
   fieldContainer: {

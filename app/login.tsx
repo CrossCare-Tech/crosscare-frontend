@@ -29,6 +29,7 @@ import CustomTextInput from "@/components/ui/CustomTextInput";
 import { width } from "@/constants/helper";
 import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { CONFIG } from "@/constants/config";
 
 // WebBrowser.maybeCompleteAuthSession();
 // GoogleSignin.configure({
@@ -79,16 +80,16 @@ const Login: FC = () => {
     setLoading(true);
 
     try {
-      const response = await fetch(
-        `https://crosscare-backends.onrender.com/api/login`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ email: email.toLowerCase().trim(), password: password }),
-        }
-      );
+      const response = await fetch(`${CONFIG.API_BASE_URL}/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: email.toLowerCase().trim(),
+          password: password,
+        }),
+      });
 
       const data = await response.json();
       console.log("API Response:", data);
@@ -102,10 +103,11 @@ const Login: FC = () => {
             [
               {
                 text: "Verify Now",
-                onPress: () => router.push({
-                  pathname: "/verify-email",
-                  params: { email: data.email || email }
-                }),
+                onPress: () =>
+                  router.push({
+                    pathname: "/verify-email",
+                    params: { email: data.email || email },
+                  }),
               },
               {
                 text: "Cancel",
@@ -116,7 +118,7 @@ const Login: FC = () => {
           setLoading(false);
           return;
         }
-        
+
         throw new Error(data.message || "Login failed");
       }
 
@@ -124,14 +126,14 @@ const Login: FC = () => {
         console.log("Dispatching User Data to Redux:", data);
         dispatch(
           setUser({
-            user_id: data.userId || data.patientId,  // ✅ Handle correct field name
+            user_id: data.userId || data.patientId, // ✅ Handle correct field name
             user_email: data.email,
             user_name: data.name,
-            user_photo: data.profilePicture || "",  // ✅ Handle missing photo
+            user_photo: data.profilePicture || "", // ✅ Handle missing photo
             token: data.accessToken, // ✅ Store token inside setUser()
           })
         );
-  
+
         dispatch(setToken(data.accessToken));
         await AsyncStorage.setItem(
           "user",
@@ -145,7 +147,7 @@ const Login: FC = () => {
         ); // ✅ Must be stringified
 
         await AsyncStorage.setItem("userToken", data.accessToken); // ✅ Save token persistently
-  
+
         router.replace("/patient/(tabs)/home");
       }
 
@@ -173,99 +175,106 @@ const Login: FC = () => {
   };
 
   return (
-    <SafeAreaView style={{
-      flex: 1,
-      backgroundColor: "#fff",
-      justifyContent: "center",
-      alignItems: "center",
-    }}>
-
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    <SafeAreaView
+      style={{
+        flex: 1,
+        backgroundColor: "#fff",
+        justifyContent: "center",
+        alignItems: "center",
+      }}
     >
-      <View
-        style={{
-          justifyContent: "center",
-          marginTop: 40,
-        }}
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         <View
           style={{
-            alignItems: "center",
+            justifyContent: "center",
+            marginTop: 40,
           }}
         >
-          <LogoSvg />
-        </View>
-        <Text style={styles.title}>Welcome, Get Started!</Text>
-        <View
-          style={{
-            width: "100%",
-            marginTop: 56,
-            flexDirection: "column",
-            gap: 20,
-          }}
-        >
-          <CustomTextInput
-            icon="user"
-            type="email"
-            value={email}
-            onChangeText={handleChangeEmail}
-            placeholder="Email"
-            errorMessage={emailError}
-          />
-          <CustomTextInput
-            icon="lock"
-            type="password"
-            value={password}
-            onChangeText={handleChangePassword}
-            placeholder="Password"
-            secureTextEntry={true}
-            errorMessage={passwordError}
-          />
-          <TouchableOpacity
-            style={styles.button}
-            onPress={handleLogin}
-            disabled={loading}
-          >
-            <LinearGradient
-              colors={["#EF99D9", "#E35ABB"]} // Gradient colors
-              start={{ x: Math.cos((117 * Math.PI) / 180), y: Math.sin((117 * Math.PI) / 180) }}
-              end={{ x: Math.cos(((117 + 180) * Math.PI) / 180), y: Math.sin(((117 + 180) * Math.PI) / 180) }}// End of the gradient (top-right)
-              style={styles.gradient} // Apply gradient as background
-            >
-              {loading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.buttonText}>Log In</Text>
-              )}
-            </LinearGradient>
-          </TouchableOpacity>
-        </View>
-
-        <TouchableOpacity onPress={() => router.push("/forget-password")}>
-          <Text
+          <View
             style={{
-              fontSize: 14,
-              width: "100%",
-              textAlign: "left",
-              color: "#E05FA0",
-              fontFamily: "DMSans400",
-              marginTop: 17,
-              textDecorationLine: "underline",
+              alignItems: "center",
             }}
           >
-            Forgot Password?
-          </Text>
-        </TouchableOpacity>
-        <View
-          style={{
-            flexDirection: "column",
-            gap: 12,
-            marginTop: 12,
-          }}
-        >
-          {/* <Text
+            <LogoSvg />
+          </View>
+          <Text style={styles.title}>Welcome, Get Started!</Text>
+          <View
+            style={{
+              width: "100%",
+              marginTop: 56,
+              flexDirection: "column",
+              gap: 20,
+            }}
+          >
+            <CustomTextInput
+              icon="user"
+              type="email"
+              value={email}
+              onChangeText={handleChangeEmail}
+              placeholder="Email"
+              errorMessage={emailError}
+            />
+            <CustomTextInput
+              icon="lock"
+              type="password"
+              value={password}
+              onChangeText={handleChangePassword}
+              placeholder="Password"
+              secureTextEntry={true}
+              errorMessage={passwordError}
+            />
+            <TouchableOpacity
+              style={styles.button}
+              onPress={handleLogin}
+              disabled={loading}
+            >
+              <LinearGradient
+                colors={["#EF99D9", "#E35ABB"]} // Gradient colors
+                start={{
+                  x: Math.cos((117 * Math.PI) / 180),
+                  y: Math.sin((117 * Math.PI) / 180),
+                }}
+                end={{
+                  x: Math.cos(((117 + 180) * Math.PI) / 180),
+                  y: Math.sin(((117 + 180) * Math.PI) / 180),
+                }} // End of the gradient (top-right)
+                style={styles.gradient} // Apply gradient as background
+              >
+                {loading ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.buttonText}>Log In</Text>
+                )}
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity onPress={() => router.push("/forget-password")}>
+            <Text
+              style={{
+                fontSize: 14,
+                width: "100%",
+                textAlign: "left",
+                color: "#E05FA0",
+                fontFamily: "DMSans400",
+                marginTop: 17,
+                textDecorationLine: "underline",
+              }}
+            >
+              Forgot Password?
+            </Text>
+          </TouchableOpacity>
+          <View
+            style={{
+              flexDirection: "column",
+              gap: 12,
+              marginTop: 12,
+            }}
+          >
+            {/* <Text
             style={{
               fontSize: 14,
               color: "#1B2559",
@@ -298,35 +307,35 @@ const Login: FC = () => {
               Administrator/Doctor
             </Text>
           </Text> */}
-          
-          {/* New Patient Signup Link */}
-          <Text
-            style={{
-              fontSize: 14,
-              color: "#545454",
-              fontFamily: "DMSans400",
-              textAlign: "center",
-              marginTop: 8,
-            }}
-          >
-            New patient?{" "}
+
+            {/* New Patient Signup Link */}
             <Text
               style={{
-                fontFamily: "DMSans500",
-                color: "#E05FA0",
-                textDecorationLine: "underline",
+                fontSize: 14,
+                color: "#545454",
+                fontFamily: "DMSans400",
+                textAlign: "center",
+                marginTop: 8,
               }}
-              onPress={() => router.push("/signup")}
             >
-              Sign up
+              New patient?{" "}
+              <Text
+                style={{
+                  fontFamily: "DMSans500",
+                  color: "#E05FA0",
+                  textDecorationLine: "underline",
+                }}
+                onPress={() => router.push("/signup")}
+              >
+                Sign up
+              </Text>
             </Text>
-          </Text>
+          </View>
         </View>
-      </View>
-      <Text style={styles.footerText}>
-        Terms & Conditions | Privacy Policy | Contact Us
-      </Text>
-    </KeyboardAvoidingView>
+        <Text style={styles.footerText}>
+          Terms & Conditions | Privacy Policy | Contact Us
+        </Text>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
@@ -366,7 +375,7 @@ const styles = StyleSheet.create({
     color: "#333",
   },
   gradient: {
-    paddingVertical:14,
+    paddingVertical: 14,
     paddingHorizontal: 12,
     width: "100%", // Make the gradient fill the entire button
     justifyContent: "center",
