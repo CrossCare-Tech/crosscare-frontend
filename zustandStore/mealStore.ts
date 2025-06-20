@@ -109,7 +109,7 @@ export const useMealStore = create<MealStore>()(
     persist(
       (set, get) => ({
         // Initial state
-        calorieGoal: 0,
+        calorieGoal: 2000, // Default goal of 10
         caloriesConsumed: 0,
         goodFoodCount: 0,
         badFoodCount: 0,
@@ -160,12 +160,12 @@ export const useMealStore = create<MealStore>()(
               },
               selectedDate: today,
               lastAccessedDate: today,
-              calorieGoal: currentGoal, // Persist the goal
+              calorieGoal: currentGoal || 2000, // Preserve the goal, use default of 0 if none exists
             });
 
             console.log(
               "✅ Daily progress reset completed. Goal preserved:",
-              currentGoal
+              currentGoal || 2000
             );
           } else {
             console.log("📊 Same day - no reset needed");
@@ -189,12 +189,12 @@ export const useMealStore = create<MealStore>()(
             },
             selectedDate: today,
             lastAccessedDate: today,
-            calorieGoal: currentGoal, // Preserve the goal
+            calorieGoal: currentGoal || 2000, // Preserve the goal, use default of 10 if none exists
           });
 
           console.log(
             "🔄 Manual daily progress reset completed. Goal preserved:",
-            currentGoal
+            currentGoal || 2000
           );
         },
 
@@ -232,8 +232,13 @@ export const useMealStore = create<MealStore>()(
             );
 
             // Update state with fetched data
+            // Only update the goal if API returns one AND it's not zero
+            const currentGoal = get().calorieGoal;
+            const apiGoal = data.calorieGoal;
+            const newGoal = apiGoal > 0 ? apiGoal : currentGoal || 2000;
+
             set({
-              calorieGoal: data.calorieGoal || get().calorieGoal, // Preserve existing goal if API doesn't return one
+              calorieGoal: newGoal, // Use API goal if valid, otherwise keep current or use default
               caloriesConsumed: data.caloriesConsumed || 0,
               goodFoodCount: data.goodFoodCount || 0,
               badFoodCount: data.badFoodCount || 0,
@@ -288,9 +293,14 @@ export const useMealStore = create<MealStore>()(
 
             const data = await response.json();
 
+            // Only update the goal if API returns one AND it's not zero
+            const currentGoal = get().calorieGoal;
+            const apiGoal = data.calorieGoal;
+            const newGoal = apiGoal > 0 ? apiGoal : currentGoal || 2000;
+
             // Update state with fetched data for the specific date
             set({
-              calorieGoal: data.calorieGoal || get().calorieGoal, // Preserve existing goal
+              calorieGoal: newGoal, // Use API goal if valid, otherwise keep current or use default
               caloriesConsumed: data.caloriesConsumed || 0,
               goodFoodCount: data.goodFoodCount || 0,
               badFoodCount: data.badFoodCount || 0,
@@ -683,8 +693,13 @@ export const useMealStore = create<MealStore>()(
 
             const data = await response.json();
 
+            // Only update the goal if API returns one AND it's not zero
+            const currentGoal = get().calorieGoal;
+            const apiGoal = data.calorieGoal;
+            const newGoal = apiGoal > 0 ? apiGoal : currentGoal || 2000;
+
             set({
-              calorieGoal: data.calorieGoal,
+              calorieGoal: newGoal, // Use API goal if valid, otherwise keep current or use default
               isLoading: false,
               lastAccessedDate: getTodayDate(),
             });

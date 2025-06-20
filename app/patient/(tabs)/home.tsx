@@ -38,6 +38,7 @@ import PregnancyModal from "../modal/preagnancyModal";
 import { useMealStore } from "@/zustandStore/mealStore";
 import { CONFIG } from "@/constants/config";
 
+
 interface Progress {
   progressPercentage: number;
   remainingDays: number;
@@ -360,7 +361,7 @@ const Home = () => {
     }
 
     const data = await response.json();
-    console.log("Profile data:", data);
+    
     // console.log("Profile data:", data.week);
 
     // Save the fresh profile data to AsyncStorage
@@ -489,8 +490,16 @@ const Home = () => {
         waterStore.checkAndResetForNewDay();
 
         // Initialize all user goals (these should persist)
-        mealStore.fetchUserGoals(userId);
-        waterStore.fetchUserGoals(userId);
+        // Only fetch if goals are not already set to prevent overriding manual settings
+        if (!mealStore.calorieGoal || mealStore.calorieGoal <= 0) {
+          console.log("🏠 Home: Setting default calorie goal to 10");
+          mealStore.fetchUserGoals(userId);
+        }
+        
+        if (!waterStore.maxGlasses || waterStore.maxGlasses <= 0) {
+          console.log("🏠 Home: Setting default water goal to 10");
+          waterStore.fetchUserGoals(userId);
+        }
 
         console.log("🏠 Home: All stores checked and reset if needed");
       };
@@ -510,25 +519,6 @@ const Home = () => {
     }
   }, [userId]);
 
-  // Also add this useFocusEffect to check when the app comes back into focus
-  useFocusEffect(
-    useCallback(() => {
-      if (userId) {
-        console.log("🏠 Home: App focused, checking for date changes...");
-
-        // Check all stores for new day when app comes back into focus
-        useMealStore.getState().checkAndResetForNewDay();
-        useWaterStore.getState().checkAndResetForNewDay();
-
-        // Fetch fresh data
-        getProfile();
-      }
-
-      return () => {
-        console.log("🏠 Home: App lost focus");
-      };
-    }, [userId])
-  );
   const Header = () => {
     return (
       <View

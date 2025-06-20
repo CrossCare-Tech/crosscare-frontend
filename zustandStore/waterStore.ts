@@ -26,7 +26,7 @@ export const useWaterStore = create<WaterStore>()(
     (set, get) => ({
       baseUrl: `${CONFIG.API_BASE_URL}`,
       glassCount: 0,
-      maxGlasses: 0,
+      maxGlasses: 10, // Default goal of 10 glasses
       lastAccessedDate: null,
 
       // New action to check and reset for new day
@@ -49,13 +49,13 @@ export const useWaterStore = create<WaterStore>()(
 
           set({
             glassCount: 0, // Reset daily water intake
-            maxGlasses: currentGoal, // Persist the goal
+            maxGlasses: currentGoal || 10, // Persist the goal, use default of 10 if none exists
             lastAccessedDate: today,
           });
 
           console.log(
             "✅ Water daily progress reset completed. Goal preserved:",
-            currentGoal
+            currentGoal || 10
           );
         } else {
           console.log("💧 Same day - no water reset needed");
@@ -69,13 +69,13 @@ export const useWaterStore = create<WaterStore>()(
 
         set({
           glassCount: 0, // Reset daily water intake
-          maxGlasses: currentGoal, // Preserve the goal
+          maxGlasses: currentGoal || 10, // Preserve the goal, use default of 10 if none exists
           lastAccessedDate: today,
         });
 
         console.log(
           "🔄 Manual water daily progress reset completed. Goal preserved:",
-          currentGoal
+          currentGoal || 10
         );
       },
 
@@ -91,7 +91,7 @@ export const useWaterStore = create<WaterStore>()(
 
       setMaxGlasses: (max) => {
         set({
-          maxGlasses: Number(max),
+          maxGlasses: Number(max) || 10, // Ensure we never set a zero or invalid goal
           lastAccessedDate: getTodayDate(),
         });
       },
@@ -104,16 +104,17 @@ export const useWaterStore = create<WaterStore>()(
 
         try {
           const response = await fetch(
-            `${get().baseUrl}/api/user/activity/${userId}/goals`
+            `${get().baseUrl}/user/activity/${userId}/goals`
           );
           const data = await response.json();
 
-          // Only update maxGlasses if we don't have a goal set or if the API returns a different goal
+          // Only update maxGlasses if API returns a valid goal
           const currentGoal = get().maxGlasses;
           const apiGoal = data.waterGoal;
+          const newGoal = apiGoal > 0 ? apiGoal : currentGoal || 10;
 
           set({
-            maxGlasses: apiGoal || currentGoal, // Use API goal or preserve current
+            maxGlasses: newGoal, // Use API goal if valid, otherwise keep current or use default
             lastAccessedDate: getTodayDate(),
           });
 
@@ -130,7 +131,7 @@ export const useWaterStore = create<WaterStore>()(
         // Ensure values are numbers when rehydrating from storage
         if (state) {
           state.glassCount = Number(state.glassCount);
-          state.maxGlasses = Number(state.maxGlasses);
+          state.maxGlasses = Number(state.maxGlasses) || 10; // Ensure default if invalid
 
           // Check for new day immediately after rehydration
           state.checkAndResetForNewDay();

@@ -11,9 +11,13 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "NSMicrophoneUsageDescription": "This app requires access to your microphone for voice processing."
+        "NSMicrophoneUsageDescription": "This app requires access to your microphone for voice processing.",
+        "NSHealthShareUsageDescription": "This app needs access to read your health data including steps, heart rate, and sleep information to provide personalized health insights."
       },
-      "bundleIdentifier": "com.crosscare.tech"
+      "bundleIdentifier": "com.crosscare.tech",
+      "entitlements": {
+        "com.apple.developer.healthkit": true
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -61,7 +65,13 @@
           "color": "#ffffff"
         }
       ],
-      "react-native-health"
+      [
+      "react-native-health", 
+      {
+        "healthSharePermission": "Allow Crosscare to access your health data",
+        "healthSharePermissionDescription": "This app requires access to your health data to provide personalized insights and recommendations."
+      }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

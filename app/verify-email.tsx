@@ -14,6 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import LogoSvg from "@/assets/images/Svg/LogoSvg";
 import { LinearGradient } from "expo-linear-gradient";
 import CustomTextInput from "@/components/ui/CustomTextInput";
+import { CONFIG } from "@/constants/config";
 
 const VerifyEmail: FC = () => {
   const [otp, setOtp] = useState("");
