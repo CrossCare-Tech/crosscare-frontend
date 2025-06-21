@@ -75,6 +75,9 @@ const ConversationalQuestionnaire = ({
 
   // Flag to prevent multiple starts
   const isStartingQuestionnaire = useRef(false);
+  
+  // Flag to prevent duplicate messages during resume
+  const isResuming = useRef(false);
 
   // Flag to track if intro has been shown
   const [hasSeenIntro, setHasSeenIntro] = useState(false);
@@ -228,7 +231,8 @@ const ConversationalQuestionnaire = ({
       context.isActive &&
       !context.isPaused &&
       !context.isCompleted &&
-      context.currentQuestionIndex !== null
+      context.currentQuestionIndex !== null &&
+      !isResuming.current
     ) {
       sendNextQuestion();
     }
@@ -479,6 +483,11 @@ const ConversationalQuestionnaire = ({
     }
   };
 
+  // Helper function to check if a question is an info message
+  const isInfoMessage = (questionId: string): boolean => {
+    return questionId.includes('-info');
+  };
+
   // Send the next question in the sequence
   const sendNextQuestion = () => {
     try {
@@ -565,6 +574,30 @@ const ConversationalQuestionnaire = ({
           context.currentQuestionIndex === 0
         ) {
           sentMessages.add("first_question");
+        }
+
+        // Check if this is an info message and auto-continue
+        if (isInfoMessage(currentQuestion.id)) {
+          console.log("Info message detected, will auto-continue after delay");
+          
+          // Auto-continue after 2 seconds for info messages
+          setTimeout(() => {
+            console.log("Auto-continuing from info message");
+            
+            // Move to next question automatically
+            const nextQuestionIndex = context.currentQuestionIndex + 1;
+            if (nextQuestionIndex < currentDomain.questions.length) {
+              dispatch({
+                type: "SET_POSITION",
+                payload: {
+                  currentQuestionIndex: nextQuestionIndex,
+                },
+              });
+            } else {
+              // End of domain, ask to continue
+              askToContinue();
+            }
+          }, 2000);
         }
       }
     } catch (error) {
@@ -1701,6 +1734,9 @@ const ConversationalQuestionnaire = ({
     console.log("Resuming questionnaire");
 
     try {
+      // Set resuming flag to prevent duplicate messages
+      isResuming.current = true;
+
       // Clear sent messages
       sentMessages.clear();
 
@@ -1716,6 +1752,7 @@ const ConversationalQuestionnaire = ({
       console.log("Loaded saved context for resuming:", savedContext);
       if (!savedContext) {
         console.error("No saved context found for resuming");
+        isResuming.current = false;
         return;
       }
       // Mark intro as seen
@@ -1782,6 +1819,11 @@ const ConversationalQuestionnaire = ({
 
           // Send the message
           onQuestionReady(continueMessage);
+
+          // Reset resuming flag after a delay
+          setTimeout(() => {
+            isResuming.current = false;
+          }, 2000);
         } else {
           // Resume at specific question
           console.log("Resuming at specific question");
@@ -1793,6 +1835,7 @@ const ConversationalQuestionnaire = ({
               "Invalid domain index when resuming:",
               savedContext.currentDomainIndex
             );
+            isResuming.current = false;
             return;
           }
 
@@ -1803,6 +1846,7 @@ const ConversationalQuestionnaire = ({
               "Invalid question index when resuming:",
               savedContext.currentQuestionIndex
             );
+            isResuming.current = false;
             return;
           }
 
@@ -1836,10 +1880,43 @@ const ConversationalQuestionnaire = ({
 
           // Send the message
           onQuestionReady(resumeMessage);
+
+          // Check if this is an info message and auto-continue
+          if (isInfoMessage(currentQuestion.id)) {
+            console.log("Resumed on info message, will auto-continue after delay");
+            
+            // Auto-continue after 2 seconds for info messages
+            setTimeout(() => {
+              console.log("Auto-continuing from resumed info message");
+              
+              // Move to next question automatically
+              const nextQuestionIndex = savedContext.currentQuestionIndex + 1;
+              if (nextQuestionIndex < currentDomain.questions.length) {
+                dispatch({
+                  type: "SET_POSITION",
+                  payload: {
+                    currentQuestionIndex: nextQuestionIndex,
+                  },
+                });
+              } else {
+                // End of domain, ask to continue
+                askToContinue();
+              }
+              
+              // Reset resuming flag after auto-continue
+              isResuming.current = false;
+            }, 2000);
+          } else {
+            // Reset resuming flag after a delay for regular questions
+            setTimeout(() => {
+              isResuming.current = false;
+            }, 2000);
+          }
         }
       }, 1000);
     } catch (error) {
       console.error("Error resuming questionnaire:", error);
+      isResuming.current = false;
     }
   };
 
