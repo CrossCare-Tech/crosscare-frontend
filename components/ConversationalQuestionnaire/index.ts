@@ -7,6 +7,27 @@ import {
   QuestionnaireAction,
 } from "./types";
 import { CONFIG } from "@/constants/config";
+import { getTranslatedQuestionnaireDomains } from "../../utils/questionnaireTranslations";
+import {
+  initialConversationContext,
+  conversationReducer,
+  saveConversationContext,
+  loadConversationContext,
+} from "../../utils/ConversationalSystem/ConversationalContext/contextManager";
+import {
+  classifyIntentWithAI,
+  fallbackClassification,
+} from "../../utils/ConversationalSystem/IntentClassification/classifier";
+import { getCachedClassification } from "../../utils/ConversationalSystem/IntentClassification/cache";
+import {
+  detectEmpathyTrigger,
+  generateEmpathyResponse,
+} from "../../utils/ConversationalSystem/EmpathyResponses/generator";
+import axios from "axios";
+import { AppState, type AppStateStatus } from "react-native";
+
+// Default OpenAI API key (you'll want to store this securely)
+const DEFAULT_API_KEY = `${CONFIG.OPENAI_API_KEY}` || "";
 
 interface SensitiveDisclosure {
   topic: string;
@@ -30,26 +51,6 @@ interface SerializedQuestionnaireResponse
   extends Omit<QuestionnaireResponse, "timestamp"> {
   timestamp: string;
 }
-import {
-  initialConversationContext,
-  conversationReducer,
-  saveConversationContext,
-  loadConversationContext,
-} from "../../utils/ConversationalSystem/ConversationalContext/contextManager";
-import {
-  classifyIntentWithAI,
-  fallbackClassification,
-} from "../../utils/ConversationalSystem/IntentClassification/classifier";
-import { getCachedClassification } from "../../utils/ConversationalSystem/IntentClassification/cache";
-import {
-  detectEmpathyTrigger,
-  generateEmpathyResponse,
-} from "../../utils/ConversationalSystem/EmpathyResponses/generator";
-import axios from "axios";
-import { AppState, type AppStateStatus } from "react-native";
-
-// Default OpenAI API key (you'll want to store this securely)
-const DEFAULT_API_KEY = `${CONFIG.OPENAI_API_KEY}` || "";
 
 const ConversationalQuestionnaire = ({
   userId,
@@ -58,7 +59,11 @@ const ConversationalQuestionnaire = ({
   onResponseSaved,
   setIsPaused,
   openAIApiKey = DEFAULT_API_KEY,
+  t,
 }: ConversationalQuestionnaireProps): ConversationalQuestionnaireManager => {
+  // Get translated questionnaire domains
+  const QUESTIONNAIRE_DOMAINS = getTranslatedQuestionnaireDomains(t);
+
   // Use useReducer instead of multiple useState calls for complex state
   const [context, dispatch] = useReducer(
     conversationReducer,

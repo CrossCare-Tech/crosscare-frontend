@@ -1,6 +1,7 @@
 import { EmpathyResponse } from '../../utils/ConversationalSystem/EmpathyResponses/types';
 import { QuestionnaireResponse } from '../../constants/questionaireData';
 import { ConversationContext } from '../../utils/ConversationalSystem/ConversationalContext/types';
+import { TFunction } from 'i18next';
 
 export interface ConversationalQuestionnaireProps {
   userId: string;
@@ -9,6 +10,7 @@ export interface ConversationalQuestionnaireProps {
   onResponseSaved: (response: QuestionnaireResponse) => void;
   setIsPaused: (val: boolean) => void,
   openAIApiKey?: string; // For intent classification
+  t: TFunction; // Translation function
 }
 
 export interface QuestionnaireAction {
