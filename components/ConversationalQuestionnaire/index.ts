@@ -306,7 +306,7 @@ const ConversationalQuestionnaire = ({
       }
     }
     // Returning user who has seen the intro
-    else if (hasSeenIntro && introStep >= 4) {
+    else if (hasSeenIntro && introStep >= 4 && !isResuming.current) {
       // Send the first question if not already sent
       setTimeout(() => {
         if (!sentMessages.has("first_question")) {
@@ -321,6 +321,7 @@ const ConversationalQuestionnaire = ({
     hasSeenIntro,
     hasAskedForTime,
     userWantsToStart,
+    isResuming,
   ]);
 
   // Load conversation state from storage
