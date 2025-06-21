@@ -559,7 +559,7 @@ const styles = StyleSheet.create({
   reminderActions: {
     alignItems: 'flex-end',
     justifyContent: 'space-between',
-    height: '100%',
+    // height: '100%',
     paddingVertical: 4,
   },
   deleteButton: {

@@ -2056,11 +2056,11 @@ export default function askdoula() {
                 >
                   {!message.isUser && (
                     <Image
-                      source={{
-                        uri:
-                          user?.avatar_url ||
-                          "https://tskzddfyjazcirdvloch.supabase.co/storage/v1/object/public/cross-care/avatars/avatar-660e8400-e29b-41d4-a716-446655440014-46d376a4-820f-45d8-82cb-82766db041fa.jpg",
-                      }}
+                      source={user.avatar_url?
+                        {uri:
+                        user.avatar_url} :
+                          require("../../assets/images/doulaImg.png")
+                      }
                       style={styles.doulaAvatar}
                     />
                   )}

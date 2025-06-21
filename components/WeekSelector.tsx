@@ -64,6 +64,12 @@ const WeekSelector: React.FC<WeekSelectorProps> = ({
 
   // Mapping of weeks to fruits/vegetables with their data
   const weekToFruitMap: Record<string, FruitData> = {
+     "0": {
+      name: "poppySeed",
+      imageUrl: <PoppySeedIcon width={40} height={40}/>,
+      weight: "<1g",
+      length: "0.1cm",
+    },
     "1": {
       name: "poppySeed",
       imageUrl: <PoppySeedIcon width={40} height={40}/>,
@@ -83,8 +89,8 @@ const WeekSelector: React.FC<WeekSelectorProps> = ({
       length: "0.1cm",
     },
     "4": {
-      name: "poppySeed",
-      imageUrl: <PoppySeedIcon width={46} height={46}/>,
+      name: "lentilSeed",
+      imageUrl: <LentilIcon width={44} height={44}/>,
       weight: "<1g",
       length: "0.1cm",
     },
@@ -399,7 +405,7 @@ const WeekSelector: React.FC<WeekSelectorProps> = ({
               ]}
               onPress={() => handlePress(weekStr)}
             >
-              <Text style={styles.weekText}>{week}</Text>
+              <Text style={styles.weekText}>{week-1}</Text>
             </TouchableOpacity>
           )
         })}
