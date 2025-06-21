@@ -63,7 +63,7 @@
     "yourpregnancy": "Sua Gravidez",
     "weekofpregnancy": "Semana de Gravidez",
     "progresstracking": "Acompanhamento de Progresso",
-    "customizeyourdoula": "Personalize sua Doula",
+    "customizeyourdoula": "Personalize seu CrossCare Concierge",
     "voicetone": "Tom de voz",
     "hair": "Cabelo",
     "dress": "Roupas",
@@ -72,7 +72,7 @@
     "halloffame": "Hall da Fama",
     "earnbadge": "Distintivos Conquistados",
     "rewards": "Recompensas",
-    "changedoulalanguage": "Alterar idioma da doula",
+    "changedoulalanguage": "Alterar idioma do CrossCare Concierge",
     "notifications": "Notificações",
     "messages": "Mensagens",
     "alerts": "Alertas",
@@ -188,10 +188,10 @@
     "at": "Em"
   },
   "askDoula": {
-    "title": "Pergunte à Sua Doula",
+    "title": "Pergunte ao Seu CrossCare Concierge",
     "hi": "Oi",
     "description": "Eu sou sua Digital",
-    "doula": "Doula",
+    "doula": "CrossCare Concierge",
     "subtitle": "Como posso ajudar você hoje?",
     "title1": "Histórico de Conversa Limpo",
     "message": "Seu histórico de conversa foi excluído. Deseja iniciar o questionário de saúde agora?",
@@ -518,7 +518,7 @@
     "HYDRATED_QUEEN": "Registre sua ingestão de água para desbloquear este distintivo.",
     "RESTED_DIVA": "Registre o sono pela primeira vez e tenha pelo menos 8 horas de sono para desbloquear este distintivo.",
     "HEART_SCRIBE": "Registre uma entrada no diário pela primeira vez para desbloquear este distintivo.",
-    "TRIVIA_QUEEN": "Complete todos os domínios do questionário perguntado pela Doula para desbloquear este distintivo.",
+    "TRIVIA_QUEEN": "Complete todos os domínios do questionário perguntado pelo CrossCare Concierge para desbloquear este distintivo.",
     "SNAPSHOT": "Carregue sua foto pela primeira vez para desbloquear este distintivo.",
     "EXPLORER": "Explore todos os recursos deste aplicativo para desbloquear este distintivo.",
     "SLEEP_WIZARD_I": "Registre o sono diariamente de forma consistente por 25/30 dias no 1º mês para desbloquear este distintivo.",
@@ -563,7 +563,7 @@
     "HYDRATED_QUEEN": "Primeira vez que a água é registrada.",
     "RESTED_DIVA": "Primeira vez registrando o sono (e alcançando pelo menos 8 horas de sono).",
     "HEART_SCRIBE": "Primeira vez registrando uma entrada no diário.",
-    "TRIVIA_QUEEN": "Ao completar todos os domínios do questionário perguntado pela Doula.",
+    "TRIVIA_QUEEN": "Ao completar todos os domínios do questionário perguntado pelo CrossCare Concierge.",
     "SNAPSHOT": "Primeira vez que a foto é carregada.",
     "EXPLORER": "Primeira vez explorando todos os recursos do aplicativo.",
     "SLEEP_WIZARD_I": "Registrou o sono diariamente, consistente por 25/30 dias no mês.",
@@ -906,7 +906,35 @@
     }
   },
   "questionaire":{
-    "do":"Vive em uma casa ou em um apartamento?"
+    "do":"Você mora em uma casa ou apartamento?"
+  },
+  "conversationalQuestionnaire": {
+    "timeQuestion": "Olá, você tem alguns minutos para um questionário de saúde?",
+    "introMessages": {
+      "intro1": "Estou aqui para apoiá-la durante sua jornada da gravidez. Gostaria de entender melhor sua situação para fornecer orientação personalizada.",
+      "intro2": "Muitos fatores em nossas vidas—como moradia, acesso a alimentos, sistemas de apoio, e mais—podem afetar nossa saúde e bem-estar durante a gravidez.",
+      "intro3": "Gostaria de fazer algumas perguntas sobre as circunstâncias de sua vida. Isso me ajudará a conectá-la com recursos e informações úteis. Tudo o que você compartilhar é confidencial, e você pode pular qualquer pergunta que a deixe desconfortável."
+    },
+    "continue": {
+      "basicQuestion": "Gostaria de continuar com mais perguntas, ou prefere fazer uma pausa?",
+      "domainTransition": "Isso completa esta seção. Gostaria de continuar com perguntas sobre {{domain}}, ou prefere fazer uma pausa?",
+      "clarification": "Estou perguntando se gostaria de continuar com mais perguntas agora, ou se prefere pausar e voltar mais tarde. Você pode dizer 'sim' para continuar ou 'não' para pausar.",
+      "domainClarification": "Estou perguntando se gostaria de continuar com perguntas sobre {{domain}} agora, ou se prefere pausar e voltar mais tarde. Você pode dizer 'sim' para continuar ou 'não' para pausar."
+    },
+    "responses": {
+      "noTime": "Sem problemas! Podemos continuar esta conversa sempre que você tiver mais tempo. Apenas me avise quando estiver pronta.",
+      "pauseConfirmation": "Salvei seu progresso. Podemos continuar sempre que você estiver pronta - apenas me avise.",
+      "thankYou": "Obrigada por compartilhar essas informações comigo. Entender esses aspectos de sua vida me ajuda a fornecer melhor apoio e conectá-la com recursos que podem abordar quaisquer desafios que você esteja enfrentando. Lembre-se, você não está sozinha, e há organizações prontas para ajudá-la."
+    },
+    "questionFormat": {
+      "domainIntro": "Agora gostaria de perguntar sobre {{domain}}. {{question}}"
+    },
+    "options": {
+      "yes": "Sim",
+      "no": "Não",
+      "continue": "Continuar",
+      "pause": "Pausar"
+    }
   },
   "common": {
     "cancel": "Cancelar",

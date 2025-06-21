@@ -240,7 +240,7 @@ const ConversationalQuestionnaire = ({
 
     // First, ask if they have a few minutes if we haven't asked yet
     if (!hasAskedForTime) {
-      const timeQuestion = `Hey there, do you have a few minutes for a health questionnaire?`;
+      const timeQuestion = t('conversationalQuestionnaire.timeQuestion');
 
       if (!sentMessages.has("time_question")) {
         sentMessages.add("time_question");
@@ -259,11 +259,9 @@ const ConversationalQuestionnaire = ({
     // First-time user who needs to see the intro
     if (!hasSeenIntro && introStep < 4) {
       const introMessages = [
-        `I'm here to support you throughout your pregnancy journey. I'd like to better understand your situation to provide personalized guidance.`,
-
-        `Many factors in our lives—like housing, food access, support systems, and more—can affect our health and wellbeing during pregnancy.`,
-
-        `I'd like to ask you some questions about your life circumstances. This will help me connect you with useful resources and information. Everything you share is confidential, and you can skip any questions that make you uncomfortable.`,
+        t('conversationalQuestionnaire.introMessages.intro1'),
+        t('conversationalQuestionnaire.introMessages.intro2'),
+        t('conversationalQuestionnaire.introMessages.intro3'),
       ];
 
       if (introStep < 3) {
@@ -576,18 +574,19 @@ const ConversationalQuestionnaire = ({
 
   // Format question in a conversational way
   const formatQuestionConversationally = (domain: any, question: any) => {
-    // Add domain intro if it's the first question
+    // For the first question in a domain, introduce the domain
     if (context.currentQuestionIndex === 0) {
-      return `Now I'd like to ask you about ${domain.description.toLowerCase()}. ${
-        question.text
-      }`;
+      return t('conversationalQuestionnaire.questionFormat.domainIntro', {
+        domain: domain.description.toLowerCase(),
+        question: question.text
+      });
     }
 
     // Otherwise just ask the question naturally
     const conversationalLeadIns = [
       "",
-      "Could you tell me, ",
-      "I'd like to know, ",
+      // "Could you tell me, ",
+      // "I'd like to know, ",
     ];
     const leadIn =
       conversationalLeadIns[
@@ -615,12 +614,13 @@ const ConversationalQuestionnaire = ({
 
         // Create the message
         const nextDomainIndex = context.currentDomainIndex + 1;
-        let continueMessage =
-          "Would you like to continue with more questions, or would you prefer to take a break?";
+        let continueMessage = t('conversationalQuestionnaire.continue.basicQuestion');
 
         if (nextDomainIndex < QUESTIONNAIRE_DOMAINS.length) {
           const nextDomain = QUESTIONNAIRE_DOMAINS[nextDomainIndex];
-          continueMessage = `That completes this section. Would you like to continue to questions about ${nextDomain.description.toLowerCase()}, or would you prefer to take a break?`;
+          continueMessage = t('conversationalQuestionnaire.continue.domainTransition', {
+            domain: nextDomain.description.toLowerCase()
+          });
         }
 
         // Save the message
@@ -702,8 +702,7 @@ const ConversationalQuestionnaire = ({
           const noTimeKey = "no_time_response";
           if (!sentMessages.has(noTimeKey)) {
             sentMessages.add(noTimeKey);
-            const noTimeMessage =
-              "No problem! We can continue this conversation whenever you have more time. Just let me know when you're ready.";
+            const noTimeMessage = t('conversationalQuestionnaire.responses.noTime');
 
             // Save as last message
             saveLastQuestion("pause", noTimeKey, noTimeMessage);
@@ -805,8 +804,7 @@ const ConversationalQuestionnaire = ({
           const pauseKey = `pause_${context.currentDomainIndex}`;
           if (!sentMessages.has(pauseKey)) {
             sentMessages.add(pauseKey);
-            const pauseMessage =
-              "I've saved your progress. We can continue whenever you're ready - just let me know.";
+            const pauseMessage = t('conversationalQuestionnaire.responses.pauseConfirmation');
 
             // Save as last message
             saveLastQuestion("pause", pauseKey, pauseMessage);
@@ -826,8 +824,7 @@ const ConversationalQuestionnaire = ({
           if (!sentMessages.has(clarificationKey)) {
             sentMessages.add(clarificationKey);
 
-            let clarificationMessage =
-              "I'm asking if you'd like to continue with more questions now, or if you'd prefer to pause and come back later. You can say 'yes' to continue or 'no' to pause.";
+            let clarificationMessage = t('conversationalQuestionnaire.continue.clarification');
 
             // Add context about the next domain if available
             if (
@@ -835,7 +832,9 @@ const ConversationalQuestionnaire = ({
               nextDomainIndex < QUESTIONNAIRE_DOMAINS.length
             ) {
               const nextDomain = QUESTIONNAIRE_DOMAINS[nextDomainIndex];
-              clarificationMessage = `I'm asking if you'd like to continue with questions about ${nextDomain.description.toLowerCase()} now, or if you'd prefer to pause and come back later. You can say 'yes' to continue or 'no' to pause.`;
+              clarificationMessage = t('conversationalQuestionnaire.continue.domainClarification', {
+                domain: nextDomain.description.toLowerCase()
+              });
             }
 
             // Send clarification
@@ -1487,8 +1486,7 @@ const ConversationalQuestionnaire = ({
         const thankYouKey = "thank_you_message";
         if (!sentMessages.has(thankYouKey)) {
           sentMessages.add(thankYouKey);
-          const thankYouMessage =
-            "Thank you for sharing this information with me. Understanding these aspects of your life helps me provide better support and connect you with resources that can address any challenges you're facing. Remember, you're not alone, and there are organizations ready to assist you.";
+          const thankYouMessage = t('conversationalQuestionnaire.responses.thankYou');
 
           // Save as last message
           saveLastQuestion("complete", thankYouKey, thankYouMessage);
@@ -1503,8 +1501,7 @@ const ConversationalQuestionnaire = ({
         const thankYouKey = "thank_you_message";
         if (!sentMessages.has(thankYouKey)) {
           sentMessages.add(thankYouKey);
-          const thankYouMessage =
-            "Thank you for sharing this information with me. Understanding these aspects of your life helps me provide better support and connect you with resources that can address any challenges you're facing. Remember, you're not alone, and there are organizations ready to assist you.";
+          const thankYouMessage = t('conversationalQuestionnaire.responses.thankYou');
 
           // Send the message
           onQuestionReady(thankYouMessage);
@@ -1761,6 +1758,10 @@ const ConversationalQuestionnaire = ({
           setWaitingForDomainTransition(true);
           setNextDomainIndex(savedContext.currentDomainIndex + 1);
 
+          // Mark the continue message as sent to prevent duplicates
+          const continueKey = `continue_${savedContext.currentDomainIndex}`;
+          sentMessages.add(continueKey);
+
           // Create continuation message
           const nextDomainIndex = savedContext.currentDomainIndex + 1;
           let continueMessage =
@@ -1805,11 +1806,17 @@ const ConversationalQuestionnaire = ({
             return;
           }
 
-          // Mark as sent
+          // Mark the current question as sent to prevent duplicates
           const questionKey = `question_${currentDomain.id}_${currentQuestion.id}`;
           sentMessages.add(questionKey);
 
-          // Create resume message
+          // Also mark any previous messages to prevent them from being resent
+          sentMessages.add("time_question");
+          if (savedContext.currentDomainIndex === 0 && savedContext.currentQuestionIndex === 0) {
+            sentMessages.add("first_question");
+          }
+
+          // Create resume message with welcome back text
           let resumeMessage =
             "Welcome back! Let's continue where we left off. ";
 

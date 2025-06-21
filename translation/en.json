@@ -63,7 +63,7 @@
     "yourpregnancy": "Your Pregnancy",
     "weekofpregnancy": "Week of Pregnancy",
     "progresstracking": "Progress Tracking",
-    "customizeyourdoula": "Customize your Doula",
+    "customizeyourdoula": "Customize your CrossCare Concierge",
     "voicetone": "Voice tone",
     "hair": "Hair",
     "dress": "Dress",
@@ -72,7 +72,7 @@
     "halloffame": "Hall of Fame",
     "earnbadge": "Earned Badges",
     "rewards": "Rewards",
-    "changedoulalanguage": "Change doula language",
+    "changedoulalanguage": "Change CrossCare Concierge language",
     "notifications": "Notification",
     "messages": "Messages",
     "alerts": "Alerts",
@@ -188,7 +188,7 @@
     "at": "At"
   },
   "askDoula": {
-    "title": "Ask Your Doula",
+    "title": "Ask Your CrossCare Concierge",
     "hi": "Hi",
     "description": "I'm your",
     "doula": "CrossCare Concierge",
@@ -517,7 +517,7 @@
     "HYDRATED_QUEEN": "Log your water intake to unlock this badge.",
     "RESTED_DIVA": "Log sleep for the first time and take a minimum of 8 hours of sleep to unlock this badge.",
     "HEART_SCRIBE": "Log an entry in the journal for the first time to unlock this badge.",
-    "TRIVIA_QUEEN": "Complete all domains of the questionnaire asked by Doula to unlock this badge.",
+    "TRIVIA_QUEEN": "Complete all domains of the questionnaire asked by CrossCare Concierge to unlock this badge.",
     "SNAPSHOT": "Upload your photo to unlock this badge.",
     "EXPLORER": "Explore all the features of this app to unlock this badge.",
     "SLEEP_WIZARD_I": "Log sleep daily consistently for 25/30 days in the 1st month to unlock this badge.",
@@ -562,7 +562,7 @@
     "HYDRATED_QUEEN": "First time water is logged.",
     "RESTED_DIVA": "First time logging sleep (and getting minimum 8 hours of sleep).",
     "HEART_SCRIBE": "First time logging an entry in the journal.",
-    "TRIVIA_QUEEN": "On completing all domains of the questionnaire asked by Doula.",
+    "TRIVIA_QUEEN": "On completing all domains of the questionnaire asked by CrossCare Concierge.",
     "SNAPSHOT": "First time photo is uploaded.",
     "EXPLORER": "First time exploring all features of the app (should have navigated at least once to all habit trackers, self-care, journal).",
     "SLEEP_WIZARD_I": "Logged sleep daily monthly, consistent 25/30 days in the month.",
@@ -932,6 +932,34 @@
   },
   "questionaire":{
     "do":"Do you live in a house or an apartment?"
+  },
+  "conversationalQuestionnaire": {
+    "timeQuestion": "Hey there, do you have a few minutes for a health questionnaire?",
+    "introMessages": {
+      "intro1": "I'm here to support you throughout your pregnancy journey. I'd like to better understand your situation to provide personalized guidance.",
+      "intro2": "Many factors in our lives—like housing, food access, support systems, and more—can affect our health and wellbeing during pregnancy.",
+      "intro3": "I'd like to ask you some questions about your life circumstances. This will help me connect you with useful resources and information. Everything you share is confidential, and you can skip any questions that make you uncomfortable."
+    },
+    "continue": {
+      "basicQuestion": "Would you like to continue with more questions, or would you prefer to take a break?",
+      "domainTransition": "That completes this section. Would you like to continue to questions about {{domain}}, or would you prefer to take a break?",
+      "clarification": "I'm asking if you'd like to continue with more questions now, or if you'd prefer to pause and come back later. You can say 'yes' to continue or 'no' to pause.",
+      "domainClarification": "I'm asking if you'd like to continue with questions about {{domain}} now, or if you'd prefer to pause and come back later. You can say 'yes' to continue or 'no' to pause."
+    },
+    "responses": {
+      "noTime": "No problem! We can continue this conversation whenever you have more time. Just let me know when you're ready.",
+      "pauseConfirmation": "I've saved your progress. We can continue whenever you're ready - just let me know.",
+      "thankYou": "Thank you for sharing this information with me. Understanding these aspects of your life helps me provide better support and connect you with resources that can address any challenges you're facing. Remember, you're not alone, and there are organizations ready to assist you."
+    },
+    "questionFormat": {
+      "domainIntro": "Now I'd like to ask you about {{domain}}. {{question}}"
+    },
+    "options": {
+      "yes": "Yes",
+      "no": "No",
+      "continue": "Continue", 
+      "pause": "Pause"
+    }
   },
   "common": {
     "cancel": "Cancel",

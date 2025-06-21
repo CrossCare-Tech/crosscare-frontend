@@ -63,16 +63,16 @@
     "yourpregnancy": "Gravidity ou",
     "weekofpregnancy": "Semèn nan Gravidity",
     "progresstracking": "Suivi Progres",
-    "customizeyourdoula": "Personnalize Doula ou",
-    "voicetone": "Ton Vwa",
+    "customizeyourdoula": "Personnalize CrossCare Concierge ou",
+    "voicetone": "Ton vwa",
     "hair": "Cheve",
     "dress": "Rad",
     "language": "Lang",
-    "skintone": "Ton Po",
-    "halloffame": "Sal Onè",
-    "earnbadge": "Badj Ki Jwenn",
-    "rewards": "Rekonesans",
-    "changedoulalanguage": "Chanje lang doula",
+    "skintone": "Ton po",
+    "halloffame": "Hall la Fam",
+    "earnbadge": "Badj yo ki gen",
+    "rewards": "Rekonpans",
+    "changedoulalanguage": "Chanje lang CrossCare Concierge",
     "notifications": "Notifikasyon",
     "messages": "Mesaj",
     "alerts": "Alèt",
@@ -188,17 +188,17 @@
     "at": "Nan"
   },
   "askDoula": {
-    "title": "Mande Doula ou",
-    "hi": "Bonjou",
-    "description": "Mwen se Digital ou",
-    "doula": "Doula",
+    "title": "Mande CrossCare Concierge ou",
+    "hi": "Alo",
+    "description": "Mwen se dijital",
+    "doula": "CrossCare Concierge",
     "subtitle": "Kijan mwen ka ede ou jodi a?",
-    "title1": "Istwa Chat Efase",
-    "message": "Istwa konvèsasyon ou efase. Èske ou ta renmen kòmanse kesyonè sante a kounye a?",
+    "title1": "Istwa Chat la efase",
+    "message": "Istwa konvèsasyon ou an efase. Eske ou ta renmen kòmanse kesyonè sante a kounye a?",
     "yes": "Wi",
     "no": "Pa kounye a",
     "errorTitle": "Erè",
-    "errorMessage": "Echwe pou efase istwa chat la. Tanpri eseye ankò."
+    "errorMessage": "Echèk nan efase istwa chat la. Tanpri eseye ankò."
   },
   "options": {
     "healthStats": "Estatistik Sante",
@@ -518,7 +518,7 @@
     "HYDRATED_QUEEN": "Mete enfòmasyon sou konsomasyon dlo ou pou debloque badj sa a.",
     "RESTED_DIVA": "Mete enfòmasyon sou dòmi ou pou premye fwa epi pran yon minimòm de 8 èdtan dòmi pou debloque badj sa a.",
     "HEART_SCRIBE": "Mete yon antre nan jounal ou pou premye fwa pou debloque badj sa a.",
-    "TRIVIA_QUEEN": "Konplete tout domèn nan kesyonè Doula a pou debloque badj sa a.",
+    "TRIVIA_QUEEN": "Konplete tout domèn nan kesyonè CrossCare Concierge a pou debloke badj sa a.",
     "SNAPSHOT": "Telechaje foto ou pou debloque badj sa a.",
     "EXPLORER": "Eksplore tout karakteristik nan aplikasyon an pou debloque badj sa a.",
     "SLEEP_WIZARD_I": "Mete enfòmasyon sou dòmi chak jou pou 25/30 jou nan premye mwa a pou debloque badj sa a.",
@@ -563,7 +563,7 @@
     "HYDRATED_QUEEN": "Premye fwa dlo a ap antre nan dosye a.",
     "RESTED_DIVA": "Premye fwa mete enfòmasyon sou dòmi (epi ou jwenn omwen 8 èdtan dòmi).",
     "HEART_SCRIBE": "Premye fwa mete yon antre nan jounal ou.",
-    "TRIVIA_QUEEN": "Nan konplete tout domèn nan kesyonè Doula a.",
+    "TRIVIA_QUEEN": "Nan konplete tout domèn nan kesyonè CrossCare Concierge a.",
     "SNAPSHOT": "Premye fwa telechaje yon foto.",
     "EXPLORER": "Premye fwa eksplore tout karakteristik aplikasyon an (ou dwe pase nan tout trasè abitid yo, swen tèt, jounal).",
     "SLEEP_WIZARD_I": "Mete enfòmasyon sou dòmi chak jou pou 25/30 jou nan mwa a.",
@@ -903,6 +903,34 @@
     }
   },
   "questionaire":{
-    "do":"Èske w ap viv nan yon kay oswa yon apatman?"
+    "do":"Eske w ap viv nan yon kay oswa nan yon apatman?"
+  },
+  "conversationalQuestionnaire": {
+    "timeQuestion": "Alo, eske ou gen kèk minit pou yon kesyonè sante?",
+    "introMessages": {
+      "intro1": "Mwen isit la pou sipòte ou pandan vwayaj gwosès ou an. M ta renmen konprann sitiyasyon ou an pi byen pou m ka ba ou konsèy pèsonèl.",
+      "intro2": "Anpil faktè nan lavi nou yo—tankou lojman, aksè nan manje, sistèm sipò, ak plis ankò—ka afekte sante ak byennèt nou pandan gwosès.",
+      "intro3": "M ta renmen poze ou kèk kesyon sou sikonstans lavi ou yo. Sa ap ede m konekte ou ak resous ak enfòmasyon itil yo. Tout bagay ou pataje a konfidansyèl, ak ou ka sote nenpòt kesyon ki fè ou santi ou pa alèz."
+    },
+    "continue": {
+      "basicQuestion": "Eske ou ta renmen kontinye ak plis kesyon, oswa ou ta prefere pran yon ti repo?",
+      "domainTransition": "Sa fini seksyon sa a. Eske ou ta renmen kontinye ak kesyon sou {{domain}}, oswa ou ta prefere pran yon ti repo?",
+      "clarification": "M ap mande si ou ta renmen kontinye ak plis kesyon kounye a, oswa si ou ta prefere fè yon pòz ak tounen pi ta. Ou ka di 'wi' pou kontinye oswa 'non' pou fè pòz.",
+      "domainClarification": "M ap mande si ou ta renmen kontinye ak kesyon sou {{domain}} kounye a, oswa si ou ta prefere fè yon pòz ak tounen pi ta. Ou ka di 'wi' pou kontinye oswa 'non' pou fè pòz."
+    },
+    "responses": {
+      "noTime": "Pa gen pwoblèm! Nou ka kontinye konvèsasyon sa a nenpòt lè ou gen plis tan. Jis fè m konnen lè ou pare.",
+      "pauseConfirmation": "Mwen sove pwogrè ou an. Nou ka kontinye nenpòt lè ou pare - jis fè m konnen.",
+      "thankYou": "Mèsi pou ou pataje enfòmasyon sa yo avè m. Konprann aspè sa yo nan lavi ou yo ede m bay pi bon sipò ak konekte ou ak resous ki ka adrese nenpòt defi ou ka fè fas ak yo. Sonje, ou pa pou kont ou, ak gen òganizasyon ki pare pou ede ou."
+    },
+    "questionFormat": {
+      "domainIntro": "Kounye a m ta renmen mande ou sou {{domain}}. {{question}}"
+    },
+    "options": {
+      "yes": "Wi",
+      "no": "Non", 
+      "continue": "Kontinye",
+      "pause": "Fè Pòz"
+    }
   }
 }
