@@ -24,7 +24,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage"
 import * as WebBrowser from "expo-web-browser"
 import { useFitbit } from "@/zustandStore/useFitbitStore"
 import { useTranslation } from "react-i18next"
-import { checkAppleHealthConnection, testAppleHealthData } from "@/zustandStore/useAppleStore";
+// import { checkAppleHealthConnection, testAppleHealthData } from "@/zustandStore/useAppleStore";
 
 
 const { width } = Dimensions.get("window")
@@ -120,45 +120,45 @@ export default function HeartRateScreen() {
       setHeartVisited();
     }, [userId]);
 
-    useEffect(() => {
-      const testAppleHealth = async () => {
-        console.log('🍎 Testing Apple Health connection...');
+    // useEffect(() => {
+    //   const testAppleHealth = async () => {
+    //     console.log('🍎 Testing Apple Health connection...');
         
-        try {
-          // Check if Apple Health is available and get permissions
-          const connectionResult = await checkAppleHealthConnection();
+    //     try {
+    //       // Check if Apple Health is available and get permissions
+    //       const connectionResult = await checkAppleHealthConnection();
           
-          console.log('🍎 Apple Health Connection Result:', connectionResult);
+    //       console.log('🍎 Apple Health Connection Result:', connectionResult);
           
-          if (connectionResult.isAvailable && connectionResult.hasPermissions) {
-            console.log('🎉 Apple Health is connected! Testing data access...');
+    //       if (connectionResult.isAvailable && connectionResult.hasPermissions) {
+    //         console.log('🎉 Apple Health is connected! Testing data access...');
             
-            // Test basic data access
-            const dataResult = await testAppleHealthData();
-            console.log('🍎 Apple Health Data Test Result:', dataResult);
+    //         // Test basic data access
+    //         const dataResult = await testAppleHealthData();
+    //         console.log('🍎 Apple Health Data Test Result:', dataResult);
             
-            if (dataResult.success) {
-              console.log(`🚶‍♀️ Step count retrieved: ${dataResult.stepCount} steps`);
-            } else {
-              console.log('❌ Failed to retrieve data:', dataResult.error);
-            }
-          } else if (connectionResult.isAvailable && !connectionResult.hasPermissions) {
-            console.log('⚠️ Apple Health is available but permissions not granted');
-          } else {
-            console.log('❌ Apple Health not available on this device');
-          }
-        } catch (error) {
-          console.error('🚨 Error testing Apple Health:', JSON.stringify(error, null, 2));
-        }
-      };
+    //         if (dataResult.success) {
+    //           console.log(`🚶‍♀️ Step count retrieved: ${dataResult.stepCount} steps`);
+    //         } else {
+    //           console.log('❌ Failed to retrieve data:', dataResult.error);
+    //         }
+    //       } else if (connectionResult.isAvailable && !connectionResult.hasPermissions) {
+    //         console.log('⚠️ Apple Health is available but permissions not granted');
+    //       } else {
+    //         console.log('❌ Apple Health not available on this device');
+    //       }
+    //     } catch (error) {
+    //       console.error('🚨 Error testing Apple Health:', JSON.stringify(error, null, 2));
+    //     }
+    //   };
     
-      // Only test on iOS devices
-      if (Platform.OS === 'ios') {
-        testAppleHealth();
-      } else {
-        console.log('📱 Apple Health only available on iOS devices');
-      }
-    }, []);
+    //   // Only test on iOS devices
+    //   if (Platform.OS === 'ios') {
+    //     testAppleHealth();
+    //   } else {
+    //     console.log('📱 Apple Health only available on iOS devices');
+    //   }
+    // }, []);
 
   // Add a ref for the period selector button
   const periodSelectorRef = useRef<View>(null)
