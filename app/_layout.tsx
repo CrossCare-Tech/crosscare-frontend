@@ -11,7 +11,7 @@ import { useEffect } from "react";
 import "react-native-reanimated";
 import { Provider, useDispatch, useSelector } from "react-redux";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
+import { Platform } from "react-native";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { supabase } from "@/supabase/supabase";
 import { store } from "../store/store";
@@ -24,6 +24,7 @@ import '../translation/i18next'
 import { loadSavedLanguage } from "@/translation/i18next";
 import { useMealStore } from "@/zustandStore/mealStore";
 import { setLanguage } from "@/store/languageSlice";
+import { initializeAppleHealth } from "@/zustandStore/useAppleHealthStore";
 // Prevent the splash screen from a@/translation/i18nextfore asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
@@ -104,6 +105,18 @@ const RootLayoutNav = () => {
     fetchUserMealData();
   }, [user?.user_id, user?.id, fetchMeals, fetchCalorieHistory]);
 
+
+  useEffect(() => {
+    const initializeApp = async () => {
+      // Initialize Apple Health connection on iOS
+      if (Platform.OS === 'ios') {
+        await initializeAppleHealth();
+      }
+    };
+    
+    initializeApp();
+  }, []);
+  
   // Hide the splash screen once fonts are loaded
   useEffect(() => {
     if (loaded) {

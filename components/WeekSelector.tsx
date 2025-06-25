@@ -47,28 +47,27 @@ interface WeekSelectorProps {
 
 interface FruitData {
   name: string
-  imageUrl: string | React.ReactNode
+  imageUrl: string | React.ReactNode | null
   weight: string
   length: string
 }
 
-// Update the WeekSelector component to handle undefined initialWeek
 const WeekSelector: React.FC<WeekSelectorProps> = ({
   onWeekChange,
-  initialWeek = "1", // Provide a default value of "8"
+  initialWeek = "0",
 }) => {
-  const [selectedWeek, setSelectedWeek] = useState(initialWeek || "8")
+  const [selectedWeek, setSelectedWeek] = useState(initialWeek || "0")
   const scrollViewRef = useRef<ScrollView>(null)
   const scaleValue = new Animated.Value(0)
   const screenWidth = Dimensions.get("window").width
 
   // Mapping of weeks to fruits/vegetables with their data
   const weekToFruitMap: Record<string, FruitData> = {
-     "0": {
-      name: "poppySeed",
-      imageUrl: <PoppySeedIcon width={40} height={40}/>,
-      weight: "<1g",
-      length: "0.1cm",
+    "0": {
+      name: "comingSoon",
+      imageUrl: null,
+      weight: "-",
+      length: "-",
     },
     "1": {
       name: "poppySeed",
@@ -312,13 +311,13 @@ const WeekSelector: React.FC<WeekSelectorProps> = ({
     },
   }
 
-  // Default to week 8 if the selected week doesn't have data
+  // Default to week 0 if the selected week doesn't have data
   const getDefaultFruit = (): FruitData => {
     return {
-      name: "cherry",
-      imageUrl: "https://cdn-icons-png.flaticon.com/512/590/590685.png",
-      weight: "1g",
-      length: "1.6cm",
+      name: "comingSoon",
+      imageUrl: null,
+      weight: "-",
+      length: "-",
     }
   }
 
@@ -344,7 +343,7 @@ const WeekSelector: React.FC<WeekSelectorProps> = ({
     // Scroll to the selected week when component mounts
     if (scrollViewRef.current) {
       const weekNumber = Number.parseInt(selectedWeek)
-      const scrollToX = (weekNumber - 1) * 60 // Approximate position
+      const scrollToX = weekNumber * 60 // Approximate position
 
       // Add a small delay to ensure the ScrollView is fully rendered
       setTimeout(() => {
@@ -359,7 +358,7 @@ const WeekSelector: React.FC<WeekSelectorProps> = ({
     // Scroll to center the selected week
     if (scrollViewRef.current) {
       const weekNumber = Number.parseInt(week)
-      const scrollToX = (weekNumber - 1) * 60 // Approximate position
+      const scrollToX = weekNumber * 60 // Approximate position
       scrollViewRef.current.scrollTo({ x: scrollToX, animated: true })
     }
   }
@@ -369,8 +368,18 @@ const WeekSelector: React.FC<WeekSelectorProps> = ({
   return (
     <View style={styles.container}>
       <View style={styles.fruitInfoContainer}>
-      {getFruitForWeek(selectedWeek).imageUrl}
-        <Text style={styles.fruitText}> {t("fruitText", { fruit: t(`fruits.${getFruitForWeek(selectedWeek).name}`) })}</Text>
+        {selectedWeek === "0" ? (
+          <View style={styles.comingSoonContainer}>
+            <Text style={styles.comingSoonText}>See your baby grow here!</Text>
+          </View>
+        ) : (
+          <>
+            {getFruitForWeek(selectedWeek).imageUrl}
+            <Text style={styles.fruitText}>
+              {t("fruitText", { fruit: t(`fruits.${getFruitForWeek(selectedWeek).name}`) })}
+            </Text>
+          </>
+        )}
       </View>
       <ScrollView
         ref={scrollViewRef}
@@ -380,7 +389,7 @@ const WeekSelector: React.FC<WeekSelectorProps> = ({
         onScroll={Animated.event([{ nativeEvent: { contentOffset: { x: scaleValue } } }], { useNativeDriver: false })}
         scrollEventThrottle={16}
       >
-        {Array.from({ length: 40 }, (_, index) => index + 1).map((week) => {
+        {Array.from({ length: 41 }, (_, index) => index).map((week) => {
           const weekStr = week.toString()
           const isSelected = weekStr === selectedWeek
 
@@ -405,13 +414,11 @@ const WeekSelector: React.FC<WeekSelectorProps> = ({
               ]}
               onPress={() => handlePress(weekStr)}
             >
-              <Text style={styles.weekText}>{week-1}</Text>
+              <Text style={styles.weekText}>{week}</Text>
             </TouchableOpacity>
           )
         })}
       </ScrollView>
-
-      
     </View>
   )
 }
@@ -442,6 +449,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 15,
     marginBottom: 10,
+    minHeight: 180, // Ensure consistent height
   },
   fruitImage: {
     width: 60,
@@ -455,7 +463,18 @@ const styles = StyleSheet.create({
     letterSpacing:1.26,
     textAlign: "center",
   },
+  comingSoonContainer: {
+    justifyContent: "center",
+    alignItems: "center",
+    height: 160,
+  },
+  comingSoonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontFamily: 'Inter700',
+    textAlign: "center",
+    letterSpacing: 1.26,
+  },
 })
 
 export default WeekSelector
-

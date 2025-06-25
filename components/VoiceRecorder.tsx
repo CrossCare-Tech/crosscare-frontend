@@ -39,7 +39,7 @@ interface FormatTimeProps {
 export default function VoiceRecorder({
   onSendAudio,
   systemPrompt = systemPrompts,
-  apiKey = `${CONFIG.GEMINI_API_KEY}`,
+  apiKey = `${CONFIG.GEMINI_KEY}`,
   isMuted,
   isSpeaking,
   setIsSpeaking,
@@ -283,7 +283,7 @@ export default function VoiceRecorder({
         {
           method: "POST",
           headers: {
-            Authorization: `Token ${CONFIG.DEEPGRAM_API_KEY}`, // Replace with your Deepgram API key
+            Authorization: `Token ${CONFIG.DEEPGRAM_API}`, // Replace with your Deepgram API key
             "Content-Type": "audio/wav",
           },
           body: audioBlob,
@@ -325,7 +325,7 @@ export default function VoiceRecorder({
         throw new Error("Invalid response format or missing transcript data");
       }
     } catch (error) {
-      console.error("Error transcribing audio:", error);
+      console.error("Error transcribing audio:", JSON.stringify(error, null, 2));
       if (setIsProcessing) setIsProcessing(false);
       Alert.alert(
         "Speech Recognition Error",

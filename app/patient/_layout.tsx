@@ -16,6 +16,7 @@ const PatientStack = () => {
         animation: 'slide_from_right',
     }}>
         <Stack.Screen name="(tabs)"  />
+        <Stack.Screen name='home'/>
         <Stack.Screen name='track'/>
         <Stack.Screen name='health'/>
         <Stack.Screen name='steps'/>

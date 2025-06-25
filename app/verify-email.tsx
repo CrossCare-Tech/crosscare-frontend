@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Image
 } from "react-native";
 import { useNavigation, useRouter, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -15,6 +16,7 @@ import LogoSvg from "@/assets/images/Svg/LogoSvg";
 import { LinearGradient } from "expo-linear-gradient";
 import CustomTextInput from "@/components/ui/CustomTextInput";
 import { CONFIG } from "@/constants/config";
+import appLogo from "@/assets/images/Svg/appLogo.png"
 
 const VerifyEmail: FC = () => {
   const [otp, setOtp] = useState("");
@@ -144,7 +146,7 @@ const VerifyEmail: FC = () => {
       >
         <View style={styles.headerContainer}>
           <View style={styles.logoContainer}>
-            <LogoSvg />
+            <Image source={appLogo} style={{ width: 100, height: 100 }} resizeMode="contain" />
           </View>
 
           <Text style={styles.title}>Verify Your Email</Text>

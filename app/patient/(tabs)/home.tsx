@@ -37,6 +37,8 @@ import { Linking } from "react-native";
 import PregnancyModal from "../modal/preagnancyModal";
 import { useMealStore } from "@/zustandStore/mealStore";
 import { CONFIG } from "@/constants/config";
+import { useFitbit } from "@/zustandStore/useFitbitStore";
+import { useAppleHealth } from "@/zustandStore/useAppleHealthStore";
 
 
 interface Progress {
@@ -126,6 +128,24 @@ const Home = () => {
   // const { stepsWalked, stepGoal, fetchStepData } = useStepsStore();
   const { stepsWalked, stepGoal } = useStepsWithAutoRefresh(user?.user_id);
 
+  // Add health service hooks
+  const {
+    isConnected: fitbitConnected,
+    getStepsData: fitbitGetStepsData,
+    getDataForRange: fitbitGetDataForRange,
+  } = useFitbit();
+
+  const {
+    isConnected: appleHealthConnected,
+    getStepsData: appleHealthGetStepsData,
+    getDataForRange: appleHealthGetDataForRange,
+    syncStepsWithBackend: appleHealthSyncSteps,
+  } = useAppleHealth();
+
+  // Determine which health service to use
+  const isUsingAppleHealth = Platform.OS === 'ios';
+  const healthServiceConnected = isUsingAppleHealth ? appleHealthConnected : fitbitConnected;
+
   const [foodQualityScore, setFoodQualityScore] = useState("50%");
 
   const handlePregnancySave = (week: number) => {
@@ -152,6 +172,65 @@ const Home = () => {
   // const [steps, setSteps] = useState(null);
 
   const userId = user?.user_id;
+
+  // Helper function to extract steps from health service data
+  const extractStepsFromHealthData = (healthData: any): number | null => {
+    if (!healthData) return null;
+    
+    if (isUsingAppleHealth) {
+      // Apple Health format
+      return healthData.value || null;
+    } else {
+      // Fitbit format
+      if (healthData["activities-steps"] && healthData["activities-steps"].length > 0) {
+        return parseInt(healthData["activities-steps"][0].value) || null;
+      }
+    }
+    
+    return null;
+  };
+
+  // Add health service data fetching
+  useEffect(() => {
+    const fetchHealthStepsData = async () => {
+      if (!userId || !healthServiceConnected) return;
+
+      try {
+        let stepsData;
+        if (isUsingAppleHealth) {
+          stepsData = await appleHealthGetStepsData();
+          // Sync with backend
+          if (stepsData && user?.user_id) {
+            await appleHealthSyncSteps(user.user_id);
+          }
+        } else {
+          // For Fitbit
+          const today = new Date().toISOString().split('T')[0];
+          stepsData = await fitbitGetStepsData(today);
+        }
+
+        // Update steps store with health service data
+        if (stepsData) {
+          const { setStepsWalked } = useStepsStore.getState();
+          // Extract steps count from health service data
+          const todaySteps = extractStepsFromHealthData(stepsData);
+          if (todaySteps !== null) {
+            setStepsWalked(todaySteps);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching health steps data:', error);
+      }
+    };
+
+    // Initial fetch
+    fetchHealthStepsData();
+
+    // Set up periodic refresh
+    const interval = setInterval(fetchHealthStepsData, 60000); // Every minute
+    
+    return () => clearInterval(interval);
+  }, [userId, healthServiceConnected, isUsingAppleHealth]);
 
   const cardData1 = [
     
@@ -405,6 +484,25 @@ const Home = () => {
         // console.log("Home screen lost focus")
       };
     }, [user?.user_id, getProfile])
+  );
+
+  // Add focus-based refresh for steps data
+  useFocusEffect(
+    useCallback(() => {
+      console.log("Home screen focused - refreshing steps data");
+      
+      if (user?.user_id) {
+        // Refresh steps data when screen comes into focus
+        const { fetchStepData } = useStepsStore.getState();
+        fetchStepData(user.user_id);
+        
+        // If health service is connected, also fetch from there
+        if (healthServiceConnected) {
+          // This will trigger the health service data fetch
+          // The useEffect above will handle the actual fetching
+        }
+      }
+    }, [user?.user_id, healthServiceConnected])
   );
 
   // // Updated useEffect to handle questionnaire navigation based on responses
@@ -665,7 +763,7 @@ const Home = () => {
             uri: selectedImage.uri,
             type: "image/jpeg",
             name: "profile-image.jpg",
-          });
+          } as any);
 
           const response = await fetch(
             `${CONFIG.API_BASE_URL}/user/${user?.user_id}/profile/image`,
@@ -704,7 +802,7 @@ const Home = () => {
             uri: selectedImage.uri,
             type: "image/jpeg",
             name: "upload.jpg",
-          });
+          } as any);
 
           const response1 = await fetch(
             `${CONFIG.API_BASE_URL}/user/activity/${user.user_id}/journal/upload`,

@@ -3,6 +3,18 @@ import { IntentClassification } from "../IntentClassification/types";
 import axios from "axios";
 import { CONFIG } from "@/constants/config";
 
+// Helper function to get language names
+const getLanguageName = (langCode: string) => {
+  const languages = {
+    en: "English",
+    es: "Spanish",
+    pt: "Portuguese",
+    ht: "Haitian Creole",
+    hi: "Hindi"
+  };
+  return languages[langCode as keyof typeof languages] || "English";
+};
+
 // Keep the existing trigger detection logic
 export const detectEmpathyTrigger = (
   userResponse: string,
@@ -106,31 +118,75 @@ export const detectEmpathyTrigger = (
   return "general_distress";
 };
 
-// New AI-powered empathy response generator
+// Translation helper function
+const translateToLanguage = async (text: string, languageCode: string, apiKey: string): Promise<string> => {
+  const languageMap: Record<string, string> = {
+    en: "English",
+    es: "Spanish",
+    hi: "Hindi",
+    ht: "Haitian Creole",
+    pt: "Portuguese"
+  };
+  
+  const targetLanguage = languageMap[languageCode] || "English";
+  if (targetLanguage === "English") return text;
+
+  try {
+    const response = await axios.post(
+      "https://api.openai.com/v1/chat/completions",
+      {
+        model: "gpt-3.5-turbo",
+        messages: [
+          { role: "system", content: `Translate the following empathetic text to ${targetLanguage}. Preserve all emotional tone, empathy, and caring language. Keep the response natural and culturally appropriate.` },
+          { role: "user", content: text }
+        ],
+        max_tokens: 200,
+        temperature: 0.3
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+      }
+    );
+
+    const translatedText = response.data.choices[0]?.message?.content?.trim();
+    return translatedText || text;
+  } catch (error) {
+    console.error("Translation error for empathy response:", error);
+    return text; // Return original text if translation fails
+  }
+};
+
+// Updated AI-powered empathy response generator with language support
 export const generateEmpathyResponse = async (
   trigger: EmpathyTrigger,
   userResponse: string,
   questionContext: string,
+  currentLanguage: string = "en",
   apiKey: string = `${CONFIG.OPENAI_API_KEY}` || ""
 ): Promise<EmpathyResponse> => {
   try {
     console.log("Generating AI empathy response for:", {
       trigger,
       questionContext,
+      currentLanguage: currentLanguage,
       responsePreview:
         userResponse.substring(0, 50) + (userResponse.length > 50 ? "..." : ""),
     });
 
-    // Remove follow-up questions entirely
-    let suggestedFollowUp = "";
-
     // Check if we have a valid API key
     if (!apiKey || apiKey.trim() === "") {
       console.error("No API key provided for empathy generation");
-      return fallbackEmpathyResponse(trigger);
+      return fallbackEmpathyResponse(trigger, currentLanguage);
     }
 
-    // Create a prompt for the AI
+    // Determine target language
+    const targetLanguage = getLanguageName(currentLanguage);
+    const isEnglish = currentLanguage === "en";
+
+    // Create a prompt for the AI with language instruction
     const prompt = `
 You are a supportive and empathetic doula providing care to a pregnant person. The person has just shared something that requires an empathetic response.
 
@@ -140,6 +196,8 @@ Person's response: "${userResponse}"
 
 Type of concern identified: ${trigger.replace("_", " ")}
 
+IMPORTANT: ${isEnglish ? 'Respond in English.' : `Respond ONLY in ${targetLanguage} language.`}
+
 Please generate a warm, empathetic response that:
 1. Acknowledges their feelings and validates their experience
 2. Shows genuine care and concern
@@ -148,6 +206,7 @@ Please generate a warm, empathetic response that:
 5. Feels natural and conversational, not scripted
 6. Does not ask follow-up questions (we'll handle that separately)
 7. Does not offer solutions yet, just emotional support
+${!isEnglish ? `8. Is written entirely in ${targetLanguage}` : ''}
 
 Your response should sound like a caring healthcare professional, not a therapist or counselor.
 Provide only the response text, no additional commentary.`;
@@ -160,7 +219,7 @@ Provide only the response text, no additional commentary.`;
         messages: [
           {
             role: "system",
-            content: "You are a supportive and empathetic doula assistant.",
+            content: `You are a supportive and empathetic doula assistant. ${!isEnglish ? `Always respond in ${targetLanguage}.` : ''}`,
           },
           { role: "user", content: prompt },
         ],
@@ -176,12 +235,27 @@ Provide only the response text, no additional commentary.`;
     );
 
     // Extract the generated response
-    const generatedResponse =
-      response.data.choices[0]?.message?.content?.trim();
+    let generatedResponse = response.data.choices[0]?.message?.content?.trim();
 
     if (!generatedResponse) {
       console.error("Empty response from OpenAI API");
-      return fallbackEmpathyResponse(trigger);
+      return fallbackEmpathyResponse(trigger, currentLanguage);
+    }
+
+    // If the response is not in English and we want to ensure proper translation,
+    // we can use the translation service as a backup
+    if (!isEnglish && generatedResponse) {
+      // Optional: Add a translation step as backup if the AI didn't respond in the right language
+      // This is a fallback to ensure the response is in the correct language
+      try {
+        const translatedResponse = await translateToLanguage(generatedResponse, currentLanguage, apiKey);
+        if (translatedResponse && translatedResponse !== generatedResponse) {
+          console.log("Used translation service as backup for empathy response");
+          generatedResponse = translatedResponse;
+        }
+      } catch (translationError) {
+        console.warn("Translation backup failed, using original response:", translationError);
+      }
     }
 
     console.log("Generated empathy response:", generatedResponse);
@@ -193,7 +267,7 @@ Provide only the response text, no additional commentary.`;
     };
   } catch (error) {
     console.error("Error generating AI empathy response:", error);
-    return fallbackEmpathyResponse(trigger);
+    return fallbackEmpathyResponse(trigger, currentLanguage);
   }
 };
 
@@ -241,10 +315,29 @@ const FALLBACK_TEMPLATES: Record<EmpathyTrigger, string[]> = {
   ],
 };
 
-// Provide a fallback response if the API call fails
-const fallbackEmpathyResponse = (trigger: EmpathyTrigger): EmpathyResponse => {
+// Updated fallback response function with language support
+const fallbackEmpathyResponse = async (trigger: EmpathyTrigger, currentLanguage: string = "en"): Promise<EmpathyResponse> => {
   const templates = FALLBACK_TEMPLATES[trigger];
-  const template = templates[Math.floor(Math.random() * templates.length)];
+  let template = templates[Math.floor(Math.random() * templates.length)];
+
+  // If not English, attempt to translate the fallback response
+  if (currentLanguage !== "en") {
+    try {
+      const apiKey = `${CONFIG.OPENAI_API_KEY}`;
+      if (apiKey && apiKey.trim() !== "") {
+        const translatedTemplate = await translateToLanguage(template, currentLanguage, apiKey);
+        if (translatedTemplate) {
+          template = translatedTemplate;
+          console.log("Translated fallback empathy response to", currentLanguage);
+        }
+      } else {
+        console.log("No API key available for translating fallback empathy response");
+      }
+    } catch (error) {
+      console.error("Error translating fallback empathy response:", error);
+      // Continue with English fallback
+    }
+  }
 
   return {
     responseText: template,

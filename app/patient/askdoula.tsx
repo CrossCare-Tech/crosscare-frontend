@@ -41,13 +41,16 @@ import { processUserQuery } from "@/utils/DoulaChatUtils/processUserQuery";
 import ConversationalQuestionnaire from "@/components/ConversationalQuestionnaire";
 import { BackHandler } from "react-native";
 import { useTranslation } from "react-i18next";
-import * as Speech from "expo-speech";
+import { Audio } from 'expo-av';
 import {
   GOAL_PATTERNS,
   isIncrementalRequest,
   LOG_PATTERNS,
 } from "@/utils/DoulaChatUtils/doulaLogPatterns";
 import { CONFIG } from "@/constants/config";
+import i18n from "@/translation/i18next";
+import { deepgramTTS, speakWithDeepgram } from "@/utils/deepgramTTS";
+
 
 interface PauseStateStorage {
   paused: boolean;
@@ -93,7 +96,7 @@ export default function askdoula() {
 
   const params = useLocalSearchParams();
   const fromModal = params.from_modal === "true";
-  const RAG_SERVICE_URL = `${CONFIG.API_BASE_URL}/chat`;
+  const RAG_SERVICE_URL = `${CONFIG.RAG_SERVICE_URL}/chat`;
   const [isAssistantResponding, setIsAssistantResponding] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -131,6 +134,7 @@ export default function askdoula() {
     // You need to add your OpenAI API key here
     openAIApiKey: `${CONFIG.OPENAI_API_KEY}` || "",
     t, // Pass the translation function
+    currentLanguage,
   });
 
   const checkQuestionnaireCompletionStatus = async () => {
@@ -268,6 +272,10 @@ export default function askdoula() {
       subscription.remove();
     };
   }, []);
+
+  useEffect(() => {
+    console.log("This is the current language", currentLanguage);
+  }, [currentLanguage]);
 
   const contextSavingRef = useRef(false);
   const isNavigatingAwayRef = useRef(false);
@@ -1055,46 +1063,38 @@ export default function askdoula() {
 
     // If speech is already happening, stop it before starting new speech
     if (isSpeaking) {
-      Speech.stop();
+      deepgramTTS.stop();
       console.log("Speech interrupted.");
     }
 
     setIsSpeaking(true);
 
-    // Create speech options with the female voice if available
-    const speechOptions: Speech.SpeechOptions = {
+    // Use Deepgram TTS with callbacks
+    speakWithDeepgram(text, {
       language: currentLanguage,
-      pitch: 1.0,
-      rate: 0.9,
-      onDone: () => {
-        setIsSpeaking(false);
-        setIsProcessing(false);
-        setSpeakingMessageId(null);
+      onStart: () => {
+        setIsSpeaking(true);
       },
-      onStopped: () => {
+      onComplete: () => {
         setIsSpeaking(false);
         setIsProcessing(false);
         setSpeakingMessageId(null);
       },
       onError: (error) => {
-        console.error("Speech error:", error);
+        console.error("Deepgram TTS error:", error);
         setIsSpeaking(false);
         setIsProcessing(false);
         setSpeakingMessageId(null);
       },
-    };
-
-    // Add the voice if we found a female one
-    if (femaleVoice) {
-      speechOptions.voice = femaleVoice.identifier;
-    }
-
-    // Start speaking the text
-    Speech.speak(text, speechOptions);
+    }).catch((error) => {
+      console.error("Error starting Deepgram TTS:", error);
+      setIsSpeaking(false);
+      setIsProcessing(false);
+      setSpeakingMessageId(null);
+    });
   };
 
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [femaleVoice, setFemaleVoice] = useState<Speech.Voice | null>(null);
   const [localMuted, setLocalMuted] = useState(false);
   const effectiveMuted = isMuted !== undefined ? isMuted : localMuted;
 
@@ -1102,7 +1102,7 @@ export default function askdoula() {
     return () => {
       // Cleanup speech when component unmounts
       if (isSpeaking) {
-        Speech.stop();
+        deepgramTTS.stop();
         setIsSpeaking(false);
         setSpeakingMessageId(null);
       }
@@ -1425,7 +1425,7 @@ export default function askdoula() {
         timestamp: new Date(),
       };
 
-      Speech.stop();
+      deepgramTTS.stop();
       // Update messages state with the new message
       const updatedMessages = [...messages, userMessage];
       setMessages(updatedMessages as Message[]);
@@ -1866,7 +1866,7 @@ export default function askdoula() {
 
   //     // Stop any ongoing speech when muting
   //     if (newMuteState && isSpeaking) {
-  //         Speech.stop();
+  //         deepgramTTS.stop();
   //         setIsSpeaking(false);
   //     }
   // };
@@ -1876,7 +1876,7 @@ export default function askdoula() {
 
     // If this message is already being spoken, stop it
     if (speakingMessageId === messageId) {
-      Speech.stop();
+      deepgramTTS.stop();
       setIsSpeaking(false);
       setSpeakingMessageId(null);
       return;
@@ -1886,7 +1886,7 @@ export default function askdoula() {
 
     // If another message is being spoken, stop it first
     if (isSpeaking) {
-      Speech.stop();
+      deepgramTTS.stop();
     }
 
     // If muted, unmute first
@@ -1897,33 +1897,26 @@ export default function askdoula() {
     // Set the speaking state and ID before starting speech
     setIsSpeaking(true);
 
-    const speechOptions: Speech.SpeechOptions = {
+    // Use Deepgram TTS to speak the message
+    speakWithDeepgram(messageContent, {
       language: currentLanguage,
-      pitch: 1.0,
-      rate: 0.9,
-      onDone: () => {
+      onStart: () => {
+        setIsSpeaking(true);
+      },
+      onComplete: () => {
         setIsSpeaking(false);
         setSpeakingMessageId(null);
       },
-      onStopped: () => {
+      onError: (error: any) => {
+        console.error("Deepgram TTS error:", error);
         setIsSpeaking(false);
         setSpeakingMessageId(null);
       },
-      onError: (error) => {
-        console.error("Speech error:", error);
-        setIsSpeaking(false);
-        setSpeakingMessageId(null);
-      },
-    };
-
-    // Add the voice if we found a female one
-    if (femaleVoice) {
-      speechOptions.voice = femaleVoice.identifier;
-    }
-
-    // Start speaking the text
-
-    Speech.speak(messageContent, speechOptions);
+    }).catch((error) => {
+      console.error("Error starting Deepgram TTS:", error);
+      setIsSpeaking(false);
+      setSpeakingMessageId(null);
+    });
   };
 
   return (
@@ -2468,6 +2461,7 @@ const styles = StyleSheet.create({
     color: "#7B7B7B",
     fontFamily: "DMSans400",
     marginTop: 4,
+    textAlign: "center",
   },
   optionsContainer: {
     flexDirection: "row",

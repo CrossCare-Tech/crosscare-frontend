@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Image
 } from "react-native";
 import React, { FC, useLayoutEffect, useState } from "react";
 import CustomTextInput from "@/components/ui/CustomTextInput";
@@ -18,6 +19,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import LogoSvg from "@/assets/images/Svg/LogoSvg";
 import { LinearGradient } from "expo-linear-gradient";
 import { CONFIG } from "@/constants/config";
+import appLogo from "@/assets/images/Svg/appLogo.png"
 
 const ForgetScreen: FC = () => {
   const [email, setEmail] = useState("");
@@ -110,7 +112,7 @@ const ForgetScreen: FC = () => {
       >
         <View style={styles.headerContainer}>
           <View style={styles.logoContainer}>
-            <LogoSvg />
+            <Image source={appLogo} style={{ width: 100, height: 100 }} resizeMode="contain" />
           </View>
 
           <Text style={styles.title}>

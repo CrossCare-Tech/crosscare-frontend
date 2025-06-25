@@ -13,6 +13,7 @@ import {
   StatusBar,
   ScrollView,
   Dimensions,
+  Image
 } from "react-native";
 import { supabase } from "@/supabase/supabase";
 import { useNavigation } from "@react-navigation/native";
@@ -26,6 +27,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { FontAwesome5 } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { CONFIG } from "@/constants/config";
+import appLogo from "@/assets/images/Svg/appLogo.png"
 
 const screenHeight = Dimensions.get("window").height;
 
@@ -230,7 +232,7 @@ const SignUp: FC = () => {
         >
           <View style={styles.headerContainer}>
             <View style={styles.logoContainer}>
-              <LogoSvg />
+              <Image source={appLogo} style={{ width: 100, height: 100 }} resizeMode="contain" />
             </View>
             <Text style={styles.title}>Create Your Account</Text>
 

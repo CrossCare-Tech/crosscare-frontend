@@ -70,6 +70,7 @@ const Home = () => {
       await AsyncStorage.removeItem("user");
       await AsyncStorage.removeItem("role");
       await AsyncStorage.removeItem("hasOnboarded");
+      await AsyncStorage.removeItem("appleHealthConnected");
       await AsyncStorage.clear();
 
       dispatch(removeToken());

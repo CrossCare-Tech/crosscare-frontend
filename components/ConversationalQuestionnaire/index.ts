@@ -25,6 +25,7 @@ import {
 } from "../../utils/ConversationalSystem/EmpathyResponses/generator";
 import axios from "axios";
 import { AppState, type AppStateStatus } from "react-native";
+import i18n from "@/translation/i18next";
 
 // Default OpenAI API key (you'll want to store this securely)
 const DEFAULT_API_KEY = `${CONFIG.OPENAI_API_KEY}` || "";
@@ -63,7 +64,8 @@ const ConversationalQuestionnaire = ({
 }: ConversationalQuestionnaireProps): ConversationalQuestionnaireManager => {
   // Get translated questionnaire domains
   const QUESTIONNAIRE_DOMAINS = getTranslatedQuestionnaireDomains(t);
-
+  const currentLanguage = i18n.language || "en";
+  console.log("Current language:", currentLanguage);
   // Use useReducer instead of multiple useState calls for complex state
   const [context, dispatch] = useReducer(
     conversationReducer,
@@ -973,7 +975,9 @@ const ConversationalQuestionnaire = ({
           const empathyResponse = await generateEmpathyResponse(
             empathyTrigger,
             response,
-            currentQuestion.text
+            currentQuestion.text,
+            currentLanguage,
+            openAIApiKey
           );
 
           // Record this as a sensitive disclosure
@@ -1803,16 +1807,16 @@ const ConversationalQuestionnaire = ({
           // Create continuation message
           const nextDomainIndex = savedContext.currentDomainIndex + 1;
           let continueMessage =
-            "Welcome back! Would you like to continue with the questionnaire where we left off?";
+            t('conversationalQuestionnaire.responses.welcomeBack');
 
           if (nextDomainIndex < QUESTIONNAIRE_DOMAINS.length) {
             const nextDomain = QUESTIONNAIRE_DOMAINS[nextDomainIndex];
-            continueMessage = `Welcome back! We were about to discuss ${nextDomain.description.toLowerCase()}. Would you like to continue?`;
+            continueMessage = t('conversationalQuestionnaire.responses.welcomeBack') + ` We were about to discuss ${nextDomain.description.toLowerCase()}. Would you like to continue?`;
           }
 
           // Use last question if available
           if (lastQuestion && lastQuestion.domainId === "continue") {
-            continueMessage = `Welcome back! ${lastQuestion.text.replace(
+            continueMessage = t('conversationalQuestionnaire.responses.welcomeBack') + `${lastQuestion.text.replace(
               /Would you like to keep going/,
               "Would you like to continue"
             )}`;
@@ -1863,7 +1867,7 @@ const ConversationalQuestionnaire = ({
 
           // Create resume message with welcome back text
           let resumeMessage =
-            "Welcome back! Let's continue where we left off. ";
+            t('conversationalQuestionnaire.responses.welcomeBack')
 
           // Add the question
           if (

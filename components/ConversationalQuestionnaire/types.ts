@@ -11,6 +11,7 @@ export interface ConversationalQuestionnaireProps {
   setIsPaused: (val: boolean) => void,
   openAIApiKey?: string; // For intent classification
   t: TFunction; // Translation function
+  currentLanguage?: string;
 }
 
 export interface QuestionnaireAction {

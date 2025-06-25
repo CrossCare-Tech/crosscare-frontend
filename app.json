@@ -4,7 +4,7 @@
     "slug": "crosscare",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/app-icon.png",
+    "icon": "./assets/images/app-splash.png",
     "scheme": "com.crosscare.tech",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -21,7 +21,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/logo.png",
+        "foregroundImage": "./assets/images/app-splash.png",
         "backgroundColor": "#ffffff"
       },
       "package": "com.crosscare.tech",
@@ -43,7 +43,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/app-logo.png",
+          "image": "./assets/images/app-splash.png",
           "width": 300,
           "height": 300,
           "resizeMode": "contain",

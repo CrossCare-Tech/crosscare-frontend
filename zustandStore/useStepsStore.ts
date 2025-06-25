@@ -369,13 +369,22 @@ export const useStepsStore = create<StepsState>()(
           // Initial fetch
           get().fetchStepData(userId);
 
-          // console.log("Auto-refreshing steps data...")
-          get().fetchStepData(userId);
+          // Set up periodic refresh every 30 seconds
+          const intervalId = setInterval(() => {
+            console.log("Auto-refreshing steps data...");
+            get().fetchStepData(userId);
+            
+            // If Fitbit is connected, also refresh Fitbit data
+            if (get().isFitbitConnected) {
+              get().fetchFitbitStepData(userId, "today");
+            }
+          }, 30000); // 30 seconds
 
-          // If Fitbit is connected, also refresh Fitbit data
-          if (get().isFitbitConnected) {
-            get().fetchFitbitStepData(userId, "today");
-          }
+          // Return cleanup function
+          return () => {
+            console.log("Stopping auto-refresh for steps data");
+            clearInterval(intervalId);
+          };
         },
 
         // Fitbit actions

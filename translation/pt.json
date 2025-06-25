@@ -924,7 +924,8 @@
     "responses": {
       "noTime": "Sem problemas! Podemos continuar esta conversa sempre que você tiver mais tempo. Apenas me avise quando estiver pronta.",
       "pauseConfirmation": "Salvei seu progresso. Podemos continuar sempre que você estiver pronta - apenas me avise.",
-      "thankYou": "Obrigada por compartilhar essas informações comigo. Entender esses aspectos de sua vida me ajuda a fornecer melhor apoio e conectá-la com recursos que podem abordar quaisquer desafios que você esteja enfrentando. Lembre-se, você não está sozinha, e há organizações prontas para ajudá-la."
+      "thankYou": "Obrigada por compartilhar essas informações comigo. Entender esses aspectos de sua vida me ajuda a fornecer melhor apoio e conectá-la com recursos que podem abordar quaisquer desafios que você esteja enfrentando. Lembre-se, você não está sozinha, e há organizações prontas para ajudá-la.",
+      "welcomeBack": "Bem-vinda de volta! Continuemos do ponto em que paramos. "
     },
     "questionFormat": {
       "domainIntro": "Agora gostaria de perguntar sobre {{domain}}. {{question}}"

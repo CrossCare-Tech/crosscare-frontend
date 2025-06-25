@@ -459,6 +459,7 @@
   "trimester2": "2do trimestre",
   "trimester3": "3er trimestre",
   "dateOfLabor": "Fecha de parto",
+  "seeYourBabyGrowHere": "¡Ve crecer a tu bebé aquí!",
   "fruitText": "Tu bebe es del tamaño de una {{fruit}}!",
   "fruits": {
     "poppySeed": "Semilla de amapola",
@@ -928,7 +929,8 @@
     "responses": {
       "noTime": "¡No hay problema! Podemos continuar esta conversación cuando tengas más tiempo. Solo déjame saber cuando estés lista.",
       "pauseConfirmation": "He guardado tu progreso. Podemos continuar cuando estés lista - solo déjame saber.",
-      "thankYou": "Gracias por compartir esta información conmigo. Entender estos aspectos de tu vida me ayuda a brindarte mejor apoyo y conectarte con recursos que pueden abordar cualquier desafío que estés enfrentando. Recuerda, no estás sola, y hay organizaciones listas para ayudarte."
+      "thankYou": "Gracias por compartir esta información conmigo. Entender estos aspectos de tu vida me ayuda a brindarte mejor apoyo y conectarte con recursos que pueden abordar cualquier desafío que estés enfrentando. Recuerda, no estás sola, y hay organizaciones listas para ayudarte.",
+      "welcomeBack": "¡Bienvenida de nuevo! Continuemos desde donde nos quedamos. "
     },
     "questionFormat": {
       "domainIntro": "Ahora me gustaría preguntarte sobre {{domain}}. {{question}}"

@@ -27,6 +27,7 @@ import { useSelector } from "react-redux";
 import { ActivityIndicator } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFitbit } from "@/zustandStore/useFitbitStore";
+import { useAppleHealth } from "@/zustandStore/useAppleHealthStore";
 import { useTranslation } from "react-i18next";
 import { CONFIG } from "@/constants/config";
 
@@ -134,15 +135,31 @@ export default function tracksleep() {
     width: 0,
   });
 
+  // Fitbit hook (for Android)
   const {
-    isConnected,
+    isConnected: fitbitConnected,
     isLoading: fitbitLoading,
-    connect,
-    disconnect,
-    getSleepData,
-    getSleepDataForRange,
-    getDataForRange,
+    connect: fitbitConnect,
+    disconnect: fitbitDisconnect,
+    getSleepData: fitbitGetSleepData,
+    getSleepDataForRange: fitbitGetSleepDataForRange,
   } = useFitbit();
+
+  // Apple Health hook (for iOS)
+  const {
+    isConnected: appleHealthConnected,
+    isLoading: appleHealthLoading,
+    connect: appleHealthConnect,
+    disconnect: appleHealthDisconnect,
+    getSleepData: appleHealthGetSleepData,
+    getSleepDataForRange: appleHealthGetSleepDataForRange,
+    syncSleepWithBackend: appleHealthSyncSleep,
+  } = useAppleHealth();
+
+  // Determine which health service to use based on platform
+  const isUsingAppleHealth = Platform.OS === 'ios';
+  const healthServiceConnected = isUsingAppleHealth ? appleHealthConnected : fitbitConnected;
+  const healthServiceLoading = isUsingAppleHealth ? appleHealthLoading : fitbitLoading;
 
   const [initialCheckDone, setInitialCheckDone] = useState(false);
 
@@ -175,28 +192,49 @@ export default function tracksleep() {
   useEffect(() => {
     const fetchSleepData = async () => {
       console.log(`Time range changed to: ${timeRange}`);
-      if (isConnected) {
-        // Refresh Fitbit data when time range changes
+      if (healthServiceConnected) {
+        // Refresh health data when time range changes
         await getSleepStatus();
       }
     };
 
     fetchSleepData();
-  }, [timeRange, isConnected]);
+  }, [timeRange, healthServiceConnected]);
 
-  const handleFitbitConnection = async () => {
-    if (isConnected) {
-      // Disconnect from Fitbit
-      await disconnect();
-      Alert.alert("Disconnected", "Successfully disconnected from Fitbit");
-    } else {
-      // Connect to Fitbit
-      const success = await connect();
-      if (success) {
-        Alert.alert("Success", "Connected to Fitbit");
-        getSleepStatus(); // Refresh data with Fitbit data
+  const handleHealthConnection = async () => {
+    if (isUsingAppleHealth) {
+      if (appleHealthConnected) {
+        // Disconnect from Apple Health
+        await appleHealthDisconnect();
+        Alert.alert("Disconnected", "Successfully disconnected from Apple Health");
+      
       } else {
-        Alert.alert("Error", "Failed to connect to Fitbit");
+        // Connect to Apple Health
+        const success = await appleHealthConnect();
+        if (success) {
+          Alert.alert("Success", "Connected to Apple Health");
+          getSleepStatus(); // Refresh data with Apple Health data
+        } else {
+          Alert.alert("Error", "Failed to connect to Apple Health");
+        }
+      }
+    } else {
+      // Existing Fitbit logic
+      if (fitbitConnected) {
+        // Disconnect from Fitbit
+        await fitbitDisconnect();
+        Alert.alert("Disconnected", "Successfully disconnected from Fitbit");
+        // Clear data when disconnected
+       
+      } else {
+        // Connect to Fitbit
+        const success = await fitbitConnect();
+        if (success) {
+          Alert.alert("Success", "Connected to Fitbit");
+          getSleepStatus(); // Refresh data with Fitbit data
+        } else {
+          Alert.alert("Error", "Failed to connect to Fitbit");
+        }
       }
     }
   };
@@ -219,49 +257,61 @@ export default function tracksleep() {
     return `${hours}:${minutesStr} ${ampm}`;
   };
 
-  const fetchFitbitSleepData = async () => {
+  const fetchHealthSleepData = async () => {
     try {
       console.log(`Fetching sleep data for time range: ${timeRange}`);
 
-      // Use the new function that handles different time ranges
-      const data = await getSleepDataForRange(timeRange);
+      // Use the appropriate health service based on platform
+      let data;
+      if (isUsingAppleHealth) {
+        // Get data from Apple Health
+        data = await appleHealthGetSleepDataForRange(timeRange);
+        
+        // Sync with backend for Apple Health
+        if (user?.user_id) {
+          await appleHealthSyncSleep(user.user_id);
+        }
+      } else {
+        // Get data from Fitbit
+        data = await fitbitGetSleepDataForRange(timeRange);
+      }
 
       if (!data) {
         console.error(
-          "Failed to fetch Fitbit sleep data - API returned null/undefined"
+          "Failed to fetch health sleep data - API returned null/undefined"
         );
         return null;
       }
 
-      console.log("Fitbit sleep response received successfully");
-      return processFitbitSleepData(data);
+      console.log("Health service sleep response received successfully");
+      return processHealthSleepData(data);
     } catch (error) {
-      console.error("Error fetching Fitbit sleep data:", error);
+      console.error("Error fetching health sleep data:", error);
       return null;
     }
   };
 
-  // Process Fitbit sleep data
-  const processFitbitSleepData = async (fitbitData: any) => {
+  // Process health sleep data (works for both Fitbit and Apple Health)
+  const processHealthSleepData = async (healthData: any) => {
     console.log(
-      "Raw Fitbit sleep data received:",
-      JSON.stringify(fitbitData, null, 2)
+      "Raw health sleep data received:",
+      JSON.stringify(healthData, null, 2)
     );
 
-    if (!fitbitData) {
-      console.log("No Fitbit data received");
+    if (!healthData) {
+      console.log("No health data received");
       return [];
     }
 
-    if (!fitbitData.sleep) {
+    if (!healthData.sleep) {
       console.log(
-        "No sleep property in Fitbit data. Available properties:",
-        Object.keys(fitbitData)
+        "No sleep property in health data. Available properties:",
+        Object.keys(healthData)
       );
       return [];
     }
 
-    const sleepData = fitbitData.sleep;
+    const sleepData = healthData.sleep;
     console.log(`Processing ${sleepData.length} sleep records`);
 
     const fixedWeekdays = ["S", "M", "T", "W", "T", "F", "S"];
@@ -279,21 +329,21 @@ export default function tracksleep() {
 
         // Validate the date is valid before proceeding
         if (isNaN(date.getTime())) {
-          console.error("Invalid date from Fitbit:", dateStr);
+          console.error("Invalid date from health service:", dateStr);
           continue; // Skip this record
         }
 
         const dayIndex = date.getDay(); // 0 = Sunday, 1 = Monday, etc.
         const dayAbbr = fixedWeekdays[dayIndex];
 
-        // Parse the ISO timestamps from Fitbit
+        // Parse the timestamps
         const sleepStart = new Date(sleepRecord.startTime);
         const sleepEnd = new Date(sleepRecord.endTime);
 
         // Validate timestamps are valid
         if (isNaN(sleepStart.getTime()) || isNaN(sleepEnd.getTime())) {
           console.error(
-            "Invalid timestamps from Fitbit:",
+            "Invalid timestamps from health service:",
             sleepRecord.startTime,
             sleepRecord.endTime
           );
@@ -342,7 +392,7 @@ export default function tracksleep() {
 
           console.log("Sending sleep data to API:", sleepDataForAPI);
 
-          // Make POST request to your API - use the correct sleep endpoint
+          // Make POST request to your API
           const response = await fetch(
             `${CONFIG.API_BASE_URL}/user/activity/${user.user_id}/sleep`,
             {
@@ -733,33 +783,33 @@ export default function tracksleep() {
       }
 
       let allSleepLogs: SleepEntry[] = [];
-      let chartDataFromFitbit: any[] = [];
+      let chartDataFromHealth: any[] = [];
 
-      // Only process Fitbit data if actually connected
-      if (isConnected) {
-        console.log("Fetching sleep data from Fitbit...");
-        // Get sleep data from Fitbit
-        const fitbitData = await fetchFitbitSleepData();
+      // Only process health data if actually connected
+      if (healthServiceConnected) {
+        console.log("Fetching sleep data from health service...");
+        // Get sleep data from health service
+        const healthData = await fetchHealthSleepData();
 
-        if (fitbitData && fitbitData.length > 0) {
-          console.log("Processing Fitbit sleep data:", fitbitData);
+        if (healthData && healthData.length > 0) {
+          console.log("Processing health sleep data:", healthData);
 
           // Extract sleep logs from the processed data
-          const sleepLogsFromFitbit: SleepEntry[] = [];
-          fitbitData.forEach((item) => {
+          const sleepLogsFromHealth: SleepEntry[] = [];
+          healthData.forEach((item) => {
             if (item.logs && item.logs.length > 0) {
-              sleepLogsFromFitbit.push(...item.logs);
+              sleepLogsFromHealth.push(...item.logs);
             }
           });
 
-          // Set chart data from Fitbit
-          chartDataFromFitbit = fitbitData;
-          allSleepLogs = sleepLogsFromFitbit;
+          // Set chart data from health service
+          chartDataFromHealth = healthData;
+          allSleepLogs = sleepLogsFromHealth;
 
-          console.log("Fitbit sleep logs:", sleepLogsFromFitbit);
+          console.log("Health service sleep logs:", sleepLogsFromHealth);
         }
       } else {
-        console.log("Not connected to Fitbit, skipping Fitbit data fetch");
+        console.log("Not connected to health service, skipping health data fetch");
       }
 
       // Fetch data from backend
@@ -780,10 +830,10 @@ export default function tracksleep() {
           console.log("Backend sleep data:", data.sleepData);
 
           if (data.sleepData && data.sleepData.length > 0) {
-            if (isConnected) {
-              // If connected to Fitbit, we need to merge data carefully to avoid duplicates
-              // Create a Set of dates that already exist in Fitbit data
-              const fitbitDates = new Set(
+            if (healthServiceConnected) {
+              // If connected to health service, we need to merge data carefully to avoid duplicates
+              // Create a Set of dates that already exist in health data
+              const healthDates = new Set(
                 allSleepLogs
                   .map((log) => {
                     // Convert display date back to YYYY-MM-DD format for comparison
@@ -821,25 +871,25 @@ export default function tracksleep() {
                   .filter(Boolean)
               );
 
-              // Only add backend logs that don't exist in Fitbit data
+              // Only add backend logs that don't exist in health data
               const uniqueBackendLogs = data.sleepData.filter(
-                (backendLog: any) => !fitbitDates.has(backendLog.date)
+                (backendLog: any) => !healthDates.has(backendLog.date)
               );
 
               allSleepLogs = [...allSleepLogs, ...uniqueBackendLogs];
               console.log(
                 `Added ${uniqueBackendLogs.length} unique backend logs to ${
                   allSleepLogs.length - uniqueBackendLogs.length
-                } Fitbit logs`
+                } health logs`
               );
             } else {
-              // If not connected to Fitbit, just use backend data
+              // If not connected to health service, just use backend data
               allSleepLogs = data.sleepData;
               console.log(`Using ${allSleepLogs.length} backend logs only`);
             }
 
-            // Process backend data for chart if no Fitbit data
-            if (chartDataFromFitbit.length === 0) {
+            // Process backend data for chart if no health data
+            if (chartDataFromHealth.length === 0) {
               const fixedWeekdays = ["S", "M", "T", "W", "T", "F", "S"];
               const fullWeekdays = [
                 "Sunday",
@@ -892,30 +942,30 @@ export default function tracksleep() {
                 }
               );
 
-              chartDataFromFitbit = Array.from(sleepMap.values());
+              chartDataFromHealth = Array.from(sleepMap.values());
             }
           }
         }
       } catch (backendError) {
         console.error("Error fetching backend sleep data:", backendError);
-        // Continue with Fitbit data only (if any)
+        // Continue with health data only (if any)
       }
 
-      // Set all sleep logs (Fitbit + Backend, with duplicates removed)
+      // Set all sleep logs (Health + Backend, with duplicates removed)
       setSleepLogs(allSleepLogs);
-      setChartData(chartDataFromFitbit);
+      setChartData(chartDataFromHealth);
 
       // Process data for current time range
       const filteredData = processDataForTimeRange(
-        chartDataFromFitbit,
+        chartDataFromHealth,
         timeRange
       );
       setFilteredData(filteredData);
 
       console.log("Final combined sleep data:", {
-        isConnected,
+        isConnected: healthServiceConnected,
         logs: allSleepLogs.length,
-        chartData: chartDataFromFitbit.length,
+        chartData: chartDataFromHealth.length,
         filteredData: filteredData.length,
       });
     } catch (error) {
@@ -1442,7 +1492,7 @@ export default function tracksleep() {
               >
                 {t("sleepScreen.mySleep")}
               </Text>
-              {isConnected ? (
+              {healthServiceConnected ? (
                 <View
                   style={{
                     backgroundColor: "#335C85",
@@ -1465,7 +1515,7 @@ export default function tracksleep() {
                       fontFamily: "Inter500",
                     }}
                   >
-                    Log via Fitbit
+                    {isUsingAppleHealth ? "Log via Apple Health" : "Log via Fitbit"}
                   </Text>
                 </View>
               ) : (
@@ -1578,7 +1628,7 @@ export default function tracksleep() {
                           : formatDate(entry.date)}
                       </Text>
                     </View>
-                    {!isConnected && (
+                    {!healthServiceConnected && (
                       <DeleteMenu onDelete={() => handleDeleteLog(entry.id)} />
                     )}
                   </View>
@@ -1660,39 +1710,47 @@ export default function tracksleep() {
                   style={{ width: 24, height: 24 }}
                 />
                 <Text style={styles.connectText}>Health App</Text>
-                <TouchableOpacity>
+                <TouchableOpacity onPress={handleHealthConnection}>
                   <Text style={styles.connectButton}>
-                    {t("sleepScreen.connect")}
+                    {!initialCheckDone
+                      ? t("sleepScreen.checkConnection")
+                      : appleHealthLoading
+                      ? "CONNECTING..."
+                      : appleHealthConnected
+                      ? t("sleepScreen.disconnect")
+                      : t("sleepScreen.connect")}
                   </Text>
                 </TouchableOpacity>
               </View>
             </View>
           )}
 
-          {/* Connect to Device Section */}
-          <View style={styles.sectionContainer}>
-            <Text style={styles.sectionTitle}>
-              {t("sleepScreen.connectToDevice")}
-            </Text>
-            <View style={styles.connectItem}>
-              <Image
-                source={require("../../assets/images/fitbit.png")}
-                style={{ width: 24, height: 24 }}
-              />
-              <Text style={styles.connectText}>Fitbit</Text>
-              <TouchableOpacity onPress={handleFitbitConnection}>
-                <Text style={styles.connectButton}>
-                  {!initialCheckDone
-                    ? t("sleepScreen.checkConnection")
-                    : fitbitLoading
-                    ? "CONNECTING..."
-                    : isConnected
-                    ? t("sleepScreen.disconnect")
-                    : t("sleepScreen.connect")}
-                </Text>
-              </TouchableOpacity>
+          {/* Connect to Device Section - Only show Fitbit on Android */}
+          {Platform.OS === "android" && (
+            <View style={styles.sectionContainer}>
+              <Text style={styles.sectionTitle}>
+                {t("sleepScreen.connectToDevice")}
+              </Text>
+              <View style={styles.connectItem}>
+                <Image
+                  source={require("../../assets/images/fitbit.png")}
+                  style={{ width: 24, height: 24 }}
+                />
+                <Text style={styles.connectText}>Fitbit</Text>
+                <TouchableOpacity onPress={handleHealthConnection}>
+                  <Text style={styles.connectButton}>
+                    {!initialCheckDone
+                      ? t("sleepScreen.checkConnection")
+                      : fitbitLoading
+                      ? "CONNECTING..."
+                      : fitbitConnected
+                      ? t("sleepScreen.disconnect")
+                      : t("sleepScreen.connect")}
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
+          )}
 
           {/* Analysis Section */}
           <View style={styles.analysisSection}>

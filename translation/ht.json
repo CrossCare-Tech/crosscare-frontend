@@ -454,6 +454,7 @@
   "trimester2": "2yèm trimès",
   "trimester3": "3yèm trimès",
   "dateOfLabor": "Dat akouchman",
+  "seeYourBabyGrowHere": "Gade bebe ou a grandi la!",
   "fruitText": "Bebè ou a gen gwosè yon {{fruit}}!",
   "fruits": {
     "poppySeed": "Grenn papav",
@@ -921,7 +922,8 @@
     "responses": {
       "noTime": "Pa gen pwoblèm! Nou ka kontinye konvèsasyon sa a nenpòt lè ou gen plis tan. Jis fè m konnen lè ou pare.",
       "pauseConfirmation": "Mwen sove pwogrè ou an. Nou ka kontinye nenpòt lè ou pare - jis fè m konnen.",
-      "thankYou": "Mèsi pou ou pataje enfòmasyon sa yo avè m. Konprann aspè sa yo nan lavi ou yo ede m bay pi bon sipò ak konekte ou ak resous ki ka adrese nenpòt defi ou ka fè fas ak yo. Sonje, ou pa pou kont ou, ak gen òganizasyon ki pare pou ede ou."
+      "thankYou": "Mèsi pou ou pataje enfòmasyon sa yo avè m. Konprann aspè sa yo nan lavi ou yo ede m bay pi bon sipò ak konekte ou ak resous ki ka adrese nenpòt defi ou ka fè fas ak yo. Sonje, ou pa pou kont ou, ak gen òganizasyon ki pare pou ede ou.",
+      "welcomeBack": "Wèbyen! Kontinye nan kote ou te mete. "
     },
     "questionFormat": {
       "domainIntro": "Kounye a m ta renmen mande ou sou {{domain}}. {{question}}"

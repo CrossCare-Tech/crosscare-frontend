@@ -198,7 +198,10 @@
     "yes": "Yes",
     "no": "Not now",
     "errorTitle": "Error",
-    "errorMessage": "Failed to clear chat history. Please try again."
+    "errorMessage": "Failed to clear chat history. Please try again.",
+    "responses": {
+      "welcomeBack": "Welcome back! Let's continue where we left off. "
+    }
   },
   "options": {
     "healthStats": "Health Stats",
@@ -455,6 +458,7 @@
   "trimester3": "3rd trimester",
   "dateOfLabor": "Date of labor",
   "fruitText": "Your baby is the size of a {{fruit}}!",
+  "seeYourBabyGrowHere": "See your baby grow here!",
   "fruits": {
     "poppySeed": "Poppy seed",
     "sesameSeed": "Sesame seed",
@@ -949,7 +953,8 @@
     "responses": {
       "noTime": "No problem! We can continue this conversation whenever you have more time. Just let me know when you're ready.",
       "pauseConfirmation": "I've saved your progress. We can continue whenever you're ready - just let me know.",
-      "thankYou": "Thank you for sharing this information with me. Understanding these aspects of your life helps me provide better support and connect you with resources that can address any challenges you're facing. Remember, you're not alone, and there are organizations ready to assist you."
+      "thankYou": "Thank you for sharing this information with me. Understanding these aspects of your life helps me provide better support and connect you with resources that can address any challenges you're facing. Remember, you're not alone, and there are organizations ready to assist you.",
+      "welcomeBack": "Welcome back! Let's continue where we left off. "
     },
     "questionFormat": {
       "domainIntro": "Now I'd like to ask you about {{domain}}. {{question}}"
