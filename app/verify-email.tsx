@@ -8,7 +8,9 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  Image
+  Image,
+  Pressable,
+  Linking
 } from "react-native";
 import { useNavigation, useRouter, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -217,9 +219,11 @@ const VerifyEmail: FC = () => {
           </View>
         </View>
 
-        <Text style={styles.footerText}>
-          Terms & Conditions | Privacy Policy | Contact Us
-        </Text>
+        <Pressable onPress={() => Linking.openURL("https://crosscaretech.com/privacy-policy")}>
+          <Text style={styles.footerText}>
+            Terms & Conditions | Privacy Policy | Contact Us
+          </Text>
+        </Pressable>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

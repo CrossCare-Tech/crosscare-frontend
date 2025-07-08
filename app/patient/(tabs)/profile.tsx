@@ -8,6 +8,7 @@ import {
   ScrollView,
   Alert,
   Keyboard,
+  Linking,
 } from "react-native";
 import { useEffect, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -230,7 +231,9 @@ const Profile = () => {
             icon={<Terms />}
             title={`${t("profile.tnc")}`}
             subtitle={`${t("profile.privacy")}, ${t("profile.Termsofuse")}`}
-            onPress={() => router.push("/patient/profile-setting/tnc")}
+            onPress={() =>
+              Linking.openURL("https://crosscaretech.com/privacy-policy")
+            }
           />
         </View>
       </ScrollView>

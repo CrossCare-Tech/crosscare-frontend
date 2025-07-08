@@ -13,7 +13,8 @@ import {
   StatusBar,
   ScrollView,
   Dimensions,
-  Image
+  Image,
+  Pressable
 } from "react-native";
 import { supabase } from "@/supabase/supabase";
 import { useNavigation } from "@react-navigation/native";
@@ -372,9 +373,11 @@ const SignUp: FC = () => {
         )}
 
         {/* Footer */}
-        <Text style={styles.footerText}>
-          Terms & Conditions | Privacy Policy | Contact Us
-        </Text>
+        <Pressable onPress={() => Linking.openURL("https://crosscaretech.com/privacy-policy")}>
+          <Text style={styles.footerText}>
+            Terms & Conditions | Privacy Policy | Contact Us
+          </Text>
+        </Pressable>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

@@ -11,7 +11,9 @@ import {
   Platform,
   Switch,
   Dimensions,
-  Image
+  Image,
+  Pressable,
+  Linking
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { useRouter } from "expo-router";
@@ -283,9 +285,11 @@ const LoginContent: FC = () => {
             </Text>
           </View>
         </View>
-        <Text style={styles.footerText}>
-          Terms & Conditions | Privacy Policy | Contact Us
-        </Text>
+        <Pressable onPress={() => Linking.openURL("https://crosscaretech.com/privacy-policy")}>
+          <Text style={styles.footerText}>
+            Terms & Conditions | Privacy Policy | Contact Us
+          </Text>
+        </Pressable>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

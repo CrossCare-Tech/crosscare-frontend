@@ -8,7 +8,8 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  Image
+  Image,
+  Linking
 } from "react-native";
 import React, { FC, useLayoutEffect, useState } from "react";
 import CustomTextInput from "@/components/ui/CustomTextInput";
@@ -206,7 +207,14 @@ const ForgetScreen: FC = () => {
         </View>
 
         <Text style={styles.footerText}>
-          Terms & Conditions | Privacy Policy | Contact Us
+          <Text style={styles.loginLink} onPress={() => Linking.openURL("https://crosscaretech.com/privacy-policy")}>
+            Terms & Conditions
+          </Text>{" "}
+          |{" "}
+          <Text style={styles.loginLink} onPress={() => Linking.openURL("https://crosscaretech.com/privacy-policy")}>
+            Privacy Policy
+          </Text>{" "}
+          | Contact Us
         </Text>
       </KeyboardAvoidingView>
     </SafeAreaView>
