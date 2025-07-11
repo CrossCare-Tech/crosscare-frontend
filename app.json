@@ -66,11 +66,11 @@
         }
       ],
       [
-      "react-native-health", 
-      {
-        "healthSharePermission": "Allow Crosscare to access your health data",
-        "healthSharePermissionDescription": "This app requires access to your health data to provide personalized insights and recommendations."
-      }
+        "react-native-health",
+        {
+          "healthSharePermission": "Allow Crosscare to access your health data",
+          "healthSharePermissionDescription": "This app requires access to your health data to provide personalized insights and recommendations."
+        }
       ]
     ],
     "experiments": {
@@ -81,8 +81,9 @@
         "origin": false
       },
       "eas": {
-        "projectId": "b10d128f-00f3-4a0e-baa3-4ffca8140854"
+        "projectId": "8bd53f19-424a-4f0e-9884-0ba5f660490f"
       }
-    }
+    },
+    "owner": "crosscare"
   }
 }
