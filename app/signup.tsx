@@ -14,7 +14,8 @@ import {
   ScrollView,
   Dimensions,
   Image,
-  Pressable
+  Pressable,
+  Modal
 } from "react-native";
 import { supabase } from "@/supabase/supabase";
 import { useNavigation } from "@react-navigation/native";
@@ -65,13 +66,32 @@ const SignUp: FC = () => {
   };
 
   const handleDateChange = (event: any, selectedDate?: Date) => {
-    setShowDatePicker(Platform.OS === "ios");
-    if (selectedDate) {
-      setDateOfBirth(selectedDate);
-      if (dobError) {
-        setDobError("");
+    if (Platform.OS === "ios") {
+      // For iOS, we keep the modal open until user confirms
+      if (selectedDate) {
+        setDateOfBirth(selectedDate);
+        if (dobError) {
+          setDobError("");
+        }
+      }
+    } else {
+      // For Android, close the picker immediately
+      setShowDatePicker(false);
+      if (selectedDate) {
+        setDateOfBirth(selectedDate);
+        if (dobError) {
+          setDobError("");
+        }
       }
     }
+  };
+
+  const handleDatePickerConfirm = () => {
+    setShowDatePicker(false);
+  };
+
+  const handleDatePickerCancel = () => {
+    setShowDatePicker(false);
   };
 
   const formatDate = (date: Date) => {
@@ -362,14 +382,47 @@ const SignUp: FC = () => {
         </ScrollView>
 
         {/* Date Picker Modal */}
-        {showDatePicker && (
-          <DateTimePicker
-            value={dateOfBirth}
-            mode="date"
-            display={Platform.OS === "ios" ? "spinner" : "default"}
-            onChange={handleDateChange}
-            maximumDate={new Date()}
-          />
+        {Platform.OS === "ios" ? (
+          <Modal
+            animationType="slide"
+            transparent={true}
+            visible={showDatePicker}
+            onRequestClose={handleDatePickerCancel}
+          >
+            <View style={styles.modalOverlay}>
+              <View style={styles.modalContainerIOS}>
+                <View style={styles.modalHeader}>
+                  <TouchableOpacity onPress={handleDatePickerCancel}>
+                    <Text style={styles.modalButton}>Cancel</Text>
+                  </TouchableOpacity>
+                  <Text style={styles.modalTitle}>Select Date of Birth</Text>
+                  <TouchableOpacity onPress={handleDatePickerConfirm}>
+                    <Text style={styles.modalButton}>Done</Text>
+                  </TouchableOpacity>
+                </View>
+                <View style={styles.pickerWrapper}>
+                  <DateTimePicker
+                    value={dateOfBirth}
+                    mode="date"
+                    display="spinner"
+                    onChange={handleDateChange}
+                    maximumDate={new Date()}
+                    style={styles.datePicker}
+                  />
+                </View>
+              </View>
+            </View>
+          </Modal>
+        ) : (
+          showDatePicker && (
+            <DateTimePicker
+              value={dateOfBirth}
+              mode="date"
+              display="default"
+              onChange={handleDateChange}
+              maximumDate={new Date()}
+            />
+          )
         )}
 
         {/* Footer */}
@@ -491,6 +544,60 @@ const styles = StyleSheet.create({
     color: "#545454",
     paddingBottom: 20,
     marginTop: 20,
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.5)",
+  },
+  modalContainerIOS: {
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    width: "90%",
+    minHeight: 340,
+    padding: 0,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 8,
+    overflow: "hidden",
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    width: "100%",
+    paddingHorizontal: 20,
+    paddingTop: 18,
+    marginBottom: 0,
+  },
+  modalButton: {
+    fontSize: 16,
+    color: "#E05FA0",
+    fontFamily: "DMSans500",
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontFamily: "DMSans500",
+    color: "#545454",
+  },
+  pickerWrapper: {
+    backgroundColor: "black",
+    borderRadius: 16,
+    marginTop: 10,
+    marginBottom: 20,
+    width: "100%",
+    minHeight: 250,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 10,
+  },
+  datePicker: {
+    width: "100%",
+    minHeight: 200,
   },
 });
 
