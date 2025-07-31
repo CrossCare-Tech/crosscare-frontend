@@ -1765,7 +1765,7 @@ export default function askdoula() {
           }
           console.log("Saved questionnaire responses to database");
         } catch (error) {
-          console.error("Error saving responses to database:", error);
+          console.error("Error saving responses to database:", JSON.stringify(error, null, 2));
         }
       }
 

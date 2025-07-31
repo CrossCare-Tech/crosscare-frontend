@@ -9,10 +9,11 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "infoPlist": {
         "NSMicrophoneUsageDescription": "This app requires access to your microphone for voice processing.",
-        "NSHealthShareUsageDescription": "This app needs access to read your health data including steps, heart rate, and sleep information to provide personalized health insights."
+        "NSHealthShareUsageDescription": "This app needs access to read your health data including steps, heart rate, and sleep information to provide personalized health insights.",
+        "ITSAppUsesNonExemptEncryption": false
       },
       "bundleIdentifier": "com.crosscare.tech",
       "entitlements": {

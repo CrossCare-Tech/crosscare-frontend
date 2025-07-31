@@ -23,6 +23,11 @@
       "android": {
         "buildType": "app-bundle",
         "credentialsSource": "remote"
+      },
+      "ios": {
+        "credentialsSource": "remote",
+        "distribution": "store",
+        "image": "macos-sequoia-15.3-xcode-16.2"
       }
     }
   },
