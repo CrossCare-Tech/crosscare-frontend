@@ -1,4 +1,12 @@
-import React, { FC, useLayoutEffect, useState } from "react";
+import React, {
+  FC,
+  useCallback,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  memo,
+} from "react";
 import {
   Alert,
   StyleSheet,
@@ -9,11 +17,10 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  Switch,
   Dimensions,
   Image,
   Pressable,
-  Linking
+  Linking,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { useRouter } from "expo-router";
@@ -31,43 +38,45 @@ import { store } from "../store/store";
 
 const height = Dimensions.get("window").height;
 
-// Separate component that uses Redux hooks
-const LoginContent: FC = () => {
+const LoginContent: FC = memo(() => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [emailError, setEmailError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
   const navigation = useNavigation();
   const router = useRouter();
   const dispatch = useDispatch();
-  const [emailError, setEmailError] = useState("");
-  const [passwordError, setPasswordError] = useState("");
+  const loginInProgress = useRef(false);
 
   useLayoutEffect(() => {
-    navigation.setOptions({
-      headerShown: false,
-    });
+    navigation.setOptions({ headerShown: false });
   }, [navigation]);
 
-  const handleLogin = async () => {
-    const newError: any = {};
+  const validateInput = useCallback(() => {
+    const errors: Record<string, string> = {};
+    if (!email) errors.email = "Email is required.";
+    if (!password) errors.password = "Password is required.";
+    return errors;
+  }, [email, password]);
 
-    if (!email) {
-      newError.email = "Email is required.";
-    }
+  const handleLogin = useCallback(async () => {
+    if (loginInProgress.current) return;
 
-    if (!password) {
-      newError.password = "Password is required.";
-    }
+    setEmailError("");
+    setPasswordError("");
 
-    if (Object.keys(newError).length > 0) {
-      setEmailError(newError.email || "");
-      setPasswordError(newError.password || "");
-      setLoading(false);
+    const errors = validateInput();
+    if (Object.keys(errors).length > 0) {
+      setEmailError(errors.email || "");
+      setPasswordError(errors.password || "");
       return;
     }
-    setLoading(true);
 
     try {
+      loginInProgress.current = true;
+      setLoading(true);
+
       const response = await fetch(`${CONFIG.API_BASE_URL}/login`, {
         method: "POST",
         headers: {
@@ -75,15 +84,13 @@ const LoginContent: FC = () => {
         },
         body: JSON.stringify({
           email: email.toLowerCase().trim(),
-          password: password,
+          password,
         }),
       });
 
       const data = await response.json();
-      console.log("API Response:", data);
 
       if (!response.ok) {
-        // Check if email verification is required
         if (data.requiresVerification) {
           Alert.alert(
             "Email Verification Required",
@@ -97,106 +104,75 @@ const LoginContent: FC = () => {
                     params: { email: data.email || email },
                   }),
               },
-              {
-                text: "Cancel",
-                style: "cancel",
-              },
+              { text: "Cancel", style: "cancel" },
             ]
           );
-          setLoading(false);
           return;
         }
-
         throw new Error(data.message || "Login failed");
       }
 
-      if (data) {
-        console.log("Dispatching User Data to Redux:", data);
-        dispatch(
-          setUser({
-            user_id: data.userId || data.patientId,
-            user_email: data.email,
-            user_name: data.name,
-            user_photo: data.profilePicture || "",
-            token: data.accessToken,
-          })
-        );
+      const userPayload = {
+        user_id: data.userId || data.patientId,
+        user_email: data.email,
+        user_name: data.name,
+        user_photo: data.profilePicture || "",
+        token: data.accessToken,
+      };
 
-        dispatch(setToken(data.accessToken));
-        await AsyncStorage.setItem(
-          "user",
-          JSON.stringify({
-            user_id: data.userId || data.patientId,
-            user_email: data.email,
-            user_name: data.name,
-            user_photo: data.profilePicture || "",
-            token: data.accessToken,
-          })
-        );
+      dispatch(setUser(userPayload));
+      dispatch(setToken(data.accessToken));
 
+      try {
+        await AsyncStorage.setItem("user", JSON.stringify(userPayload));
         await AsyncStorage.setItem("userToken", data.accessToken);
-
-        router.replace("/patient/(tabs)/home");
+      } catch (storageErr) {
+        console.warn("AsyncStorage Error:", storageErr);
       }
 
-      setLoading(false);
+      router.replace("/patient/(tabs)/home");
     } catch (error: any) {
       Alert.alert("Login Failed", error.message);
       setEmailError("Invalid email or password");
       setPasswordError("Invalid email or password");
+    } finally {
       setLoading(false);
+      loginInProgress.current = false;
     }
-  };
+  }, [email, password, router, dispatch, validateInput]);
 
-  const handleChangeEmail = (text: string) => {
+  const handleChangeEmail = useCallback((text: string) => {
     setEmail(text);
-    if (emailError) {
-      setEmailError("");
-    }
-  };
+    if (emailError) setEmailError("");
+  }, [emailError]);
 
-  const handleChangePassword = (text: string) => {
+  const handleChangePassword = useCallback((text: string) => {
     setPassword(text);
-    if (passwordError) {
-      setPasswordError("");
-    }
-  };
+    if (passwordError) setPasswordError("");
+  }, [passwordError]);
+
+  const footerText = useMemo(
+    () =>
+      "Terms & Conditions | Privacy Policy | Contact Us",
+    []
+  );
 
   return (
-    <SafeAreaView
-      style={{
-        flex: 1,
-        backgroundColor: "#fff",
-        justifyContent: "center",
-        alignItems: "center",
-      }}
-    >
+    <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
-        <View
-          style={{
-            justifyContent: "center",
-            marginTop: 40,
-          }}
-        >
-          <View
-            style={{
-              alignItems: "center",
-            }}
-          >
-            <Image source={appLogo} style={{ width: 100, height: 100 }} resizeMode="contain" />
+        <View style={{ justifyContent: "center", marginTop: 40 }}>
+          <View style={{ alignItems: "center" }}>
+            <Image
+              source={appLogo}
+              style={{ width: 100, height: 100 }}
+              resizeMode="contain"
+            />
           </View>
           <Text style={styles.title}>Welcome, Get Started!</Text>
-          <View
-            style={{
-              width: "100%",
-              marginTop: 56,
-              flexDirection: "column",
-              gap: 20,
-            }}
-          >
+          <View style={{ width: "100%", marginTop: 56, gap: 20 }}>
             <CustomTextInput
               icon="user"
               type="email"
@@ -215,7 +191,7 @@ const LoginContent: FC = () => {
               errorMessage={passwordError}
             />
             <TouchableOpacity
-              style={styles.button}
+              style={[styles.button, loading && { opacity: 0.5 }]}
               onPress={handleLogin}
               disabled={loading}
             >
@@ -241,43 +217,14 @@ const LoginContent: FC = () => {
           </View>
 
           <TouchableOpacity onPress={() => router.push("/forget-password")}>
-            <Text
-              style={{
-                fontSize: 14,
-                width: "100%",
-                textAlign: "left",
-                color: "#E05FA0",
-                fontFamily: "DMSans400",
-                marginTop: 17,
-                textDecorationLine: "underline",
-              }}
-            >
-              Forgot Password?
-            </Text>
+            <Text style={styles.forgot}>Forgot Password?</Text>
           </TouchableOpacity>
-          <View
-            style={{
-              flexDirection: "column",
-              gap: 12,
-              marginTop: 12,
-            }}
-          >
-            <Text
-              style={{
-                fontSize: 14,
-                color: "#545454",
-                fontFamily: "DMSans400",
-                textAlign: "center",
-                marginTop: 8,
-              }}
-            >
-              New patient?{" "}
+
+          <View style={{ flexDirection: "column", gap: 12, marginTop: 12 }}>
+            <Text style={styles.signup}>
+              New patient?{' '}
               <Text
-                style={{
-                  fontFamily: "DMSans500",
-                  color: "#E05FA0",
-                  textDecorationLine: "underline",
-                }}
+                style={styles.signupLink}
                 onPress={() => router.push("/signup")}
               >
                 Sign up
@@ -285,28 +232,30 @@ const LoginContent: FC = () => {
             </Text>
           </View>
         </View>
+
         <Pressable onPress={() => Linking.openURL("https://crosscaretech.com/privacy-policy")}>
-          <Text style={styles.footerText}>
-            Terms & Conditions | Privacy Policy | Contact Us
-          </Text>
+          <Text style={styles.footerText}>{footerText}</Text>
         </Pressable>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
-};
+});
 
-// Main component that wraps Redux Provider
-const Login: FC = () => {
-  return (
-    <Provider store={store}>
-      <LoginContent />
-    </Provider>
-  );
-};
+const Login: FC = () => (
+  <Provider store={store}>
+    <LoginContent />
+  </Provider>
+);
 
 export default Login;
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#fff",
+    justifyContent: "center",
+    alignItems: "center",
+  },
   container: {
     flex: 1,
     justifyContent: "space-between",
@@ -319,20 +268,6 @@ const styles = StyleSheet.create({
     fontFamily: "DMSans500",
     color: "#545454",
   },
-  subtitle: {
-    color: "#555",
-  },
-  input: {
-    width: "100%",
-    height: 50,
-    backgroundColor: "#fff",
-    borderRadius: 10,
-    paddingHorizontal: 15,
-    borderWidth: 1,
-    borderColor: "#ddd",
-    fontSize: 16,
-    color: "#333",
-  },
   gradient: {
     paddingVertical: 14,
     paddingHorizontal: 12,
@@ -340,22 +275,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     borderRadius: 8,
-  },
-  googleButton: {
-    width: "100%",
-    height: 50,
-    backgroundColor: "#fff",
-    borderWidth: 1,
-    borderColor: "#ddd",
-    justifyContent: "center",
-    alignItems: "center",
-    borderRadius: 10,
-    marginTop: 15,
-  },
-  googleButtonText: {
-    fontSize: 18,
-    color: "black",
-    fontWeight: "bold",
   },
   button: {
     backgroundColor: "#87247D",
@@ -376,27 +295,25 @@ const styles = StyleSheet.create({
     color: "#545454",
     paddingBottom: 20,
   },
-  link: {
-    color: "#4CAF50",
-    fontWeight: "bold",
+  forgot: {
+    fontSize: 14,
+    width: "100%",
+    textAlign: "left",
+    color: "#E05FA0",
+    fontFamily: "DMSans400",
+    marginTop: 17,
+    textDecorationLine: "underline",
   },
-  roleButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    width: "48%",
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "#4CAF50",
-  },
-  selectedRole: {
-    backgroundColor: "#4CAF50",
-  },
-  roleText: {
-    fontSize: 16,
-    color: "#4CAF50",
+  signup: {
+    fontSize: 14,
+    color: "#545454",
+    fontFamily: "DMSans400",
     textAlign: "center",
+    marginTop: 8,
   },
-  selectedRoleText: {
-    color: "#fff",
+  signupLink: {
+    fontFamily: "DMSans500",
+    color: "#E05FA0",
+    textDecorationLine: "underline",
   },
 });

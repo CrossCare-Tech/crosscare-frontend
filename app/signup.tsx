@@ -379,6 +379,11 @@ const SignUp: FC = () => {
               </Text>
             </View>
           </View>
+           <Pressable  style={{marginTop:20}} onPress={() => Linking.openURL("https://crosscaretech.com/privacy-policy")}>
+          <Text style={styles.footerText}>
+            Terms & Conditions | Privacy Policy | Contact Us
+          </Text>
+        </Pressable>
         </ScrollView>
 
         {/* Date Picker Modal */}
@@ -426,11 +431,7 @@ const SignUp: FC = () => {
         )}
 
         {/* Footer */}
-        <Pressable onPress={() => Linking.openURL("https://crosscaretech.com/privacy-policy")}>
-          <Text style={styles.footerText}>
-            Terms & Conditions | Privacy Policy | Contact Us
-          </Text>
-        </Pressable>
+        
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

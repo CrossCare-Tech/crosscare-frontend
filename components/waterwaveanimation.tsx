@@ -25,41 +25,34 @@ const WaterWaveAnimation = ({ percentage, waveColor = "#67B6FF", containerSize =
 
   // Function to update first wave path
   const updateWavePath1 = useCallback(
-    (value: number) => {
-      const amplitude = 6 // Wave height
-      const frequency = 2 // Wave frequency
+  (value: number) => {
+    const amplitude = 6;
+    const frequency = 2;
+    const points = 10;
+    const step = containerSize / points;
+    // Calculate water level Y position
+    const waterY = containerSize * (1 - clampedPercentage / 100);
 
-      // Create a smoother wave with more points
-      let path = `M0 10 `
-
-      // Generate a smooth wave with multiple points
-      const points = 10 // Number of points to create a smooth curve
-      const step = containerSize / points
-
-      for (let i = 0; i <= points; i++) {
-        const x = i * step
-        // Use sine function with phase shift based on animation value
-        const y = 10 + amplitude * Math.sin((frequency * Math.PI * i) / points + value * Math.PI * 2)
-
-        if (i === 0) {
-          path += `L${x} ${y} `
-        } else {
-          // Use curve commands for smoother waves
-          const prevX = (i - 1) * step
-          const cpX1 = prevX + step / 3
-          const cpX2 = x - step / 3
-
-          path += `C${cpX1} ${y - 2}, ${cpX2} ${y + 2}, ${x} ${y} `
-        }
+    let path = `M0 ${waterY} `;
+    for (let i = 0; i <= points; i++) {
+      const x = i * step;
+      const y =
+        waterY +
+        amplitude * Math.sin((frequency * Math.PI * i) / points + value * Math.PI * 2);
+      if (i === 0) {
+        path += `L${x} ${y} `;
+      } else {
+        const prevX = (i - 1) * step;
+        const cpX1 = prevX + step / 3;
+        const cpX2 = x - step / 3;
+        path += `C${cpX1} ${y - 2}, ${cpX2} ${y + 2}, ${x} ${y} `;
       }
-
-      // Complete the path
-      path += `L${containerSize} ${containerSize} L0 ${containerSize} Z`
-
-      setWavePath1(path)
-    },
-    [containerSize],
-  )
+    }
+    path += `L${containerSize} ${containerSize} L0 ${containerSize} Z`;
+    setWavePath1(path);
+  },
+  [containerSize, clampedPercentage]
+);
 
   // Function to update second wave path with different phase
   const updateWavePath2 = useCallback(
