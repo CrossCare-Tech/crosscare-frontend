@@ -15,7 +15,7 @@ import {
   Dimensions,
   Image,
   Pressable,
-  Modal
+  Modal,
 } from "react-native";
 import { supabase } from "@/supabase/supabase";
 import { useNavigation } from "@react-navigation/native";
@@ -29,7 +29,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { FontAwesome5 } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { CONFIG } from "@/constants/config";
-import appLogo from "@/assets/images/Svg/appLogo.png"
+import appLogo from "@/assets/images/Svg/appLogo.png";
 
 const screenHeight = Dimensions.get("window").height;
 
@@ -253,7 +253,11 @@ const SignUp: FC = () => {
         >
           <View style={styles.headerContainer}>
             <View style={styles.logoContainer}>
-              <Image source={appLogo} style={{ width: 100, height: 100 }} resizeMode="contain" />
+              <Image
+                source={appLogo}
+                style={{ width: 100, height: 100 }}
+                resizeMode="contain"
+              />
             </View>
             <Text style={styles.title}>Create Your Account</Text>
 
@@ -379,11 +383,16 @@ const SignUp: FC = () => {
               </Text>
             </View>
           </View>
-           <Pressable  style={{marginTop:20}} onPress={() => Linking.openURL("https://crosscaretech.com/privacy-policy")}>
-          <Text style={styles.footerText}>
-            Terms & Conditions | Privacy Policy | Contact Us
-          </Text>
-        </Pressable>
+          <Pressable
+            style={{ marginTop: 20 }}
+            onPress={() =>
+              Linking.openURL("https://crosscaretech.com/privacy-policy")
+            }
+          >
+            <Text style={styles.footerText}>
+              Terms & Conditions | Privacy Policy | Contact Us
+            </Text>
+          </Pressable>
         </ScrollView>
 
         {/* Date Picker Modal */}
@@ -431,7 +440,6 @@ const SignUp: FC = () => {
         )}
 
         {/* Footer */}
-        
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

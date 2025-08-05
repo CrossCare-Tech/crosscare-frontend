@@ -141,19 +141,24 @@ const LoginContent: FC = memo(() => {
     }
   }, [email, password, router, dispatch, validateInput]);
 
-  const handleChangeEmail = useCallback((text: string) => {
-    setEmail(text);
-    if (emailError) setEmailError("");
-  }, [emailError]);
+  const handleChangeEmail = useCallback(
+    (text: string) => {
+      setEmail(text);
+      if (emailError) setEmailError("");
+    },
+    [emailError]
+  );
 
-  const handleChangePassword = useCallback((text: string) => {
-    setPassword(text);
-    if (passwordError) setPasswordError("");
-  }, [passwordError]);
+  const handleChangePassword = useCallback(
+    (text: string) => {
+      setPassword(text);
+      if (passwordError) setPasswordError("");
+    },
+    [passwordError]
+  );
 
   const footerText = useMemo(
-    () =>
-      "Terms & Conditions | Privacy Policy | Contact Us",
+    () => "Terms & Conditions | Privacy Policy | Contact Us",
     []
   );
 
@@ -222,7 +227,7 @@ const LoginContent: FC = memo(() => {
 
           <View style={{ flexDirection: "column", gap: 12, marginTop: 12 }}>
             <Text style={styles.signup}>
-              New patient?{' '}
+              New patient?{" "}
               <Text
                 style={styles.signupLink}
                 onPress={() => router.push("/signup")}
@@ -233,7 +238,11 @@ const LoginContent: FC = memo(() => {
           </View>
         </View>
 
-        <Pressable onPress={() => Linking.openURL("https://crosscaretech.com/privacy-policy")}>
+        <Pressable
+          onPress={() =>
+            Linking.openURL("https://crosscaretech.com/privacy-policy")
+          }
+        >
           <Text style={styles.footerText}>{footerText}</Text>
         </Pressable>
       </KeyboardAvoidingView>
