@@ -29,10 +29,12 @@ import Globe from "@/assets/images/Svg/Globe";
 import Notification from "@/assets/images/Svg/Notification";
 import Help from "@/assets/images/Svg/Help";
 import Terms from "@/assets/images/Svg/Terms";
+import Delete from "@/assets/images/Svg/Delete";
 import Logout from "@/assets/images/Svg/Logout";
 import { width, height } from "../../../constants/helper";
 import { useTranslation } from "react-i18next";
 import { CONFIG } from "@/constants/config";
+import Language from "../profile-setting/language";
 
 const Profile = () => {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
@@ -234,6 +236,24 @@ const Profile = () => {
             onPress={() =>
               Linking.openURL("https://crosscaretech.com/privacy-policy")
             }
+          />
+
+          <MenuItem
+            icon={<Globe />}
+            title={`${t("profile.citations")}`}
+            subtitle={`${t("profile.citationsDescription")}`}
+            onPress={() => {
+              router.push("/patient/profile-setting/citations");
+            }}
+          />
+
+          <MenuItem
+            icon={<Delete />}
+            title={`${t("profile.deleteaccount")}`}
+            subtitle={`${t("profile.deleteaccountDescription")}`}
+            onPress={() => {
+              router.push("/patient/profile-setting/delete-account");
+            }}
           />
         </View>
       </ScrollView>

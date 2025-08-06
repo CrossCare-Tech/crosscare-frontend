@@ -88,17 +88,21 @@ const RootLayoutNav = () => {
   
   useEffect(() => {
     const fetchUserMealData = async () => {
-      if (user?.user_id || user?.id) {
-        const userId = user.user_id || user.id;
-        console.log("Fetching meals for user:", userId);
-        
-        try {
-          // Fetch current meals and calorie history
-          await fetchMeals(userId);
-          await fetchCalorieHistory(userId, 'week');
-        } catch (error) {
-          console.error("Error fetching meal data:", error);
-        }
+      // Defensive check: Don't run if user is null or being cleared
+      if (!user || (!user?.user_id && !user?.id)) {
+        console.log("Skipping meal data fetch - no valid user");
+        return;
+      }
+      
+      const userId = user.user_id || user.id;
+      console.log("Fetching meals for user:", userId);
+      
+      try {
+        // Fetch current meals and calorie history
+        await fetchMeals(userId);
+        await fetchCalorieHistory(userId, 'week');
+      } catch (error) {
+        console.error("Error fetching meal data:", error);
       }
     };
 

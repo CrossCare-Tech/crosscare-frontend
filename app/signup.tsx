@@ -598,6 +598,7 @@ const styles = StyleSheet.create({
   datePicker: {
     width: "100%",
     minHeight: 200,
+    backgroundColor: "#fff",
   },
 });
 

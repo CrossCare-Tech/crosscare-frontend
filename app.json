@@ -11,8 +11,9 @@
     "ios": {
       "supportsTablet": false,
       "infoPlist": {
-        "NSMicrophoneUsageDescription": "This app requires access to your microphone for voice processing.",
+        "NSMicrophoneUsageDescription": "We use your microphone for conversating with Doula chatbot using your voice.",
         "NSHealthShareUsageDescription": "This app needs access to read your health data including steps, heart rate, and sleep information to provide personalized health insights.",
+        "NSPhotoLibraryUsageDescription": "We use your photos to help you track your pregnancy journey, show it on your profile and give you analysis of your pregnancy journey.",
         "ITSAppUsesNonExemptEncryption": false
       },
       "bundleIdentifier": "com.crosscare.tech",
