@@ -72,7 +72,7 @@ const DeleteAccount = () => {
               
               // Call backend API to delete account
               const response = await fetch(
-                `http://localhost:8000/api/user/${currentUserId}/delete-account`,
+                `${CONFIG.API_BASE_URL}/user/${currentUserId}/delete-account`,
                 {
                   method: "DELETE",
                   headers: {
