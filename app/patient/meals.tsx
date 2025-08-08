@@ -9,7 +9,13 @@ import {
   Modal,
   FlatList,
 } from "react-native";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ActivityIndicator, TouchableOpacity } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
@@ -708,53 +714,57 @@ const meals = () => {
     setIsGoalModalVisible(false);
   };
 
-  const handleAddFood = useCallback((mealType: string) => {
-  const formattedDate = selectedDate.toISOString().split("T")[0];
-  router.push({
-    pathname: "/patient/addmeals",
-    params: { mealType, selectedDate: formattedDate },
-  });
-}, [selectedDate, router]);
+  const handleAddFood = useCallback(
+    (mealType: string) => {
+      const formattedDate = selectedDate.toISOString().split("T")[0];
+      router.push({
+        pathname: "/patient/addmeals",
+        params: { mealType, selectedDate: formattedDate },
+      });
+    },
+    [selectedDate, router]
+  );
 
-  const handleDeleteFood = useCallback((mealType: string, foodIndex: number) => {
+  const handleDeleteFood = useCallback(
+    (mealType: string, foodIndex: number) => {
+      // Get the correct meal type for the API
+      const apiMealType =
+        mealType === "meals.mealTitles.Breakfast"
+          ? "BREAKFAST"
+          : mealType === "meals.mealTitles.Lunch"
+          ? "LUNCH"
+          : mealType === "meals.mealTitles.Dinner"
+          ? "DINNER"
+          : "SNACK";
 
-    // Get the correct meal type for the API
-    const apiMealType =
-      mealType === "meals.mealTitles.Breakfast"
-        ? "BREAKFAST"
-        : mealType === "meals.mealTitles.Lunch"
-        ? "LUNCH"
-        : mealType === "meals.mealTitles.Dinner"
-        ? "DINNER"
-        : "SNACK";
+      // Find the meal and food item IDs from the store
+      const meals = storeMeals[apiMealType];
+      if (!meals || meals.length === 0) return;
 
-    // Find the meal and food item IDs from the store
-    const meals = storeMeals[apiMealType];
-    if (!meals || meals.length === 0) return;
+      // Find which meal contains this food item
+      let foodItemId = null;
+      let mealId = null;
 
-    // Find which meal contains this food item
-    let foodItemId = null;
-    let mealId = null;
-
-    // We need to find the specific meal and food item by index
-    let currentIndex = 0;
-    for (const meal of meals) {
-      const foodItems = meal.foodItems || [];
-      if (currentIndex + foodItems.length > foodIndex) {
-        // This meal contains our target food
-        const itemIndex = foodIndex - currentIndex;
-        foodItemId = foodItems[itemIndex]?.id;
-        mealId = meal.id;
-        break;
+      // We need to find the specific meal and food item by index
+      let currentIndex = 0;
+      for (const meal of meals) {
+        const foodItems = meal.foodItems || [];
+        if (currentIndex + foodItems.length > foodIndex) {
+          // This meal contains our target food
+          const itemIndex = foodIndex - currentIndex;
+          foodItemId = foodItems[itemIndex]?.id;
+          mealId = meal.id;
+          break;
+        }
+        currentIndex += foodItems.length;
       }
-      currentIndex += foodItems.length;
-    }
 
-    if (userId && mealId && foodItemId) {
-      deleteFoodItem(userId, mealId, foodItemId);
-    }
-  }, [userId, storeMeals, deleteFoodItem]);
-
+      if (userId && mealId && foodItemId) {
+        deleteFoodItem(userId, mealId, foodItemId);
+      }
+    },
+    [userId, storeMeals, deleteFoodItem]
+  );
 
   // Calculate y-axis values using useMemo to prevent recalculation on every render - matching weight.tsx
   const { yAxisLabels, roundedMax, roundedMin } = useMemo(() => {
@@ -1060,47 +1070,46 @@ const meals = () => {
   const { goodRatio, badRatio } = getFoodQualityRatio();
 
   // Update the MealItem component to handle quantity changes
-  const handleQuantityChange = useCallback((
-    mealType: string,
-    foodIndex: number,
-    newQuantity: number
-  ) => {
-    // Get the correct meal type for the API
-    const apiMealType =
-      mealType === "meals.mealTitles.Breakfast"
-        ? "BREAKFAST"
-        : mealType === "meals.mealTitles.Lunch"
-        ? "LUNCH"
-        : mealType === "meals.mealTitles.Dinner"
-        ? "DINNER"
-        : "SNACK";
+  const handleQuantityChange = useCallback(
+    (mealType: string, foodIndex: number, newQuantity: number) => {
+      // Get the correct meal type for the API
+      const apiMealType =
+        mealType === "meals.mealTitles.Breakfast"
+          ? "BREAKFAST"
+          : mealType === "meals.mealTitles.Lunch"
+          ? "LUNCH"
+          : mealType === "meals.mealTitles.Dinner"
+          ? "DINNER"
+          : "SNACK";
 
-    // Find the meal and food item IDs from the store
-    const meals = storeMeals[apiMealType];
-    if (!meals || meals.length === 0) return;
+      // Find the meal and food item IDs from the store
+      const meals = storeMeals[apiMealType];
+      if (!meals || meals.length === 0) return;
 
-    // Find which meal contains this food item
-    let foodItemId = null;
-    let mealId = null;
+      // Find which meal contains this food item
+      let foodItemId = null;
+      let mealId = null;
 
-    // We need to find the specific meal and food item by index
-    let currentIndex = 0;
-    for (const meal of meals) {
-      const foodItems = meal.foodItems || [];
-      if (currentIndex + foodItems.length > foodIndex) {
-        // This meal contains our target food
-        const itemIndex = foodIndex - currentIndex;
-        foodItemId = foodItems[itemIndex]?.id;
-        mealId = meal.id;
-        break;
+      // We need to find the specific meal and food item by index
+      let currentIndex = 0;
+      for (const meal of meals) {
+        const foodItems = meal.foodItems || [];
+        if (currentIndex + foodItems.length > foodIndex) {
+          // This meal contains our target food
+          const itemIndex = foodIndex - currentIndex;
+          foodItemId = foodItems[itemIndex]?.id;
+          mealId = meal.id;
+          break;
+        }
+        currentIndex += foodItems.length;
       }
-      currentIndex += foodItems.length;
-    }
 
-    if (userId && mealId && foodItemId) {
-      updateFoodItemQuantity(userId, mealId, foodItemId, newQuantity);
-    }
-  }, [userId, storeMeals, updateFoodItemQuantity]);
+      if (userId && mealId && foodItemId) {
+        updateFoodItemQuantity(userId, mealId, foodItemId, newQuantity);
+      }
+    },
+    [userId, storeMeals, updateFoodItemQuantity]
+  );
 
   return (
     <SafeAreaView style={styles.container}>

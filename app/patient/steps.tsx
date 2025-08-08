@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
   Modal,
   ActivityIndicator,
   Platform,
+  FlatList,
 } from "react-native";
 import {
   Ionicons,
@@ -173,14 +174,18 @@ const step = () => {
     disconnect: appleHealthDisconnect,
     getStepsData: appleHealthGetStepsData,
     getDataForRange: appleHealthGetDataForRange,
-    syncStepsGoalWithBackend: appleHealthSyncStepsGoal,  // Correct
-    syncStepsWithBackend: appleHealthSyncSteps,  // Correct
+    syncStepsGoalWithBackend: appleHealthSyncStepsGoal, // Correct
+    syncStepsWithBackend: appleHealthSyncSteps, // Correct
   } = useAppleHealth();
 
   // Determine which health service to use based on platform
-  const isUsingAppleHealth = Platform.OS === 'ios';
-  const healthServiceConnected = isUsingAppleHealth ? appleHealthConnected : isConnected;
-  const healthServiceLoading = isUsingAppleHealth ? appleHealthLoading : fitbitLoading;
+  const isUsingAppleHealth = Platform.OS === "ios";
+  const healthServiceConnected = isUsingAppleHealth
+    ? appleHealthConnected
+    : isConnected;
+  const healthServiceLoading = isUsingAppleHealth
+    ? appleHealthLoading
+    : fitbitLoading;
 
   const [initialCheckDone, setInitialCheckDone] = useState(false);
 
@@ -209,13 +214,20 @@ const step = () => {
             // For Apple Health, only pass the current goal if it's valid
             // Don't use || 10000 as that overrides 0 values
             const currentGoal = stepGoal && stepGoal > 0 ? stepGoal : undefined;
-            console.log(`Syncing with Apple Health, current goal: ${currentGoal || 'undefined'}`);
-            syncedGoal = await appleHealthSyncStepsGoal(user.user_id, currentGoal);
+            console.log(
+              `Syncing with Apple Health, current goal: ${
+                currentGoal || "undefined"
+              }`
+            );
+            syncedGoal = await appleHealthSyncStepsGoal(
+              user.user_id,
+              currentGoal
+            );
           } else {
             // Get steps goal from Fitbit and sync with backend
             syncedGoal = await syncStepsGoalWithBackend(user.user_id);
           }
-          
+
           if (syncedGoal) {
             console.log(`Received synced goal: ${syncedGoal}`);
             setStepGoal(syncedGoal);
@@ -233,7 +245,10 @@ const step = () => {
     if (isUsingAppleHealth) {
       if (appleHealthConnected) {
         await appleHealthDisconnect();
-        Alert.alert("Disconnected", "Successfully disconnected from Apple Health");
+        Alert.alert(
+          "Disconnected",
+          "Successfully disconnected from Apple Health"
+        );
         // Clear data when disconnected
         setStepData([]);
         setFilteredData([]);
@@ -294,15 +309,23 @@ const step = () => {
       let data;
       if (isUsingAppleHealth) {
         // Get data from Apple Health
-        data = await appleHealthGetDataForRange("activities/steps", startDateStr, endDateStr);
-        
+        data = await appleHealthGetDataForRange(
+          "activities/steps",
+          startDateStr,
+          endDateStr
+        );
+
         // Sync with backend for Apple Health
         if (user?.user_id) {
           await appleHealthSyncSteps(user.user_id);
         }
       } else {
         // Get data from Fitbit
-        data = await getDataForRange("activities/steps", startDateStr, endDateStr);
+        data = await getDataForRange(
+          "activities/steps",
+          startDateStr,
+          endDateStr
+        );
       }
 
       console.log("Health service data:", data);
@@ -669,7 +692,7 @@ const step = () => {
 
         if (healthData && healthData.length > 0) {
           // Get today's steps for the current count
-          const today = new Date().toISOString().split('T')[0];
+          const today = new Date().toISOString().split("T")[0];
           const todayData = healthData.find((item: any) => item.date === today);
           if (todayData) {
             setStepsWalked(todayData.steps);
@@ -905,7 +928,7 @@ const step = () => {
     }, 3000);
   };
 
-  const handleBarPress = (index: number): void => {
+  const handleBarPress = useCallback((index: number): void => {
     // Get the actual item
     const item = filteredData[index];
 
@@ -937,7 +960,7 @@ const step = () => {
 
     // Set timeout to hide tooltip after delay
     hideTooltipAfterDelay();
-  };
+  }, [filteredData, selectedIndex, tooltipAnim]);
 
   // Clean up timeout on unmount
   useEffect(() => {
@@ -972,7 +995,7 @@ const step = () => {
   };
 
   // Function to handle opening the dropdown and measuring the button position
-  const handleOpenDropdown = () => {
+  const handleOpenDropdown = useCallback(() => {
     if (periodSelectorRef.current) {
       periodSelectorRef.current.measure(
         (x: any, y: any, width: any, height: any, pageX: any, pageY: any) => {
@@ -988,40 +1011,44 @@ const step = () => {
       // Fallback if ref is not available
       setDropdownVisible(true);
     }
-  };
+  }, [periodSelectorRef, setDropdownPosition, setDropdownVisible]);
 
   // Handle step goal save
-  const handleStepGoalSave = (steps: string) => {
+  const handleStepGoalSave = useCallback((steps: string) => {
     const newStepGoal = parseInt(steps);
     if (!isNaN(newStepGoal) && newStepGoal > 0) {
       console.log(`Setting new step goal: ${newStepGoal}`);
-      
+
       // Update local state
       setStepGoal(newStepGoal);
-      
+
       // Update step data with new goal
-      const updatedStepData = stepData.map(item => ({
+      const updatedStepData = stepData.map((item) => ({
         ...item,
-        stepsGoal: newStepGoal
+        stepsGoal: newStepGoal,
       }));
       setStepData(updatedStepData);
-      
+
       // Update filtered data
-      const updatedFilteredData = filteredData.map(item => ({
+      const updatedFilteredData = filteredData.map((item) => ({
         ...item,
-        stepsGoal: newStepGoal
+        stepsGoal: newStepGoal,
       }));
       setFilteredData(updatedFilteredData);
-      
+
       // If using Apple Health, sync the new goal with the health store
       if (isUsingAppleHealth && appleHealthConnected && user?.user_id) {
         console.log(`Syncing new goal ${newStepGoal} with Apple Health store`);
         appleHealthSyncStepsGoal(user.user_id, newStepGoal)
-          .then(() => console.log('Successfully synced goal with Apple Health store'))
-          .catch(err => console.error('Failed to sync goal with Apple Health store:', err));
+          .then(() =>
+            console.log("Successfully synced goal with Apple Health store")
+          )
+          .catch((err) =>
+            console.error("Failed to sync goal with Apple Health store:", err)
+          );
       }
     }
-  };
+  },[stepData, filteredData, isUsingAppleHealth, appleHealthConnected, user]);
 
   const CustomBar = ({
     item,
@@ -1198,10 +1225,11 @@ const step = () => {
               </Text>
             </Text>
             {/* Add Set Goal button for iOS */}
-            {Platform.OS === 'ios' && (
+            {Platform.OS === "ios" && (
               <TouchableOpacity
                 style={styles.setGoalButton}
                 onPress={() => setStepModalVisible(true)}
+                accessibilityLabel="Set Step Goal"
               >
                 <Text style={styles.setGoalButtonText}>
                   {t("stepScreen.setGoal")}
@@ -1340,28 +1368,31 @@ const step = () => {
                   <Text style={styles.noDataText}>No data available</Text>
                 </View>
               ) : (
-                // For month views, filter out the range labels as they're shown separately
-                filteredData
-                  .filter(
+                <FlatList
+                  data={filteredData.filter(
                     (item) =>
                       timeRange === "week" ||
                       timeRange === "today" ||
                       !item.isRangeLabel
-                  )
-                  .map((item, index) => (
+                  )}
+                  keyExtractor={(item) => item.id || item.date}
+                  horizontal
+                  renderItem={({ item, index }) => (
                     <CustomBar
-                      key={index}
                       item={item}
                       index={filteredData.findIndex(
                         (d) => d.date === item.date
-                      )} // Use original index for reference
+                      )}
                       isSelected={
                         selectedIndex ===
                         filteredData.findIndex((d) => d.date === item.date)
                       }
                       timeRange={timeRange}
                     />
-                  ))
+                  )}
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{ flexGrow: 1 }}
+                />
               )}
             </View>
           </View>
@@ -1420,7 +1451,7 @@ const step = () => {
       </Modal>
 
       {/* Step Goal Modal for iOS */}
-      {Platform.OS === 'ios' && (
+      {Platform.OS === "ios" && (
         <StepsModal
           visible={stepModalVisible}
           onClose={() => setStepModalVisible(false)}
