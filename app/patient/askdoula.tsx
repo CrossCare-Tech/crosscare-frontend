@@ -14,6 +14,7 @@ import {
   Alert,
   AppState,
   type AppStateStatus,
+  FlatList,
 } from "react-native";
 import Markdown from "react-native-markdown-display";
 import { Ionicons, Feather } from "@expo/vector-icons";
@@ -41,7 +42,7 @@ import { processUserQuery } from "@/utils/DoulaChatUtils/processUserQuery";
 import ConversationalQuestionnaire from "@/components/ConversationalQuestionnaire";
 import { BackHandler } from "react-native";
 import { useTranslation } from "react-i18next";
-import { Audio } from 'expo-av';
+import { Audio } from "expo-av";
 import {
   GOAL_PATTERNS,
   isIncrementalRequest,
@@ -50,7 +51,6 @@ import {
 import { CONFIG } from "@/constants/config";
 import i18n from "@/translation/i18next";
 import { deepgramTTS, speakWithDeepgram } from "@/utils/deepgramTTS";
-
 
 interface PauseStateStorage {
   paused: boolean;
@@ -1556,10 +1556,13 @@ export default function askdoula() {
     // }
   };
 
-  const handleOptionPress = (optionText: string) => {
-    setInputText(optionText); // Update the inputText with the selected option
-    sendMessage(optionText);
-  };
+  const handleOptionPress = useCallback(
+    (optionText: string) => {
+      setInputText(optionText); // Update the inputText with the selected option
+      sendMessage(optionText);
+    },
+    [sendMessage]
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -1765,7 +1768,10 @@ export default function askdoula() {
           }
           console.log("Saved questionnaire responses to database");
         } catch (error) {
-          console.error("Error saving responses to database:", JSON.stringify(error, null, 2));
+          console.error(
+            "Error saving responses to database:",
+            JSON.stringify(error, null, 2)
+          );
         }
       }
 
@@ -1871,53 +1877,56 @@ export default function askdoula() {
   //     }
   // };
 
-  const speakMessage = (messageId: string, messageContent: string) => {
-    setSpeakingMessageId(messageId);
+  const speakMessage = useCallback(
+    (messageId: string, messageContent: string) => {
+      setSpeakingMessageId(messageId);
 
-    // If this message is already being spoken, stop it
-    if (speakingMessageId === messageId) {
-      deepgramTTS.stop();
-      setIsSpeaking(false);
-      setSpeakingMessageId(null);
-      return;
-    }
-
-    console.log("message id", messageId);
-
-    // If another message is being spoken, stop it first
-    if (isSpeaking) {
-      deepgramTTS.stop();
-    }
-
-    // If muted, unmute first
-    if (isMuted) {
-      setIsMuted(false);
-    }
-
-    // Set the speaking state and ID before starting speech
-    setIsSpeaking(true);
-
-    // Use Deepgram TTS to speak the message
-    speakWithDeepgram(messageContent, {
-      language: currentLanguage,
-      onStart: () => {
-        setIsSpeaking(true);
-      },
-      onComplete: () => {
+      // If this message is already being spoken, stop it
+      if (speakingMessageId === messageId) {
+        deepgramTTS.stop();
         setIsSpeaking(false);
         setSpeakingMessageId(null);
-      },
-      onError: (error: any) => {
-        console.error("Deepgram TTS error:", error);
+        return;
+      }
+
+      console.log("message id", messageId);
+
+      // If another message is being spoken, stop it first
+      if (isSpeaking) {
+        deepgramTTS.stop();
+      }
+
+      // If muted, unmute first
+      if (isMuted) {
+        setIsMuted(false);
+      }
+
+      // Set the speaking state and ID before starting speech
+      setIsSpeaking(true);
+
+      // Use Deepgram TTS to speak the message
+      speakWithDeepgram(messageContent, {
+        language: currentLanguage,
+        onStart: () => {
+          setIsSpeaking(true);
+        },
+        onComplete: () => {
+          setIsSpeaking(false);
+          setSpeakingMessageId(null);
+        },
+        onError: (error: any) => {
+          console.error("Deepgram TTS error:", error);
+          setIsSpeaking(false);
+          setSpeakingMessageId(null);
+        },
+      }).catch((error) => {
+        console.error("Error starting Deepgram TTS:", error);
         setIsSpeaking(false);
         setSpeakingMessageId(null);
-      },
-    }).catch((error) => {
-      console.error("Error starting Deepgram TTS:", error);
-      setIsSpeaking(false);
-      setSpeakingMessageId(null);
-    });
-  };
+      });
+    },
+    [speakingMessageId, isSpeaking, isMuted, currentLanguage]
+  );
 
   return (
     <KeyboardAvoidingView
@@ -2037,63 +2046,67 @@ export default function askdoula() {
             </View>
           ) : (
             <View style={styles.messagesContainer}>
-              {messages.map((message) => (
-                <View
-                  key={message.id}
-                  style={[
-                    styles.messageRow,
-                    message.isUser
-                      ? styles.userMessageRow
-                      : styles.doulaMessageRow,
-                  ]}
-                >
-                  {!message.isUser && (
-                    <Image
-                      source={user.avatar_url?
-                        {uri:
-                        user.avatar_url} :
-                          require("../../assets/images/doulaImg.png")
-                      }
-                      style={styles.doulaAvatar}
-                    />
-                  )}
+              <FlatList
+                data={messages}
+                keyExtractor={(message) => message.id}
+                renderItem={({ item: message }) => (
+                  <View
+                    style={[
+                      styles.messageRow,
+                      message.isUser
+                        ? styles.userMessageRow
+                        : styles.doulaMessageRow,
+                    ]}
+                  >
+                    {!message.isUser && (
+                      <Image
+                        source={
+                          user.avatar_url
+                            ? { uri: user.avatar_url }
+                            : require("../../assets/images/doulaImg.png")
+                        }
+                        style={styles.doulaAvatar}
+                      />
+                    )}
 
-                  {message.type === "text" ? (
-                    <View
-                      style={[
-                        styles.messageBubble,
-                        message.isUser ? styles.userBubble : styles.doulaBubble,
-                      ]}
-                    >
-                      {!message.isUser && (
-                        <TouchableOpacity
-                          style={styles.bubbleMuteButton}
-                          onPress={() => {
-                            console.log("Pressed message ID:", message.id);
-                            console.log(
-                              "Current speaking ID:",
-                              speakingMessageId
-                            );
-                            console.log("Is speaking:", isSpeaking);
-                            speakMessage(message.id, message.content);
-                          }}
-                        >
-                          <Ionicons
-                            name={
-                              speakingMessageId === message.id && isSpeaking
-                                ? "volume-high"
-                                : "volume-medium"
-                            }
-                            size={16}
-                            color={
-                              speakingMessageId === message.id && isSpeaking
-                                ? "#E162BC"
-                                : "#CCCCCC"
-                            }
-                          />
-                        </TouchableOpacity>
-                      )}
-                      {/* <Text
+                    {message.type === "text" ? (
+                      <View
+                        style={[
+                          styles.messageBubble,
+                          message.isUser
+                            ? styles.userBubble
+                            : styles.doulaBubble,
+                        ]}
+                      >
+                        {!message.isUser && (
+                          <TouchableOpacity
+                            style={styles.bubbleMuteButton}
+                            onPress={() => {
+                              console.log("Pressed message ID:", message.id);
+                              console.log(
+                                "Current speaking ID:",
+                                speakingMessageId
+                              );
+                              console.log("Is speaking:", isSpeaking);
+                              speakMessage(message.id, message.content);
+                            }}
+                          >
+                            <Ionicons
+                              name={
+                                speakingMessageId === message.id && isSpeaking
+                                  ? "volume-high"
+                                  : "volume-medium"
+                              }
+                              size={16}
+                              color={
+                                speakingMessageId === message.id && isSpeaking
+                                  ? "#E162BC"
+                                  : "#CCCCCC"
+                              }
+                            />
+                          </TouchableOpacity>
+                        )}
+                        {/* <Text
                         style={[
                           styles.messageText,
                           message.isUser
@@ -2104,57 +2117,60 @@ export default function askdoula() {
                         {message.content}
                       </Text> */}
 
-                      {message.isUser ? (
-                        <Text
-                          style={[styles.messageText, styles.userMessageText]}
-                        >
-                          {message.content}
-                        </Text>
-                      ) : (
-                        <Markdown
-                          style={{
-                            body: styles.doulaMessageText, // Customize markdown text style
-                          }}
-                        >
-                          {message.content}
-                        </Markdown>
-                      )}
-                    </View>
-                  ) : (
-                    <AudioMessage
-                      audioUri={message.content}
-                      isUser={message.isUser}
-                    />
-                  )}
-
-                  {message.isUser && (
-                    <>
-                      {user?.user_photo ? (
-                        <Image
-                          source={{ uri: user.user_photo }}
-                          style={styles.userAvatar}
-                        />
-                      ) : (
-                        <>
-                          <View
+                        {message.isUser ? (
+                          <Text
+                            style={[styles.messageText, styles.userMessageText]}
+                          >
+                            {message.content}
+                          </Text>
+                        ) : (
+                          <Markdown
                             style={{
-                              borderWidth: 1.44,
-                              borderRadius: 25,
-                              borderColor: "#FDE8F8",
-                              boxShadow:
-                                "0px 0px 0.72px 0px rgba(0, 0, 0, 0.30);",
+                              body: styles.doulaMessageText, // Customize markdown text style
                             }}
                           >
-                            <User width={36} height={36} />
-                          </View>
-                        </>
-                      )}
-                    </>
-                  )}
-                </View>
-              ))}
+                            {message.content}
+                          </Markdown>
+                        )}
+                      </View>
+                    ) : (
+                      <AudioMessage
+                        audioUri={message.content}
+                        isUser={message.isUser}
+                      />
+                    )}
 
-              {isTyping && renderTypingIndicator()}
+                    {message.isUser && (
+                      <>
+                        {user?.user_photo ? (
+                          <Image
+                            source={{ uri: user.user_photo }}
+                            style={styles.userAvatar}
+                          />
+                        ) : (
+                          <>
+                            <View
+                              style={{
+                                borderWidth: 1.44,
+                                borderRadius: 25,
+                                borderColor: "#FDE8F8",
+                                boxShadow:
+                                  "0px 0px 0.72px 0px rgba(0, 0, 0, 0.30);",
+                              }}
+                            >
+                              <User width={36} height={36} />
+                            </View>
+                          </>
+                        )}
+                      </>
+                    )}
+                  </View>
+                )}
+                ListFooterComponent={isTyping ? renderTypingIndicator : null}
+                initialNumToRender={10}
+                windowSize={5}
+                removeClippedSubviews={true}
+              />
             </View>
           )}
         </ScrollView>
@@ -2238,11 +2254,9 @@ export default function askdoula() {
             </View>
 
             <TouchableOpacity
-              style={[
-                styles.sendButton,
-                (!inputText.trim() || isTyping) && styles.sendButtonDisabled,
-              ]}
+              style={styles.sendButton}
               onPress={() => sendMessage()}
+              accessibilityLabel="Send message"
               disabled={!inputText.trim() || isTyping}
             >
               <Feather name="send" size={20} color="white" />
