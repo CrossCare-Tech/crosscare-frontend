@@ -1,4 +1,4 @@
-import React, { FC, useLayoutEffect, useState } from "react";
+import React, { FC, useLayoutEffect, useState, useCallback } from "react";
 import {
   Alert,
   StyleSheet,
@@ -201,40 +201,45 @@ const SignUp: FC = () => {
     }
   };
 
-  const handleChangeFirstName = (text: string) => {
-    setFirstName(text);
-    if (firstNameError) {
-      setFirstNameError("");
-    }
-  };
+  const handleChangeFirstName = useCallback(
+    (text: string) => {
+      setFirstName(text);
+      if (firstNameError) setFirstNameError("");
+    },
+    [firstNameError]
+  );
 
-  const handleChangeLastName = (text: string) => {
-    setLastName(text);
-    if (lastNameError) {
-      setLastNameError("");
-    }
-  };
+  const handleChangeLastName = useCallback(
+    (text: string) => {
+      setLastName(text);
+      if (lastNameError) setLastNameError("");
+    },
+    [lastNameError]
+  );
 
-  const handleChangeEmail = (text: string) => {
-    setEmail(text);
-    if (emailError) {
-      setEmailError("");
-    }
-  };
+  const handleChangeEmail = useCallback(
+    (text: string) => {
+      setEmail(text);
+      if (emailError) setEmailError("");
+    },
+    [emailError]
+  );
 
-  const handleChangePhoneNumber = (text: string) => {
-    setPhoneNumber(text);
-    if (phoneNumberError) {
-      setPhoneNumberError("");
-    }
-  };
+  const handleChangePhoneNumber = useCallback(
+    (text: string) => {
+      setPhoneNumber(text);
+      if (phoneNumberError) setPhoneNumberError("");
+    },
+    [phoneNumberError]
+  );
 
-  const handleChangePassword = (text: string) => {
-    setPassword(text);
-    if (passwordError) {
-      setPasswordError("");
-    }
-  };
+  const handleChangePassword = useCallback(
+    (text: string) => {
+      setPassword(text);
+      if (passwordError) setPasswordError("");
+    },
+    [passwordError]
+  );
 
   return (
     <SafeAreaView
