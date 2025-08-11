@@ -1111,6 +1111,22 @@ const meals = () => {
     [userId, storeMeals, updateFoodItemQuantity]
   );
 
+  // Debounce function
+  function debounce(fn: (...args: any[]) => void, delay: number) {
+    let timer: NodeJS.Timeout;
+    return (...args: any[]) => {
+      clearTimeout(timer);
+      timer = setTimeout(() => fn(...args), delay);
+    };
+  }
+
+  const fetchMealsDebounced = useRef(debounce(fetchMeals, 500)).current;
+
+  useEffect(() => {
+    fetchMealsDebounced();
+    // Only include dependencies that actually affect the fetch
+  }, [userId, timeRange, selectedDate]);
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />

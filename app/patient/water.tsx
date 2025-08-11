@@ -359,20 +359,18 @@ export default function water() {
     }
   };
 
-  const debouncedPostWaterIntake = useDebounce(postWaterIntake, 500);
-
   useEffect(() => {
     fetchWaterData();
-    const syncInterval = setInterval(() => {
-      syncWaterIntakeFromApi();
-    }, 20000);
-    return () => clearInterval(syncInterval);
-  }, [user.user_id, setGlassCount, setMaxGlasses]);
+    const interval = setInterval(syncWaterIntakeFromApi, 20000);
+    return () => clearInterval(interval); // Clear on unmount
+  }, [user.user_id]);
+
+  // Debounce user-triggered API calls
+  const debouncedPostWaterIntake = useRef(useDebounce(postWaterIntake, 500)).current;
 
   const handleSliderChange = (value: number) => {
-    const newGlassCount = Number(value);
-    setGlassCount(newGlassCount);
-    debouncedPostWaterIntake(newGlassCount);
+    setGlassCount(value);
+    debouncedPostWaterIntake(value);
   };
 
   const getFilteredData = useMemo(() => {

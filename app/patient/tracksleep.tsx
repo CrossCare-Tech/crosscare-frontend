@@ -48,7 +48,14 @@ type CustomBarProps = {
   isSelected: boolean;
   timeRange: string;
 };
-
+// Debounce function
+function debounce(fn: (...args: any[]) => void, delay: number) {
+  let timer: NodeJS.Timeout;
+  return (...args: any[]) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn(...args), delay);
+  };
+}
 interface ChartDataEntry {
   day: string;
   hours: number;
@@ -1016,6 +1023,19 @@ export default function tracksleep() {
 
     return () => clearInterval(checkInterval);
   }, []);
+
+   // the following block is redundant and can cause repeated API calls :
+/*
+  useEffect(() => {
+    const interval = setInterval(checkAndResetWeeklyData, 3600000);
+    return () => clearInterval(interval);
+  }, []);
+*/
+  const debouncedFetchSleepData = useRef(debounce(getSleepStatus, 500)).current;
+
+  useEffect(() => {
+    debouncedFetchSleepData();
+  }, [timeRange, healthServiceConnected]);
 
   const handleDeleteLog = async (id: string) => {
     console.log(id);
