@@ -630,18 +630,11 @@ const meals = () => {
   useEffect(() => {
     if (userId) {
       const today = new Date().toISOString().split("T")[0];
-
-      // Set initial selected date if not set
-      if (!storeSelectedDate) {
-        setSelectedDate(today);
-      }
-
-      // Fetch meals and chart data
       const targetDate = storeSelectedDate || today;
       fetchMealsForDate(userId, targetDate);
       fetchCalorieHistory(userId, timeRange);
     }
-  }, [userId]);
+  }, [userId, storeSelectedDate, timeRange, fetchMealsForDate, fetchCalorieHistory]);
 
   // Chart data fetching when timeRange changes
   useEffect(() => {

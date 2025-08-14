@@ -103,7 +103,7 @@ const addmeals = () => {
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const animatedValues = useRef<{ [key: number]: Animated.Value }>({});
   const user = useSelector((state: any) => state.user);
-  const { addFoodItem } = useMealStore();
+  const { addFoodItem, setSelectedDate } = useMealStore();
   const [foodClassifications, setFoodClassifications] = useState(new Map());
   const [classificationModalVisible, setClassificationModalVisible] = useState(false);
   const [selectedFoodForClassification, setSelectedFoodForClassification] = useState<ToggleSelectionItem | null>(null);
@@ -165,6 +165,7 @@ const addmeals = () => {
     if (user?.user_id) {
       // Use the converted apiMealType instead of the raw mealType
       addFoodItem(user.user_id, apiMealType, storeFood, selectedDate);
+      setSelectedDate(selectedDate); // <-- Add this line
     }
   
     router.back();
