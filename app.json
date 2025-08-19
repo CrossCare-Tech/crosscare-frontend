@@ -55,8 +55,8 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera",
-          "microphonePermission": "Allow $(PRODUCT_NAME) to access your microphone",
+          "cameraPermission": "Allow Crosscare Concierge to access your camera to capture your pregnancy journey",
+          "microphonePermission": "Allow Crosscare Concierge to access your microphone to chat with Doula chatbot",
           "recordAudioAndroid": true
         }
       ],
@@ -70,7 +70,7 @@
       [
         "react-native-health",
         {
-          "healthSharePermission": "Allow Crosscare to access your health data",
+          "healthSharePermission": "Allow Crosscare Concierge to access your health data to provide personalized insights and recommendations.",
           "healthSharePermissionDescription": "This app requires access to your health data to provide personalized insights and recommendations."
         }
       ]
