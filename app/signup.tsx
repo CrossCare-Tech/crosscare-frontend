@@ -555,7 +555,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderRadius: 20,
     width: "90%",
-    minHeight: 340,
+    minHeight: 350,
     padding: 0,
     alignItems: "center",
     shadowColor: "#000",
@@ -585,20 +585,20 @@ const styles = StyleSheet.create({
     color: "#545454",
   },
   pickerWrapper: {
-    backgroundColor: "black",
+    backgroundColor: "#fff", // FIXED: Changed from "black" to "#fff"
     borderRadius: 16,
     marginTop: 10,
     marginBottom: 20,
     width: "100%",
-    minHeight: 250,
+    height: 250, // FIXED: Changed from minHeight to fixed height
     justifyContent: "center",
     alignItems: "center",
     paddingVertical: 10,
   },
   datePicker: {
     width: "100%",
-    minHeight: 200,
-    backgroundColor: "#fff",
+    height: 200, // FIXED: Changed from minHeight to fixed height
+    backgroundColor: "#fff", // FIXED: Ensured consistent white background
   },
 });
 
