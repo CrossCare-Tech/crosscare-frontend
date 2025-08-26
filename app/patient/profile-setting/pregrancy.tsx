@@ -128,9 +128,10 @@ const EditablePregnancyWeekField = ({
   const handleSave = () => {
     Keyboard.dismiss();
     const newWeek = Number.parseInt(inputValue);
-    if (!isNaN(newWeek) && newWeek > 0 && newWeek <= 42) {
+    if (!isNaN(newWeek) && newWeek >= 0 && newWeek <= 42) {
       onSave(newWeek);
     } else {
+      Alert.alert("Invalid Week", "Please enter a week between 0 and 42");
       onCancel();
     }
   };

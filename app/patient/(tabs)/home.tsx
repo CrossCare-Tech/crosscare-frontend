@@ -47,22 +47,40 @@ interface Progress {
   dueDate: string;
 }
 
-const calculatePregnancyProgress = (weeksComplete: number): Progress => {
+const calculatePregnancyProgress = (pregnancyData: any): Progress => {
   const totalWeeks = 40; // Standard pregnancy duration (40 weeks)
-
-  // Calculate progress percentage
-  const progressPercentage = (weeksComplete / totalWeeks) * 100;
-
-  // Calculate remaining weeks and days
-  const remainingWeeks = totalWeeks - weeksComplete;
-  const remainingDays = remainingWeeks * 7;
-
-  // Calculate due date based on current date and remaining days
+  
+  // If we have pregnancy data from backend, use it
+  if (pregnancyData) {
+    const currentWeek = pregnancyData.week || 0;
+    const remainingDays = pregnancyData.remainingDays || 280;
+    const dueDate = pregnancyData.dueDate || new Date().toISOString();
+    
+    // Calculate progress percentage
+    const progressPercentage = (currentWeek / totalWeeks) * 100;
+    
+    // Format due date
+    const options: Intl.DateTimeFormatOptions = {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    };
+    const formattedDueDate = new Date(dueDate).toLocaleDateString("en-US", options);
+    
+    return {
+      progressPercentage,
+      remainingDays,
+      dueDate: formattedDueDate,
+    };
+  }
+  
+  // Fallback for when no pregnancy data is available
+  const progressPercentage = 0;
+  const remainingDays = 280;
   const today = new Date();
   const dueDate = new Date(today);
   dueDate.setDate(today.getDate() + remainingDays);
-
-  // Format due date as "Month DD, YYYY"
+  
   const options: Intl.DateTimeFormatOptions = {
     year: "numeric",
     month: "long",
@@ -75,57 +93,29 @@ const calculatePregnancyProgress = (weeksComplete: number): Progress => {
     remainingDays,
     dueDate: formattedDueDate,
   };
-};
-
-// GoogleSignin.configure({
-//   webClientId:
-//     "457085426884-5aboj03hndd1l6teed5hl85vq2ba9t1b.apps.googleusercontent.com",
-// });
-
-interface UserProfile {
-  name?: string;
-  email?: string;
-  age?: number;
-  week?: number;
-  profileImage?: string;
-  questionnaires?: { isCompleted: boolean }[];
-  questionResponses?: { questionnaireId: string }[];
-}
+};  
 
 const Home = () => {
   const dispatch = useDispatch();
-  const [profile, setProfile] = useState<UserProfile | null>(null);
   const router = useRouter();
-  const [userData, setUserData] = useState<any>(null);
   const token = useSelector((state: any) => state.user.token);
   const user = useSelector((state: any) => state.user);
-  // console.log("token", token);
-  // console.log("userData1", user);
   const { t } = useTranslation();
   const {
     calorieGoal,
     caloriesConsumed,
     goodFoodCount,
-    badFoodCount,
-    meals,
-    isLoading,
-    error,
-    getFoodQualityRatio,
-    fetchUserGoals,
+    badFoodCount
   } = useMealStore();
   const [weeksComplete, setWeeksComplete] = useState(0);
+  const [pregnancyData, setPregnancyData] = useState<any>(null);
   const pregnancyProgress = React.useMemo(() => {
-    return calculatePregnancyProgress(weeksComplete);
-  }, [weeksComplete]);
+    return calculatePregnancyProgress(pregnancyData);
+  }, [pregnancyData]);
   const [showPregnancyModal, setShowPregnancyModal] = useState(false);
   const { progressPercentage, remainingDays, dueDate } = pregnancyProgress;
-  // const [name, setName] = useState<string>("");
-  // const [age, setAge] = useState<number>(0);
-  // const [email, setEmail] = useState<string>("");
-  // const [pregnancyWeek, setPregnancyWeek] = useState<number>(0)
 
   const { maxGlasses, glassCount, setGlassCount } = useWaterStore();
-  // const { stepsWalked, stepGoal, fetchStepData } = useStepsStore();
   const { stepsWalked, stepGoal } = useStepsWithAutoRefresh(user?.user_id);
 
   // Add health service hooks
@@ -149,11 +139,17 @@ const Home = () => {
   const [foodQualityScore, setFoodQualityScore] = useState("50%");
 
   const handlePregnancySave = (week: number) => {
-    // Convert days to weeks if needed
+    // Update the weeks completed for immediate UI feedback
     setWeeksComplete(week || 0);
-
-    // You can also save this to your backend here
-    // updatePregnancyProgress(value, unit);
+    
+    // The backend will handle the calculation, so we'll refresh the profile data
+    // to get the updated pregnancy information
+    if (user?.user_id) {
+      // Refresh profile data after a short delay to ensure backend has processed
+      setTimeout(() => {
+        getProfile();
+      }, 500);
+    }
   };
 
   useEffect(() => {
@@ -410,7 +406,6 @@ const Home = () => {
         const userDataString = await AsyncStorage.getItem("user");
         if (userDataString) {
           const parsedUserData = JSON.parse(userDataString);
-          setUserData(parsedUserData);
           console.log("User data:", parsedUserData);
         }
       } catch (error) {
@@ -439,13 +434,9 @@ const Home = () => {
 
     const data = await response.json();
     
-    // console.log("Profile data:", data.week);
+    // console.log("Profile data received:", data);
 
-    // Save the fresh profile data to AsyncStorage
-
-    // Extract and log question responses
-
-    // setProfile(data);
+    // Update user info
     dispatch(
       setUser({
         ...user,
@@ -454,7 +445,22 @@ const Home = () => {
         avatar_url: data.avatarUrl,
       })
     );
+
+    // Update pregnancy data - now using the calculated values from backend
+    // console.log("Current week from backend:", data.week);
+    // console.log("Pregnancy data from backend:", data.pregnancyData);
+    
     setWeeksComplete(data.week || 0);
+    
+    // Set the full pregnancy data for calculations
+    setPregnancyData({
+      week: data.week || 0,
+      day: data.day || 0,
+      remainingDays: data.pregnancyData?.remainingDays || 280,
+      dueDate: data.pregnancyData?.dueDate || new Date().toISOString(),
+      totalDays: data.pregnancyData?.totalDays || 0,
+      daysSinceAccountCreation: data.pregnancyData?.daysSinceAccountCreation || 0
+    });
 
     // If profile has an image and we don't have one loaded yet, use it
     if (data.profileImage && !image) {
@@ -1158,6 +1164,7 @@ const Home = () => {
           contentContainerStyle={styles.cardContainer}
           showsVerticalScrollIndicator={false}
         />
+        
         {/* Copyright Notice */}
 <View style={styles.copyrightContainer}>
   <Text style={styles.copyrightText}>© 2024 Cross Care Tech</Text>

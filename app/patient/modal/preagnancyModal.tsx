@@ -67,15 +67,15 @@ const PregnancyModal: React.FC<PregnancyModalProps> = ({
     const weekValue = parseInt(weeks) || 0;
     const dayValue = parseInt(days) || 0;
 
-    // Validate week range (1-42)
-    if (weekValue < 1 || weekValue > 42) {
-      Alert.alert("Invalid Week", "Please enter a week between 1 and 42");
+    // Validate week range (0-42)
+    if (weekValue < 0 || weekValue > 42) {
+      Alert.alert("Invalid Week", "Please enter a week between 0 and 42");
       return false;
     }
 
-    // Validate day range (1-7)
-    if (dayValue < 1 || dayValue > 8) {
-      Alert.alert("Invalid Day", "Please enter a day between 1 and 7");
+    // Validate day range (0-6)
+    if (dayValue < 0 || dayValue > 6) {
+      Alert.alert("Invalid Day", "Please enter a day between 0 and 6");
       return false;
     }
 
