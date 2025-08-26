@@ -2,7 +2,7 @@
   "expo": {
     "name": "crosscare",
     "slug": "crosscare",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./assets/images/app-splash.png",
     "scheme": "com.crosscare.tech",
