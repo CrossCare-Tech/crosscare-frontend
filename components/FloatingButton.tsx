@@ -20,7 +20,6 @@ import { useSelector } from "react-redux"
 interface AvatarData {
   imageUri: string;
 }
-// import { X } from "lucide-react"
 
 interface FloatingButtonProps {
   onPress?: () => void
@@ -37,7 +36,7 @@ const FloatingButton: React.FC<FloatingButtonProps> = ({
   showMessage = false,
   message = "Hey, do you have a minute?",
   onMessageDismiss,
-  autoShowInterval = 15000, // Default to 1 minute (60000ms)
+  autoShowInterval = 30000, // Default to 30 seconds
 }) => {
   // Get screen dimensions
   const { width, height } = Dimensions.get("window")
@@ -49,7 +48,6 @@ const FloatingButton: React.FC<FloatingButtonProps> = ({
   const isDragging = useRef(false)
   // Track the start time of touch to differentiate between tap and drag
   const touchStartTime = useRef(0)
-  // Track if image loaded successfully
 
   // Enhanced animations for message bubble
   const messageOpacity = useRef(new Animated.Value(0)).current
@@ -60,6 +58,8 @@ const FloatingButton: React.FC<FloatingButtonProps> = ({
 
   // Track if message is visible
   const [isMessageVisible, setIsMessageVisible] = useState(false)
+  // Track bubble layout to force proper sizing
+  const [bubbleLayout, setBubbleLayout] = useState({ width: 0, height: 0 })
 
   const [imageLoaded, setImageLoaded] = useState(true)
   // State for avatar image from AsyncStorage
@@ -94,10 +94,9 @@ const FloatingButton: React.FC<FloatingButtonProps> = ({
   }, [])
 
   const user = useSelector((state:any)=>state.user);
-  console.log("UER", user);
+  console.log("USER", user);
 
-
-  // Auto-show message every minute
+  // Auto-show message every interval
   useEffect(() => {
     const showMessageWithAnimation = () => {
       if (onMessageDismiss) {
@@ -105,7 +104,7 @@ const FloatingButton: React.FC<FloatingButtonProps> = ({
       }
     }
 
-    // Set up interval to show message every minute
+    // Set up interval to show message
     const intervalId = setInterval(showMessageWithAnimation, autoShowInterval)
 
     // Clean up interval on unmount
@@ -133,37 +132,10 @@ const FloatingButton: React.FC<FloatingButtonProps> = ({
         }),
       ]).start()
 
-      // Sequence of animations for the message bubble
-      Animated.sequence([
-        // First appear with scale and fade
-        Animated.parallel([
-          Animated.timing(messageOpacity, {
-            toValue: 1,
-            duration: 300,
-            useNativeDriver: true,
-            easing: Easing.out(Easing.cubic),
-          }),
-          Animated.timing(messageScale, {
-            toValue: 1,
-            duration: 400,
-            useNativeDriver: true,
-            easing: Easing.out(Easing.back(1.5)),
-          }),
-          Animated.timing(messageTranslateY, {
-            toValue: 0,
-            duration: 400,
-            useNativeDriver: true,
-            easing: Easing.out(Easing.cubic),
-          }),
-        ]),
-        // Then add a subtle bounce effect
-        Animated.timing(messageBounce, {
-          toValue: 1,
-          duration: 800,
-          useNativeDriver: true,
-          easing: Easing.elastic(1.2),
-        }),
-      ]).start()
+      // Start with invisible message, let layout calculate first
+      messageOpacity.setValue(0)
+      messageScale.setValue(0.8)
+      messageTranslateY.setValue(-20)
     } else if (!showMessage && isMessageVisible) {
       // Hide animation
       Animated.parallel([
@@ -185,9 +157,63 @@ const FloatingButton: React.FC<FloatingButtonProps> = ({
       ]).start(() => {
         setIsMessageVisible(false)
         messageBounce.setValue(0) // Reset bounce for next time
+        setBubbleLayout({ width: 0, height: 0 }) // Reset layout
       })
     }
   }, [showMessage])
+
+  // Separate effect to handle the show animation after layout is ready
+  useEffect(() => {
+    if (isMessageVisible) {
+      // If layout is already calculated, animate immediately
+      if (bubbleLayout.width > 0) {
+        console.log("Layout ready, starting animation")
+        startShowAnimation()
+      } else {
+        // Fallback: start animation after a delay even if layout isn't calculated
+        console.log("Layout not ready, using fallback timer")
+        const fallbackTimer = setTimeout(() => {
+          console.log("Fallback timer triggered, starting animation")
+          startShowAnimation()
+        }, 200)
+        
+        return () => clearTimeout(fallbackTimer)
+      }
+    }
+  }, [isMessageVisible, bubbleLayout.width])
+
+  const startShowAnimation = () => {
+    Animated.sequence([
+      // First appear with scale and fade
+      Animated.parallel([
+        Animated.timing(messageOpacity, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+          easing: Easing.out(Easing.cubic),
+        }),
+        Animated.timing(messageScale, {
+          toValue: 1,
+          duration: 400,
+          useNativeDriver: true,
+          easing: Easing.out(Easing.back(1.5)),
+        }),
+        Animated.timing(messageTranslateY, {
+          toValue: 0,
+          duration: 400,
+          useNativeDriver: true,
+          easing: Easing.out(Easing.cubic),
+        }),
+      ]),
+      // Then add a subtle bounce effect
+      Animated.timing(messageBounce, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+        easing: Easing.elastic(1.2),
+      }),
+    ]).start()
+  }
 
   // Update position when screen dimensions change
   useEffect(() => {
@@ -195,16 +221,18 @@ const FloatingButton: React.FC<FloatingButtonProps> = ({
       const { width, height } = Dimensions.get("window")
 
       // Keep button within screen bounds after rotation
-      if (pan.x._value > width - 60) {
+      const currentX = pan.x as any;
+      const currentY = pan.y as any;
+      if (currentX._value > width - 60) {
         pan.x.setValue(width - 60)
       }
-      if (pan.y._value > height - 60) {
+      if (currentY._value > height - 60) {
         pan.y.setValue(height - 60)
       }
 
       // Report position change
       if (onPositionChange) {
-        onPositionChange({ x: pan.x._value, y: pan.y._value })
+        onPositionChange({ x: currentX._value, y: currentY._value })
       }
     }
 
@@ -212,7 +240,9 @@ const FloatingButton: React.FC<FloatingButtonProps> = ({
 
     // Initial position report
     if (onPositionChange) {
-      onPositionChange({ x: pan.x._value, y: pan.y._value })
+      const currentX = pan.x as any;
+      const currentY = pan.y as any;
+      onPositionChange({ x: currentX._value, y: currentY._value })
     }
 
     return () => subscription.remove()
@@ -226,7 +256,8 @@ const FloatingButton: React.FC<FloatingButtonProps> = ({
       clearTimeout(debounceTimer)
       debounceTimer = setTimeout(() => {
         if (onPositionChange) {
-          onPositionChange({ x: value, y: pan.y._value })
+          const currentY = pan.y as any;
+          onPositionChange({ x: value, y: currentY._value })
         }
       }, 100) // Debounce position updates
     })
@@ -235,7 +266,8 @@ const FloatingButton: React.FC<FloatingButtonProps> = ({
       clearTimeout(debounceTimer)
       debounceTimer = setTimeout(() => {
         if (onPositionChange) {
-          onPositionChange({ x: pan.x._value, y: value })
+          const currentX = pan.x as any;
+          onPositionChange({ x: currentX._value, y: value })
         }
       }, 100) // Debounce position updates
     })
@@ -265,6 +297,13 @@ const FloatingButton: React.FC<FloatingButtonProps> = ({
     handlePress()
   }
 
+  // Handle layout change to force proper sizing
+  const handleBubbleLayout = (event: any) => {
+    const { width, height } = event.nativeEvent.layout
+    
+    setBubbleLayout({ width, height })
+  }
+
   const panResponder = useRef(
     PanResponder.create({
       // We want to activate the gesture handler on touch
@@ -277,9 +316,11 @@ const FloatingButton: React.FC<FloatingButtonProps> = ({
         isDragging.current = false
 
         // Store the initial position
+        const currentX = pan.x as any;
+        const currentY = pan.y as any;
         pan.setOffset({
-          x: pan.x._value,
-          y: pan.y._value,
+          x: currentX._value,
+          y: currentY._value,
         })
         // Reset the gesture value
         pan.setValue({ x: 0, y: 0 })
@@ -318,20 +359,21 @@ const FloatingButton: React.FC<FloatingButtonProps> = ({
         const finalX = moveX > screenWidth / 2 ? screenWidth - 60 : 10
 
         // Animate to the edge with a nice spring effect
+        const currentY = pan.y as any;
         Animated.spring(pan, {
-          toValue: { x: finalX, y: pan.y._value },
+          toValue: { x: finalX, y: currentY._value },
           useNativeDriver: false,
           friction: 7,
           tension: 40,
         }).start()
 
         // Ensure button stays within vertical bounds
-        if (pan.y._value < 50) {
+        if (currentY._value < 50) {
           Animated.spring(pan.y, {
             toValue: 50,
             useNativeDriver: false,
           }).start()
-        } else if (pan.y._value > screenHeight - 100) {
+        } else if (currentY._value > screenHeight - 100) {
           Animated.spring(pan.y, {
             toValue: screenHeight - 100,
             useNativeDriver: false,
@@ -342,7 +384,8 @@ const FloatingButton: React.FC<FloatingButtonProps> = ({
   ).current
 
   // Determine if button is on the right side of the screen
-  const isOnRightSide = pan.x._value > width / 2
+  const currentX = pan.x as any;
+  const isOnRightSide = currentX._value > width / 2
 
   // Calculate bounce effect for message
   const bounceInterpolation = messageBounce.interpolate({
@@ -404,46 +447,31 @@ const FloatingButton: React.FC<FloatingButtonProps> = ({
 
   return (
     <Animated.View style={[styles.container, pan.getLayout()]} {...panResponder.panHandlers}>
-      {/* Message bubble - positioned based on which side of screen the button is on */}
-      {isMessageVisible && (
-        <Animated.View
-          style={[
-            styles.messageBubbleContainer,
-            isOnRightSide ? styles.messageBubbleLeft : styles.messageBubbleRight,
-            {
-              opacity: messageOpacity,
-              transform: [
-                { translateY: messageTranslateY },
-                { scale: messageScale },
-                { translateY: bounceInterpolation }, // Add bounce effect
-              ],
-            },
-          ]}
-        >
-          {/* <TouchableOpacity style={styles.closeButton} onPress={handleMessageDismiss}>
-            <X size={16} color="#666" />
-          </TouchableOpacity> */}
-          <TouchableOpacity onPress={handleMessagePress}>
-            <Text style={styles.messageText}>{message}</Text>
-          </TouchableOpacity>
-        </Animated.View>
-      )}
+      {/* Message bubble - always rendered but with opacity control */}
+      <Animated.View
+        style={[
+          styles.messageBubbleContainer,
+          isOnRightSide ? styles.messageBubbleLeft : styles.messageBubbleRight,
+          {
+            opacity: isMessageVisible ? messageOpacity : 0,
+            transform: [
+              { translateY: messageTranslateY },
+              { scale: messageScale },
+              { translateY: bounceInterpolation }, // Add bounce effect
+            ],
+          },
+        ]}
+        onLayout={handleBubbleLayout}
+        pointerEvents={isMessageVisible ? "auto" : "none"}
+      >
+        <TouchableOpacity onPress={handleMessagePress} activeOpacity={0.8}>
+          <Text style={styles.messageText}>{message}</Text>
+        </TouchableOpacity>
+      </Animated.View>
 
       {/* Floating button with pulse animation */}
       <Animated.View style={{ transform: [{ scale: buttonPulse }] }}>
         <TouchableWithoutFeedback onPress={handlePress}>
-          {/* <View style={styles.button}>
-            {imageLoaded ? (
-              <Image
-                source={require("../assets/images/doulaImg.png")}
-                style={styles.image}
-                resizeMode="contain"
-                onError={() => setImageLoaded(false)}
-              />
-            ) : (
-              <Text style={styles.fallbackText}>D</Text>
-            )}
-          </View> */}
           <View style={styles.button}>
             {renderButtonContent()}
           </View>
@@ -488,33 +516,43 @@ const styles = StyleSheet.create({
   messageBubbleContainer: {
     position: "absolute",
     backgroundColor: "#FFFFFF",
-    borderTopEndRadius: 10,
-    borderTopLeftRadius: 10,
-    borderBottomLeftRadius: 10,
+    borderRadius: 16,
     borderColor: "#F76CCF4D",
-    paddingVertical: 12,
     borderWidth: 1.5,
-    paddingHorizontal: 12,
-    paddingRight: 24, // Extra space for close button
-    maxWidth: 220,
+    paddingVertical: 14,
+    paddingHorizontal: 18,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 5,
+    // Force layout calculation and prevent overflow
+    alignSelf: 'flex-start',
+    flexShrink: 1,
+    // Ensure proper text wrapping
+    flexWrap: 'wrap',
+    // Force layout recalculation
+    minHeight: 40,
   },
   messageBubbleLeft: {
-    right: 50, // Position to the left of the button
-    top: -50,
-  },
+    right: 65,
+    top: -10,
+    maxWidth: Dimensions.get("window").width * 0.7, // Responsive max width
+  },  
   messageBubbleRight: {
-    left: 60, // Position to the right of the button
-    top: 0,
+    left: 65,
+    top: -10,
+    maxWidth: Dimensions.get("window").width * 0.7, // Responsive max width
   },
   messageText: {
     fontSize: 14,
     fontFamily: "Inter400",
     color: "#3F3F3F",
+    textAlign: "left",
+    lineHeight: 20,
+    // Force text to wrap and calculate proper width
+    flexWrap: 'wrap',
+    includeFontPadding: false,
   },
   closeButton: {
     position: "absolute",
@@ -526,29 +564,3 @@ const styles = StyleSheet.create({
 })
 
 export default FloatingButton
-
-
-// interface FloatingButtonWrapperProps {
-//   onPress?: () => void
-//   onPositionChange?: (position: { x: number; y: number }) => void
-//   showMessage?: boolean
-//   message?: string
-//   onMessageDismiss?: () => void
-//   autoShowInterval?: number
-// }
-
-// const FloatingButtonWrapper: React.FC<FloatingButtonWrapperProps> = (props) => {
-//   // Get authentication state from your auth context/hook
-//   const token = useSelector((state: any) => state.user.token)
-//   const isAuthenticated = !!token // Check if token exists
-
-//   // Only render the FloatingButton if the user is authenticated
-//   if (!isAuthenticated) {
-//     return null
-//   }
-
-//   // If authenticated, render the FloatingButton with all the props
-//   return <FloatingButton {...props} />
-// }
-
-// export default FloatingButtonWrapper

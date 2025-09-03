@@ -400,14 +400,14 @@ const SignUp: FC = () => {
                     <Text style={styles.modalButton}>Done</Text>
                   </TouchableOpacity>
                 </View>
-                <View style={styles.pickerWrapper}>
+                <View >
                   <DateTimePicker
                     value={dateOfBirth}
+                    textColor="black"
                     mode="date"
                     display="spinner"
                     onChange={handleDateChange}
                     maximumDate={new Date()}
-                    style={styles.datePicker}
                   />
                 </View>
               </View>
@@ -584,22 +584,21 @@ const styles = StyleSheet.create({
     fontFamily: "DMSans500",
     color: "#545454",
   },
-  pickerWrapper: {
-    backgroundColor: "#fff", // FIXED: Changed from "black" to "#fff"
-    borderRadius: 16,
-    marginTop: 10,
-    marginBottom: 20,
-    width: "100%",
-    height: 250, // FIXED: Changed from minHeight to fixed height
-    justifyContent: "center",
-    alignItems: "center",
-    paddingVertical: 10,
-  },
-  datePicker: {
-    width: "100%",
-    height: 200, // FIXED: Changed from minHeight to fixed height
-    backgroundColor: "#fff", // FIXED: Ensured consistent white background
-  },
+  // pickerWrapper: {
+    
+  //   borderRadius: 16,
+  //   marginTop: 10,
+  //   marginBottom: 20,
+  //   width: "100%",
+  //   height: 250, // FIXED: Changed from minHeight to fixed height
+  //   justifyContent: "center",
+  //   alignItems: "center",
+  //   paddingVertical: 10,
+  // },
+  // datePicker: {
+  //   width: "100%",
+  //   height: 200, // FIXED: Changed from minHeight to fixed height
+  // },
 });
 
 export default SignUp;
