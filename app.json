@@ -73,7 +73,15 @@
           "healthSharePermission": "Allow Crosscare Concierge to access your health data to provide personalized insights and recommendations.",
           "healthSharePermissionDescription": "This app requires access to your health data to provide personalized insights and recommendations."
         }
-      ]
+      ],
+      "expo-build-properties", 
+      {
+        "android": {
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 35,
+            "buildToolsVersion": "35.0.0"
+          }
+      }
     ],
     "experiments": {
       "typedRoutes": true
