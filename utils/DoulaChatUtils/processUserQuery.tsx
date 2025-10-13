@@ -176,17 +176,23 @@ t,
   const isHeartQuery = /heart|pulse|bpm/i.test(query);
   const isSleepQuery = /sleep|slept/i.test(query);
   
-  // Add meal/food query detection
-  const isMealQuery = /meal|food|eat|ate|calories|calorie|nutrition|diet|breakfast|lunch|dinner|snack/i.test(query);
-  const isCalorieQuery = /calorie|calories|kcal/i.test(query);
-  const isFoodQualityQuery = /good food|bad food|healthy|unhealthy|nutrition quality/i.test(query);
+  // Distinguish between asking ABOUT logged meals vs asking FOR meal advice
+  const isAskingAboutLoggedMeal = /what (did I|have I) (eat|eaten|have|had)|show (my|me).*?(breakfast|lunch|dinner|snack|meal)|did I (eat|have|log)|list my (meals|food)|my (breakfast|lunch|dinner|snack)/i.test(query);
+  
+  const isAskingForMealAdvice = /what (is|are|should I|can I|would be).*?(good|healthy|best|bad).*?(breakfast|lunch|dinner|snack|food|meal)|recommend.*?(breakfast|lunch|dinner|food|meal)|suggest.*?(breakfast|lunch|dinner|food|meal)|good.*?to eat|healthy.*?to eat/i.test(query);
+  
+  const isCalorieQuery = /\bcalorie\b|\bcalories\b|\bkcal\b/i.test(query) && /how many|how much|total|consumed|logged/i.test(query);
+  const isFoodQualityQuery = /good food|bad food|healthy|unhealthy|nutrition quality/i.test(query) && /did I|have I|my food/i.test(query);
 
-  // Add specific meal type queries
-  const isBreakfastQuery = /breakfast/i.test(query);
-  const isLunchQuery = /lunch/i.test(query);
-  const isDinnerQuery = /dinner/i.test(query);
-  const isSnackQuery = /snack/i.test(query);
+  // Add specific meal type queries (only for logged meal queries)
+  const isBreakfastQuery = /breakfast/i.test(query) && isAskingAboutLoggedMeal;
+  const isLunchQuery = /lunch/i.test(query) && isAskingAboutLoggedMeal;
+  const isDinnerQuery = /dinner/i.test(query) && isAskingAboutLoggedMeal;
+  const isSnackQuery = /snack/i.test(query) && isAskingAboutLoggedMeal;
   const isSpecificMealQuery = isBreakfastQuery || isLunchQuery || isDinnerQuery || isSnackQuery;
+  
+  // Overall meal query detection (but only for logged data, not advice)
+  const isMealQuery = isAskingAboutLoggedMeal || isCalorieQuery || isFoodQualityQuery;
 
   // Check for time period queries
   const isAverageQuery = /average|avg/i.test(query);
@@ -214,6 +220,8 @@ t,
     isStepsQuery,
     isHeartQuery,
     isSleepQuery,
+    isAskingAboutLoggedMeal,
+    isAskingForMealAdvice,
     isMealQuery,
     isCalorieQuery,
     isFoodQualityQuery,

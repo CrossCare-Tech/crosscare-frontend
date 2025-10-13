@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppState } from 'react-native';
 
 // Replace these with your actual Supabase URL and Anon Key from your Supabase dashboard
-const SUPABASE_URL = 'https://sfpyewutvgmsmlywgcor.supabase.co';
+const SUPABASE_URL = 'https://jmujhkvgmzopmbbwilte.supabase.co';
 const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || undefined;
 
 // Create a Supabase client
