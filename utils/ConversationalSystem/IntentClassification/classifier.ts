@@ -1,6 +1,4 @@
-import { OpenAI } from 'openai';
 import { IntentClassification, ResponseIntent, EmotionalContent } from './types';
-import { ChatCompletionTool } from 'openai/resources/chat';
 
 // Regex patterns as fallbacks
 const YES_PATTERNS = /^(yes|yeah|yep|yup|sure|ok|okay|definitely|absolutely)$/i;
@@ -27,11 +25,6 @@ export const classifyIntentWithAI = async (
       return fallbackClassification(userResponse);
     }
 
-    const openai = new OpenAI({
-      apiKey: apiKey,
-    });
-    
-
     // Prepare the context with question and options
     const isPositiveQuestion = questionContext.questionText.includes("safe") || 
         questionContext.questionText.includes("comfortable") || 
@@ -49,7 +42,7 @@ export const classifyIntentWithAI = async (
     }
 
     // Define the function for the API to call
-    const tools: ChatCompletionTool[] = [
+    const tools = [
       {
         type: "function",
         function: {
@@ -97,32 +90,45 @@ export const classifyIntentWithAI = async (
       }
     ];
 
-    // Make the API request
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4.1-2025-04-14",
-      messages: [
-        {
-        role: "system",
-        content: `You are an assistant helping analyze responses to a health questionnaire. 
-        Your task is to determine which option a user is selecting and whether their response 
-        indicates emotional distress IN THE CONTEXT of the question. 
-        
-        Pay careful attention to whether the question is phrased positively or negatively:
-        - For positive questions (e.g. "Do you feel safe?"), a "no" response might indicate distress
-        - For negative questions (e.g. "Do you feel threatened?"), a "yes" response might indicate distress
-        - The intensity of a response (e.g. "Yes majorly") does not automatically indicate distress
-          if the response is positive in context (e.g. "majorly safe" is positive)
-        
-        Only mark responses as needing empathy if they truly express negative emotions or difficult circumstances.`
+    // Make the API request using fetch instead of OpenAI SDK
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
       },
-      {
-        role: "user",
-        content: `${promptContext}\n\nUser response: "${userResponse}"\n\nPlease classify the intent and match to available options.`
-      }
-      ],
-      tools: tools,
-      tool_choice: { type: "function", function: { name: "classify_response" } }
+      body: JSON.stringify({
+        model: "gpt-4o-2024-11-20",
+        messages: [
+          {
+            role: "system",
+            content: `You are an assistant helping analyze responses to a health questionnaire. 
+            Your task is to determine which option a user is selecting and whether their response 
+            indicates emotional distress IN THE CONTEXT of the question. 
+            
+            Pay careful attention to whether the question is phrased positively or negatively:
+            - For positive questions (e.g. "Do you feel safe?"), a "no" response might indicate distress
+            - For negative questions (e.g. "Do you feel threatened?"), a "yes" response might indicate distress
+            - The intensity of a response (e.g. "Yes majorly") does not automatically indicate distress
+              if the response is positive in context (e.g. "majorly safe" is positive)
+            
+            Only mark responses as needing empathy if they truly express negative emotions or difficult circumstances.`
+          },
+          {
+            role: "user",
+            content: `${promptContext}\n\nUser response: "${userResponse}"\n\nPlease classify the intent and match to available options.`
+          }
+        ],
+        tools: tools,
+        tool_choice: { type: "function", function: { name: "classify_response" } }
+      }),
     });
+
+    if (!response.ok) {
+      throw new Error(`OpenAI API error: ${response.status}`);
+    }
+
+    const completion = await response.json();
 
     // Process the results
     const toolCall = completion.choices[0]?.message?.tool_calls?.[0];
