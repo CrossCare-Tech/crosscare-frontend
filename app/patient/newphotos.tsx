@@ -55,7 +55,7 @@ export default function NewPhotos() {
 
     try {
       const response = await fetch(
-        `https://crosscare-backends.onrender.com/api/user/activity/${user.user_id}/journal/upload`,
+        `https://crosscare-backend.onrender.com/api/user/activity/${user.user_id}/journal/upload`,
         {
           method: "POST",
           headers: {

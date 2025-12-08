@@ -451,7 +451,7 @@ const WeightScreen = () => {
 
       // Make the actual API call instead of using dummy data
       const response = await fetch(
-        `https://crosscare-backends.onrender.com/api/user/activity/${user.user_id}/weightStatus`,
+        `https://crosscare-backend.onrender.com/api/user/activity/${user.user_id}/weightStatus`,
         {
           method: "GET",
           headers: {

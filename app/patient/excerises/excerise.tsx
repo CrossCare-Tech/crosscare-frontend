@@ -88,7 +88,7 @@ const ExerciseDetailScreen = () => {
         }
 
         // Use the correct API URL and endpoint
-        const response = await fetch(`https://crosscare-backends.onrender.com/api/categories/${id}`, {
+        const response = await fetch(`https://crosscare-backend.onrender.com/api/categories/${id}`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",

@@ -259,7 +259,7 @@ const step = () => {
   const sendStepsToBackend = async (steps: number) => {
     try {
       const userId = user?.user_id;
-      const apiUrl = `https://crosscare-backends.onrender.com/api/user/activity/${userId}/steps`;
+      const apiUrl = `https://crosscare-backend.onrender.com/api/user/activity/${userId}/steps`;
 
       console.log(`Sending ${steps} steps to backend API: ${apiUrl}`);
 
@@ -626,7 +626,7 @@ const step = () => {
 
       const userId = user?.user_id;
       const response = await fetch(
-        `https://crosscare-backends.onrender.com/api/user/activity/${userId}/stepsStatus`,
+        `https://crosscare-backend.onrender.com/api/user/activity/${userId}/stepsStatus`,
         {
           method: "GET",
           headers: {

@@ -27,6 +27,7 @@ import { setToken, setUser } from "@/store/userSlice";
 import LogoSvg from "@/assets/images/Svg/LogoSvg";
 import CustomTextInput from "@/components/ui/CustomTextInput";
 import { width } from "@/constants/helper";
+import { API_URL } from "@/constants/api";
 import { LinearGradient } from "expo-linear-gradient";
 
 // WebBrowser.maybeCompleteAuthSession();
@@ -78,9 +79,10 @@ const Login: FC = () => {
     setLoading(true);
 
     try {
-      // console.log(`${process.env.DATABASE_URL}`);
+      const loginUrl = `${API_URL}/api/login`;
+      console.log('LOGIN URL:', loginUrl);
       const response = await fetch(
-        `https://crosscare-backends.onrender.com/api/login`,
+        loginUrl,
         {
           method: "POST",
           headers: {
@@ -90,12 +92,26 @@ const Login: FC = () => {
         }
       );
 
+      // Check response status BEFORE parsing JSON
+      if (!response.ok) {
+        // Try to get error message from response, but handle non-JSON responses
+        let errorMessage = "Login failed";
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.message || errorMessage;
+          } catch {
+            // JSON parsing failed, use default message
+          }
+        } else {
+          errorMessage = `Server error: ${response.status}`;
+        }
+        throw new Error(errorMessage);
+      }
+
       const data = await response.json();
       console.log("API Response:", data);
-
-      if (!response.ok) {
-        throw new Error(data.message || "Login failed");
-      }
 
       if (data) {
         console.log("Dispatching User Data to Redux:", data);

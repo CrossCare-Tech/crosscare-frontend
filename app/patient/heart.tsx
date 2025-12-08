@@ -551,7 +551,7 @@ export default function HeartRateScreen() {
       
       const userId = user?.user_id;
 
-      const response  = await fetch(`https://crosscare-backends.onrender.com/api/user/activity/${userId}/heartstatus`,{
+      const response  = await fetch(`https://crosscare-backend.onrender.com/api/user/activity/${userId}/heartstatus`,{
         method:'GET',
         headers: {
           "Content-Type": "application/json",

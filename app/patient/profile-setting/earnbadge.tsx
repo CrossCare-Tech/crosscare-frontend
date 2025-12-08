@@ -674,7 +674,7 @@ const EarnBadge = () => {
 
     try {
       const response = await fetch(
-        `https://crosscare-backends.onrender.com/api/user/${user.user_id}`,
+        `https://crosscare-backend.onrender.com/api/user/${user.user_id}`,
         {
           method: "GET",
           headers: {

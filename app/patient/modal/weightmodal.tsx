@@ -39,7 +39,7 @@ const WeightModal = ({ visible, onClose, onSave, reload }: WeightModalProps) => 
 
     try {
       const response = await fetch(
-        `https://crosscare-backends.onrender.com/api/user/activity/${user.user_id}/weight`,
+        `https://crosscare-backend.onrender.com/api/user/activity/${user.user_id}/weight`,
         {
           method: "POST",
           headers: {

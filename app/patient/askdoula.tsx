@@ -482,7 +482,7 @@ export default function askdoula() {
     if (user && user.user_id) {
       try {
         // Use the specified endpoint format
-        const apiUrl = `https://crosscare-backends.onrender.com/api/user/activity/${user.user_id}`;
+        const apiUrl = `https://crosscare-backend.onrender.com/api/user/activity/${user.user_id}`;
         console.log(`Making API call to: ${apiUrl}`);
 
         // Make the API call
@@ -1126,7 +1126,7 @@ export default function askdoula() {
 
       try {
         if (patternMatch.type === "water") {
-          endpoint = `https://crosscare-backends.onrender.com/api/user/activity/${user.user_id}/water`;
+          endpoint = `https://crosscare-backend.onrender.com/api/user/activity/${user.user_id}/water`;
 
           const waterValue = patternMatch.isGlasses
             ? patternMatch.value
@@ -1148,22 +1148,22 @@ export default function askdoula() {
 
           console.log("Water logging request:", { waterValue, isIncrement });
         } else if (patternMatch.type === "weight") {
-          endpoint = `https://crosscare-backends.onrender.com/api/user/activity/${user.user_id}/weight`;
+          endpoint = `https://crosscare-backend.onrender.com/api/user/activity/${user.user_id}/weight`;
           requestData = {
             weight: patternMatch.value,
             weight_unit: patternMatch.unit,
           };
           successMessage = `I've logged your weight of ${patternMatch.value} ${patternMatch.unit}.`;
         } else if (patternMatch.type === "steps") {
-          endpoint = `https://crosscare-backends.onrender.com/api/user/activity/${user.user_id}/steps`;
+          endpoint = `https://crosscare-backend.onrender.com/api/user/activity/${user.user_id}/steps`;
           requestData = { steps: patternMatch.value };
           successMessage = `I've logged ${patternMatch.value} steps for you.`;
         } else if (patternMatch.type === "heart") {
-          endpoint = `https://crosscare-backends.onrender.com/api/user/activity/${user.user_id}/heart`;
+          endpoint = `https://crosscare-backend.onrender.com/api/user/activity/${user.user_id}/heart`;
           requestData = { heartRate: patternMatch.value };
           successMessage = `I've logged your heart rate of ${patternMatch.value} bpm.`;
         } else if (patternMatch.type === "sleep") {
-          endpoint = `https://crosscare-backends.onrender.com/api/user/activity/${user.user_id}/sleep`;
+          endpoint = `https://crosscare-backend.onrender.com/api/user/activity/${user.user_id}/sleep`;
 
           // Format times to ensure they have AM/PM
           const formatTime = (timeStr) => {
@@ -1277,7 +1277,7 @@ export default function askdoula() {
         extractedData = extractMetricFromText(query, "water");
 
         if (extractedData) {
-          endpoint = `https://crosscare-backends.onrender.com/api/user/activity/${user.user_id}/water`;
+          endpoint = `https://crosscare-backend.onrender.com/api/user/activity/${user.user_id}/water`;
 
           // If the user specified glasses, send that value directly
           // Otherwise, convert ml to glasses (assuming 250ml per glass)
@@ -1296,7 +1296,7 @@ export default function askdoula() {
         extractedData = extractMetricFromText(query, "weight");
 
         if (extractedData) {
-          endpoint = `https://crosscare-backends.onrender.com/api/user/activity/${user.user_id}/weight`;
+          endpoint = `https://crosscare-backend.onrender.com/api/user/activity/${user.user_id}/weight`;
           requestData = {
             weight: extractedData.value,
             weight_unit: extractedData.unit,
@@ -1307,7 +1307,7 @@ export default function askdoula() {
         extractedData = extractMetricFromText(query, "steps");
 
         if (extractedData) {
-          endpoint = `https://crosscare-backends.onrender.com/api/user/activity/${user.user_id}/steps`;
+          endpoint = `https://crosscare-backend.onrender.com/api/user/activity/${user.user_id}/steps`;
           requestData = { steps: extractedData.value };
           successMessage = `I've logged ${extractedData.value} steps for you.`;
         }
@@ -1315,7 +1315,7 @@ export default function askdoula() {
         extractedData = extractMetricFromText(query, "heart");
 
         if (extractedData) {
-          endpoint = `https://crosscare-backends.onrender.com/api/user/activity/${user.user_id}/heart`;
+          endpoint = `https://crosscare-backend.onrender.com/api/user/activity/${user.user_id}/heart`;
           requestData = { heartRate: extractedData.value };
           successMessage = `I've logged your heart rate of ${extractedData.value} bpm.`;
         }
@@ -1323,7 +1323,7 @@ export default function askdoula() {
         extractedData = extractMetricFromText(query, "sleep");
 
         if (extractedData) {
-          endpoint = `https://crosscare-backends.onrender.com/api/user/activity/${user.user_id}/sleep`;
+          endpoint = `https://crosscare-backend.onrender.com/api/user/activity/${user.user_id}/sleep`;
 
           // Format times to ensure they have AM/PM
           const formatTime = (timeStr: string) => {
@@ -1432,7 +1432,7 @@ export default function askdoula() {
 
       try {
         if (patternMatch.type === "water") {
-          endpoint = `https://crosscare-backends.onrender.com/api/user/activity/${user.user_id}/waterGoal`;
+          endpoint = `https://crosscare-backend.onrender.com/api/user/activity/${user.user_id}/waterGoal`;
 
           const waterGoal = patternMatch.isGlasses
             ? patternMatch.value
@@ -1441,7 +1441,7 @@ export default function askdoula() {
           requestData = { waterGoal: waterGoal };
           successMessage = `I've set your water intake goal to ${waterGoal} glasses per day.`;
         } else if (patternMatch.type === "steps") {
-          endpoint = `https://crosscare-backends.onrender.com/api/user/activity/${user.user_id}/steps`;
+          endpoint = `https://crosscare-backend.onrender.com/api/user/activity/${user.user_id}/steps`;
           requestData = { stepsGoal: patternMatch.value };
           successMessage = `I've set your step goal to ${patternMatch.value} steps per day.`;
         }
@@ -1514,7 +1514,7 @@ export default function askdoula() {
         extractedData = extractMetricFromText(query, "water");
 
         if (extractedData) {
-          endpoint = `https://crosscare-backends.onrender.com/api/user/activity/${user.user_id}/waterGoal`;
+          endpoint = `https://crosscare-backend.onrender.com/api/user/activity/${user.user_id}/waterGoal`;
 
           // If the user specified glasses, use that value directly
           // Otherwise, convert ml to glasses (assuming 250ml per glass)
@@ -1529,7 +1529,7 @@ export default function askdoula() {
         extractedData = extractMetricFromText(query, "steps");
 
         if (extractedData) {
-          endpoint = `https://crosscare-backends.onrender.com/api/user/activity/${user.user_id}/steps`;
+          endpoint = `https://crosscare-backend.onrender.com/api/user/activity/${user.user_id}/steps`;
           requestData = { stepsGoal: extractedData.value };
           successMessage = `I've set your step goal to ${extractedData.value} steps per day.`;
         }

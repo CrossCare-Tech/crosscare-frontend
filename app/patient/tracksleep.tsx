@@ -300,7 +300,7 @@ export default function tracksleep() {
 
           // Make POST request to your API - use sleepAttachment endpoint
           const response = await fetch(
-            `https://crosscare-backends.onrender.com/api/user/activity/${user.user_id}/sleep`,
+            `https://crosscare-backend.onrender.com/api/user/activity/${user.user_id}/sleep`,
             {
               method: "POST",
               headers: {
@@ -699,7 +699,7 @@ export default function tracksleep() {
       }
 
       const response = await fetch(
-        `https://crosscare-backends.onrender.com/api/user/activity/${user.user_id}/sleepstatus`,
+        `https://crosscare-backend.onrender.com/api/user/activity/${user.user_id}/sleepstatus`,
         {
           method: "GET",
           headers: {
@@ -824,7 +824,7 @@ export default function tracksleep() {
   const handleDeleteLog = async (id: string) => {
     console.log(id);
     const response = await fetch(
-      `https://crosscare-backends.onrender.com/api/user/activity/${user.user_id}/sleepstatus/delete/${id}`,
+      `https://crosscare-backend.onrender.com/api/user/activity/${user.user_id}/sleepstatus/delete/${id}`,
       {
         method: "DELETE",
         headers: {

@@ -330,7 +330,7 @@ const name = () => {
 
   const getProfile = async () => {
     const response = await fetch(
-      `https://crosscare-backends.onrender.com/api/user/${user?.user_id}/profile`,
+      `https://crosscare-backend.onrender.com/api/user/${user?.user_id}/profile`,
       {
         method: "GET",
         headers: {
@@ -385,7 +385,7 @@ const name = () => {
       updateData[fieldName] = value;
 
       const response = await fetch(
-        `https://crosscare-backends.onrender.com/api/user/${user.user_id}/profile`,
+        `https://crosscare-backend.onrender.com/api/user/${user.user_id}/profile`,
         {
           method: "PUT",
           headers: {

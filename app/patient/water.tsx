@@ -212,7 +212,7 @@ export default function water() {
       }
       
       const response = await fetch(
-        `https://crosscare-backends.onrender.com/api/user/activity/${user.user_id}/waterstatus`
+        `https://crosscare-backend.onrender.com/api/user/activity/${user.user_id}/waterstatus`
       );
       
       if (!response.ok) {
@@ -292,7 +292,7 @@ export default function water() {
       
       // First make the API call to get the latest data
       const response = await fetch(
-        `https://crosscare-backends.onrender.com/api/user/activity/${user.user_id}/waterstatus`
+        `https://crosscare-backend.onrender.com/api/user/activity/${user.user_id}/waterstatus`
       );
       
       if (!response.ok) {
@@ -368,7 +368,7 @@ export default function water() {
       });
       
       // Then update the API - send the glass count directly as that's what the backend expects
-      const response = await fetch(`https://crosscare-backends.onrender.com/api/user/activity/${user.user_id}/water`,{
+      const response = await fetch(`https://crosscare-backend.onrender.com/api/user/activity/${user.user_id}/water`,{
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -516,7 +516,7 @@ export default function water() {
         
         // API Call to Save Water Goal
         const response = await axios.post(
-          `https://crosscare-backends.onrender.com/api/user/activity/${user.user_id}/waterGoal`, 
+          `https://crosscare-backend.onrender.com/api/user/activity/${user.user_id}/waterGoal`, 
           { waterGoal: parsedGoal },
           { headers: { "Content-Type": "application/json" } }
         );

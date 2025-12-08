@@ -222,7 +222,7 @@ const Home = () => {
         
         // Make API call using fetch with error handling
         const response = await fetch(
-          `https://crosscare-backends.onrender.com/api/user/${userId}/badges/award`,
+          `https://crosscare-backend.onrender.com/api/user/${userId}/badges/award`,
           {
             method: 'POST',
             headers: {
@@ -256,7 +256,7 @@ const Home = () => {
       }
 
       const response = await fetch(
-        `https://crosscare-backends.onrender.com/api/user/activity/${user.user_id}/waterstatus`
+        `https://crosscare-backend.onrender.com/api/user/activity/${user.user_id}/waterstatus`
       );
 
       if (!response.ok) {
@@ -328,7 +328,7 @@ const Home = () => {
 
     // Then fetch fresh data from API
     const response = await fetch(
-      `https://crosscare-backends.onrender.com/api/user/${user?.user_id}/profile`,
+      `https://crosscare-backend.onrender.com/api/user/${user?.user_id}/profile`,
       {
         method: "GET",
         headers: {
@@ -598,7 +598,7 @@ const Home = () => {
           });
 
           const response = await fetch(
-            `https://crosscare-backends.onrender.com/api/user/${user?.user_id}/profile/image`,
+            `https://crosscare-backend.onrender.com/api/user/${user?.user_id}/profile/image`,
             {
               method: "POST",
               body: formData,
@@ -637,7 +637,7 @@ const Home = () => {
           });
 
           const response1 = await fetch(
-            `https://crosscare-backends.onrender.com/api/user/activity/${user.user_id}/journal/upload`,
+            `https://crosscare-backend.onrender.com/api/user/activity/${user.user_id}/journal/upload`,
             {
               method: "POST",
               headers: {

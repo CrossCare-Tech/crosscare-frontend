@@ -142,7 +142,7 @@ const QuestionnaireManager = ({
       awardedTriviaBadges.add(userId)
 
       // Make API call using fetch with error handling
-      const response = await fetch(`https://crosscare-backends.onrender.com/api/user/${userId}/badges/award`, {
+      const response = await fetch(`https://crosscare-backend.onrender.com/api/user/${userId}/badges/award`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1563,7 +1563,7 @@ const QuestionnaireManager = ({
       // Send individual responses to ensure each is saved correctly
       for (const responseData of formattedResponses) {
         const response = await axios.post(
-          `https://crosscare-backends.onrender.com/api/user/${user?.user_id}/domain`,
+          `https://crosscare-backend.onrender.com/api/user/${user?.user_id}/domain`,
           responseData,
           {
             headers: {

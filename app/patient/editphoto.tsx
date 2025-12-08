@@ -63,7 +63,7 @@ export default function editphoto() {
   
       try {
         const response = await fetch(
-          `https://crosscare-backends.onrender.com/api/user/activity/${user.user_id}/journal/${item.id}`,
+          `https://crosscare-backend.onrender.com/api/user/activity/${user.user_id}/journal/${item.id}`,
           {
             method: "PUT",
             headers: {

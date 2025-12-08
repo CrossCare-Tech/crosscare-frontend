@@ -143,7 +143,7 @@ const openphoto = () => {
     setLoading(true);
     try {
       const response = await fetch(
-        `https://crosscare-backends.onrender.com/api/user/activity/${user.user_id}/journal/${item.id}`, 
+        `https://crosscare-backend.onrender.com/api/user/activity/${user.user_id}/journal/${item.id}`, 
         {
           method: "GET",
           headers: {

@@ -147,7 +147,7 @@ export default function addmedication() {
     }
   
     try {
-      const apiUrl = `https://crosscare-backends.onrender.com/api/user/activity/${user.user_id}/addMedication`;
+      const apiUrl = `https://crosscare-backend.onrender.com/api/user/activity/${user.user_id}/addMedication`;
 
   
       const payload = {

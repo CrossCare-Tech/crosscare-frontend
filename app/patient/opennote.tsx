@@ -35,7 +35,7 @@ export default function OpenNote() {
    const handleSave = async (id: number) => {
       try {
         const response = await fetch(
-          `https://crosscare-backends.onrender.com/api/user/activity/${user.user_id}/note/${id}`,
+          `https://crosscare-backend.onrender.com/api/user/activity/${user.user_id}/note/${id}`,
           {
             method: "PUT",
             headers: {

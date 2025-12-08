@@ -90,7 +90,7 @@ export const useStepsStore = create<StepsState>()(
 
           try {
             const response = await fetch(
-              `https://crosscare-backends.onrender.com/api/user/activity/${userId}/stepsStatus`,
+              `https://crosscare-backend.onrender.com/api/user/activity/${userId}/stepsStatus`,
               {
                 method: "GET",
                 headers: {
@@ -447,7 +447,7 @@ export const useStepsStore = create<StepsState>()(
               return false
             }
 
-            const apiUrl = `https://crosscare-backends.onrender.com/api/user/activity/${userId}/steps`
+            const apiUrl = `https://crosscare-backend.onrender.com/api/user/activity/${userId}/steps`
             console.log(`Sending ${steps} steps to backend API: ${apiUrl}`)
 
             const response = await fetch(apiUrl, {

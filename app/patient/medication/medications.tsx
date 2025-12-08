@@ -202,7 +202,7 @@ export default function medications() {
 
       // Prepare the API request
       const userId = user?.user_id
-      const endpoint = `https://crosscare-backends.onrender.com/api/user/activity/${userId}/updateStatus/${baseMedicationId}/completed`
+      const endpoint = `https://crosscare-backend.onrender.com/api/user/activity/${userId}/updateStatus/${baseMedicationId}/completed`
 
       console.log(`Sending request to: ${endpoint}`)
       console.log(`Request body:`, { completed: newCompletionStatus, date: medicationDate, time: timeToToggle })
@@ -373,7 +373,7 @@ export default function medications() {
       }
 
       // Construct API URL (without date filters - we'll filter client-side)
-      const apiUrl = `https://crosscare-backends.onrender.com/api/user/activity/${user.user_id}/getMedication`
+      const apiUrl = `https://crosscare-backend.onrender.com/api/user/activity/${user.user_id}/getMedication`
 
       console.log("Fetching medications from:", apiUrl)
       const response = await fetch(apiUrl)
