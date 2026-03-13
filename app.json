@@ -1,0 +1,82 @@
+{
+  "expo": {
+    "name": "crosscare",
+    "slug": "crosscare",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/app-logo.png",
+    "scheme": "com.crosscare.tech",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "This app requires access to your microphone for voice processing."
+      },
+      "bundleIdentifier": "com.crosscare.tech"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/logo.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.crosscare.tech",
+      "permissions": [
+        "RECORD_AUDIO",
+        "INTERNET",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.READ_HEALTH_DATA",
+        "android.permission.WRITE_HEALTH_DATA",
+        "android.permission.READ_STEPS",
+        "android.permission.WRITE_STEPS",
+        "android.permission.health.READ_HEART_RATE"
+      ]
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/images/favicon.png",
+      "package": "com.crosscare.tech"
+    },
+    "plugins": [    
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/app-logo.png",
+          "width":200,
+          "height":200,
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff"
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera",
+          "microphonePermission": "Allow $(PRODUCT_NAME) to access your microphone",
+          "recordAudioAndroid": true
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/app-logo.png",
+          "color": "#ffffff"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "b10d128f-00f3-4a0e-baa3-4ffca8140854"
+      }
+    }
+  }
+}
