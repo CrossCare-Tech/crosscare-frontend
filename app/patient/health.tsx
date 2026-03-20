@@ -69,6 +69,12 @@ const trackingOptions = [
     icon: <MaterialCommunityIcons name="medical-bag" size={24} color="#E74C3C" />,
     onPress: () => router.push('/patient/symptoms'),
   },
+  {
+    id: 'glucose',
+    title: 'Glucose',
+    icon: <MaterialCommunityIcons name="chart-line" size={24} color="#8E44AD" />,
+    onPress: () => router.push('/patient/glucose'),
+  },
 ];
 
 

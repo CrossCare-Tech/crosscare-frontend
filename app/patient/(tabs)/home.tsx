@@ -17,7 +17,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useDispatch, useSelector } from "react-redux";
 import { removeToken, setUser } from "@/store/userSlice";
 import { useFocusEffect, useRouter } from "expo-router";
-import { AntDesign, Feather, Ionicons } from "@expo/vector-icons";
+import { AntDesign, Feather, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import Svg, { Path } from "react-native-svg";
 import { height, width } from "@/constants/helper";
@@ -120,6 +120,8 @@ const Home = () => {
   const { stepsWalked, stepGoal } = useStepsWithAutoRefresh(user?.user_id);
 
   const [foodQualityScore, setFoodQualityScore] = useState(9);
+  const [glucoseLevel, setGlucoseLevel] = useState<number | null>(null);
+  const [glucoseUnit, setGlucoseUnit] = useState("mg/dL");
   // const [steps, setSteps] = useState(null);
 
   const userId = user?.user_id;
@@ -287,6 +289,30 @@ const Home = () => {
     }
   }, [user?.user_id, setGlassCount]);
 
+  const fetchGlucoseData = useCallback(async () => {
+    try {
+      if (!user?.user_id || !user?.token) {
+        return;
+      }
+
+      const response = await fetch(`/api/user/activity/${user.user_id}/glucosestatus`, {
+        headers: {
+          Authorization: `Bearer ${user.token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch glucose data");
+      }
+
+      const data = await response.json();
+      setGlucoseLevel(data?.data?.lastGlucose ?? null);
+      setGlucoseUnit(data?.data?.glucoseUnit || "mg/dL");
+    } catch (error) {
+      console.error("Error fetching glucose data:", error);
+    }
+  }, [user?.token, user?.user_id]);
+
   // Add this useFocusEffect instead:
   useFocusEffect(
     useCallback(() => {
@@ -294,10 +320,12 @@ const Home = () => {
 
       // Fetch immediately when screen comes into focus
       fetchWaterData();
+      fetchGlucoseData();
 
       // Set up polling interval
       const syncInterval = setInterval(() => {
         fetchWaterData();
+        fetchGlucoseData();
       }, 5000); // Check every 10 seconds
 
       // Clean up interval when screen loses focus
@@ -305,7 +333,7 @@ const Home = () => {
         // console.log("Home screen lost focus, clearing water data interval");
         clearInterval(syncInterval);
       };
-    }, [fetchWaterData])
+    }, [fetchWaterData, fetchGlucoseData])
   );
 
   useEffect(() => {
@@ -1056,6 +1084,45 @@ const Home = () => {
               }}
             >
               {dueDate}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.statCard}
+            onPress={() => router.push("/patient/glucose")}
+          >
+            <View style={styles.statHeader}>
+              <View
+                style={{
+                  width: 24,
+                  height: 24,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: "#A855F71A",
+                  borderRadius: 12,
+                  marginRight: 6,
+                }}
+              >
+                <MaterialCommunityIcons
+                  name="chart-line"
+                  size={14}
+                  color="#A855F7"
+                />
+              </View>
+              <Text style={styles.statTitle}>Glucose</Text>
+            </View>
+
+            <Text style={styles.stepsValue}>
+              {glucoseLevel !== null ? glucoseLevel : "--"}
+            </Text>
+            <Text
+              style={{
+                fontSize: 12,
+                fontFamily: "DMSans400",
+                marginTop: 5,
+              }}
+            >
+              Unit: {glucoseUnit}
             </Text>
           </TouchableOpacity>
         </View>
