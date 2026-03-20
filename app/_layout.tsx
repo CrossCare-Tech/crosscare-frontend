@@ -3,33 +3,34 @@ import {
   DefaultTheme,
   ThemeProvider,
 } from "@react-navigation/native";
+
 import { useFonts } from "expo-font";
-import { Redirect, Slot, Stack, useRouter } from "expo-router";
+import { Stack, Redirect } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
-import { useEffect } from "react";
+import { useEffect, useState, useRef } from "react";
 import "react-native-reanimated";
 import { Provider, useDispatch, useSelector } from "react-redux";
+import { AppState } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
+import { API_URL } from "@/constants/api";
 import { useColorScheme } from "@/hooks/useColorScheme";
-import { supabase } from "@/supabase/supabase";
 import { store } from "../store/store";
 import { setToken, setUser } from "../store/userSlice";
 import { FloatingProvider } from "@/context/FloatingContext";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 
-// Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
 const RootLayoutNav = () => {
   const dispatch = useDispatch();
-  const user = useSelector((state: any) => state.user);
-
-  const router = useRouter();
   const colorScheme = useColorScheme();
+
   const token = useSelector((state: any) => state.user.token);
-  console.log(token);
+
+  const [checkingAuth, setCheckingAuth] = useState(true);
+
   const [loaded] = useFonts({
     DMSans300: require("../assets/fonts/DMSans-Light.ttf"),
     DMSans400: require("../assets/fonts/DMSans-Regular.ttf"),
@@ -49,47 +50,95 @@ const RootLayoutNav = () => {
     OpenSans700: require("../assets/fonts/OpenSans-Bold.ttf"),
   });
 
-  // Check for existing token on app load
+  // -----------------------------
+  // CHECK STORED AUTH TOKEN
+  // -----------------------------
   useEffect(() => {
     const checkToken = async () => {
       try {
-        const token = await AsyncStorage.getItem("userToken");
+        const storedToken = await AsyncStorage.getItem("userToken");
         const storedUser = await AsyncStorage.getItem("user");
-        if (token) {
-          dispatch(setToken(token));
+
+        if (storedToken) {
+          dispatch(setToken(storedToken));
         }
 
         if (storedUser) {
-          const parsedUser = JSON.parse(storedUser);
-          if (parsedUser) {
-            dispatch(setUser(parsedUser));
-          }
+          dispatch(setUser(JSON.parse(storedUser)));
         }
       } catch (error) {
-        console.error("Error checking token:", error);
+        console.log("Error loading auth:", error);
       }
-    };
-    checkToken();
-  }, [dispatch]);
 
-  // Hide the splash screen once fonts are loaded
+      setCheckingAuth(false);
+    };
+
+    checkToken();
+  }, []);
+
+
+  // -----------------------------
+  // SESSION TRACKING (persistent + retry queue)
+  // -----------------------------
   useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
-    }
+    // lazy import helpers to avoid circular issues
+    const { attachAppStateHandlers, getSessionStart, setSessionStart, flushPending } =
+      require('./utils/sessionMetrics');
+
+    const getToken = async () => token || null;
+    const getStart = async () => await getSessionStart();
+    const clearStart = async () => await require('@react-native-async-storage/async-storage').removeItem('session_start');
+    const setStart = async (iso: string) => await setSessionStart(iso);
+
+    // attach global AppState handlers
+    attachAppStateHandlers(getToken, getStart, clearStart, setStart as any);
+
+    // initial setup on mount or when token changes
+    (async () => {
+      const currentToken = await getToken();
+      if (currentToken) {
+        const existing = await getStart();
+        if (!existing) await setStart(new Date().toISOString());
+        await flushPending(currentToken);
+      }
+    })();
+  }, [token]);
+
+  // detect explicit logout to end session immediately
+  const prevTokenRef = useRef<string | null>(null);
+  useEffect(() => {
+    const run = async () => {
+  const { getSessionStart, endSession, clearSessionStart } = require('./utils/sessionMetrics');
+      const prev = prevTokenRef.current;
+      // logged out: previous token existed but token is now falsy
+      if (prev && !token) {
+        try {
+          const start = await getSessionStart();
+          await endSession(prev, start || null, new Date().toISOString());
+          await clearSessionStart();
+        } catch (err) {
+          console.warn('Logout session flush failed', err);
+        }
+      }
+      prevTokenRef.current = token || null;
+    };
+    run();
+  }, [token]);
+
+  // -----------------------------
+  // HIDE SPLASH
+  // -----------------------------
+  useEffect(() => {
+    if (loaded) SplashScreen.hideAsync();
   }, [loaded]);
 
-  // Wait until fonts are loaded
-  if (!loaded) {
-    return null;
-  }
-
-  if (!user) return <Redirect href="/login" />;
+  if (!loaded) return null;
+  if (checkingAuth) return null;
 
   return (
-    // <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
     <>
       <StatusBar style="dark" backgroundColor="white" />
+
       <Stack
         screenOptions={{
           headerShown: false,
@@ -97,28 +146,20 @@ const RootLayoutNav = () => {
         }}
       >
         <Stack.Screen name="index" />
-        <Stack.Screen name="onboarding" options={{ title: "Onboarding" }} />
-        <Stack.Screen name="login" options={{ title: "Login" }} />
-        <Stack.Screen name="signup" options={{ title: "Sign Up" }} />
-        <Stack.Screen
-          name="forget-password"
-          options={{ title: "Forgot Password" }}
-        />
+        <Stack.Screen name="onboarding" />
+        <Stack.Screen name="login" />
+        <Stack.Screen name="signup" />
+        <Stack.Screen name="forget-password" />
         <Stack.Screen name="avatar" />
         <Stack.Screen name="/patient/(tabs)/home" />
       </Stack>
     </>
-    // </ThemeProvider>
   );
 };
 
 export default function RootLayout() {
   return (
-    <GestureHandlerRootView
-      style={{
-        flex: 1,
-      }}
-    >
+    <GestureHandlerRootView style={{ flex: 1 }}>
       <Provider store={store}>
         <FloatingProvider>
           <RootLayoutNav />
