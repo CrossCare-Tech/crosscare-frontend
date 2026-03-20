@@ -56,6 +56,12 @@ const trackingOptions = [
     icon: <SleepIcon width={24} height={24}  />,
     onPress : () => router.push('/patient/sleep'),
   },
+  {
+    id: 'glucose',
+    title: 'Glucose',
+    icon: <MaterialCommunityIcons name="chart-line" size={24} color="#8E44AD" />,
+    onPress: () => router.push('/patient/glucose'),
+  },
 ];
 
 
