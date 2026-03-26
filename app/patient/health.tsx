@@ -14,47 +14,60 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSelector } from 'react-redux';
 
 const trackingOptions = [
-  { 
-    id: 'food', 
-    title: 'Food', 
+  {
+    id: 'food',
+    title: 'Food',
     icon: <FoodIcon width={24} height={24}  />,
     onPress: ()=> router.push('/patient/meals')
   },
-  { 
-    id: 'heart-rate', 
-    title: 'Heart-rate', 
+  {
+    id: 'heart-rate',
+    title: 'Heart-rate',
     icon: <HeartIcon width={24} height={24}  />,
     onPress: () => router.push('/patient/heart'),
   },
-  { 
-    id: 'medication', 
-    title: 'Medication', 
+  {
+    id: 'medication',
+    title: 'Medication',
     icon: <MedicationIcon width={24} height={24}  />,
     onPress: ()=> router.push('/patient/medication/medications')
   },
-  { 
-    id: 'weight', 
-    title: 'Weight', 
+  {
+    id: 'weight',
+    title: 'Weight',
     icon: <WeightIcon width={24} height={24}  />,
     onPress: ()=> router.push('/patient/weight')
   },
-  { 
-    id: 'water', 
-    title: 'Water', 
+  {
+    id: 'water',
+    title: 'Water',
     icon: <WaterIcon width={24} height={24}  />,
     onPress : () => router.push('/patient/water'),
   },
-  { 
-    id: 'steps', 
-    title: 'Steps', 
+  {
+    id: 'steps',
+    title: 'Steps',
     icon: <StepsIcon width={24} height={24}  />,
     onPress : () => router.push('/patient/steps'),
   },
-  { 
-    id: 'sleep', 
-    title: 'Sleep', 
+  {
+    id: 'sleep',
+    title: 'Sleep',
     icon: <SleepIcon width={24} height={24}  />,
     onPress : () => router.push('/patient/sleep'),
+  },
+  // New Health Metrics
+  {
+    id: 'mood',
+    title: 'Mood',
+    icon: <Ionicons name="happy-outline" size={24} color="#9B59B6" />,
+    onPress: () => router.push('/patient/mood'),
+  },
+  {
+    id: 'symptoms',
+    title: 'Symptoms',
+    icon: <MaterialCommunityIcons name="medical-bag" size={24} color="#E74C3C" />,
+    onPress: () => router.push('/patient/symptoms'),
   },
 ];
 
