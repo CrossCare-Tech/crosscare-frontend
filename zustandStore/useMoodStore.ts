@@ -47,6 +47,12 @@ interface MoodState {
     energyLevel?: number;
     notes?: string;
   }) => Promise<boolean>;
+  updateMood: (userId: string, activityId: string, data: {
+    moodLevel?: MoodLevel;
+    stressLevel?: number;
+    energyLevel?: number;
+  }) => Promise<boolean>;
+  deleteMood: (userId: string, activityId: string) => Promise<boolean>;
   clearError: () => void;
 }
 
@@ -154,8 +160,77 @@ export const useMoodStore = create<MoodState>()(
           set({ isLoading: false, lastUpdated: new Date().toISOString() });
 
           // Refresh history
-          get().fetchMoodHistory(userId);
+          get().fetchMoodHistory(userId, 30);
 
+          return true;
+        } catch (error) {
+          set({
+            error: error instanceof Error ? error.message : 'Unknown error',
+            isLoading: false,
+          });
+          return false;
+        }
+      },
+
+      updateMood: async (userId, activityId, moodData) => {
+        if (!userId) {
+          set({ error: 'User ID is required' });
+          return false;
+        }
+
+        set({ isLoading: true, error: null });
+
+        try {
+          const response = await fetch(
+            `${API_URL}/api/user/metrics/${userId}/mood/${activityId}`,
+            {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(moodData),
+            }
+          );
+
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || `Server error: ${response.status}`);
+          }
+
+          set({ isLoading: false });
+          get().fetchMoodHistory(userId, 30);
+          return true;
+        } catch (error) {
+          set({
+            error: error instanceof Error ? error.message : 'Unknown error',
+            isLoading: false,
+          });
+          return false;
+        }
+      },
+
+      deleteMood: async (userId, activityId) => {
+        if (!userId) {
+          set({ error: 'User ID is required' });
+          return false;
+        }
+
+        set({ isLoading: true, error: null });
+
+        try {
+          const response = await fetch(
+            `${API_URL}/api/user/metrics/${userId}/mood/${activityId}`,
+            {
+              method: 'DELETE',
+              headers: { 'Content-Type': 'application/json' },
+            }
+          );
+
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || `Server error: ${response.status}`);
+          }
+
+          set({ isLoading: false });
+          get().fetchMoodHistory(userId, 30);
           return true;
         } catch (error) {
           set({
