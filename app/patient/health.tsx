@@ -62,6 +62,12 @@ const trackingOptions = [
     icon: <MaterialCommunityIcons name="chart-line" size={24} color="#8E44AD" />,
     onPress: () => router.push('/patient/glucose'),
   },
+  {
+    id: 'blood-pressure',
+    title: 'Blood Pressure',
+    icon: <MaterialCommunityIcons name="heart-pulse" size={24} color="#EC4899" />,
+    onPress: () => router.push('/patient/bp'),
+  },
 ];
 
 

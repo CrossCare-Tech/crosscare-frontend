@@ -122,6 +122,15 @@ const Home = () => {
   const [foodQualityScore, setFoodQualityScore] = useState(9);
   const [glucoseLevel, setGlucoseLevel] = useState<number | null>(null);
   const [glucoseUnit, setGlucoseUnit] = useState("mg/dL");
+  const [bloodPressure, setBloodPressure] = useState<{
+    systolic: number | null;
+    diastolic: number | null;
+    unit: string;
+  }>({
+    systolic: null,
+    diastolic: null,
+    unit: "mmHg",
+  });
   // const [steps, setSteps] = useState(null);
 
   const userId = user?.user_id;
@@ -313,6 +322,33 @@ const Home = () => {
     }
   }, [user?.token, user?.user_id]);
 
+  const fetchBloodPressureData = useCallback(async () => {
+    try {
+      if (!user?.user_id || !user?.token) {
+        return;
+      }
+
+      const response = await fetch(`/api/user/activity/${user.user_id}/bpstatus`, {
+        headers: {
+          Authorization: `Bearer ${user.token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch blood pressure data");
+      }
+
+      const data = await response.json();
+      setBloodPressure({
+        systolic: data?.data?.lastBloodPressure?.systolic ?? null,
+        diastolic: data?.data?.lastBloodPressure?.diastolic ?? null,
+        unit: data?.data?.lastBloodPressure?.unit || "mmHg",
+      });
+    } catch (error) {
+      console.error("Error fetching blood pressure data:", error);
+    }
+  }, [user?.token, user?.user_id]);
+
   // Add this useFocusEffect instead:
   useFocusEffect(
     useCallback(() => {
@@ -321,11 +357,13 @@ const Home = () => {
       // Fetch immediately when screen comes into focus
       fetchWaterData();
       fetchGlucoseData();
+      fetchBloodPressureData();
 
       // Set up polling interval
       const syncInterval = setInterval(() => {
         fetchWaterData();
         fetchGlucoseData();
+        fetchBloodPressureData();
       }, 5000); // Check every 10 seconds
 
       // Clean up interval when screen loses focus
@@ -333,7 +371,7 @@ const Home = () => {
         // console.log("Home screen lost focus, clearing water data interval");
         clearInterval(syncInterval);
       };
-    }, [fetchWaterData, fetchGlucoseData])
+    }, [fetchWaterData, fetchGlucoseData, fetchBloodPressureData])
   );
 
   useEffect(() => {
@@ -1123,6 +1161,47 @@ const Home = () => {
               }}
             >
               Unit: {glucoseUnit}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.statCard}
+            onPress={() => router.push("/patient/bp")}
+          >
+            <View style={styles.statHeader}>
+              <View
+                style={{
+                  width: 24,
+                  height: 24,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: "#EC48991A",
+                  borderRadius: 12,
+                  marginRight: 6,
+                }}
+              >
+                <MaterialCommunityIcons
+                  name="heart-pulse"
+                  size={14}
+                  color="#EC4899"
+                />
+              </View>
+              <Text style={styles.statTitle}>Blood Pressure</Text>
+            </View>
+
+            <Text style={styles.stepsValue}>
+              {bloodPressure.systolic !== null && bloodPressure.diastolic !== null
+                ? `${bloodPressure.systolic}/${bloodPressure.diastolic}`
+                : "--/--"}
+            </Text>
+            <Text
+              style={{
+                fontSize: 12,
+                fontFamily: "DMSans400",
+                marginTop: 5,
+              }}
+            >
+              Unit: {bloodPressure.unit}
             </Text>
           </TouchableOpacity>
         </View>

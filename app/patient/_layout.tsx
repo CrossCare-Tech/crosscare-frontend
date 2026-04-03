@@ -21,6 +21,8 @@ const PatientStack = () => {
         <Stack.Screen name='steps'/>
         <Stack.Screen name='water'/>
         <Stack.Screen name='heart'/>
+        <Stack.Screen name='glucose'/>
+        <Stack.Screen name='bp'/>
         <Stack.Screen name='newnotes' options={{
           presentation: 'fullScreenModal',
         }}/>
