@@ -12,6 +12,8 @@ import {
   Platform,
   Animated,
   Alert,
+  AppState,
+  type AppStateStatus,
 } from "react-native";
 import { Ionicons, Feather } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -133,6 +135,10 @@ export default function askdoula() {
 
   const scrollViewRef = useRef<ScrollView>(null);
   const loadingAnimation = useRef(new Animated.Value(0)).current;
+
+  // AI engagement tracking
+  const sessionStartRef = useRef<Date>(new Date());
+  const messageCountRef = useRef<number>(0);
 
   // Questionnaire state
   const [showStartQuestionnaire, setShowStartQuestionnaire] = useState(false);
@@ -475,6 +481,56 @@ export default function askdoula() {
       saveMessages(messages);
     }
   }, [messages]);
+
+  // Log AI engagement session to backend
+  const logEngagementSession = async () => {
+    if (!user?.user_id) return;
+    const sessionEnd = new Date();
+    const durationMs =
+      sessionEnd.getTime() - sessionStartRef.current.getTime();
+
+    // Skip very short sessions (< 2 seconds)
+    if (durationMs < 2000) return;
+
+    try {
+      await axios.post(
+        `https://crosscare-backend.onrender.com/api/user/${user.user_id}/ai-engagement`,
+        {
+          sessionStartAt: sessionStartRef.current.toISOString(),
+          sessionEndAt: sessionEnd.toISOString(),
+          durationMs,
+          messageCount: messageCountRef.current,
+        }
+      );
+    } catch (error) {
+      console.error("Failed to log AI engagement:", error);
+    }
+  };
+
+  // Track AI engagement: log session on unmount or app background
+  useEffect(() => {
+    const handleAppStateChange = (nextState: AppStateStatus) => {
+      if (nextState === "background" || nextState === "inactive") {
+        logEngagementSession();
+      }
+      if (nextState === "active") {
+        // Reset for a new session segment after returning
+        sessionStartRef.current = new Date();
+        messageCountRef.current = 0;
+      }
+    };
+
+    const subscription = AppState.addEventListener(
+      "change",
+      handleAppStateChange
+    );
+
+    return () => {
+      subscription.remove();
+      // Log session when the screen unmounts (user navigates away)
+      logEngagementSession();
+    };
+  }, [user?.user_id]);
 
   const systemPrompt = `${systemPrompts}`;
 
@@ -2102,6 +2158,9 @@ export default function askdoula() {
 
   const sendMessage = async (messageContent: string = inputText) => {
     if (messageContent.trim()) {
+      // Track message for engagement
+      messageCountRef.current += 1;
+
       // Add user message
       const userMessage = {
         id: Date.now().toString(),
@@ -2135,6 +2194,9 @@ export default function askdoula() {
       transcript,
       assistantResponse,
     });
+
+    // Track audio message for engagement
+    messageCountRef.current += 1;
 
     // Add the user's audio message to the chat
     if (audioUri) {
