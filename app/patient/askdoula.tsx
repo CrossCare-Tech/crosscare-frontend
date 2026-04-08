@@ -492,13 +492,15 @@ export default function askdoula() {
     // Skip very short sessions (< 2 seconds)
     if (durationMs < 2000) return;
 
+    const durationMinutes = durationMs / 60000;
+
     try {
       await axios.post(
         `https://crosscare-backend.onrender.com/api/user/${user.user_id}/ai-engagement`,
         {
           sessionStartAt: sessionStartRef.current.toISOString(),
           sessionEndAt: sessionEnd.toISOString(),
-          durationMs,
+          durationMinutes,
           messageCount: messageCountRef.current,
         }
       );
