@@ -1,7 +1,6 @@
 import {
   ActivityIndicator,
   Alert,
-  FlatList,
   ImageBackground,
   ScrollView,
   StyleSheet,
@@ -44,6 +43,7 @@ import {
   useStepsWithAutoRefresh,
 } from "@/zustandStore/useStepsStore";
 import * as ImagePicker from "expo-image-picker";
+import { buildApiCandidates } from "@/constants/api";
 
 interface Progress {
   progressPercentage: number;
@@ -122,6 +122,8 @@ const Home = () => {
   const [foodQualityScore, setFoodQualityScore] = useState(9);
   const [glucoseLevel, setGlucoseLevel] = useState<number | null>(null);
   const [glucoseUnit, setGlucoseUnit] = useState("mg/dL");
+  const [bpSystolic, setBpSystolic] = useState<number | null>(null);
+  const [bpDiastolic, setBpDiastolic] = useState<number | null>(null);
   // const [steps, setSteps] = useState(null);
 
   const userId = user?.user_id;
@@ -295,21 +297,124 @@ const Home = () => {
         return;
       }
 
-      const response = await fetch(`/api/user/activity/${user.user_id}/glucosestatus`, {
-        headers: {
-          Authorization: `Bearer ${user.token}`,
-        },
-      });
+      const requestUrls = buildApiCandidates(`/api/user/activity/${user.user_id}/glucosestatus`);
+      let data: any = null;
+      let resolved = false;
+      let lastStatus = 0;
+      let lastError: Error | null = null;
 
-      if (!response.ok) {
-        throw new Error("Failed to fetch glucose data");
+      for (const requestUrl of requestUrls) {
+        const response = await fetch(requestUrl, {
+          headers: {
+            Accept: "application/json",
+            Authorization: `Bearer ${user.token}`,
+          },
+        });
+
+        const raw = await response.text();
+        const trimmed = raw?.trim() || "";
+        const looksLikeJson = trimmed.startsWith("{") || trimmed.startsWith("[");
+        let parsed: any = null;
+        if (looksLikeJson) {
+          try {
+            parsed = JSON.parse(trimmed);
+          } catch {
+            parsed = null;
+          }
+        }
+
+        if (response.ok) {
+          data = parsed;
+          resolved = true;
+          break;
+        }
+
+        lastStatus = response.status;
+        lastError = new Error(parsed?.message || `Failed to fetch glucose data (${response.status})`);
       }
 
-      const data = await response.json();
+      if (!resolved) {
+        setGlucoseLevel(null);
+        setGlucoseUnit("mg/dL");
+        console.warn(
+          "Glucose status unavailable:",
+          lastError?.message ||
+            `No compatible glucose status endpoint found (${lastStatus || "no response"}).`
+        );
+        return;
+      }
+
       setGlucoseLevel(data?.data?.lastGlucose ?? null);
       setGlucoseUnit(data?.data?.glucoseUnit || "mg/dL");
     } catch (error) {
-      console.error("Error fetching glucose data:", error);
+      setGlucoseLevel(null);
+      setGlucoseUnit("mg/dL");
+      console.warn("Error fetching glucose data:", error);
+    }
+  }, [user?.token, user?.user_id]);
+
+  const fetchBloodPressureData = useCallback(async () => {
+    try {
+      if (!user?.user_id || !user?.token) {
+        return;
+      }
+
+      const endpointPaths = ["bpstatus", "bloodpressurestatus"];
+      const requestUrls = endpointPaths.flatMap((endpoint) =>
+        buildApiCandidates(`/api/user/activity/${user.user_id}/${endpoint}`)
+      );
+      let data: any = null;
+      let resolved = false;
+      let lastStatus = 0;
+      let lastError: Error | null = null;
+
+      for (const requestUrl of requestUrls) {
+        const response = await fetch(requestUrl, {
+          headers: {
+            Accept: "application/json",
+            Authorization: `Bearer ${user.token}`,
+          },
+        });
+
+        const raw = await response.text();
+        const trimmed = raw?.trim() || "";
+        const looksLikeJson = trimmed.startsWith("{") || trimmed.startsWith("[");
+        let parsed: any = null;
+        if (looksLikeJson) {
+          try {
+            parsed = JSON.parse(trimmed);
+          } catch {
+            parsed = null;
+          }
+        }
+
+        if (response.ok) {
+          data = parsed;
+          resolved = true;
+          break;
+        }
+
+        lastStatus = response.status;
+        lastError = new Error(parsed?.message || `Failed to fetch blood pressure data (${response.status})`);
+      }
+
+      if (!resolved) {
+        setBpSystolic(null);
+        setBpDiastolic(null);
+        console.warn(
+          "Blood pressure status unavailable:",
+          lastError?.message ||
+            `No compatible blood pressure status endpoint found (${lastStatus || "no response"}).`
+        );
+        return;
+      }
+
+      setBpSystolic(data?.data?.lastBloodPressure?.systolic ?? null);
+      setBpDiastolic(data?.data?.lastBloodPressure?.diastolic ?? null);
+    } catch (error) {
+      setBpSystolic(null);
+      setBpDiastolic(null);
+      console.warn("Error fetching blood pressure data:", error);
     }
   }, [user?.token, user?.user_id]);
 
@@ -321,11 +426,13 @@ const Home = () => {
       // Fetch immediately when screen comes into focus
       fetchWaterData();
       fetchGlucoseData();
+      fetchBloodPressureData();
 
       // Set up polling interval
       const syncInterval = setInterval(() => {
         fetchWaterData();
         fetchGlucoseData();
+        fetchBloodPressureData();
       }, 5000); // Check every 10 seconds
 
       // Clean up interval when screen loses focus
@@ -333,7 +440,7 @@ const Home = () => {
         // console.log("Home screen lost focus, clearing water data interval");
         clearInterval(syncInterval);
       };
-    }, [fetchWaterData, fetchGlucoseData])
+    }, [fetchWaterData, fetchGlucoseData, fetchBloodPressureData])
   );
 
   useEffect(() => {
@@ -1125,15 +1232,54 @@ const Home = () => {
               Unit: {glucoseUnit}
             </Text>
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.statCard}
+            onPress={() => router.push("/patient/bloodpressure")}
+          >
+            <View style={styles.statHeader}>
+              <View
+                style={{
+                  width: 24,
+                  height: 24,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: "#E573731A",
+                  borderRadius: 12,
+                  marginRight: 6,
+                }}
+              >
+                <MaterialCommunityIcons
+                  name="heart-pulse"
+                  size={14}
+                  color="#E57373"
+                />
+              </View>
+              <Text style={styles.statTitle}>Blood Pressure</Text>
+            </View>
+
+            <Text style={styles.stepsValue}>
+              {bpSystolic !== null && bpDiastolic !== null
+                ? `${bpSystolic}/${bpDiastolic}`
+                : "--/--"}
+            </Text>
+            <Text
+              style={{
+                fontSize: 12,
+                fontFamily: "DMSans400",
+                marginTop: 5,
+              }}
+            >
+              Unit: mmHg
+            </Text>
+          </TouchableOpacity>
         </View>
 
-        <FlatList
-          data={cardData}
-          renderItem={renderCard}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.cardContainer}
-          showsVerticalScrollIndicator={false}
-        />
+        <View style={styles.cardContainer}>
+          {cardData.map((item) => (
+            <View key={item.id}>{renderCard({ item })}</View>
+          ))}
+        </View>
       </ScrollView>
     </SafeAreaView>
   );

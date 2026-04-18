@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { Picker } from "@react-native-picker/picker";
 import { useSelector } from "react-redux";
+import { buildApiCandidates } from "@/constants/api";
 
 interface GlucoseModalProps {
   visible: boolean;
@@ -80,23 +81,53 @@ const GlucoseModal = ({
     setLoading(true);
 
     try {
-      const response = await fetch(`/api/user/activity/${user.user_id}/glucose`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${user.token}`,
-        },
-        body: JSON.stringify({
-          glucoseLevel: parsedGlucoseLevel,
-          glucoseUnit: initialGlucoseUnit,
-          glucoseMealContext: glucoseMealContext.trim() || null,
-        }),
+      const payload = JSON.stringify({
+        glucoseLevel: parsedGlucoseLevel,
+        glucoseUnit: initialGlucoseUnit,
+        glucoseMealContext: glucoseMealContext.trim() || null,
       });
 
-      const responseData = await response.json();
+      const endpointPaths = ["glucose"];
+      let success = false;
+      let lastStatus = 0;
+      let lastError: Error | null = null;
+      const requestUrls = endpointPaths.flatMap((endpoint) =>
+        buildApiCandidates(`/api/user/activity/${user.user_id}/${endpoint}`)
+      );
+      console.log("Glucose save URLs:", requestUrls);
 
-      if (!response.ok) {
-        throw new Error(responseData.message || "Failed to save glucose.");
+      for (const requestUrl of requestUrls) {
+        const response = await fetch(requestUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+            Authorization: `Bearer ${user.token}`,
+          },
+          body: payload,
+        });
+
+        const raw = await response.text();
+        const trimmed = raw?.trim() || "";
+
+        if (response.ok) {
+          success = true;
+          break;
+        }
+
+        lastStatus = response.status;
+        lastError = new Error(
+          trimmed
+            ? `Failed to save glucose (${response.status}). ${trimmed.slice(0, 120)}`
+            : `Failed to save glucose (${response.status}).`
+        );
+      }
+
+      if (!success) {
+        throw (
+          lastError ||
+          new Error(`No compatible glucose endpoint found (${lastStatus || "no response"}).`)
+        );
       }
 
       setGlucoseLevel("");
@@ -104,8 +135,15 @@ const GlucoseModal = ({
       onClose();
       reload();
     } catch (error: any) {
-      console.error("Error adding glucose:", error);
-      Alert.alert("Error", error.message || "Failed to save glucose.");
+      const rawMessage = error?.message || "Failed to save glucose.";
+      const message =
+        rawMessage.includes("Unexpected token") ||
+        rawMessage.includes("JSON Parse error") ||
+        rawMessage.includes("Unexpected character: <")
+          ? "Server returned HTML instead of JSON. Confirm app is using your local backend URL."
+          : rawMessage;
+      console.warn("Error adding glucose:", message);
+      Alert.alert("Error", message);
     } finally {
       setLoading(false);
     }

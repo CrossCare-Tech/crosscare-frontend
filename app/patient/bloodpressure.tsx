@@ -14,7 +14,7 @@ import { router, useFocusEffect } from "expo-router";
 import { useSelector } from "react-redux";
 import { LinearGradient } from "expo-linear-gradient";
 import BloodPressureModal from "./modal/bloodpressuremodal";
-import { API_URL } from "@/constants/api";
+import { buildApiCandidates } from "@/constants/api";
 
 const { width } = Dimensions.get("window");
 
@@ -33,13 +33,65 @@ const BloodPressureScreen = () => {
   const [modalVisible, setModalVisible] = useState(false);
 
   const fetchHistory = async () => {
+    if (!user?.user_id || !user?.token) {
+      return;
+    }
+
     setLoading(true);
     try {
-      const res = await fetch(
-        `${API_URL}/api/user/activity/${user.user_id}/bloodpressurestatus`
+      const endpointPaths = ["bpstatus", "bloodpressurestatus"];
+      let data: any = null;
+      let lastStatus = 0;
+      let lastError: Error | null = null;
+      const requestUrls = endpointPaths.flatMap((endpoint) =>
+        buildApiCandidates(`/api/user/activity/${user.user_id}/${endpoint}`)
       );
-      const data = await res.json();
-      if (data.records) setRecords(data.records);
+
+      for (const requestUrl of requestUrls) {
+        const res = await fetch(requestUrl, {
+          headers: {
+            Accept: "application/json",
+            Authorization: `Bearer ${user.token}`,
+          },
+        });
+        const raw = await res.text();
+        const trimmed = raw?.trim() || "";
+        const looksLikeJson = trimmed.startsWith("{") || trimmed.startsWith("[");
+        let parsed: any = null;
+        if (looksLikeJson) {
+          try {
+            parsed = JSON.parse(trimmed);
+          } catch {
+            parsed = null;
+          }
+        }
+
+        if (res.ok) {
+          data = parsed;
+          break;
+        }
+
+        lastStatus = res.status;
+        lastError = new Error(parsed?.message || `Failed to fetch BP history (${res.status})`);
+      }
+
+      if (!data) {
+        throw (
+          lastError ||
+          new Error(
+            `No compatible blood pressure status endpoint found (${lastStatus || "no response"}).`
+          )
+        );
+      }
+
+      if (data?.data?.bloodPressureData) {
+        const mapped = data.data.bloodPressureData.map((entry: any) => ({
+          date: entry.date,
+          systolic: entry.systolic ?? 0,
+          diastolic: entry.diastolic ?? 0,
+        }));
+        setRecords(mapped);
+      }
     } catch (e) {
       console.warn("Failed to fetch BP history:", e);
     } finally {
@@ -50,7 +102,7 @@ const BloodPressureScreen = () => {
   useFocusEffect(
     useCallback(() => {
       fetchHistory();
-    }, [])
+    }, [user?.token, user?.user_id])
   );
 
   // Latest reading

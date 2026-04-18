@@ -105,7 +105,7 @@ const RootLayoutNav = () => {
           options={{ title: "Forgot Password" }}
         />
         <Stack.Screen name="avatar" />
-        <Stack.Screen name="/patient/(tabs)/home" />
+        <Stack.Screen name="patient" />
       </Stack>
     </>
     // </ThemeProvider>

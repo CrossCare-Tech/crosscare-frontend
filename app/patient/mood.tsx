@@ -31,6 +31,7 @@ const MOOD_OPTIONS: { level: MoodLevel; emoji: string; label: string; color: str
 export default function MoodScreen() {
   const user = useSelector((state: any) => state.user);
   const userId = user?.user_id;
+  const token = user?.token;
 
   const {
     currentMood,
@@ -58,9 +59,9 @@ export default function MoodScreen() {
 
   useEffect(() => {
     if (userId) {
-      fetchMoodHistory(userId, 30);
+      fetchMoodHistory(userId, 30, token);
     }
-  }, [userId]);
+  }, [userId, token]);
 
   const getMoodColor = (level: MoodLevel): string => {
     const mood = MOOD_OPTIONS.find((m) => m.level === level);
@@ -110,12 +111,13 @@ export default function MoodScreen() {
       moodLevel: currentMood,
       stressLevel: localStress,
       energyLevel: localEnergy,
-    });
+    }, token);
 
     if (success) {
       Alert.alert('Success', 'Mood logged successfully!');
     } else {
-      Alert.alert('Error', 'Failed to log mood. Please try again.');
+      const latestError = useMoodStore.getState().error;
+      Alert.alert('Error', latestError || error || 'Failed to log mood. Please try again.');
     }
   };
 
@@ -139,13 +141,14 @@ export default function MoodScreen() {
       moodLevel: editMood,
       stressLevel: editStress,
       energyLevel: editEnergy,
-    });
+    }, token);
 
     if (success) {
       setEditModalVisible(false);
       Alert.alert('Success', 'Mood updated successfully!');
     } else {
-      Alert.alert('Error', 'Failed to update mood. Please try again.');
+      const latestError = useMoodStore.getState().error;
+      Alert.alert('Error', latestError || error || 'Failed to update mood. Please try again.');
     }
   };
 
@@ -161,12 +164,13 @@ export default function MoodScreen() {
           style: 'destructive',
           onPress: async () => {
             if (!userId) return;
-            const success = await deleteMood(userId, selectedEntry.id);
+            const success = await deleteMood(userId, selectedEntry.id, token);
             if (success) {
               setSelectedDate(null);
               Alert.alert('Success', 'Mood deleted successfully!');
             } else {
-              Alert.alert('Error', 'Failed to delete mood. Please try again.');
+              const latestError = useMoodStore.getState().error;
+              Alert.alert('Error', latestError || error || 'Failed to delete mood. Please try again.');
             }
           },
         },

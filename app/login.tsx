@@ -27,7 +27,7 @@ import { setToken, setUser } from "@/store/userSlice";
 import LogoSvg from "@/assets/images/Svg/LogoSvg";
 import CustomTextInput from "@/components/ui/CustomTextInput";
 import { width } from "@/constants/helper";
-import { API_URL } from "@/constants/api";
+import { buildApiCandidates } from "@/constants/api";
 import { LinearGradient } from "expo-linear-gradient";
 
 // WebBrowser.maybeCompleteAuthSession();
@@ -79,38 +79,51 @@ const Login: FC = () => {
     setLoading(true);
 
     try {
-      const loginUrl = `${API_URL}/api/login`;
-      console.log('LOGIN URL:', loginUrl);
-      const response = await fetch(
-        loginUrl,
-        {
+      const loginUrls = buildApiCandidates("/api/login");
+      console.log("LOGIN URL candidates:", loginUrls);
+
+      let data: any = null;
+      let lastErrorMessage = "Login failed";
+
+      for (const loginUrl of loginUrls) {
+        const response = await fetch(loginUrl, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            Accept: "application/json",
           },
           body: JSON.stringify({ email: email, password: password }),
-        }
-      );
+        });
 
-      // Check response status BEFORE parsing JSON
-      if (!response.ok) {
-        // Try to get error message from response, but handle non-JSON responses
-        let errorMessage = "Login failed";
-        const contentType = response.headers.get("content-type");
-        if (contentType && contentType.includes("application/json")) {
+        const raw = await response.text();
+        const trimmed = raw?.trim() || "";
+        const looksLikeJson = trimmed.startsWith("{") || trimmed.startsWith("[");
+        let parsed: any = null;
+
+        if (looksLikeJson) {
           try {
-            const errorData = await response.json();
-            errorMessage = errorData.message || errorMessage;
+            parsed = JSON.parse(trimmed);
           } catch {
-            // JSON parsing failed, use default message
+            parsed = null;
           }
-        } else {
-          errorMessage = `Server error: ${response.status}`;
         }
-        throw new Error(errorMessage);
+
+        if (response.ok && parsed?.accessToken) {
+          data = parsed;
+          break;
+        }
+
+        lastErrorMessage =
+          parsed?.message ||
+          (trimmed && !looksLikeJson
+            ? `Server error: ${response.status}`
+            : `Login failed (${response.status})`);
       }
 
-      const data = await response.json();
+      if (!data) {
+        throw new Error(lastErrorMessage);
+      }
+
       console.log("API Response:", data);
 
       if (data) {

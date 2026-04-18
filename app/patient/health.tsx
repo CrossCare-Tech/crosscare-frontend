@@ -56,6 +56,12 @@ const trackingOptions = [
     icon: <SleepIcon width={24} height={24}  />,
     onPress : () => router.push('/patient/sleep'),
   },
+  {
+    id: 'blood-pressure',
+    title: 'Blood Pressure',
+    icon: <MaterialCommunityIcons name="heart-pulse" size={24} color="#E57373" />,
+    onPress: () => router.push('/patient/bloodpressure'),
+  },
   // New Health Metrics
   {
     id: 'mood',

@@ -21,6 +21,8 @@ const PatientStack = () => {
         <Stack.Screen name='steps'/>
         <Stack.Screen name='water'/>
         <Stack.Screen name='heart'/>
+        <Stack.Screen name='glucose'/>
+        <Stack.Screen name='bloodpressure'/>
         <Stack.Screen name='newnotes' options={{
           presentation: 'fullScreenModal',
         }}/>
@@ -33,8 +35,8 @@ const PatientStack = () => {
         <Stack.Screen name='openphoto'/>
         <Stack.Screen name='opennote'/>
         <Stack.Screen name='weight'/>
-        <Stack.Screen name='medications'/>
-        <Stack.Screen name='addmedication'/>
+        <Stack.Screen name='medication/medications'/>
+        <Stack.Screen name='medication/addmedication'/>
         <Stack.Screen name='askdoula'/>
         <Stack.Screen name='sleep'/>
         <Stack.Screen name='tracksleep'/>

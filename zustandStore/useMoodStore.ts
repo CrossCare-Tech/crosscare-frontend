@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_URL } from '../constants/api';
+import { buildApiCandidates } from '../constants/api';
 
 type MoodLevel = 'VERY_LOW' | 'LOW' | 'MODERATE' | 'HIGH' | 'VERY_HIGH';
 
@@ -39,22 +39,43 @@ interface MoodState {
   setStressLevel: (level: number) => void;
   setAnxietyLevel: (level: number) => void;
   setEnergyLevel: (level: number) => void;
-  fetchMoodHistory: (userId: string, days?: number) => Promise<void>;
+  fetchMoodHistory: (userId: string, days?: number, token?: string | null) => Promise<void>;
   logMood: (userId: string, data: {
     moodLevel?: MoodLevel;
     stressLevel?: number;
     anxietyLevel?: number;
     energyLevel?: number;
     notes?: string;
-  }) => Promise<boolean>;
+  }, token?: string | null) => Promise<boolean>;
   updateMood: (userId: string, activityId: string, data: {
     moodLevel?: MoodLevel;
     stressLevel?: number;
     energyLevel?: number;
-  }) => Promise<boolean>;
-  deleteMood: (userId: string, activityId: string) => Promise<boolean>;
+  }, token?: string | null) => Promise<boolean>;
+  deleteMood: (userId: string, activityId: string, token?: string | null) => Promise<boolean>;
   clearError: () => void;
 }
+
+const parseResponseBody = async (response: Response) => {
+  const raw = await response.text();
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    if (raw.trim().startsWith("<")) {
+      return { message: "Server returned HTML instead of JSON. Check deployed backend route/version." };
+    }
+    return { message: "Invalid JSON response from server." };
+  }
+};
+
+const moodBaseEndpoints = (userId: string) =>
+  Array.from(
+    new Set([
+      ...buildApiCandidates(`/api/user/metrics/${userId}/mood`),
+      ...buildApiCandidates(`/api/user/activity/${userId}/mood`),
+    ])
+  );
 
 export const useMoodStore = create<MoodState>()(
   persist(
@@ -77,7 +98,7 @@ export const useMoodStore = create<MoodState>()(
       setEnergyLevel: (level) => set({ currentEnergy: level }),
       clearError: () => set({ error: null }),
 
-      fetchMoodHistory: async (userId: string, days = 7) => {
+      fetchMoodHistory: async (userId: string, days = 7, token?: string | null) => {
         if (!userId) {
           set({ error: 'User ID is required' });
           return;
@@ -86,19 +107,34 @@ export const useMoodStore = create<MoodState>()(
         set({ isLoading: true, error: null });
 
         try {
-          const response = await fetch(
-            `${API_URL}/api/user/metrics/${userId}/mood?days=${days}`,
-            {
-              method: 'GET',
-              headers: { 'Content-Type': 'application/json' },
-            }
-          );
+          let data: any = null;
+          let resolved = false;
+          let lastError: Error | null = null;
+          const headers: Record<string, string> = {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          };
+          if (token) headers.Authorization = `Bearer ${token}`;
 
-          if (!response.ok) {
-            throw new Error('Failed to fetch mood history');
+          for (const base of moodBaseEndpoints(userId)) {
+            const response = await fetch(`${base}?days=${days}`, {
+              method: 'GET',
+              headers,
+            });
+            const body = await parseResponseBody(response);
+
+            if (response.ok) {
+              data = body || {};
+              resolved = true;
+              break;
+            }
+
+            lastError = new Error(body?.message || `Failed to fetch mood history (${response.status})`);
           }
 
-          const data = await response.json();
+          if (!resolved) {
+            throw lastError || new Error('Failed to fetch mood history');
+          }
 
           set({
             moodHistory: data.moodHistory || [],
@@ -126,7 +162,7 @@ export const useMoodStore = create<MoodState>()(
         }
       },
 
-      logMood: async (userId, moodData) => {
+      logMood: async (userId, moodData, token?: string | null) => {
         if (!userId) {
           set({ error: 'User ID is required' });
           return false;
@@ -135,21 +171,33 @@ export const useMoodStore = create<MoodState>()(
         set({ isLoading: true, error: null });
 
         try {
-          const response = await fetch(
-            `${API_URL}/api/user/metrics/${userId}/mood`,
-            {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(moodData),
-            }
-          );
+          let resolved = false;
+          let lastError: Error | null = null;
+          const headers: Record<string, string> = {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          };
+          if (token) headers.Authorization = `Bearer ${token}`;
 
-          if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.message || `Server error: ${response.status}`);
+          for (const endpoint of moodBaseEndpoints(userId)) {
+            const response = await fetch(endpoint, {
+              method: 'POST',
+              headers,
+              body: JSON.stringify(moodData),
+            });
+            const body = await parseResponseBody(response);
+
+            if (response.ok) {
+              resolved = true;
+              break;
+            }
+
+            lastError = new Error(body?.message || `Server error: ${response.status}`);
           }
 
-          const result = await response.json();
+          if (!resolved) {
+            throw lastError || new Error('Failed to log mood. Endpoint not found.');
+          }
 
           // Update local state
           if (moodData.moodLevel) set({ currentMood: moodData.moodLevel });
@@ -160,7 +208,7 @@ export const useMoodStore = create<MoodState>()(
           set({ isLoading: false, lastUpdated: new Date().toISOString() });
 
           // Refresh history
-          get().fetchMoodHistory(userId, 30);
+          get().fetchMoodHistory(userId, 30, token);
 
           return true;
         } catch (error) {
@@ -172,7 +220,7 @@ export const useMoodStore = create<MoodState>()(
         }
       },
 
-      updateMood: async (userId, activityId, moodData) => {
+      updateMood: async (userId, activityId, moodData, token?: string | null) => {
         if (!userId) {
           set({ error: 'User ID is required' });
           return false;
@@ -181,22 +229,37 @@ export const useMoodStore = create<MoodState>()(
         set({ isLoading: true, error: null });
 
         try {
-          const response = await fetch(
-            `${API_URL}/api/user/metrics/${userId}/mood/${activityId}`,
-            {
+          const endpoints = moodBaseEndpoints(userId).map((base) => `${base}/${activityId}`);
+          let resolved = false;
+          let lastError: Error | null = null;
+          const headers: Record<string, string> = {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          };
+          if (token) headers.Authorization = `Bearer ${token}`;
+
+          for (const endpoint of endpoints) {
+            const response = await fetch(endpoint, {
               method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
+              headers,
               body: JSON.stringify(moodData),
-            }
-          );
+            });
+            const body = await parseResponseBody(response);
 
-          if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.message || `Server error: ${response.status}`);
+            if (response.ok) {
+              resolved = true;
+              break;
+            }
+
+            lastError = new Error(body?.message || `Server error: ${response.status}`);
+          }
+
+          if (!resolved) {
+            throw lastError || new Error('Failed to update mood. Endpoint not found.');
           }
 
           set({ isLoading: false });
-          get().fetchMoodHistory(userId, 30);
+          get().fetchMoodHistory(userId, 30, token);
           return true;
         } catch (error) {
           set({
@@ -207,7 +270,7 @@ export const useMoodStore = create<MoodState>()(
         }
       },
 
-      deleteMood: async (userId, activityId) => {
+      deleteMood: async (userId, activityId, token?: string | null) => {
         if (!userId) {
           set({ error: 'User ID is required' });
           return false;
@@ -216,21 +279,36 @@ export const useMoodStore = create<MoodState>()(
         set({ isLoading: true, error: null });
 
         try {
-          const response = await fetch(
-            `${API_URL}/api/user/metrics/${userId}/mood/${activityId}`,
-            {
-              method: 'DELETE',
-              headers: { 'Content-Type': 'application/json' },
-            }
-          );
+          const endpoints = moodBaseEndpoints(userId).map((base) => `${base}/${activityId}`);
+          let resolved = false;
+          let lastError: Error | null = null;
+          const headers: Record<string, string> = {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          };
+          if (token) headers.Authorization = `Bearer ${token}`;
 
-          if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.message || `Server error: ${response.status}`);
+          for (const endpoint of endpoints) {
+            const response = await fetch(endpoint, {
+              method: 'DELETE',
+              headers,
+            });
+            const body = await parseResponseBody(response);
+
+            if (response.ok) {
+              resolved = true;
+              break;
+            }
+
+            lastError = new Error(body?.message || `Server error: ${response.status}`);
+          }
+
+          if (!resolved) {
+            throw lastError || new Error('Failed to delete mood. Endpoint not found.');
           }
 
           set({ isLoading: false });
-          get().fetchMoodHistory(userId, 30);
+          get().fetchMoodHistory(userId, 30, token);
           return true;
         } catch (error) {
           set({

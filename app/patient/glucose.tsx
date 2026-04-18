@@ -15,6 +15,7 @@ import { router } from "expo-router";
 import { useSelector } from "react-redux";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import GlucoseModal from "./modal/glucosemodal";
+import { buildApiCandidates } from "@/constants/api";
 
 interface GlucoseEntry {
   day: string;
@@ -87,15 +88,59 @@ const GlucoseScreen = () => {
 
     try {
       setIsLoading(true);
-      const response = await fetch(`/api/user/activity/${userId}/glucosestatus`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      const result: GlucoseStatusResponse = await response.json();
+      const requestUrls = buildApiCandidates(`/api/user/activity/${userId}/glucosestatus`);
+      let result: GlucoseStatusResponse | any = null;
+      let resolved = false;
+      let lastStatus = 0;
+      let lastError: Error | null = null;
 
-      if (!response.ok) {
-        throw new Error(result.message || "Failed to fetch glucose status");
+      for (const requestUrl of requestUrls) {
+        const response = await fetch(requestUrl, {
+          headers: {
+            Accept: "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        const raw = await response.text();
+        const trimmed = raw?.trim() || "";
+        const looksLikeJson = trimmed.startsWith("{") || trimmed.startsWith("[");
+        let parsed: GlucoseStatusResponse | any = null;
+        if (looksLikeJson) {
+          try {
+            parsed = JSON.parse(trimmed);
+          } catch {
+            parsed = null;
+          }
+        }
+
+        if (response.ok) {
+          result = parsed;
+          resolved = true;
+          break;
+        }
+
+        lastStatus = response.status;
+        lastError = new Error(parsed?.message || `Failed to fetch glucose status (${response.status})`);
+      }
+
+      if (!resolved) {
+        setGlucoseData([]);
+        setLastGlucose(null);
+        setGlucoseUnit("mg/dL");
+        setMealContext(null);
+        setTodayGlucose(null);
+        setTodayGlucoseUnit("mg/dL");
+        setTodayMealContext(null);
+        console.warn(
+          "Glucose status unavailable:",
+          lastError?.message ||
+            `No compatible glucose status endpoint found (${lastStatus || "no response"}).`
+        );
+        return;
+      }
+
+      if (!result?.data) {
+        throw new Error("Unexpected server response while fetching glucose status.");
       }
 
       setGlucoseData(result.data.glucoseData || []);
@@ -106,7 +151,14 @@ const GlucoseScreen = () => {
       setTodayGlucoseUnit(result.data.todayGlucoseUnit || "mg/dL");
       setTodayMealContext(result.data.todayGlucoseMealContext || null);
     } catch (error) {
-      console.error("Error fetching glucose status:", error);
+      setGlucoseData([]);
+      setLastGlucose(null);
+      setGlucoseUnit("mg/dL");
+      setMealContext(null);
+      setTodayGlucose(null);
+      setTodayGlucoseUnit("mg/dL");
+      setTodayMealContext(null);
+      console.warn("Error fetching glucose status:", error);
     } finally {
       setIsLoading(false);
     }

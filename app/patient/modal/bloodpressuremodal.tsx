@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { useSelector } from "react-redux";
-import { API_URL } from "@/constants/api";
+import { buildApiCandidates } from "@/constants/api";
 
 interface BloodPressureModalProps {
   visible: boolean;
@@ -36,27 +36,70 @@ const BloodPressureModal = ({ visible, onClose, reload }: BloodPressureModalProp
 
     setLoading(true);
     try {
-      const response = await fetch(
-        `${API_URL}/api/user/activity/${user.user_id}/bloodpressure`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            systolic: parseInt(systolic),
-            diastolic: parseInt(diastolic),
-          }),
-        }
-      );
+      const payload = JSON.stringify({
+        systolic: parseInt(systolic),
+        diastolic: parseInt(diastolic),
+      });
 
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || "Failed to save.");
+      const endpointPaths = ["bp", "bloodpressure"];
+      let data: any = null;
+      let lastStatus = 0;
+      let lastError: Error | null = null;
+      const requestUrls = endpointPaths.flatMap((endpoint) =>
+        buildApiCandidates(`/api/user/activity/${user.user_id}/${endpoint}`)
+      );
+      console.log("BP save URLs:", requestUrls);
+
+      for (const requestUrl of requestUrls) {
+        const response = await fetch(requestUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+            Authorization: `Bearer ${user.token}`,
+          },
+          body: payload,
+        });
+
+        const raw = await response.text();
+        const trimmed = raw?.trim() || "";
+
+        if (response.ok) {
+          data = {};
+          break;
+        }
+
+        lastStatus = response.status;
+        lastError = new Error(
+          trimmed
+            ? `Request failed (${response.status}). ${trimmed.slice(0, 120)}`
+            : `Request failed (${response.status})`
+        );
+      }
+
+      if (!data) {
+        throw (
+          lastError ||
+          new Error(
+            `No compatible blood pressure endpoint found (${lastStatus || "no response"}).`
+          )
+        );
+      }
 
       setSystolic("");
       setDiastolic("");
       onClose();
       reload();
     } catch (error: any) {
-      Alert.alert("Error", error.message || "Failed to save blood pressure.");
+      const rawMessage = error?.message || "Failed to save blood pressure.";
+      const message =
+        rawMessage.includes("Unexpected token") ||
+        rawMessage.includes("JSON Parse error") ||
+        rawMessage.includes("Unexpected character: <")
+          ? "Server returned HTML instead of JSON. Confirm app is using your local backend URL."
+          : rawMessage;
+      console.warn("Error saving blood pressure:", message);
+      Alert.alert("Error", message);
     } finally {
       setLoading(false);
     }
