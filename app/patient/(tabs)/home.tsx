@@ -478,37 +478,35 @@ const Home = () => {
     }
 
     const data = await response.json();
-    // console.log("Profile data:", data.week);
+    const profileData = data?.data ?? data;
+    const resolvedProfileImage =
+      profileData?.profileImage ||
+      profileData?.avatarUrl ||
+      profileData?.profilePicture ||
+      profileData?.avatar_url ||
+      user?.avatar_url ||
+      user?.user_photo ||
+      "";
 
-    // Save the fresh profile data to AsyncStorage
-
-    // Extract and log question responses
-
-    // setProfile(data);
     dispatch(
       setUser({
         ...user,
-        user_name: data.name,
-        user_email: data.email,
-        avatar_url: data.avatarUrl,
+        user_name: profileData?.name || user?.user_name,
+        user_email: profileData?.email || user?.user_email,
+        avatar_url:
+          profileData?.avatarUrl ||
+          profileData?.avatar_url ||
+          resolvedProfileImage,
+        user_photo:
+          profileData?.profileImage ||
+          profileData?.profilePicture ||
+          resolvedProfileImage,
       })
     );
-    setWeeksComplete(data.week || 0);
+    setWeeksComplete(profileData?.week || 0);
 
-    // If profile has an image and we don't have one loaded yet, use it
-    if (data.profileImage && !image) {
-      setImage(data.profileImage);
-
-      // Save to AsyncStorage for persistence
-      // await AsyncStorage.setItem("profileImage", data.profileImage);
-
-      // Update Redux state
-      dispatch(
-        setUser({
-          ...user,
-          user_photo: data.profileImage,
-        })
-      );
+    if (resolvedProfileImage) {
+      setImage(resolvedProfileImage);
     }
   };
 
@@ -956,6 +954,8 @@ const Home = () => {
                 source={{
                   uri:
                     image ||
+                    user?.avatar_url ||
+                    user?.user_photo ||
                     "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-IiR3eCJFbWfehr5WotOVpXRSj1c7N3.png",
                 }}
                 style={{
