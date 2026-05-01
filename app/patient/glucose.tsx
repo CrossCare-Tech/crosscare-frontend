@@ -38,6 +38,8 @@ interface GlucoseStatusResponse {
   };
 }
 
+const DAYS = ["S", "M", "T", "W", "T", "F", "S"];
+
 const MAX_HEIGHT = 200;
 const BAR_WIDTH = 28;
 const SPACING = (Dimensions.get("window").width - BAR_WIDTH * 10) / 8;
@@ -70,6 +72,17 @@ const GlucoseScreen = () => {
       yAxisLabels: labels.reverse(),
       roundedMax: rounded,
     };
+  }, [glucoseData]);
+
+  const chartData = useMemo(() => {
+    return glucoseData.map((entry) => {
+      const parsedDate = new Date(`${entry.date}T12:00:00`);
+
+      return {
+        ...entry,
+        displayDay: Number.isNaN(parsedDate.getTime()) ? entry.day : DAYS[parsedDate.getDay()],
+      };
+    });
   }, [glucoseData]);
 
   useEffect(() => {
@@ -233,7 +246,7 @@ const GlucoseScreen = () => {
                 ))}
 
                 <View style={styles.barsRow}>
-                  {glucoseData.map((entry) => {
+                  {chartData.map((entry) => {
                     const hasReading = entry.glucoseLevel !== null;
                     const height =
                       hasReading && roundedMax > 0
@@ -248,7 +261,7 @@ const GlucoseScreen = () => {
                             hasReading ? { height } : styles.emptyBar,
                           ]}
                         />
-                        <Text style={styles.barLabel}>{entry.day}</Text>
+                        <Text style={styles.barLabel}>{entry.displayDay}</Text>
                       </View>
                     );
                   })}
