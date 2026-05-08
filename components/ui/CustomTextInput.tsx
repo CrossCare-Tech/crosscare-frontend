@@ -6,7 +6,7 @@ import { TextInputProps, TextInput, View, Text, TouchableOpacity, StyleSheet } f
 
 
 interface CustomTextInputProps extends TextInputProps {
-  icon: string;
+  icon: keyof typeof Feather.glyphMap;
   value: string;
   onChangeText: (text: string) => void;
   placeholder: string;

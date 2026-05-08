@@ -55,7 +55,7 @@ const SelfCare = () => {
         params: {
           title: routine.title,
           duration: routine.duration || "5 min", // Fallback duration if not set
-          url: audioPath || routine.audioUrl, // Use local path if available, otherwise remote URL
+          url: audioPath || routine.audio || "", // Use local path if available, otherwise remote URL
           gradientColors: JSON.stringify(
             routine.gradientColors || ["#7B96FF", "#0039C6"]
           ),

@@ -136,7 +136,6 @@ const BadgeCarousel: React.FC<BadgeCarouselProps> = ({
         )}
         scrollEventThrottle={16}
         contentContainerStyle={styles.scrollViewContent}
-        initialScrollIndex={currentIndex}
         onContentSizeChange={() => {
           // Scroll to the initial index when content size changes
           scrollToBadge(currentIndex);

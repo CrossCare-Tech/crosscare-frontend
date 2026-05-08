@@ -44,6 +44,8 @@ const FloatingButton: React.FC<FloatingButtonProps> = ({
 
   // Initialize position (bottom right corner)
   const pan = useRef(new Animated.ValueXY({ x: width - 70, y: height / 1.2 })).current
+  const panX = pan.x as any
+  const panY = pan.y as any
 
   // Track if we're currently dragging to differentiate between drag and tap
   const isDragging = useRef(false)
@@ -195,16 +197,16 @@ const FloatingButton: React.FC<FloatingButtonProps> = ({
       const { width, height } = Dimensions.get("window")
 
       // Keep button within screen bounds after rotation
-      if (pan.x._value > width - 60) {
+      if (panX._value > width - 60) {
         pan.x.setValue(width - 60)
       }
-      if (pan.y._value > height - 60) {
+      if (panY._value > height - 60) {
         pan.y.setValue(height - 60)
       }
 
       // Report position change
       if (onPositionChange) {
-        onPositionChange({ x: pan.x._value, y: pan.y._value })
+        onPositionChange({ x: panX._value, y: panY._value })
       }
     }
 
@@ -212,7 +214,7 @@ const FloatingButton: React.FC<FloatingButtonProps> = ({
 
     // Initial position report
     if (onPositionChange) {
-      onPositionChange({ x: pan.x._value, y: pan.y._value })
+      onPositionChange({ x: panX._value, y: panY._value })
     }
 
     return () => subscription.remove()
@@ -226,7 +228,7 @@ const FloatingButton: React.FC<FloatingButtonProps> = ({
       clearTimeout(debounceTimer)
       debounceTimer = setTimeout(() => {
         if (onPositionChange) {
-          onPositionChange({ x: value, y: pan.y._value })
+          onPositionChange({ x: value, y: panY._value })
         }
       }, 100) // Debounce position updates
     })
@@ -235,7 +237,7 @@ const FloatingButton: React.FC<FloatingButtonProps> = ({
       clearTimeout(debounceTimer)
       debounceTimer = setTimeout(() => {
         if (onPositionChange) {
-          onPositionChange({ x: pan.x._value, y: value })
+          onPositionChange({ x: panX._value, y: value })
         }
       }, 100) // Debounce position updates
     })
@@ -278,8 +280,8 @@ const FloatingButton: React.FC<FloatingButtonProps> = ({
 
         // Store the initial position
         pan.setOffset({
-          x: pan.x._value,
-          y: pan.y._value,
+          x: panX._value,
+          y: panY._value,
         })
         // Reset the gesture value
         pan.setValue({ x: 0, y: 0 })
@@ -319,19 +321,19 @@ const FloatingButton: React.FC<FloatingButtonProps> = ({
 
         // Animate to the edge with a nice spring effect
         Animated.spring(pan, {
-          toValue: { x: finalX, y: pan.y._value },
+          toValue: { x: finalX, y: panY._value },
           useNativeDriver: false,
           friction: 7,
           tension: 40,
         }).start()
 
         // Ensure button stays within vertical bounds
-        if (pan.y._value < 50) {
+        if (panY._value < 50) {
           Animated.spring(pan.y, {
             toValue: 50,
             useNativeDriver: false,
           }).start()
-        } else if (pan.y._value > screenHeight - 100) {
+        } else if (panY._value > screenHeight - 100) {
           Animated.spring(pan.y, {
             toValue: screenHeight - 100,
             useNativeDriver: false,
@@ -342,7 +344,7 @@ const FloatingButton: React.FC<FloatingButtonProps> = ({
   ).current
 
   // Determine if button is on the right side of the screen
-  const isOnRightSide = pan.x._value > width / 2
+  const isOnRightSide = panX._value > width / 2
 
   // Calculate bounce effect for message
   const bounceInterpolation = messageBounce.interpolate({

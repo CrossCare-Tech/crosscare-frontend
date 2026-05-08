@@ -132,7 +132,7 @@ export default function HeartRateScreen() {
     }, [userId]);
 
   // Add a ref for the period selector button
-  const periodSelectorRef = useRef<TouchableOpacity>(null)
+  const periodSelectorRef = useRef<any>(null)
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, right: 0 })
 
   // Use the simplified Fitbit hook

@@ -92,7 +92,7 @@ const WeightScreen = () => {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
   const [tooltipAnim] = useState(new Animated.Value(0)) // Start with 0 opacity
   const tooltipTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const periodSelectorRef = useRef<TouchableOpacity>(null)
+  const periodSelectorRef = useRef<any>(null)
   const [modalVisible, setModalVisible] = useState(false)
   const [currentWeight, setCurrentWeight] = useState<number | null>(null)
   const [dropdownVisible, setDropdownVisible] = useState(false)
@@ -1491,4 +1491,3 @@ const styles = StyleSheet.create({
 })
 
 export default WeightScreen
-

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react"
-import { StyleSheet, Text, View, TouchableOpacity, Animated, StatusBar, Dimensions } from "react-native"
+import { StyleSheet, Text, View, TouchableOpacity, Animated, StatusBar, Dimensions, DimensionValue } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 import { Ionicons } from "@expo/vector-icons"
 import { useRouter, useLocalSearchParams } from "expo-router"
@@ -19,12 +19,12 @@ const AudioPlayerScreen = () => {
   const description = (params.description as string) || ""
 
   // Parse gradient colors from params or use default blue gradient
-  let gradientColors: string[] = ["#1A237E", "#006064"]
+  let gradientColors: [string, string, ...string[]] = ["#1A237E", "#006064"]
   try {
     if (params.gradientColors) {
       const parsedColors = JSON.parse(params.gradientColors as string)
       if (Array.isArray(parsedColors) && parsedColors.length >= 2) {
-        gradientColors = parsedColors
+        gradientColors = parsedColors as [string, string, ...string[]]
       }
     }
   } catch (error) {
@@ -38,7 +38,7 @@ const AudioPlayerScreen = () => {
   const [sound, setSound] = useState<Audio.Sound | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [progressWidth, setProgressWidth] = useState("0%")
+  const [progressWidth, setProgressWidth] = useState<DimensionValue>("0%")
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current
@@ -187,7 +187,9 @@ const AudioPlayerScreen = () => {
         )
 
         // Race between timeout and loading
-        const { sound: newSound } = await Promise.race([loadPromise, timeoutPromise])
+        const { sound: newSound } = (await Promise.race([loadPromise, timeoutPromise])) as {
+          sound: Audio.Sound
+        }
 
         console.log("Sound loaded successfully")
         setSound(newSound)
@@ -487,4 +489,3 @@ const styles = StyleSheet.create({
 })
 
 export default AudioPlayerScreen
-

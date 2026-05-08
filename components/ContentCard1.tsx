@@ -3,7 +3,7 @@ import React from "react";
 import { router } from "expo-router";
 
 interface ContentCard1Props {
-  id: number;
+  id: number | string;
   title: string;
   imageSource: {
     uri: string;

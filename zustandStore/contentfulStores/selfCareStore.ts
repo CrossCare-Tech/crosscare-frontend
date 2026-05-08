@@ -13,10 +13,11 @@ const CACHE_EXPIRY_MS = 0;
 interface SelfCareRoutine {
     id: string;
     title: string;
-    routineImage: string;
+    routineImage: string | null;
     description: string;
-    audio: string;
-    localAudioPath: string;
+    audio: string | null;
+    duration?: string;
+    localAudioPath: string | null;
     gradientColors: string[];
 }
 

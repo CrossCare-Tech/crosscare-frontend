@@ -49,8 +49,7 @@ const neutralWhiteColor_900='#6b6b6b';
 
 
 
-export const Colors = {
-  // light: {
+const light = {
     text: '#11181C',
     background: '#fff',
     tint: tintColorLight,
@@ -97,8 +96,9 @@ export const Colors = {
     neutralWhiteColor_700,
     neutralWhiteColor_800,
     neutralWhiteColor_900,
-  // },
-  dark: {
+};
+
+const dark = {
     text: '#ECEDEE',
     background: '#151718',
     tint: tintColorDark,
@@ -126,5 +126,10 @@ export const Colors = {
     secondaryColor_800,
     secondaryColor_900,
 
-  },
+};
+
+export const Colors = {
+  ...light,
+  light,
+  dark,
 };

@@ -620,6 +620,11 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#F0F0F0",
   },
+  foodItemContainer: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 8,
+    marginBottom: 8,
+  },
   expandedFoodItem: {
     backgroundColor: '#FAFAFA',
     borderTopLeftRadius: 8,

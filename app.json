@@ -4,7 +4,7 @@
     "slug": "crosscare",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/app-logo.png",
+    "icon": "./assets/images/icon.png",
     "scheme": "com.crosscare.tech",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -17,7 +17,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/logo.png",
+        "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
       "package": "com.crosscare.tech",
@@ -39,14 +39,14 @@
       "favicon": "./assets/images/favicon.png",
       "package": "com.crosscare.tech"
     },
-    "plugins": [    
+    "plugins": [
       "expo-router",
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/app-logo.png",
-          "width":200,
-          "height":200,
+          "image": "./assets/images/splash-icon.png",
+          "width": 200,
+          "height": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
@@ -62,10 +62,11 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/images/app-logo.png",
+          "icon": "./assets/images/icon.png",
           "color": "#ffffff"
         }
-      ]
+      ],
+      "expo-build-properties"
     ],
     "experiments": {
       "typedRoutes": false

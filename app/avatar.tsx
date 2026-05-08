@@ -516,7 +516,10 @@ export default function AvatarSelectionScreen() {
       }
 
       // Capture the avatar image from the viewshot
-      const uri = await avatarViewShotRef.current.capture();
+      const uri = await avatarViewShotRef.current.capture?.();
+      if (!uri) {
+        throw new Error("Failed to capture avatar image");
+      }
 
       // Save avatar data to AsyncStorage as a backup
       const avatarData = {
@@ -735,7 +738,7 @@ export default function AvatarSelectionScreen() {
                 style={[
                   styles.avatarImage,
                   isPreviewLocked() && styles.grayscaleImage,
-                ]}
+                ] as any}
                 resizeMode="contain"
               />
             ) : (
@@ -827,7 +830,7 @@ export default function AvatarSelectionScreen() {
                         style={[
                           styles.optionImage,
                           hairstyle.grayScale && styles.grayscaleImage,
-                        ]}
+                        ] as any}
                         resizeMode="contain"
                       />
                     ) : (
@@ -836,7 +839,7 @@ export default function AvatarSelectionScreen() {
                         style={[
                           styles.optionImage,
                           hairstyle.grayScale && styles.grayscaleImage,
-                        ]}
+                        ] as any}
                         resizeMode="contain"
                         onLoad={() => downloadHairstyleImage(hairstyle.id)}
                       />
@@ -888,7 +891,7 @@ export default function AvatarSelectionScreen() {
                       style={[
                         styles.outfitImage,
                         outfit.grayScale && styles.grayscaleImage,
-                      ]}
+                      ] as any}
                       resizeMode="contain"
                     />
                   ) : (
@@ -897,7 +900,7 @@ export default function AvatarSelectionScreen() {
                     style={[
                       styles.outfitImage,
                       outfit.grayScale && styles.grayscaleImage,
-                    ]}
+                    ] as any}
                     resizeMode="contain"
                     onLoad={() => downloadOutfitImage(outfit.id)}
                   />
@@ -937,7 +940,7 @@ export default function AvatarSelectionScreen() {
                   {finalFaceImageUrl ? (
                     <Image
                       source={{ uri: finalFaceImageUrl }}
-                      style={styles.capturedAvatarImage}
+                      style={styles.capturedAvatarImage as any}
                       resizeMode="contain"
                     />
                   ) : (
@@ -963,7 +966,7 @@ export default function AvatarSelectionScreen() {
               {finalCombinedImageUrl ? (
                 <Image
                   source={{ uri: finalCombinedImageUrl }}
-                  style={styles.previewAvatarImage}
+                  style={styles.previewAvatarImage as any}
                   resizeMode="contain"
                 />
               ) : (

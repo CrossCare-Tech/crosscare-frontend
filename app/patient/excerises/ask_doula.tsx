@@ -51,7 +51,7 @@ const AskDoulaScreen = () => {
         id: "1",
         text: "This Mindfulness technique has proven to increase levels of optimism and kindness, especially towards oneself.",
         isUser: false,
-        type: "text",
+        type: "text" as const,
         timestamp: new Date(),
       },
     ]
@@ -76,7 +76,7 @@ const AskDoulaScreen = () => {
           id: "4",
           text: "Mindfulness Exercise",
           isUser: false,
-          type: "exercise-intro",
+          type: "exercise-intro" as const,
           duration: "5 min",
           timestamp: new Date(),
         },
@@ -129,7 +129,7 @@ const AskDoulaScreen = () => {
         id: Date.now().toString(),
         text: currentExercise?.title || "Mindfulness Exercise",
         isUser: false,
-        type: "exercise",
+        type: "exercise" as const,
         duration: currentExercise?.duration || "5 min",
         timestamp: new Date(),
       },
@@ -149,7 +149,7 @@ const AskDoulaScreen = () => {
         id: Date.now().toString(),
         text: "I'll do this exercise later.",
         isUser: true,
-        type: "text",
+        type: "text" as const,
         timestamp: new Date(),
       },
     ])
@@ -166,7 +166,7 @@ const AskDoulaScreen = () => {
           id: Date.now().toString(),
           text: "No problem! The exercise will be available whenever you're ready. Is there anything else I can help you with?",
           isUser: false,
-          type: "text",
+          type: "text" as const,
           timestamp: new Date(),
         },
       ])
@@ -181,7 +181,7 @@ const AskDoulaScreen = () => {
         id: Date.now().toString(),
         text: inputText,
         isUser: true,
-        type: "text",
+        type: "text" as const,
         timestamp: new Date(),
       }
 
@@ -197,7 +197,7 @@ const AskDoulaScreen = () => {
           id: (Date.now() + 1).toString(),
           text: "I understand how you feel. Let's work through this together with another mindfulness exercise.",
           isUser: false,
-          type: "text",
+          type: "text" as const,
           timestamp: new Date(),
         }
         setMessages((prevMessages) => [...prevMessages, aiResponse])
@@ -663,4 +663,3 @@ const styles = StyleSheet.create({
 })
 
 export default AskDoulaScreen
-

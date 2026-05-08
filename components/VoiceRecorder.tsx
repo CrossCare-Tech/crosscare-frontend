@@ -36,6 +36,9 @@ export default function VoiceRecorder({
 
   const user = useSelector((state: any) => state.user)
 
+  const processUserInput = async (_input: string) => {}
+  const processUserQuery = async (_query: string) => {}
+
   // Get available voices when component mounts
   useEffect(() => {
     const loadVoices = async () => {
@@ -424,4 +427,3 @@ const styles = StyleSheet.create({
     fontFamily: "Inter400",
   },
 })
-

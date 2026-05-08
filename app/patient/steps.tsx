@@ -143,7 +143,7 @@ const step = () => {
   const [dropdownVisible, setDropdownVisible] = useState(false);
 
   // Ref for the period selector button to measure its position
-  const periodSelectorRef = useRef<TouchableOpacity>(null);
+  const periodSelectorRef = useRef<any>(null);
   // State to store the dropdown position
   const [dropdownPosition, setDropdownPosition] = useState({
     top: 0,

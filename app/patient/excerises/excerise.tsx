@@ -51,12 +51,12 @@ const ExerciseDetailScreen = () => {
   const contentType = (params.contentType as string) || "EXERCISES"
 
   // Parse gradient colors from params or use default blue gradient
-  let gradientColors: string[] = ["#0039C6", "#0039C6", "#7B96FF"]
+  let gradientColors: [string, string, ...string[]] = ["#0039C6", "#0039C6", "#7B96FF"]
   try {
     if (params.gradientColors) {
       const parsedColors = JSON.parse(params.gradientColors as string)
       if (Array.isArray(parsedColors) && parsedColors.length >= 2) {
-        gradientColors = parsedColors
+        gradientColors = parsedColors as [string, string, ...string[]]
       }
     }
   } catch (error) {
@@ -171,7 +171,7 @@ const ExerciseDetailScreen = () => {
     extrapolate: "clamp",
   })
 
-  const handleExercisePress = (exercise: ExerciseItem | AudioItem) => {
+  const handleExercisePress = (exercise: any) => {
     if (!exercise.isLocked) {
       router.push({
         pathname: "/patient/excerises/audio_player", // Changed to match your existing route
@@ -321,7 +321,7 @@ const ExerciseDetailScreen = () => {
         <View style={styles.exerciseList}>
           {!isLoading && exercises.length === 0
             ? renderEmptyState()
-            : exercises.map((exercise) => (
+            : exercises.map((exercise: any) => (
                 <TouchableOpacity
                   key={exercise.id}
                   onPress={() => handleExercisePress(exercise)}
