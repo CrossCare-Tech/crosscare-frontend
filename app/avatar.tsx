@@ -135,9 +135,9 @@ export default function AvatarSelectionScreen() {
   const dispatch = useDispatch();
 
   // Reference for ViewShot
-  const viewShotRef = useRef(null);
+  const viewShotRef = useRef<ViewShot | null>(null);
   // Reference for avatar ViewShot
-  const avatarViewShotRef = useRef(null);
+  const avatarViewShotRef = useRef<ViewShot | null>(null);
 
   // Animation values
   const scaleAnim = useRef(new Animated.Value(1)).current;
