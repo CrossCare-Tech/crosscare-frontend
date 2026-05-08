@@ -15,7 +15,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useDispatch, useSelector } from "react-redux";
 import { removeToken, setUser } from "@/store/userSlice";
 import { useFocusEffect, useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { StatusBar, Platform } from "react-native";
 import Card from "@/components/Card";
 import { useTranslation } from "react-i18next";
@@ -137,6 +137,64 @@ const Home = () => {
   const healthServiceConnected = isUsingAppleHealth ? appleHealthConnected : fitbitConnected;
 
   const [foodQualityScore, setFoodQualityScore] = useState("50%");
+  const [bpSystolic, setBpSystolic] = useState<number | null>(null);
+  const [bpDiastolic, setBpDiastolic] = useState<number | null>(null);
+  const [glucoseLevel, setGlucoseLevel] = useState<number | null>(null);
+  const [glucoseUnit, setGlucoseUnit] = useState<string>("mg/dL");
+
+  const fetchBloodPressureData = useCallback(async () => {
+    if (!user?.user_id || !user?.token) return;
+    try {
+      const res = await fetch(
+        `${CONFIG.API_BASE_URL}/user/activity/${user.user_id}/bpstatus`,
+        {
+          headers: {
+            Accept: "application/json",
+            Authorization: `Bearer ${user.token}`,
+          },
+        }
+      );
+      if (!res.ok) {
+        setBpSystolic(null);
+        setBpDiastolic(null);
+        return;
+      }
+      const data = await res.json();
+      setBpSystolic(data?.data?.lastBloodPressure?.systolic ?? null);
+      setBpDiastolic(data?.data?.lastBloodPressure?.diastolic ?? null);
+    } catch (error) {
+      setBpSystolic(null);
+      setBpDiastolic(null);
+      console.warn("Error fetching blood pressure data:", error);
+    }
+  }, [user?.user_id, user?.token]);
+
+  const fetchGlucoseData = useCallback(async () => {
+    if (!user?.user_id || !user?.token) return;
+    try {
+      const res = await fetch(
+        `${CONFIG.API_BASE_URL}/user/activity/${user.user_id}/glucosestatus`,
+        {
+          headers: {
+            Accept: "application/json",
+            Authorization: `Bearer ${user.token}`,
+          },
+        }
+      );
+      if (!res.ok) {
+        setGlucoseLevel(null);
+        setGlucoseUnit("mg/dL");
+        return;
+      }
+      const data = await res.json();
+      setGlucoseLevel(data?.data?.lastGlucose ?? null);
+      setGlucoseUnit(data?.data?.glucoseUnit || "mg/dL");
+    } catch (error) {
+      setGlucoseLevel(null);
+      setGlucoseUnit("mg/dL");
+      console.warn("Error fetching glucose data:", error);
+    }
+  }, [user?.user_id, user?.token]);
 
   const handlePregnancySave = (week: number) => {
     // Update the weeks completed for immediate UI feedback
@@ -484,12 +542,14 @@ const Home = () => {
       // console.log("Home screen in focus, fetching profile data...")
       if (user?.user_id) {
         getProfile();
+        fetchBloodPressureData();
+        fetchGlucoseData();
       }
 
       return () => {
         // console.log("Home screen lost focus")
       };
-    }, [user?.user_id, getProfile])
+    }, [user?.user_id, getProfile, fetchBloodPressureData, fetchGlucoseData])
   );
 
   // Add focus-based refresh for steps data
@@ -907,10 +967,7 @@ const Home = () => {
                   resizeMode="contain"
                 />
               ) : (
-                <>
-                  <User width="100%" height="100%" color="#888" />{" "}
-                  {/* Replace with your icon component */}
-                </>
+                <User width="100%" height="100%" color="#888" />
               )}
             </View>
             {isUploading && (
@@ -1155,6 +1212,90 @@ const Home = () => {
               {dueDate}
             </Text>
           </TouchableOpacity>
+
+          {/* Blood Pressure Card */}
+          <TouchableOpacity
+            style={styles.statCard5}
+            onPress={() => router.push("/patient/bloodpressure")}
+          >
+            <View style={styles.statHeader}>
+              <View
+                style={{
+                  width: 24,
+                  height: 24,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: "#E573731A",
+                  borderRadius: 12,
+                  marginRight: 6,
+                }}
+              >
+                <MaterialCommunityIcons
+                  name="heart-pulse"
+                  size={14}
+                  color="#E57373"
+                />
+              </View>
+              <Text style={styles.statTitle}>Blood Pressure</Text>
+            </View>
+
+            <Text style={styles.bpValue}>
+              {bpSystolic !== null && bpDiastolic !== null
+                ? `${bpSystolic}/${bpDiastolic}`
+                : "--/--"}
+            </Text>
+            <Text
+              style={{
+                fontSize: 12,
+                fontFamily: "DMSans400",
+                marginTop: 5,
+                color: "#434343",
+              }}
+            >
+              mmHg
+            </Text>
+          </TouchableOpacity>
+
+          {/* Glucose Card */}
+          <TouchableOpacity
+            style={styles.statCard6}
+            onPress={() => router.push("/patient/glucose")}
+          >
+            <View style={styles.statHeader}>
+              <View
+                style={{
+                  width: 24,
+                  height: 24,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: "#8E44AD1A",
+                  borderRadius: 12,
+                  marginRight: 6,
+                }}
+              >
+                <MaterialCommunityIcons
+                  name="chart-line"
+                  size={14}
+                  color="#8E44AD"
+                />
+              </View>
+              <Text style={styles.statTitle}>Glucose</Text>
+            </View>
+
+            <Text style={styles.glucoseValue}>
+              {glucoseLevel !== null ? glucoseLevel : "--"}
+            </Text>
+            <Text
+              style={{
+                fontSize: 12,
+                fontFamily: "DMSans400",
+                marginTop: 5,
+                color: "#434343",
+              }}
+            >
+              {glucoseUnit}
+            </Text>
+          </TouchableOpacity>
         </View>
 
         <FlatList
@@ -1241,6 +1382,36 @@ copyrightText: {
     padding: 15,
     marginBottom: 15,
     justifyContent: "space-between",
+  },
+  statCard5: {
+    width: "48%",
+    height: 103,
+    backgroundColor: "rgba(229, 115, 115, 0.05)",
+    boxShadow: "0px 0px 4px 0px rgba(0, 0, 0, 0.25)",
+    borderRadius: 15,
+    padding: 15,
+    marginBottom: 15,
+    justifyContent: "space-between",
+  },
+  bpValue: {
+    fontSize: 22,
+    fontFamily: "DMSans600",
+    color: "#E57373",
+  },
+  statCard6: {
+    width: "48%",
+    height: 103,
+    backgroundColor: "rgba(142, 68, 173, 0.05)",
+    boxShadow: "0px 0px 4px 0px rgba(0, 0, 0, 0.25)",
+    borderRadius: 15,
+    padding: 15,
+    marginBottom: 15,
+    justifyContent: "space-between",
+  },
+  glucoseValue: {
+    fontSize: 22,
+    fontFamily: "DMSans600",
+    color: "#8E44AD",
   },
   userName: {
     fontSize: 20,

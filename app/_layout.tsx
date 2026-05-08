@@ -18,8 +18,6 @@ import { store } from "../store/store";
 import { setToken, setUser } from "../store/userSlice";
 import { FloatingProvider } from "@/context/FloatingContext";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { BadgeProvider } from "@/context/BadgeContext";
-import { BadgeMonitor } from "@/context/BadgeMonitor";
 import '../translation/i18next'
 import { loadSavedLanguage } from "@/translation/i18next";
 import { useMealStore } from "@/zustandStore/mealStore";
@@ -154,7 +152,7 @@ const RootLayoutNav = () => {
           options={{ title: "Forgot Password" }}
         />
         <Stack.Screen name="avatar" />
-        <Stack.Screen name="/patient/(tabs)/home" />
+        <Stack.Screen name="patient" />
       </Stack>
     </>
     // </ThemeProvider>
@@ -170,10 +168,7 @@ export default function RootLayout() {
     >
       <Provider store={store}>
         <FloatingProvider>
-        <BadgeProvider>
-        <BadgeMonitor />
           <RootLayoutNav />
-          </BadgeProvider>
         </FloatingProvider>
       </Provider>
     </GestureHandlerRootView>

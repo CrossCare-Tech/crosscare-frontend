@@ -95,6 +95,9 @@ export default function water() {
 
   // Modify the generateAllDays function to use the correct date format
   const generateAllDays = (timeRange: string): DataItem[] => {
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const toLocalDateString = (d: Date) =>
+      `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
     const today = new Date();
     const days = [];
     let startDate: Date;
@@ -102,7 +105,7 @@ export default function water() {
 
     if (timeRange === "today") {
       // Just show today
-      const dateString = today.toISOString().split("T")[0];
+      const dateString = toLocalDateString(today);
       days.push({
         id: `today-${dateString}`,
         date: dateString,
@@ -126,14 +129,14 @@ export default function water() {
       // For debugging
       console.log(
         "Week view date range:",
-        startDate.toISOString().split("T")[0],
+        toLocalDateString(startDate),
         "to",
-        endDate.toISOString().split("T")[0]
+        toLocalDateString(endDate)
       );
 
       const currentDate = new Date(startDate);
       while (currentDate <= endDate) {
-        const dateString = currentDate.toISOString().split("T")[0];
+        const dateString = toLocalDateString(currentDate);
         days.push({
           id: `empty-${dateString}`,
           date: dateString,
@@ -174,7 +177,7 @@ export default function water() {
           // Add the main label date
           const labelDate = new Date(startDate);
           labelDate.setDate(range.start);
-          const labelDateString = labelDate.toISOString().split("T")[0];
+          const labelDateString = toLocalDateString(labelDate);
 
           days.push({
             id: `label-${labelDateString}`,
@@ -194,7 +197,7 @@ export default function water() {
           ) {
             const currentDate = new Date(startDate);
             currentDate.setDate(day);
-            const dateString = currentDate.toISOString().split("T")[0];
+            const dateString = toLocalDateString(currentDate);
 
             days.push({
               id: `day-${dateString}`,

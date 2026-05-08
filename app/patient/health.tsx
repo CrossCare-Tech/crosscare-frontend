@@ -40,11 +40,35 @@ const TrackingOptionsScreen = () => {
     icon: <FoodIcon width={24} height={24}  />,
     onPress: ()=> router.push('/patient/meals')
   },
-  { 
-    id: 'heart-rate', 
-    title: t('heartRate'), 
+  {
+    id: 'heart-rate',
+    title: t('heartRate'),
     icon: <HeartIcon width={24} height={24}  />,
     onPress: () => router.push('/patient/heart'),
+  },
+  {
+    id: 'blood-pressure',
+    title: 'Blood Pressure',
+    icon: <MaterialCommunityIcons name="heart-pulse" size={24} color="#E57373" />,
+    onPress: () => router.push('/patient/bloodpressure'),
+  },
+  {
+    id: 'glucose',
+    title: 'Glucose',
+    icon: <MaterialCommunityIcons name="chart-line" size={24} color="#8E44AD" />,
+    onPress: () => router.push('/patient/glucose'),
+  },
+  {
+    id: 'mood',
+    title: 'Mood',
+    icon: <MaterialCommunityIcons name="emoticon-happy-outline" size={24} color="#5E4FA2" />,
+    onPress: () => router.push('/patient/mood'),
+  },
+  {
+    id: 'symptoms',
+    title: 'Symptoms',
+    icon: <MaterialCommunityIcons name="medical-bag" size={24} color="#E74C3C" />,
+    onPress: () => router.push('/patient/symptoms'),
   },
   { 
     id: 'medication', 

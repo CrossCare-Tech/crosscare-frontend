@@ -8,7 +8,7 @@
     "scheme": "com.crosscare.tech",
     "userInterfaceStyle": "automatic",
     "description": "Crosscare Concierge is your AI-powered pregnancy companion that provides personalized health insights, tracks your pregnancy journey, and offers 24/7 support through an intelligent doula chatbot. Monitor your health metrics, log meals and activities, capture pregnancy memories, and get expert guidance throughout your maternal health journey.",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "ios": {
       "supportsTablet": false,
       "infoPlist": {

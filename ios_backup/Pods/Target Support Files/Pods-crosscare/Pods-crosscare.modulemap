@@ -1,0 +1,6 @@
+module Pods_crosscare {
+  umbrella header "Pods-crosscare-umbrella.h"
+
+  export *
+  module * { export * }
+}
