@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, StatusBar, ScrollView } from 'react-native';
 import { Ionicons, FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -121,12 +121,16 @@ const TrackingOptionsScreen = () => {
       <Text style={styles.title}>{t('track_title')}</Text>
       
       {/* Tracking Options List */}
-      <View style={styles.optionsContainer}>
+      <ScrollView
+        style={styles.optionsContainer}
+        contentContainerStyle={{ paddingBottom: 40 }}
+        showsVerticalScrollIndicator={false}
+      >
         {trackingOptions.map((option) => (
-          <TouchableOpacity 
+          <TouchableOpacity
             key={option.id}
             style={styles.optionItem}
-            onPress={option.onPress} // Navigate to the respective screen
+            onPress={option.onPress}
           >
             <View style={styles.optionIconContainer}>
               {option.icon}
@@ -135,7 +139,7 @@ const TrackingOptionsScreen = () => {
             <Ionicons name="chevron-forward" size={20} color="black" />
           </TouchableOpacity>
         ))}
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 };
