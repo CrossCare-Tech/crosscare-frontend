@@ -2,7 +2,7 @@
   "expo": {
     "name": "Crosscare Concierge",
     "slug": "crosscare",
-    "version": "1.0.4",
+    "version": "1.0.5",
     "orientation": "portrait",
     "icon": "./assets/images/app-splash.png",
     "scheme": "com.crosscare.tech",
@@ -94,9 +94,9 @@
         "origin": false
       },
       "eas": {
-        "projectId": "8bd53f19-424a-4f0e-9884-0ba5f660490f"
+        "projectId": "5db0fad2-5b84-466e-a322-46415afcd371"
       }
     },
-    "owner": "crosscare"
+    "owner": "crosscaretech"
   }
 }
