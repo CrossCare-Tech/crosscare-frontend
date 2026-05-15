@@ -1997,6 +1997,20 @@ export default function askdoula() {
           </View>
         )}
 
+        {/* Medical sources disclaimer banner — required by Apple guideline 1.4.1 */}
+        <TouchableOpacity
+          onPress={() => router.push("/patient/profile-setting/citations")}
+          style={styles.sourcesBanner}
+          accessibilityRole="link"
+          accessibilityLabel="View medical sources and citations"
+        >
+          <Ionicons name="information-circle-outline" size={16} color="#87247D" />
+          <Text style={styles.sourcesBannerText}>
+            Medical information — tap to view trusted sources
+          </Text>
+          <Ionicons name="chevron-forward" size={14} color="#87247D" />
+        </TouchableOpacity>
+
         {/* Chat Container */}
         <ScrollView
           ref={scrollViewRef}
@@ -2351,6 +2365,24 @@ const styles = StyleSheet.create({
   },
   chatContainer: {
     flex: 1,
+  },
+  sourcesBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FBE8F6",
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 4,
+    borderRadius: 10,
+    gap: 8,
+  },
+  sourcesBannerText: {
+    flex: 1,
+    fontSize: 12,
+    fontFamily: "DMSans500",
+    color: "#87247D",
   },
   chatContent: {
     flexGrow: 1,
