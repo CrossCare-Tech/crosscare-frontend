@@ -28,7 +28,7 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.crosscare.tech",
-      "versionCode": 5,
+      "versionCode": 10,
       "permissions": [
         "RECORD_AUDIO",
         "INTERNET",
