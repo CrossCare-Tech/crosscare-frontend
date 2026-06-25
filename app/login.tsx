@@ -286,6 +286,7 @@ const LoginContent: FC = () => {
           </View>
         </View>
         <Pressable onPress={() => Linking.openURL("https://crosscaretech.com/privacy-policy")}>
+          <Text style={styles.footerText}>DISCLAIMER: CrossCare Concierge is not a medical device and does not diagnose, treat, cure, or prevent any medical condition. Please consult a healthcare professional for medical advice, diagnosis, or treatment.</Text>
           <Text style={styles.footerText}>
             Terms & Conditions | Privacy Policy | Contact Us
           </Text>
