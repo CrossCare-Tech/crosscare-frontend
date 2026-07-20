@@ -27,7 +27,7 @@
         "foregroundImage": "./assets/images/app-splash.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.crosscaretech.concierge",
+      "package": "com.crosscaretech.v2",
       "permissions": [
         "RECORD_AUDIO",
         "INTERNET",
