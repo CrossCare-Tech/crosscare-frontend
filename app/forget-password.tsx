@@ -18,6 +18,7 @@ import { Feather } from "@expo/vector-icons";
 import { CONFIG } from "@/constants/config";
 import { Theme } from "@/constants/theme";
 import AuthTopBar from "@/components/ui/AuthTopBar";
+import AuthSuccess from "@/components/ui/AuthSuccess";
 import OtpInput from "@/components/ui/OtpInput";
 
 const ForgetScreen: FC = () => {
@@ -30,6 +31,7 @@ const ForgetScreen: FC = () => {
   const [passwordError, setPasswordError] = useState("");
   const [confirmError, setConfirmError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [resetDone, setResetDone] = useState(false);
   const [step, setStep] = useState(1); // 1: email, 2: verification code, 3: new password
 
   const navigation = useNavigation();
@@ -120,9 +122,7 @@ const ForgetScreen: FC = () => {
         throw new Error(data.message || "Failed to reset password");
       }
 
-      Alert.alert("Success", "Your password has been reset successfully.", [
-        { text: "Log in", onPress: () => router.push("/login") },
-      ]);
+      setResetDone(true);
     } catch (error: any) {
       if (/otp/i.test(error.message || "")) {
         // Wrong or expired code: send the user back to fix it.
@@ -135,6 +135,17 @@ const ForgetScreen: FC = () => {
       setLoading(false);
     }
   };
+
+  if (resetDone) {
+    return (
+      <AuthSuccess
+        title="Password updated"
+        message="Your password has been reset. Log in with your new password."
+        buttonLabel="Log in"
+        onPress={() => router.replace("/login")}
+      />
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
