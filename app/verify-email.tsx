@@ -18,6 +18,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { CONFIG } from "@/constants/config";
 import { Theme } from "@/constants/theme";
 import AuthTopBar from "@/components/ui/AuthTopBar";
+import AuthSuccess from "@/components/ui/AuthSuccess";
 import OtpInput from "@/components/ui/OtpInput";
 
 const officialLogo = require("@/assets/logo/logo-full.png");
@@ -34,6 +35,7 @@ const formatCountdown = (seconds: number) =>
 const VerifyEmail: FC = () => {
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
+  const [verified, setVerified] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
   const [countdown, setCountdown] = useState(0);
   const navigation = useNavigation();
@@ -87,16 +89,7 @@ const VerifyEmail: FC = () => {
         throw new Error(data.message || "Verification failed");
       }
 
-      Alert.alert(
-        "Email Verified",
-        "Your email has been verified successfully. You can now log in.",
-        [
-          {
-            text: "Log in",
-            onPress: () => router.replace("/login"),
-          },
-        ]
-      );
+      setVerified(true);
     } catch (error: any) {
       Alert.alert("Verification Failed", error.message || "Invalid verification code");
       if (error.message?.includes("OTP")) {
@@ -151,6 +144,17 @@ const VerifyEmail: FC = () => {
       setOtpError("");
     }
   };
+
+  if (verified) {
+    return (
+      <AuthSuccess
+        title="Email verified"
+        message="Your email has been verified. You can now log in."
+        buttonLabel="Log in"
+        onPress={() => router.replace("/login")}
+      />
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
