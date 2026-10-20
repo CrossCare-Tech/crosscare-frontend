@@ -19,6 +19,7 @@ import { Theme } from "@/constants/theme";
 import AuthTopBar from "@/components/ui/AuthTopBar";
 import AuthSuccess from "@/components/ui/AuthSuccess";
 import { useAuthDialog } from "@/components/ui/AuthDialog";
+import InlineNotice, { Notice } from "@/components/ui/InlineNotice";
 import OtpInput from "@/components/ui/OtpInput";
 
 const ForgetScreen: FC = () => {
@@ -37,6 +38,7 @@ const ForgetScreen: FC = () => {
   const navigation = useNavigation();
   const router = useRouter();
   const { dialog, show } = useAuthDialog();
+  const [notice, setNotice] = useState<Notice>(null);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -50,6 +52,7 @@ const ForgetScreen: FC = () => {
       return;
     }
 
+    setNotice(null);
     setLoading(true);
     try {
       const response = await fetch(`${CONFIG.API_BASE_URL}/forgot-password`, {
@@ -77,11 +80,15 @@ const ForgetScreen: FC = () => {
         setStep(2);
       }
     } catch (error: any) {
-      show({
-        title: "Could not send code",
-        message: error.message || "Failed to send code",
-        variant: "error",
-      });
+      if (isResend) {
+        setNotice({
+          variant: "error",
+          message: error.message || "Could not resend the code",
+        });
+      } else {
+        // e.g. "User not found": shown under the email field.
+        setEmailError(error.message || "Failed to send code");
+      }
     } finally {
       setLoading(false);
     }
@@ -112,6 +119,7 @@ const ForgetScreen: FC = () => {
       return;
     }
 
+    setNotice(null);
     setLoading(true);
     try {
       const response = await fetch(`${CONFIG.API_BASE_URL}/reset-password`, {
@@ -138,10 +146,9 @@ const ForgetScreen: FC = () => {
         setOtpError(error.message);
         setStep(2);
       } else {
-        show({
-          title: "Could not reset password",
-          message: error.message || "Failed to reset password",
+        setNotice({
           variant: "error",
+          message: error.message || "Failed to reset password",
         });
       }
     } finally {
@@ -274,6 +281,8 @@ const ForgetScreen: FC = () => {
                 />
               </>
             )}
+
+            <InlineNotice notice={notice} />
 
             {/* Botão de Ação */}
             <TouchableOpacity
