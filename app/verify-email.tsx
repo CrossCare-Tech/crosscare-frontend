@@ -1,6 +1,5 @@
 import React, { FC, useLayoutEffect, useState, useEffect } from "react";
 import {
-  Alert,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -19,6 +18,7 @@ import { CONFIG } from "@/constants/config";
 import { Theme } from "@/constants/theme";
 import AuthTopBar from "@/components/ui/AuthTopBar";
 import AuthSuccess from "@/components/ui/AuthSuccess";
+import { useAuthDialog } from "@/components/ui/AuthDialog";
 import OtpInput from "@/components/ui/OtpInput";
 
 const officialLogo = require("@/assets/logo/logo-full.png");
@@ -40,6 +40,7 @@ const VerifyEmail: FC = () => {
   const [countdown, setCountdown] = useState(0);
   const navigation = useNavigation();
   const router = useRouter();
+  const { dialog, show } = useAuthDialog();
   const params = useLocalSearchParams();
   const email = (params.email as string) || "";
 
@@ -91,9 +92,15 @@ const VerifyEmail: FC = () => {
 
       setVerified(true);
     } catch (error: any) {
-      Alert.alert("Verification Failed", error.message || "Invalid verification code");
-      if (error.message?.includes("OTP")) {
+      if (/otp/i.test(error.message || "")) {
+        // Wrong or expired code: the red boxes and the message below are enough.
         setOtpError(error.message);
+      } else {
+        show({
+          title: "Verification Failed",
+          message: error.message || "Something went wrong. Please try again.",
+          variant: "error",
+        });
       }
     } finally {
       setLoading(false);
@@ -102,7 +109,11 @@ const VerifyEmail: FC = () => {
 
   const handleResendOTP = async () => {
     if (!email) {
-      Alert.alert("Error", "Missing email address for resending code.");
+      show({
+        title: "Missing email",
+        message: "Missing email address for resending code.",
+        variant: "error",
+      });
       return;
     }
 
@@ -126,12 +137,20 @@ const VerifyEmail: FC = () => {
         throw new Error(data.message || "Failed to resend code");
       }
 
-      Alert.alert("Code Resent", "A new verification code has been sent to your email.");
+      show({
+        title: "Code Resent",
+        message: "A new verification code has been sent to your email.",
+        variant: "success",
+      });
       setCountdown(60);
       setOtp("");
       setOtpError("");
     } catch (error: any) {
-      Alert.alert("Error", error.message || "Could not resend code");
+      show({
+        title: "Could not resend code",
+        message: error.message || "Could not resend code",
+        variant: "error",
+      });
     } finally {
       setResendLoading(false);
     }
@@ -247,6 +266,7 @@ const VerifyEmail: FC = () => {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+      {dialog}
     </SafeAreaView>
   );
 };
