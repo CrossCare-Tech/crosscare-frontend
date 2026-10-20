@@ -10,15 +10,26 @@ import {
   Platform,
   Image,
   Pressable,
-  Linking
+  Linking,
+  ScrollView,
 } from "react-native";
 import { useNavigation, useRouter, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import LogoSvg from "@/assets/images/Svg/LogoSvg";
-import { LinearGradient } from "expo-linear-gradient";
-import CustomTextInput from "@/components/ui/CustomTextInput";
 import { CONFIG } from "@/constants/config";
-import appLogo from "@/assets/images/Svg/appLogo.png"
+import { Theme } from "@/constants/theme";
+import AuthTopBar from "@/components/ui/AuthTopBar";
+import OtpInput from "@/components/ui/OtpInput";
+
+const officialLogo = require("@/assets/logo/logo-full.png");
+
+const maskEmail = (value: string) => {
+  const [local, domain] = value.split("@");
+  if (!domain || local.length < 2) return value;
+  return `${local[0]}***${local[local.length - 1]}@${domain}`;
+};
+
+const formatCountdown = (seconds: number) =>
+  `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
 
 const VerifyEmail: FC = () => {
   const [otp, setOtp] = useState("");
@@ -28,7 +39,7 @@ const VerifyEmail: FC = () => {
   const navigation = useNavigation();
   const router = useRouter();
   const params = useLocalSearchParams();
-  const email = params.email as string;
+  const email = (params.email as string) || "";
 
   const [otpError, setOtpError] = useState("");
 
@@ -38,7 +49,6 @@ const VerifyEmail: FC = () => {
     });
   }, [navigation]);
 
-  // Countdown timer for resend button
   useEffect(() => {
     if (countdown > 0) {
       const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
@@ -66,31 +76,30 @@ const VerifyEmail: FC = () => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          email: email,
+          email: email.toLowerCase().trim(),
           otp: otp.trim(),
         }),
       });
 
       const data = await response.json();
-      console.log("This is the verify data", data);
 
       if (!response.ok) {
         throw new Error(data.message || "Verification failed");
       }
 
       Alert.alert(
-        "Success!",
-        "Your email has been verified successfully. You can now login.",
+        "Email Verified",
+        "Your email has been verified successfully. You can now log in.",
         [
           {
-            text: "Login",
+            text: "Log in",
             onPress: () => router.replace("/login"),
           },
         ]
       );
     } catch (error: any) {
-      Alert.alert("Verification Failed", error.message);
-      if (error.message.includes("OTP")) {
+      Alert.alert("Verification Failed", error.message || "Invalid verification code");
+      if (error.message?.includes("OTP")) {
         setOtpError(error.message);
       }
     } finally {
@@ -99,6 +108,11 @@ const VerifyEmail: FC = () => {
   };
 
   const handleResendOTP = async () => {
+    if (!email) {
+      Alert.alert("Error", "Missing email address for resending code.");
+      return;
+    }
+
     setResendLoading(true);
 
     try {
@@ -114,25 +128,23 @@ const VerifyEmail: FC = () => {
       );
 
       const data = await response.json();
-      console.log("This is the resend data", data);
 
       if (!response.ok) {
         throw new Error(data.message || "Failed to resend code");
       }
 
-      Alert.alert("Success", "New verification code sent to your email");
-      setCountdown(60); // 60 second countdown
-      setOtp(""); // Clear current OTP
+      Alert.alert("Code Resent", "A new verification code has been sent to your email.");
+      setCountdown(60);
+      setOtp("");
       setOtpError("");
     } catch (error: any) {
-      Alert.alert("Error", error.message);
+      Alert.alert("Error", error.message || "Could not resend code");
     } finally {
       setResendLoading(false);
     }
   };
 
   const handleChangeOTP = (text: string) => {
-    // Only allow numbers and limit to 6 digits
     const numericText = text.replace(/[^0-9]/g, "").slice(0, 6);
     setOtp(numericText);
     if (otpError) {
@@ -144,185 +156,196 @@ const VerifyEmail: FC = () => {
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
         style={styles.container}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <View style={styles.headerContainer}>
-          <View style={styles.logoContainer}>
-            <Image source={appLogo} style={{ width: 100, height: 100 }} resizeMode="contain" />
+        <AuthTopBar
+          title="Verify email"
+        />
+
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Header com Logo */}
+          <View style={styles.header}>
+            <Image
+              source={officialLogo}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+            <Text style={styles.title}>Verify your email</Text>
+            <Text style={styles.subtitle}>
+              Enter the 6-digit code sent to{"\n"}
+              <Text style={styles.emailHighlight}>
+                {email ? maskEmail(email) : "your email"}
+              </Text>
+            </Text>
           </View>
 
-          <Text style={styles.title}>Verify Your Email</Text>
-
-          <Text style={styles.subtitle}>
-            We've sent a 6-digit verification code to{"\n"}
-            <Text style={styles.emailText}>{email}</Text>
-          </Text>
-
-          <View style={styles.formContainer}>
-            <CustomTextInput
-              type="number"
-              placeholder="Enter 6-digit code"
-              icon="key"
+          {/* Form */}
+          <View style={styles.form}>
+            <OtpInput
               value={otp}
               onChangeText={handleChangeOTP}
-              errorMessage={otpError}
-              maxLength={6}
-              keyboardType="numeric"
+              hasError={!!otpError}
             />
+            {otpError ? <Text style={styles.otpError}>{otpError}</Text> : null}
 
+            {/* Botão de Verificação */}
             <TouchableOpacity
-              style={styles.button}
+              style={styles.verifyButton}
               onPress={handleVerifyOTP}
               disabled={loading}
+              activeOpacity={0.88}
             >
-              <LinearGradient
-                colors={["#EF99D9", "#E35ABB"]}
-                start={{
-                  x: Math.cos((117 * Math.PI) / 180),
-                  y: Math.sin((117 * Math.PI) / 180),
-                }}
-                end={{
-                  x: Math.cos(((117 + 180) * Math.PI) / 180),
-                  y: Math.sin(((117 + 180) * Math.PI) / 180),
-                }}
-                style={styles.gradient}
-              >
-                {loading ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text style={styles.buttonText}>Verify Email</Text>
-                )}
-              </LinearGradient>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.resendContainer}>
-            <Text style={styles.resendText}>Didn't receive the code?</Text>
-            <TouchableOpacity
-              onPress={handleResendOTP}
-              disabled={countdown > 0 || resendLoading}
-              style={styles.resendButton}
-            >
-              {resendLoading ? (
-                <ActivityIndicator size="small" color="#E05FA0" />
+              {loading ? (
+                <ActivityIndicator color="#FFFFFF" />
               ) : (
-                <Text
-                  style={[
-                    styles.resendLink,
-                    countdown > 0 && styles.disabledLink,
-                  ]}
-                >
-                  {countdown > 0 ? `Resend in ${countdown}s` : "Resend Code"}
-                </Text>
+                <Text style={styles.verifyButtonText}>Verify</Text>
               )}
             </TouchableOpacity>
-          </View>
-        </View>
 
-        <Pressable onPress={() => Linking.openURL("https://crosscaretech.com/privacy-policy")}>
-          <Text style={styles.footerText}>
-            Terms & Conditions | Privacy Policy | Contact Us
-          </Text>
-        </Pressable>
+            {/* Reenvio */}
+            <View style={styles.resendContainer}>
+              <Text style={styles.resendPrompt}>Didn&apos;t receive the code? </Text>
+              <TouchableOpacity
+                onPress={handleResendOTP}
+                disabled={countdown > 0 || resendLoading}
+              >
+                {resendLoading ? (
+                  <ActivityIndicator size="small" color={Theme.colors.magenta} />
+                ) : (
+                  <Text
+                    style={[
+                      styles.resendLink,
+                      countdown > 0 && styles.resendLinkDisabled,
+                    ]}
+                  >
+                    {countdown > 0 ? `Resend code in ${formatCountdown(countdown)}` : "Resend code"}
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Footer */}
+          <View style={styles.footer}>
+            <Pressable
+              onPress={() =>
+                Linking.openURL("https://crosscaretech.com/privacy-policy")
+              }
+            >
+              <Text style={styles.footerText}>
+                Terms & Conditions • Privacy Policy • Contact Us
+              </Text>
+            </Pressable>
+          </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
 
+export default VerifyEmail;
+
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: Theme.colors.bg,
   },
   container: {
     flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
     justifyContent: "space-between",
-    paddingHorizontal: 40,
-    backgroundColor: "#fff",
+    paddingHorizontal: 28,
+    paddingTop: 24,
+    paddingBottom: 20,
   },
-  headerContainer: {
-    flex: 1,
-    justifyContent: "center",
-    marginTop: 40,
-  },
-  logoContainer: {
+  header: {
     alignItems: "center",
+    marginTop: 8,
+    marginBottom: 28,
+  },
+  logo: {
+    width: 200,
+    height: 64,
+    marginBottom: 16,
   },
   title: {
-    fontSize: 18,
+    fontSize: 24,
+    fontFamily: Theme.typography.display,
+    color: Theme.colors.ink,
+    marginBottom: 6,
     textAlign: "center",
-    fontFamily: "DMSans500",
-    color: "#545454",
-    marginTop: 20,
+    letterSpacing: -0.3,
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 13.5,
+    fontFamily: Theme.typography.body,
+    color: Theme.colors.inkSoft,
     textAlign: "center",
-    fontFamily: "DMSans400",
-    color: "#8A8A8A",
-    marginTop: 20,
     lineHeight: 20,
   },
-  emailText: {
-    fontFamily: "DMSans500",
-    color: "#E05FA0",
+  emailHighlight: {
+    fontFamily: Theme.typography.heading,
+    color: Theme.colors.magenta,
   },
-  formContainer: {
+  form: {
     width: "100%",
-    marginTop: 40,
-    flexDirection: "column",
-    gap: 20,
+    gap: 18,
   },
-  button: {
-    backgroundColor: "#87247D",
+  verifyButton: {
+    backgroundColor: Theme.colors.magenta,
+    height: 52,
+    borderRadius: Theme.borderRadius.sm,
     justifyContent: "center",
     alignItems: "center",
-    borderRadius: 8,
+    marginTop: 8,
+    ...Theme.shadows.card,
   },
-  gradient: {
-    paddingVertical: 14,
-    paddingHorizontal: 12,
-    width: "100%",
-    justifyContent: "center",
-    alignItems: "center",
-    borderRadius: 8,
-  },
-  buttonText: {
-    fontSize: 20,
-    color: "#fff",
+  verifyButtonText: {
+    fontSize: 16,
+    fontFamily: Theme.typography.heading,
+    color: "#FFFFFF",
     letterSpacing: 0.2,
-    fontFamily: "DMSans600",
+  },
+  otpError: {
+    textAlign: "center",
+    fontSize: 12,
+    fontFamily: Theme.typography.body,
+    color: Theme.colors.danger,
+    marginTop: -6,
   },
   resendContainer: {
-    marginTop: 30,
+    flexDirection: "row",
+    justifyContent: "center",
     alignItems: "center",
-  },
-  resendText: {
-    fontSize: 14,
-    color: "#8A8A8A",
-    fontFamily: "DMSans400",
-    textAlign: "center",
-  },
-  resendButton: {
     marginTop: 8,
   },
-  resendLink: {
-    fontFamily: "DMSans500",
-    color: "#E05FA0",
-    textDecorationLine: "underline",
-    fontSize: 14,
+  resendPrompt: {
+    fontSize: 13.5,
+    fontFamily: Theme.typography.body,
+    color: Theme.colors.inkSoft,
   },
-  disabledLink: {
-    color: "#CCCCCC",
-    textDecorationLine: "none",
+  resendLink: {
+    fontSize: 13.5,
+    fontFamily: Theme.typography.heading,
+    color: Theme.colors.magenta,
+  },
+  resendLinkDisabled: {
+    color: Theme.colors.inkFaint,
+  },
+  footer: {
+    marginTop: 32,
+    alignItems: "center",
   },
   footerText: {
     textAlign: "center",
-    fontFamily: "DMSans400",
-    fontSize: 12,
-    color: "#545454",
-    paddingBottom: 20,
+    fontFamily: Theme.typography.caption,
+    fontSize: 11,
+    color: Theme.colors.inkFaint,
   },
 });
-
-export default VerifyEmail;
