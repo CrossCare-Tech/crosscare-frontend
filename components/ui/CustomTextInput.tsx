@@ -1,18 +1,25 @@
-import { Colors } from '@/constants/Colors';
-import { fontSize, height, width } from '@/constants/helper';
-import { Feather } from '@expo/vector-icons';
 import React, { useState } from 'react';
-import { TextInputProps, TextInput, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-
+import {
+  TextInputProps,
+  TextInput,
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+} from 'react-native';
+import { Feather } from '@expo/vector-icons';
+import { Theme } from '@/constants/theme';
 
 interface CustomTextInputProps extends TextInputProps {
-  icon: string;
+  icon?: string;
   value: string;
   onChangeText: (text: string) => void;
   placeholder: string;
   secureTextEntry?: boolean;
-  type: 'email' | 'password' | 'username'| 'number' | 'phone'; // Add phone type
+  type?: 'email' | 'password' | 'username' | 'number' | 'phone';
   errorMessage?: string;
+  label?: string;
+  isValid?: boolean;
 }
 
 const CustomTextInput: React.FC<CustomTextInputProps> = ({
@@ -23,85 +30,128 @@ const CustomTextInput: React.FC<CustomTextInputProps> = ({
   secureTextEntry = false,
   type,
   errorMessage,
+  label,
+  isValid = false,
   ...props
 }) => {
   const [showPassword, setShowPassword] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
 
-  // Toggle password visibility
   const handlePasswordVisibility = () => {
-    setShowPassword(prevState => !prevState);
+    setShowPassword((prevState) => !prevState);
   };
+
+  const hasError = !!errorMessage;
 
   return (
     <View style={styles.container}>
-      <View style={styles.inputContainer}>
-        {/* Icon */}
-        <Feather name={icon as any} size={16} color="#8A8A8A" style={styles.icon} />
-        {/* TextInput */}
+      {label && <Text style={styles.label}>{label}</Text>}
+      <View
+        style={[
+          styles.inputContainer,
+          isFocused && styles.inputFocused,
+          isValid && !hasError && styles.inputValid,
+          hasError && styles.inputError,
+        ]}
+      >
+        {icon && (
+          <Feather
+            name={icon as any}
+            size={18}
+            color={hasError ? Theme.colors.danger : isFocused ? Theme.colors.magenta : Theme.colors.inkFaint}
+            style={styles.icon}
+          />
+        )}
         <TextInput
           {...props}
           style={styles.input}
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
+          placeholderTextColor={Theme.colors.placeholder}
           secureTextEntry={secureTextEntry && !showPassword}
-          placeholderTextColor="#B0B0B0"
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
         />
-        {/* Show/Hide Password Button */}
         {type === 'password' && (
-          <TouchableOpacity onPress={handlePasswordVisibility}>
+          <TouchableOpacity
+            onPress={handlePasswordVisibility}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            style={styles.actionIcon}
+            accessibilityRole="button"
+            accessibilityLabel={showPassword ? "Hide password" : "Show password"}
+          >
             <Feather
               name={showPassword ? 'eye-off' : 'eye'}
               size={18}
-              color='#B0B0B0'
-              style={styles.eyeIcon}
+              color={Theme.colors.inkFaint}
             />
           </TouchableOpacity>
         )}
+        {isValid && !hasError && type !== 'password' && (
+          <View style={styles.actionIcon}>
+            <Feather name="check" size={18} color={Theme.colors.success} />
+          </View>
+        )}
       </View>
-      {/* Error message */}
-      {errorMessage && <Text style={styles.errorMessage}>{errorMessage}</Text>}
+      {hasError && <Text style={styles.errorMessage}>{errorMessage}</Text>}
     </View>
   );
 };
 
-// Styles for the component
 const styles = StyleSheet.create({
   container: {
-    // marginVertical: 10,
+    width: '100%',
+  },
+  label: {
+    fontSize: 12.5,
+    fontFamily: Theme.typography.heading,
+    color: Theme.colors.inkSoft,
+    marginBottom: 7,
+    letterSpacing: -0.1,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E8E8E8',
-    borderRadius: 8,
+    backgroundColor: Theme.colors.inputBg,
+    borderWidth: 1.5,
+    borderColor: Theme.colors.inputBorder,
+    borderRadius: Theme.borderRadius.sm,
     paddingHorizontal: 16,
-    // paddingVertical:16,
-    // padding:14,
-    height: 56,
+    height: 52,
     width: '100%',
+  },
+  inputFocused: {
+    borderColor: Theme.colors.magenta,
+    backgroundColor: Theme.colors.surface,
+  },
+  inputValid: {
+    borderColor: Theme.colors.success,
+  },
+  inputError: {
+    borderColor: Theme.colors.danger,
   },
   icon: {
     marginRight: 10,
   },
   input: {
     flex: 1,
-    // height: '100%',
-    // marginTop: 7,
-    fontSize: 16,
-    color: '#000',
-    fontFamily: 'DMSans400',
+    fontSize: 15,
+    color: Theme.colors.ink,
+    fontFamily: Theme.typography.body,
+    height: '100%',
   },
-  eyeIcon: {
-    marginLeft:  10,
-    marginTop: 7,
+  actionIcon: {
+    marginLeft: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   errorMessage: {
-    color: 'red',
-    fontSize:width * 12,
-    marginTop: 2,
-    fontFamily: 'DMSans400',
+    color: Theme.colors.danger,
+    fontSize: 12,
+    marginTop: 4,
+    fontFamily: Theme.typography.body,
+    paddingHorizontal: 2,
   },
 });
 

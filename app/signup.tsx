@@ -1,59 +1,51 @@
 import React, { FC, useLayoutEffect, useState } from "react";
 import {
-  Alert,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   Linking,
   View,
-  StatusBar,
   ScrollView,
-  Dimensions,
-  Image,
-  Pressable,
-  Modal
+  Modal,
 } from "react-native";
-import { supabase } from "@/supabase/supabase";
 import { useNavigation } from "@react-navigation/native";
 import { useRouter } from "expo-router";
-import { makeRedirectUri } from "expo-auth-session";
-import { fontSize, height, width } from "@/constants/helper";
 import CustomTextInput from "@/components/ui/CustomTextInput";
-import LogoSvg from "@/assets/images/Svg/LogoSvg";
-import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { FontAwesome5 } from "@expo/vector-icons";
+import { Feather } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { CONFIG } from "@/constants/config";
-import appLogo from "@/assets/images/Svg/appLogo.png"
-
-const screenHeight = Dimensions.get("window").height;
+import { Theme } from "@/constants/theme";
+import { useAuthDialog } from "@/components/ui/AuthDialog";
+import InlineNotice, { Notice } from "@/components/ui/InlineNotice";
+import AuthTopBar from "@/components/ui/AuthTopBar";
 
 const SignUp: FC = () => {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [dateOfBirth, setDateOfBirth] = useState(new Date());
+  const [dateOfBirth, setDateOfBirth] = useState<Date | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [email, setEmail] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [password, setPassword] = useState("");
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [role, setRole] = useState("patient");
   const navigation = useNavigation();
   const router = useRouter();
+  const { dialog, show } = useAuthDialog();
+  const [notice, setNotice] = useState<Notice>(null);
+
+  // Estados de erro
   const [emailError, setEmailError] = useState("");
   const [phoneNumberError, setPhoneNumberError] = useState("");
   const [passwordError, setPasswordError] = useState("");
-  const redirectTo = makeRedirectUri();
-
-  // Error states
   const [firstNameError, setFirstNameError] = useState("");
   const [lastNameError, setLastNameError] = useState("");
   const [dobError, setDobError] = useState("");
+  const [termsError, setTermsError] = useState("");
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -61,13 +53,11 @@ const SignUp: FC = () => {
     });
   }, [navigation]);
 
-  const openEmail = () => {
-    Linking.openURL("mailto:");
-  };
+  // Opens on a plausible birth year instead of today.
+  const pickerDate = dateOfBirth ?? new Date(new Date().getFullYear() - 28, 0, 1);
 
   const handleDateChange = (event: any, selectedDate?: Date) => {
     if (Platform.OS === "ios") {
-      // For iOS, we keep the modal open until user confirms
       if (selectedDate) {
         setDateOfBirth(selectedDate);
         if (dobError) {
@@ -75,9 +65,8 @@ const SignUp: FC = () => {
         }
       }
     } else {
-      // For Android, close the picker immediately
       setShowDatePicker(false);
-      if (selectedDate) {
+      if (event?.type === "set" && selectedDate) {
         setDateOfBirth(selectedDate);
         if (dobError) {
           setDobError("");
@@ -97,7 +86,7 @@ const SignUp: FC = () => {
   const formatDate = (date: Date) => {
     return date.toLocaleDateString("en-US", {
       year: "numeric",
-      month: "long",
+      month: "short",
       day: "numeric",
     });
   };
@@ -118,49 +107,46 @@ const SignUp: FC = () => {
 
   const handleSignUp = async () => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/; // Basic international phone number regex
-    const newError: any = {};
+    let isValid = true;
 
-    // Validation
     if (!firstName.trim()) {
-      newError.firstName = "First name is required.";
+      setFirstNameError("First name is required");
+      isValid = false;
     }
-
     if (!lastName.trim()) {
-      newError.lastName = "Last name is required.";
+      setLastNameError("Last name is required");
+      isValid = false;
+    }
+    if (!email.trim() || !emailRegex.test(email.trim())) {
+      setEmailError("Please enter a valid email address");
+      isValid = false;
+    }
+    if (phoneNumber.replace(/\D/g, "").length < 7) {
+      setPhoneNumberError("Please enter a valid phone number");
+      isValid = false;
+    }
+    if (!password || password.length < 8 || !/\d/.test(password)) {
+      setPasswordError("Use 8+ characters with at least one number");
+      isValid = false;
+    }
+    if (!agreedToTerms) {
+      setTermsError("You must agree to the Terms of Service to continue");
+      isValid = false;
+    } else {
+      setTermsError("");
     }
 
-    const age = validateAge(dateOfBirth);
-    if (age < 13) {
-      newError.dob = "You must be at least 13 years old to sign up.";
+    if (!dateOfBirth) {
+      setDobError("Please select your date of birth");
+      isValid = false;
+    } else if (validateAge(dateOfBirth) < 18) {
+      setDobError("You must be at least 18 years old to register");
+      isValid = false;
     }
 
-    if (!email) {
-      newError.email = "Email is required.";
-    } else if (!emailRegex.test(email)) {
-      newError.email = "Invalid email format.";
-    }
+    if (!isValid) return;
 
-    if (phoneNumber && !phoneRegex.test(phoneNumber.replace(/\s/g, ""))) {
-      newError.phoneNumber = "Invalid phone number format.";
-    }
-
-    if (!password) {
-      newError.password = "Password is required.";
-    } else if (password.length < 6) {
-      newError.password = "Password must be at least 6 characters long.";
-    }
-
-    if (Object.keys(newError).length > 0) {
-      setFirstNameError(newError.firstName || "");
-      setLastNameError(newError.lastName || "");
-      setDobError(newError.dob || "");
-      setEmailError(newError.email || "");
-      setPhoneNumberError(newError.phoneNumber || "");
-      setPasswordError(newError.password || "");
-      return;
-    }
-
+    setNotice(null);
     setLoading(true);
 
     try {
@@ -172,29 +158,42 @@ const SignUp: FC = () => {
         body: JSON.stringify({
           firstName: firstName.trim(),
           lastName: lastName.trim(),
-          dateOfBirth: dateOfBirth.toISOString(),
           email: email.toLowerCase().trim(),
-          phoneNumber: phoneNumber.trim() || null,
+          phoneNumber: phoneNumber.trim(),
           password: password,
+          dateOfBirth: dateOfBirth!.toISOString().split("T")[0],
+          role: "patient",
         }),
       });
 
       const data = await response.json();
-      console.log("This is the signup data", data);
+
       if (!response.ok) {
-        throw new Error(data.message || "Signup failed");
+        throw new Error(data.message || "Registration failed");
       }
 
-      // Navigate to email verification screen
-      router.push({
-        pathname: "/verify-email",
-        params: { email: email.toLowerCase().trim() },
+      show({
+        title: "Verification Email Sent",
+        message:
+          "We've sent a 6-digit verification code to your email. Please verify to continue.",
+        variant: "success",
+        buttons: [
+          {
+            text: "Verify Now",
+            onPress: () =>
+              router.push({
+                pathname: "/verify-email",
+                params: { email: email.toLowerCase().trim() },
+              }),
+          },
+        ],
       });
     } catch (error: any) {
-      Alert.alert("Signup Failed", error.message);
-      console.log(JSON.stringify(error, null, 2));
-      if (error.message.includes("email")) {
-        setEmailError("Email already exists or is invalid");
+      const message = error.message || "Something went wrong.";
+      if (/email/i.test(message)) {
+        setEmailError(message);
+      } else {
+        setNotice({ variant: "error", message });
       }
     } finally {
       setLoading(false);
@@ -203,185 +202,221 @@ const SignUp: FC = () => {
 
   const handleChangeFirstName = (text: string) => {
     setFirstName(text);
-    if (firstNameError) {
-      setFirstNameError("");
-    }
+    if (firstNameError) setFirstNameError("");
   };
 
   const handleChangeLastName = (text: string) => {
     setLastName(text);
-    if (lastNameError) {
-      setLastNameError("");
-    }
+    if (lastNameError) setLastNameError("");
   };
 
   const handleChangeEmail = (text: string) => {
     setEmail(text);
-    if (emailError) {
-      setEmailError("");
-    }
+    if (emailError) setEmailError("");
   };
 
   const handleChangePhoneNumber = (text: string) => {
     setPhoneNumber(text);
-    if (phoneNumberError) {
-      setPhoneNumberError("");
-    }
+    if (phoneNumberError) setPhoneNumberError("");
   };
 
   const handleChangePassword = (text: string) => {
     setPassword(text);
-    if (passwordError) {
-      setPasswordError("");
-    }
+    if (passwordError) setPasswordError("");
   };
 
   return (
-    <SafeAreaView
-      style={{
-        flex: 1,
-        backgroundColor: "#fff",
-      }}
-    >
+    <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
         style={styles.container}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
+        <AuthTopBar
+          title="Sign up"
+        />
+
         <ScrollView
-          contentContainerStyle={styles.scrollContainer}
+          contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
-          <View style={styles.headerContainer}>
-            <View style={styles.logoContainer}>
-              <Image source={appLogo} style={{ width: 100, height: 100 }} resizeMode="contain" />
-            </View>
-            <Text style={styles.title}>Create Your Account</Text>
+          {/* Header */}
+          <View style={styles.header}>
+            <Text style={styles.title}>Create your account</Text>
+            <Text style={styles.subtitle}>Takes about two minutes.</Text>
+          </View>
 
-            <View style={styles.formContainer}>
-              {/* First Name */}
-              <CustomTextInput
-                icon="user"
-                type="username"
-                value={firstName}
-                onChangeText={handleChangeFirstName}
-                placeholder="First Name"
-                errorMessage={firstNameError}
-              />
-
-              {/* Last Name */}
-              <CustomTextInput
-                icon="user"
-                type="username"
-                value={lastName}
-                onChangeText={handleChangeLastName}
-                placeholder="Last Name"
-                errorMessage={lastNameError}
-              />
-
-              {/* Date of Birth */}
-              <View style={styles.inputContainer}>
-                <TouchableOpacity
-                  style={[
-                    styles.dateInput,
-                    dobError ? styles.errorInput : null,
-                  ]}
-                  onPress={() => setShowDatePicker(true)}
-                >
-                  <FontAwesome5
-                    name="calendar"
-                    size={16}
-                    color="#777"
-                    style={styles.dateIcon}
-                  />
-                  <Text
-                    style={[
-                      styles.dateText,
-                      !dateOfBirth && styles.placeholderText,
-                    ]}
-                  >
-                    {formatDate(dateOfBirth)}
-                  </Text>
-                  <FontAwesome5 name="chevron-down" size={14} color="#777" />
-                </TouchableOpacity>
-                {dobError ? (
-                  <Text style={styles.errorText}>{dobError}</Text>
-                ) : null}
+          {/* Formulário */}
+          <View style={styles.form}>
+            {/* Nome e Sobrenome lado a lado */}
+            <View style={styles.row}>
+              <View style={styles.flexHalf}>
+                <CustomTextInput
+                  label="First name"
+                  type="username"
+                  value={firstName}
+                  onChangeText={handleChangeFirstName}
+                  placeholder="Maya"
+                  errorMessage={firstNameError}
+                />
               </View>
+              <View style={styles.flexHalf}>
+                <CustomTextInput
+                  label="Last name"
+                  type="username"
+                  value={lastName}
+                  onChangeText={handleChangeLastName}
+                  placeholder="Reyes"
+                  errorMessage={lastNameError}
+                />
+              </View>
+            </View>
 
-              {/* Email */}
-              <CustomTextInput
-                icon="envelope"
-                type="email"
-                value={email}
-                onChangeText={handleChangeEmail}
-                placeholder="Email Address"
-                errorMessage={emailError}
-              />
+            {/* Data de Nascimento */}
+            <View style={styles.datePickerContainer}>
+              <Text style={styles.fieldLabel}>Date of birth</Text>
+              <TouchableOpacity
+                style={[
+                  styles.dateInput,
+                  dobError ? styles.dateInputError : null,
+                ]}
+                onPress={() => setShowDatePicker(true)}
+                activeOpacity={0.8}
+              >
+                <Feather
+                  name="calendar"
+                  size={18}
+                  color={dobError ? Theme.colors.danger : Theme.colors.inkFaint}
+                  style={styles.dateIcon}
+                />
+                <Text
+                  style={[styles.dateText, !dateOfBirth && styles.datePlaceholder]}
+                >
+                  {dateOfBirth ? formatDate(dateOfBirth) : "Select date"}
+                </Text>
+                <Feather name="chevron-down" size={16} color={Theme.colors.inkFaint} />
+              </TouchableOpacity>
+              {dobError ? <Text style={styles.errorText}>{dobError}</Text> : null}
+            </View>
 
-              {/* Phone Number */}
-              <CustomTextInput
-                icon="phone"
-                type="phone"
-                value={phoneNumber}
-                onChangeText={handleChangePhoneNumber}
-                placeholder="Phone Number"
-                errorMessage={phoneNumberError}
-              />
+            {/* Email */}
+            <CustomTextInput
+              label="Email"
+              icon="mail"
+              type="email"
+              value={email}
+              isValid={/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())}
+              onChangeText={handleChangeEmail}
+              placeholder="maya.reyes@email.com"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              errorMessage={emailError}
+            />
 
-              {/* Password */}
+            {/* Telefone */}
+            <CustomTextInput
+              label="Phone number"
+              icon="phone"
+              type="phone"
+              value={phoneNumber}
+              onChangeText={handleChangePhoneNumber}
+              placeholder="+1 (555) 019-2834"
+              keyboardType="phone-pad"
+              errorMessage={phoneNumberError}
+            />
+
+            {/* Senha */}
+            <View>
               <CustomTextInput
+                label="Password"
                 icon="lock"
                 type="password"
                 value={password}
                 onChangeText={handleChangePassword}
-                placeholder="Password"
+                placeholder="••••••••"
                 secureTextEntry={true}
                 errorMessage={passwordError}
               />
-
-              {/* Signup Button */}
-              <TouchableOpacity
-                style={styles.button}
-                onPress={handleSignUp}
-                disabled={loading}
-              >
-                <LinearGradient
-                  colors={["#EF99D9", "#E35ABB"]}
-                  start={{
-                    x: Math.cos((117 * Math.PI) / 180),
-                    y: Math.sin((117 * Math.PI) / 180),
-                  }}
-                  end={{
-                    x: Math.cos(((117 + 180) * Math.PI) / 180),
-                    y: Math.sin(((117 + 180) * Math.PI) / 180),
-                  }}
-                  style={styles.gradient}
-                >
-                  {loading ? (
-                    <ActivityIndicator color="#fff" />
-                  ) : (
-                    <Text style={styles.buttonText}>Sign Up</Text>
-                  )}
-                </LinearGradient>
-              </TouchableOpacity>
+              <Text style={styles.helperText}>
+                Use 8+ characters with at least one number.
+              </Text>
             </View>
 
-            {/* Login Link */}
-            <View style={styles.loginLinkContainer}>
-              <Text style={styles.loginText}>
-                Already have an account?{" "}
+            {/* Checkbox de Termos */}
+            <TouchableOpacity
+              style={styles.checkboxRow}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: agreedToTerms }}
+              onPress={() => {
+                setAgreedToTerms(!agreedToTerms);
+                if (termsError) setTermsError("");
+              }}
+              activeOpacity={0.8}
+            >
+              <View
+                style={[
+                  styles.checkboxBox,
+                  agreedToTerms && styles.checkboxBoxChecked,
+                  termsError ? styles.checkboxBoxError : null,
+                ]}
+              >
+                {agreedToTerms && (
+                  <Feather name="check" size={14} color="#FFFFFF" />
+                )}
+              </View>
+              <Text style={styles.checkboxText}>
+                I agree to the{" "}
                 <Text
-                  style={styles.loginLink}
-                  onPress={() => router.push("/login")}
+                  style={styles.linkText}
+                  onPress={() =>
+                    Linking.openURL("https://crosscaretech.com/terms")
+                  }
                 >
-                  Login
+                  Terms of Service
+                </Text>{" "}
+                and{" "}
+                <Text
+                  style={styles.linkText}
+                  onPress={() =>
+                    Linking.openURL("https://crosscaretech.com/privacy-policy")
+                  }
+                >
+                  Privacy Policy
                 </Text>
+                .
               </Text>
+            </TouchableOpacity>
+            {termsError ? (
+              <Text style={styles.errorText}>{termsError}</Text>
+            ) : null}
+
+            <InlineNotice notice={notice} />
+
+            {/* Botão Create account */}
+            <TouchableOpacity
+              style={styles.createButton}
+              onPress={handleSignUp}
+              disabled={loading}
+              activeOpacity={0.88}
+            >
+              {loading ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text style={styles.createButtonText}>Create account</Text>
+              )}
+            </TouchableOpacity>
+
+            {/* Link Log in */}
+            <View style={styles.loginRow}>
+              <Text style={styles.loginPrompt}>Already have an account? </Text>
+              <TouchableOpacity onPress={() => router.push("/login")}>
+                <Text style={styles.loginLink}>Log in</Text>
+              </TouchableOpacity>
             </View>
           </View>
         </ScrollView>
 
-        {/* Date Picker Modal */}
+        {/* Modal de DatePicker no iOS */}
         {Platform.OS === "ios" ? (
           <Modal
             animationType="slide"
@@ -393,30 +428,28 @@ const SignUp: FC = () => {
               <View style={styles.modalContainerIOS}>
                 <View style={styles.modalHeader}>
                   <TouchableOpacity onPress={handleDatePickerCancel}>
-                    <Text style={styles.modalButton}>Cancel</Text>
+                    <Text style={styles.modalCancelButton}>Cancel</Text>
                   </TouchableOpacity>
                   <Text style={styles.modalTitle}>Select Date of Birth</Text>
                   <TouchableOpacity onPress={handleDatePickerConfirm}>
-                    <Text style={styles.modalButton}>Done</Text>
+                    <Text style={styles.modalDoneButton}>Done</Text>
                   </TouchableOpacity>
                 </View>
-                <View >
-                  <DateTimePicker
-                    value={dateOfBirth}
-                    textColor="black"
-                    mode="date"
-                    display="spinner"
-                    onChange={handleDateChange}
-                    maximumDate={new Date()}
-                  />
-                </View>
+                <DateTimePicker
+                  value={pickerDate}
+                  textColor={Theme.colors.ink}
+                  mode="date"
+                  display="spinner"
+                  onChange={handleDateChange}
+                  maximumDate={new Date()}
+                />
               </View>
             </View>
           </Modal>
         ) : (
           showDatePicker && (
             <DateTimePicker
-              value={dateOfBirth}
+              value={pickerDate}
               mode="date"
               display="default"
               onChange={handleDateChange}
@@ -424,181 +457,200 @@ const SignUp: FC = () => {
             />
           )
         )}
-
-        {/* Footer */}
-        <Pressable onPress={() => Linking.openURL("https://crosscaretech.com/privacy-policy")}>
-          <Text style={styles.footerText}>
-            Terms & Conditions | Privacy Policy | Contact Us
-          </Text>
-        </Pressable>
       </KeyboardAvoidingView>
+      {dialog}
     </SafeAreaView>
   );
 };
 
+export default SignUp;
+
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: Theme.colors.bg,
+  },
   container: {
     flex: 1,
-    backgroundColor: "#fff",
   },
-  scrollContainer: {
-    flexGrow: 1,
-    justifyContent: "space-between",
-    paddingHorizontal: 40,
+  scrollContent: {
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 36,
   },
-  headerContainer: {
-    flex: 1,
-    justifyContent: "center",
-    marginTop: 40,
-  },
-  logoContainer: {
-    alignItems: "center",
+  header: {
+    marginBottom: 24,
   },
   title: {
-    fontSize: 18,
-    textAlign: "center",
-    fontFamily: "DMSans500",
-    color: "#545454",
-    marginTop: 20,
+    fontSize: 24,
+    fontFamily: Theme.typography.display,
+    color: Theme.colors.ink,
+    marginBottom: 4,
+    letterSpacing: -0.3,
   },
-  formContainer: {
+  subtitle: {
+    fontSize: 13.5,
+    fontFamily: Theme.typography.body,
+    color: Theme.colors.inkSoft,
+  },
+  form: {
+    gap: 16,
+  },
+  row: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  flexHalf: {
+    flex: 1,
+  },
+  fieldLabel: {
+    fontSize: 12.5,
+    fontFamily: Theme.typography.heading,
+    color: Theme.colors.inkSoft,
+    marginBottom: 7,
+    letterSpacing: -0.1,
+  },
+  datePickerContainer: {
     width: "100%",
-    marginTop: 40,
-    flexDirection: "column",
-    gap: 20,
-  },
-  inputContainer: {
-    marginBottom: 0,
   },
   dateInput: {
     flexDirection: "row",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 10,
-    paddingHorizontal: 15,
-    paddingVertical: 15,
-    backgroundColor: "#fff",
+    backgroundColor: Theme.colors.inputBg,
+    borderWidth: 1.5,
+    borderColor: Theme.colors.inputBorder,
+    borderRadius: Theme.borderRadius.sm,
+    paddingHorizontal: 16,
+    height: 52,
   },
-  errorInput: {
-    borderColor: "#FF6B6B",
+  dateInputError: {
+    borderColor: Theme.colors.danger,
   },
   dateIcon: {
-    marginRight: 12,
+    marginRight: 10,
   },
   dateText: {
     flex: 1,
-    fontSize: 16,
-    color: "#333",
-    fontFamily: "DMSans400",
+    fontSize: 15,
+    color: Theme.colors.ink,
+    fontFamily: Theme.typography.body,
   },
-  placeholderText: {
-    color: "#999",
+  datePlaceholder: {
+    color: Theme.colors.placeholder,
   },
   errorText: {
-    color: "#FF6B6B",
+    color: Theme.colors.danger,
     fontSize: 12,
-    marginTop: 5,
-    fontFamily: "DMSans400",
+    marginTop: 4,
+    fontFamily: Theme.typography.body,
+    paddingHorizontal: 2,
   },
-  gradient: {
-    paddingVertical: 14,
-    paddingHorizontal: 12,
-    width: "100%",
+  helperText: {
+    fontSize: 11.5,
+    fontFamily: Theme.typography.caption,
+    color: Theme.colors.inkFaint,
+    marginTop: 4,
+    paddingHorizontal: 2,
+  },
+  checkboxRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    marginTop: 4,
+  },
+  checkboxBox: {
+    width: 20,
+    height: 20,
+    borderRadius: 6,
+    borderWidth: 1.6,
+    borderColor: Theme.colors.purple,
+    backgroundColor: Theme.colors.surface,
     justifyContent: "center",
     alignItems: "center",
-    borderRadius: 8,
+    marginTop: 2,
   },
-  button: {
-    backgroundColor: "#87247D",
+  checkboxBoxChecked: {
+    backgroundColor: Theme.colors.purple,
+    borderColor: Theme.colors.purple,
+  },
+  checkboxBoxError: {
+    borderColor: Theme.colors.danger,
+  },
+  checkboxText: {
+    flex: 1,
+    fontSize: 12.5,
+    fontFamily: Theme.typography.body,
+    color: Theme.colors.inkSoft,
+    lineHeight: 18,
+  },
+  linkText: {
+    color: Theme.colors.purple,
+    fontFamily: Theme.typography.subheading,
+  },
+  createButton: {
+    backgroundColor: Theme.colors.magenta,
+    height: 52,
+    borderRadius: Theme.borderRadius.sm,
     justifyContent: "center",
     alignItems: "center",
-    borderRadius: 8,
-    marginTop: 10,
+    marginTop: 8,
+    ...Theme.shadows.card,
   },
-  buttonText: {
-    fontSize: 20,
-    color: "#fff",
+  createButtonText: {
+    fontSize: 16,
+    fontFamily: Theme.typography.heading,
+    color: "#FFFFFF",
     letterSpacing: 0.2,
-    fontFamily: "DMSans600",
   },
-  loginLinkContainer: {
-    marginTop: 30,
+  loginRow: {
+    flexDirection: "row",
+    justifyContent: "center",
     alignItems: "center",
+    marginTop: 12,
   },
-  loginText: {
-    fontSize: 14,
-    color: "#545454",
-    fontFamily: "DMSans400",
-    textAlign: "center",
+  loginPrompt: {
+    fontSize: 13.5,
+    fontFamily: Theme.typography.body,
+    color: Theme.colors.inkSoft,
   },
   loginLink: {
-    fontFamily: "DMSans500",
-    color: "#E05FA0",
-    textDecorationLine: "underline",
-  },
-  footerText: {
-    textAlign: "center",
-    fontFamily: "DMSans400",
-    fontSize: 12,
-    color: "#545454",
-    paddingBottom: 20,
-    marginTop: 20,
+    fontSize: 13.5,
+    fontFamily: Theme.typography.heading,
+    color: Theme.colors.magenta,
   },
   modalOverlay: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(25, 28, 29, 0.4)",
   },
   modalContainerIOS: {
-    backgroundColor: "#fff",
-    borderRadius: 20,
-    width: "90%",
-    minHeight: 350,
-    padding: 0,
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 8,
-    overflow: "hidden",
+    backgroundColor: Theme.colors.surface,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingBottom: 24,
   },
   modalHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    width: "100%",
     paddingHorizontal: 20,
-    paddingTop: 18,
-    marginBottom: 0,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: Theme.colors.hairline,
   },
-  modalButton: {
-    fontSize: 16,
-    color: "#E05FA0",
-    fontFamily: "DMSans500",
+  modalCancelButton: {
+    fontSize: 15,
+    color: Theme.colors.inkSoft,
+    fontFamily: Theme.typography.subheading,
+  },
+  modalDoneButton: {
+    fontSize: 15,
+    color: Theme.colors.magenta,
+    fontFamily: Theme.typography.heading,
   },
   modalTitle: {
-    fontSize: 18,
-    fontFamily: "DMSans500",
-    color: "#545454",
+    fontSize: 16,
+    fontFamily: Theme.typography.heading,
+    color: Theme.colors.ink,
   },
-  // pickerWrapper: {
-    
-  //   borderRadius: 16,
-  //   marginTop: 10,
-  //   marginBottom: 20,
-  //   width: "100%",
-  //   height: 250, // FIXED: Changed from minHeight to fixed height
-  //   justifyContent: "center",
-  //   alignItems: "center",
-  //   paddingVertical: 10,
-  // },
-  // datePicker: {
-  //   width: "100%",
-  //   height: 200, // FIXED: Changed from minHeight to fixed height
-  // },
 });
-
-export default SignUp;

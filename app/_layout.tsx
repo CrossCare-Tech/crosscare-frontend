@@ -34,7 +34,6 @@ const RootLayoutNav = () => {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const token = useSelector((state: any) => state.user.token);
-  console.log(token);
   const [loaded] = useFonts({
     DMSans300: require("../assets/fonts/DMSans-Light.ttf"),
     DMSans400: require("../assets/fonts/DMSans-Regular.ttf"),
@@ -52,6 +51,12 @@ const RootLayoutNav = () => {
     OpenSans500: require("../assets/fonts/OpenSans-Medium.ttf"),
     OpenSans600: require("../assets/fonts/OpenSans-SemiBold.ttf"),
     OpenSans700: require("../assets/fonts/OpenSans-Bold.ttf"),
+    Manrope400: require("../assets/fonts/Manrope_400Regular.ttf"),
+    Manrope500: require("../assets/fonts/Manrope_500Medium.ttf"),
+    Manrope600: require("../assets/fonts/Manrope_600SemiBold.ttf"),
+    Manrope700: require("../assets/fonts/Manrope_700Bold.ttf"),
+    Manrope800: require("../assets/fonts/Manrope_800ExtraBold.ttf"),
+    Fraunces600: require("../assets/fonts/Fraunces_600SemiBold.ttf"),
     GroBold: require("../assets/fonts/GROBOLD.ttf"),
   });
 
