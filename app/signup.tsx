@@ -20,6 +20,7 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import { CONFIG } from "@/constants/config";
 import { Theme } from "@/constants/theme";
 import { useAuthDialog } from "@/components/ui/AuthDialog";
+import InlineNotice, { Notice } from "@/components/ui/InlineNotice";
 import AuthTopBar from "@/components/ui/AuthTopBar";
 
 const SignUp: FC = () => {
@@ -35,6 +36,7 @@ const SignUp: FC = () => {
   const navigation = useNavigation();
   const router = useRouter();
   const { dialog, show } = useAuthDialog();
+  const [notice, setNotice] = useState<Notice>(null);
 
   // Estados de erro
   const [emailError, setEmailError] = useState("");
@@ -144,6 +146,7 @@ const SignUp: FC = () => {
 
     if (!isValid) return;
 
+    setNotice(null);
     setLoading(true);
 
     try {
@@ -186,11 +189,12 @@ const SignUp: FC = () => {
         ],
       });
     } catch (error: any) {
-      show({
-        title: "Registration Failed",
-        message: error.message || "Something went wrong.",
-        variant: "error",
-      });
+      const message = error.message || "Something went wrong.";
+      if (/email/i.test(message)) {
+        setEmailError(message);
+      } else {
+        setNotice({ variant: "error", message });
+      }
     } finally {
       setLoading(false);
     }
@@ -385,6 +389,8 @@ const SignUp: FC = () => {
             {termsError ? (
               <Text style={styles.errorText}>{termsError}</Text>
             ) : null}
+
+            <InlineNotice notice={notice} />
 
             {/* Botão Create account */}
             <TouchableOpacity
