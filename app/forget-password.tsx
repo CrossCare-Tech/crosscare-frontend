@@ -5,7 +5,6 @@ import {
   Text,
   TouchableOpacity,
   View,
-  Alert,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
@@ -19,6 +18,7 @@ import { CONFIG } from "@/constants/config";
 import { Theme } from "@/constants/theme";
 import AuthTopBar from "@/components/ui/AuthTopBar";
 import AuthSuccess from "@/components/ui/AuthSuccess";
+import { useAuthDialog } from "@/components/ui/AuthDialog";
 import OtpInput from "@/components/ui/OtpInput";
 
 const ForgetScreen: FC = () => {
@@ -36,6 +36,7 @@ const ForgetScreen: FC = () => {
 
   const navigation = useNavigation();
   const router = useRouter();
+  const { dialog, show } = useAuthDialog();
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -67,12 +68,20 @@ const ForgetScreen: FC = () => {
       if (isResend) {
         setOtp("");
         setOtpError("");
-        Alert.alert("Code resent", "We sent you a new verification code.");
+        show({
+          title: "Code resent",
+          message: "We sent you a new verification code.",
+          variant: "success",
+        });
       } else {
         setStep(2);
       }
     } catch (error: any) {
-      Alert.alert("Error", error.message || "Failed to send code");
+      show({
+        title: "Could not send code",
+        message: error.message || "Failed to send code",
+        variant: "error",
+      });
     } finally {
       setLoading(false);
     }
@@ -129,7 +138,11 @@ const ForgetScreen: FC = () => {
         setOtpError(error.message);
         setStep(2);
       } else {
-        Alert.alert("Error", error.message || "Failed to reset password");
+        show({
+          title: "Could not reset password",
+          message: error.message || "Failed to reset password",
+          variant: "error",
+        });
       }
     } finally {
       setLoading(false);
@@ -321,6 +334,7 @@ const ForgetScreen: FC = () => {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+      {dialog}
     </SafeAreaView>
   );
 };
