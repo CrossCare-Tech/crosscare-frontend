@@ -28,8 +28,9 @@ const ForgetScreen: FC = () => {
   const [emailError, setEmailError] = useState("");
   const [otpError, setOtpError] = useState("");
   const [passwordError, setPasswordError] = useState("");
+  const [confirmError, setConfirmError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState(1); // 1: Email entry, 2: OTP verification & new password
+  const [step, setStep] = useState(1); // 1: email, 2: verification code, 3: new password
 
   const navigation = useNavigation();
   const router = useRouter();
@@ -40,7 +41,7 @@ const ForgetScreen: FC = () => {
     });
   }, [navigation]);
 
-  const handleSendOTP = async () => {
+  const handleSendOTP = async (isResend = false) => {
     if (!email.trim()) {
       setEmailError("Email is required.");
       return;
@@ -61,7 +62,13 @@ const ForgetScreen: FC = () => {
         throw new Error(data.message || "Failed to send reset code");
       }
 
-      setStep(2);
+      if (isResend) {
+        setOtp("");
+        setOtpError("");
+        Alert.alert("Code resent", "We sent you a new verification code.");
+      } else {
+        setStep(2);
+      }
     } catch (error: any) {
       Alert.alert("Error", error.message || "Failed to send code");
     } finally {
@@ -69,22 +76,28 @@ const ForgetScreen: FC = () => {
     }
   };
 
-  const handleResetPassword = async () => {
-    setOtpError("");
-    setPasswordError("");
-
+  // The backend validates the code together with the new password, so this
+  // step only checks the format before moving on.
+  const handleContinue = () => {
     if (otp.length !== 6) {
       setOtpError("Enter the 6-digit code");
       return;
     }
+    setOtpError("");
+    setStep(3);
+  };
 
-    if (newPassword.length < 8) {
-      setPasswordError("Password must be at least 8 characters");
+  const handleResetPassword = async () => {
+    setPasswordError("");
+    setConfirmError("");
+
+    if (newPassword.length < 8 || !/\d/.test(newPassword)) {
+      setPasswordError("Use 8+ characters with at least one number");
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      setPasswordError("Passwords do not match");
+      setConfirmError("Passwords do not match");
       return;
     }
 
@@ -111,7 +124,13 @@ const ForgetScreen: FC = () => {
         { text: "Log in", onPress: () => router.push("/login") },
       ]);
     } catch (error: any) {
-      Alert.alert("Error", error.message || "Failed to reset password");
+      if (/otp/i.test(error.message || "")) {
+        // Wrong or expired code: send the user back to fix it.
+        setOtpError(error.message);
+        setStep(2);
+      } else {
+        Alert.alert("Error", error.message || "Failed to reset password");
+      }
     } finally {
       setLoading(false);
     }
@@ -124,8 +143,8 @@ const ForgetScreen: FC = () => {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <AuthTopBar
-          title={step === 1 ? "Forgot password" : "Reset password"}
-          onBack={step === 2 ? () => setStep(1) : undefined}
+          title={step === 1 ? "Forgot password" : step === 2 ? "Verify code" : "New password"}
+          onBack={step > 1 ? () => setStep(step - 1) : undefined}
         />
 
         <ScrollView
@@ -136,12 +155,18 @@ const ForgetScreen: FC = () => {
           {/* Header */}
           <View style={styles.header}>
             <Text style={styles.title}>
-              {step === 1 ? "Reset your password" : "Enter verification code"}
+              {step === 1
+                ? "Reset your password"
+                : step === 2
+                ? "Enter verification code"
+                : "Create a new password"}
             </Text>
             <Text style={styles.subtitle}>
               {step === 1
                 ? "Enter your email address and we'll send you a secure verification code to reset your password."
-                : `We sent a 6-digit verification code to ${email}.`}
+                : step === 2
+                ? `We sent a 6-digit verification code to ${email.trim()}.`
+                : "Choose a password with 8+ characters and at least one number."}
             </Text>
           </View>
 
@@ -162,7 +187,7 @@ const ForgetScreen: FC = () => {
               </View>
             )}
 
-            {step === 1 ? (
+            {step === 1 && (
               <CustomTextInput
                 label="Email"
                 placeholder="maya.reyes@email.com"
@@ -177,42 +202,50 @@ const ForgetScreen: FC = () => {
                 keyboardType="email-address"
                 autoCapitalize="none"
               />
-            ) : (
-              <>
-                <View style={styles.otpGroup}>
-                  <Text style={styles.otpLabel}>Verification code</Text>
-                  <OtpInput
-                    value={otp}
-                    onChangeText={(text) => {
-                      setOtp(text);
-                      if (otpError) setOtpError("");
-                    }}
-                    hasError={!!otpError}
-                  />
-                  {otpError ? <Text style={styles.fieldError}>{otpError}</Text> : null}
-                </View>
+            )}
 
+            {step === 2 && (
+              <View style={styles.otpGroup}>
+                <Text style={styles.otpLabel}>Verification code</Text>
+                <OtpInput
+                  value={otp}
+                  onChangeText={(text) => {
+                    setOtp(text);
+                    if (otpError) setOtpError("");
+                  }}
+                  hasError={!!otpError}
+                />
+                {otpError ? <Text style={styles.fieldError}>{otpError}</Text> : null}
+              </View>
+            )}
+
+            {step === 3 && (
+              <>
                 <CustomTextInput
                   label="New password"
                   type="password"
-                  placeholder="••••••••"
+                  placeholder="Enter a new password"
                   icon="lock"
                   value={newPassword}
-                  onChangeText={setNewPassword}
+                  onChangeText={(text) => {
+                    setNewPassword(text);
+                    if (passwordError) setPasswordError("");
+                  }}
+                  errorMessage={passwordError}
                   secureTextEntry
                 />
 
                 <CustomTextInput
                   label="Confirm new password"
                   type="password"
-                  placeholder="••••••••"
+                  placeholder="Repeat the new password"
                   icon="lock"
                   value={confirmPassword}
                   onChangeText={(text) => {
                     setConfirmPassword(text);
-                    if (passwordError) setPasswordError("");
+                    if (confirmError) setConfirmError("");
                   }}
-                  errorMessage={passwordError}
+                  errorMessage={confirmError}
                   secureTextEntry
                 />
               </>
@@ -221,7 +254,7 @@ const ForgetScreen: FC = () => {
             {/* Botão de Ação */}
             <TouchableOpacity
               style={styles.actionButton}
-              onPress={step === 1 ? handleSendOTP : handleResetPassword}
+              onPress={step === 1 ? () => handleSendOTP() : step === 2 ? handleContinue : handleResetPassword}
               disabled={loading}
               activeOpacity={0.88}
             >
@@ -229,10 +262,19 @@ const ForgetScreen: FC = () => {
                 <ActivityIndicator color="#FFFFFF" />
               ) : (
                 <Text style={styles.actionButtonText}>
-                  {step === 1 ? "Send reset code" : "Reset password"}
+                  {step === 1 ? "Send reset code" : step === 2 ? "Continue" : "Reset password"}
                 </Text>
               )}
             </TouchableOpacity>
+
+            {step === 2 && (
+              <View style={styles.loginRow}>
+                <Text style={styles.loginPrompt}>Didn&apos;t receive the code? </Text>
+                <TouchableOpacity onPress={() => handleSendOTP(true)} disabled={loading}>
+                  <Text style={styles.loginLink}>Resend code</Text>
+                </TouchableOpacity>
+              </View>
+            )}
 
             {/* Voltar para login */}
             <View style={styles.loginRow}>
