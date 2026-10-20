@@ -1,6 +1,5 @@
 import React, { FC, useLayoutEffect, useState } from "react";
 import {
-  Alert,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -20,6 +19,7 @@ import { Feather } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { CONFIG } from "@/constants/config";
 import { Theme } from "@/constants/theme";
+import { useAuthDialog } from "@/components/ui/AuthDialog";
 import AuthTopBar from "@/components/ui/AuthTopBar";
 
 const SignUp: FC = () => {
@@ -34,6 +34,7 @@ const SignUp: FC = () => {
   const [loading, setLoading] = useState(false);
   const navigation = useNavigation();
   const router = useRouter();
+  const { dialog, show } = useAuthDialog();
 
   // Estados de erro
   const [emailError, setEmailError] = useState("");
@@ -168,10 +169,12 @@ const SignUp: FC = () => {
         throw new Error(data.message || "Registration failed");
       }
 
-      Alert.alert(
-        "Verification Email Sent",
-        "We've sent a 6-digit verification code to your email. Please verify to continue.",
-        [
+      show({
+        title: "Verification Email Sent",
+        message:
+          "We've sent a 6-digit verification code to your email. Please verify to continue.",
+        variant: "success",
+        buttons: [
           {
             text: "Verify Now",
             onPress: () =>
@@ -180,10 +183,14 @@ const SignUp: FC = () => {
                 params: { email: email.toLowerCase().trim() },
               }),
           },
-        ]
-      );
+        ],
+      });
     } catch (error: any) {
-      Alert.alert("Registration Failed", error.message || "Something went wrong.");
+      show({
+        title: "Registration Failed",
+        message: error.message || "Something went wrong.",
+        variant: "error",
+      });
     } finally {
       setLoading(false);
     }
@@ -445,6 +452,7 @@ const SignUp: FC = () => {
           )
         )}
       </KeyboardAvoidingView>
+      {dialog}
     </SafeAreaView>
   );
 };
