@@ -1,6 +1,5 @@
 import React, { FC, useLayoutEffect, useState } from "react";
 import {
-  Alert,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -23,6 +22,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { CONFIG } from "@/constants/config";
 import { store } from "../store/store";
 import { Theme } from "@/constants/theme";
+import { useAuthDialog } from "@/components/ui/AuthDialog";
 import { FontAwesome5, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 
 // Logo oficial com o coração 3D e "CROSSCARE TECH" em ameixa
@@ -35,6 +35,7 @@ const LoginContent: FC = () => {
   const navigation = useNavigation();
   const router = useRouter();
   const dispatch = useDispatch();
+  const { dialog, show } = useAuthDialog();
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
 
@@ -80,10 +81,11 @@ const LoginContent: FC = () => {
 
       if (!response.ok) {
         if (data.requiresVerification) {
-          Alert.alert(
-            "Email Verification Required",
-            "Please verify your email address before logging in.",
-            [
+          show({
+            title: "Email Verification Required",
+            message: "Please verify your email address before logging in.",
+            variant: "info",
+            buttons: [
               {
                 text: "Verify Now",
                 onPress: () =>
@@ -92,12 +94,9 @@ const LoginContent: FC = () => {
                     params: { email: data.email || email },
                   }),
               },
-              {
-                text: "Cancel",
-                style: "cancel",
-              },
-            ]
-          );
+              { text: "Cancel", style: "cancel" },
+            ],
+          });
           setLoading(false);
           return;
         }
@@ -137,16 +136,25 @@ const LoginContent: FC = () => {
       setLoading(false);
     } catch (error: any) {
       if (error?.isCredentialError) {
-        Alert.alert("Login Failed", error.message || "Invalid email or password");
+        show({
+          title: "Login Failed",
+          message: error.message || "Invalid email or password",
+          variant: "error",
+        });
         setEmailError("Invalid email or password");
         setPasswordError("Invalid email or password");
       } else if (error instanceof TypeError) {
-        Alert.alert(
-          "Connection Problem",
-          "We couldn't reach the server. Check your connection and try again."
-        );
+        show({
+          title: "Connection Problem",
+          message: "We couldn't reach the server. Check your connection and try again.",
+          variant: "error",
+        });
       } else {
-        Alert.alert("Login Failed", error?.message || "Something went wrong. Please try again.");
+        show({
+          title: "Login Failed",
+          message: error?.message || "Something went wrong. Please try again.",
+          variant: "error",
+        });
       }
       setLoading(false);
     }
@@ -167,17 +175,20 @@ const LoginContent: FC = () => {
   };
 
   const handleBiometricAuth = () => {
-    Alert.alert(
-      "Biometric Authentication",
-      "Face ID / Biometric login will be enabled once your device is registered with your account."
-    );
+    show({
+      title: "Biometric Authentication",
+      message:
+        "Face ID / Biometric login will be enabled once your device is registered with your account.",
+      variant: "info",
+    });
   };
 
   const handleSocialAuth = (provider: "Apple" | "Google") => {
-    Alert.alert(
-      `${provider} Sign-In`,
-      `${provider} authentication will connect to your clinical profile.`
-    );
+    show({
+      title: `${provider} Sign-In`,
+      message: `${provider} authentication will connect to your clinical profile.`,
+      variant: "info",
+    });
   };
 
   return (
@@ -327,6 +338,7 @@ const LoginContent: FC = () => {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+      {dialog}
     </SafeAreaView>
   );
 };
