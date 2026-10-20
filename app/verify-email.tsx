@@ -19,6 +19,7 @@ import { Theme } from "@/constants/theme";
 import AuthTopBar from "@/components/ui/AuthTopBar";
 import AuthSuccess from "@/components/ui/AuthSuccess";
 import { useAuthDialog } from "@/components/ui/AuthDialog";
+import InlineNotice, { Notice } from "@/components/ui/InlineNotice";
 import OtpInput from "@/components/ui/OtpInput";
 
 const officialLogo = require("@/assets/logo/logo-full.png");
@@ -41,6 +42,7 @@ const VerifyEmail: FC = () => {
   const navigation = useNavigation();
   const router = useRouter();
   const { dialog, show } = useAuthDialog();
+  const [notice, setNotice] = useState<Notice>(null);
   const params = useLocalSearchParams();
   const email = (params.email as string) || "";
 
@@ -70,6 +72,7 @@ const VerifyEmail: FC = () => {
       return;
     }
 
+    setNotice(null);
     setLoading(true);
 
     try {
@@ -96,10 +99,9 @@ const VerifyEmail: FC = () => {
         // Wrong or expired code: the red boxes and the message below are enough.
         setOtpError(error.message);
       } else {
-        show({
-          title: "Verification Failed",
-          message: error.message || "Something went wrong. Please try again.",
+        setNotice({
           variant: "error",
+          message: error.message || "Something went wrong. Please try again.",
         });
       }
     } finally {
@@ -109,14 +111,14 @@ const VerifyEmail: FC = () => {
 
   const handleResendOTP = async () => {
     if (!email) {
-      show({
-        title: "Missing email",
-        message: "Missing email address for resending code.",
+      setNotice({
         variant: "error",
+        message: "Missing email address for resending code.",
       });
       return;
     }
 
+    setNotice(null);
     setResendLoading(true);
 
     try {
@@ -146,10 +148,9 @@ const VerifyEmail: FC = () => {
       setOtp("");
       setOtpError("");
     } catch (error: any) {
-      show({
-        title: "Could not resend code",
-        message: error.message || "Could not resend code",
+      setNotice({
         variant: "error",
+        message: error.message || "Could not resend code",
       });
     } finally {
       setResendLoading(false);
@@ -214,6 +215,8 @@ const VerifyEmail: FC = () => {
               hasError={!!otpError}
             />
             {otpError ? <Text style={styles.otpError}>{otpError}</Text> : null}
+
+            <InlineNotice notice={notice} />
 
             {/* Botão de Verificação */}
             <TouchableOpacity
