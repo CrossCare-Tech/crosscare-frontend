@@ -28,6 +28,7 @@ export const Theme = {
     // Feedback
     danger: '#B3261E',
     dangerTint: '#FBE9E7',
+    caution: '#FFC400', // fill for warning icons; pair with ink, never as text on white
     warning: '#8A5A00',
     warningTint: '#FFF2D9',
     success: '#1E6E42',
