@@ -23,6 +23,7 @@ import { CONFIG } from "@/constants/config";
 import { store } from "../store/store";
 import { Theme } from "@/constants/theme";
 import { useAuthDialog } from "@/components/ui/AuthDialog";
+import InlineNotice, { Notice } from "@/components/ui/InlineNotice";
 import { FontAwesome5, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 
 // Logo oficial com o coração 3D e "CROSSCARE TECH" em ameixa
@@ -36,6 +37,7 @@ const LoginContent: FC = () => {
   const router = useRouter();
   const dispatch = useDispatch();
   const { dialog, show } = useAuthDialog();
+  const [notice, setNotice] = useState<Notice>(null);
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
 
@@ -63,6 +65,7 @@ const LoginContent: FC = () => {
       return;
     }
 
+    setNotice(null);
     setLoading(true);
 
     try {
@@ -102,6 +105,7 @@ const LoginContent: FC = () => {
         }
 
         const apiError: any = new Error(data.message || "Login failed");
+        apiError.status = response.status;
         apiError.isCredentialError = [400, 401, 404].includes(response.status);
         throw apiError;
       }
@@ -136,24 +140,24 @@ const LoginContent: FC = () => {
       setLoading(false);
     } catch (error: any) {
       if (error?.isCredentialError) {
-        show({
-          title: "Login Failed",
-          message: error.message || "Invalid email or password",
-          variant: "error",
-        });
-        setEmailError("Invalid email or password");
-        setPasswordError("Invalid email or password");
+        // Shown on the fields themselves, no popup.
+        if (error.status === 404) {
+          setEmailError("No account found with this email.");
+        } else if (error.status === 401) {
+          setPasswordError("Incorrect password.");
+        } else {
+          setEmailError("Invalid email or password");
+          setPasswordError("Invalid email or password");
+        }
       } else if (error instanceof TypeError) {
-        show({
-          title: "Connection Problem",
-          message: "We couldn't reach the server. Check your connection and try again.",
+        setNotice({
           variant: "error",
+          message: "We couldn't reach the server. Check your connection and try again.",
         });
       } else {
-        show({
-          title: "Login Failed",
-          message: error?.message || "Something went wrong. Please try again.",
+        setNotice({
           variant: "error",
+          message: error?.message || "Something went wrong. Please try again.",
         });
       }
       setLoading(false);
@@ -162,6 +166,7 @@ const LoginContent: FC = () => {
 
   const handleChangeEmail = (text: string) => {
     setEmail(text);
+    if (notice) setNotice(null);
     if (emailError) {
       setEmailError("");
     }
@@ -169,25 +174,24 @@ const LoginContent: FC = () => {
 
   const handleChangePassword = (text: string) => {
     setPassword(text);
+    if (notice) setNotice(null);
     if (passwordError) {
       setPasswordError("");
     }
   };
 
   const handleBiometricAuth = () => {
-    show({
-      title: "Biometric Authentication",
+    setNotice({
+      variant: "info",
       message:
         "Face ID / Biometric login will be enabled once your device is registered with your account.",
-      variant: "info",
     });
   };
 
   const handleSocialAuth = (provider: "Apple" | "Google") => {
-    show({
-      title: `${provider} Sign-In`,
-      message: `${provider} authentication will connect to your clinical profile.`,
+    setNotice({
       variant: "info",
+      message: `${provider} authentication will connect to your clinical profile.`,
     });
   };
 
@@ -247,6 +251,8 @@ const LoginContent: FC = () => {
                 <Text style={styles.forgotPasswordText}>Forgot password?</Text>
               </TouchableOpacity>
             </View>
+
+            <InlineNotice notice={notice} />
 
             {/* Botão Principal Log in */}
             <TouchableOpacity
