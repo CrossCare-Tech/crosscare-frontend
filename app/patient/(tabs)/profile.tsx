@@ -6,10 +6,8 @@ import {
   ScrollView,
   Alert,
   Linking,
-  StatusBar,
 } from "react-native";
 import React, { useEffect, useState } from "react";
-import { useIsFocused } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Circle, Path, Rect } from "react-native-svg";
 import { useDispatch, useSelector } from "react-redux";
@@ -18,7 +16,8 @@ import { removeToken } from "@/store/userSlice";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTranslation } from "react-i18next";
 import { CONFIG } from "@/constants/config";
-import { C } from "@/components/profile/theme";
+import { Theme } from "@/constants/theme";
+import ScreenBackground from "@/components/ui/ScreenBackground";
 import LineIcon from "@/components/profile/LineIcon";
 import ProfilePhoto, {
   usePickProfileImage,
@@ -103,9 +102,9 @@ const ICONS: Record<string, React.ReactNode> = {
 type RowTone = "default" | "sos" | "danger";
 
 const CHIP_TONES: Record<RowTone, { bg: string; fg: string }> = {
-  default: { bg: C.sunken, fg: C.purple },
-  sos: { bg: C.sosTint, fg: C.magenta },
-  danger: { bg: C.dangerTint, fg: C.danger },
+  default: { bg: Theme.colors.surfaceSunken, fg: Theme.colors.purple },
+  sos: { bg: Theme.colors.sosTint, fg: Theme.colors.magenta },
+  danger: { bg: Theme.colors.dangerTint, fg: Theme.colors.danger },
 };
 
 const MenuRow = ({
@@ -138,14 +137,14 @@ const MenuRow = ({
         <Text
           style={[
             styles.rowTitle,
-            tone === "danger" && { color: C.danger },
+            tone === "danger" && { color: Theme.colors.danger },
           ]}
         >
           {title}
         </Text>
         {subtitle ? <Text style={styles.rowSub}>{subtitle}</Text> : null}
       </View>
-      <LineIcon size={16} color={C.ink}>
+      <LineIcon size={16} color={Theme.colors.ink}>
         <Path d="M9 6l6 6-6 6" />
       </LineIcon>
     </TouchableOpacity>
@@ -160,7 +159,6 @@ const Profile = () => {
   const [photo, setPhoto] = useState<string>(user?.user_photo || "");
   const dispatch = useDispatch();
   const { t, i18n } = useTranslation();
-  const isFocused = useIsFocused();
 
   const getProfile = async () => {
     try {
@@ -228,11 +226,8 @@ const Profile = () => {
     : user?.user_email;
 
   return (
+    <ScreenBackground>
     <SafeAreaView style={styles.container} edges={["top"]}>
-      {/* Mounted only while focused so it wins over the other tabs' StatusBar */}
-      {isFocused && (
-        <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
-      )}
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
           <View style={styles.header}>
@@ -332,6 +327,7 @@ const Profile = () => {
         </View>
       </ScrollView>
     </SafeAreaView>
+    </ScreenBackground>
   );
 };
 
@@ -340,7 +336,6 @@ export default Profile;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: C.bg,
   },
   content: {
     paddingHorizontal: 22,
@@ -354,33 +349,29 @@ const styles = StyleSheet.create({
     paddingBottom: 4,
   },
   name: {
-    fontFamily: "Manrope700",
+    fontFamily: Theme.typography.heading,
     fontSize: 16,
-    color: C.ink,
+    color: Theme.colors.ink,
     marginTop: 10,
   },
   subtitle: {
-    fontFamily: "Manrope400",
+    fontFamily: Theme.typography.body,
     fontSize: 12,
-    color: C.inkFaint,
+    color: Theme.colors.inkFaint,
   },
   sectionTitle: {
-    fontFamily: "Manrope700",
+    fontFamily: Theme.typography.heading,
     fontSize: 11.5,
-    color: C.inkFaint,
+    color: Theme.colors.inkFaint,
     marginTop: 2,
     marginBottom: -6,
   },
   card: {
-    backgroundColor: C.surface,
+    backgroundColor: Theme.colors.surface,
     borderRadius: 20,
     paddingVertical: 2,
     paddingHorizontal: 14,
-    shadowColor: "#190A19",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.14,
-    shadowRadius: 9,
-    elevation: 2,
+    ...Theme.shadows.card,
   },
   menuRow: {
     flexDirection: "row",
@@ -389,7 +380,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 2,
     borderBottomWidth: 1,
-    borderBottomColor: C.hairline,
+    borderBottomColor: Theme.colors.hairline,
   },
   menuRowLast: {
     borderBottomWidth: 0,
@@ -405,14 +396,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   rowTitle: {
-    fontFamily: "Manrope700",
+    fontFamily: Theme.typography.heading,
     fontSize: 13.5,
-    color: C.ink,
+    color: Theme.colors.ink,
   },
   rowSub: {
-    fontFamily: "Manrope400",
+    fontFamily: Theme.typography.body,
     fontSize: 11.5,
-    color: C.inkFaint,
+    color: Theme.colors.inkFaint,
     marginTop: 1,
   },
 });

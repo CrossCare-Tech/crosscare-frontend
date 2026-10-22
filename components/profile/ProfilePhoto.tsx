@@ -7,7 +7,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { setUser } from "@/store/userSlice";
 import { CONFIG } from "@/constants/config";
 import LineIcon from "./LineIcon";
-import { C } from "./theme";
+import { Theme } from "@/constants/theme";
 
 // Picks a square photo from the library, uploads it and stores it in Redux.
 // Returns the local uri of the picked image, or null when nothing was picked.
@@ -85,7 +85,7 @@ const ProfilePhoto = ({
     accessibilityLabel="Edit photo"
   >
     <LinearGradient
-      colors={["#F6D3E4", "#D9CCF3"]}
+      colors={[Theme.colors.photoFrom, Theme.colors.photoTo]}
       start={{ x: 0.25, y: 0.07 }}
       end={{ x: 0.75, y: 0.93 }}
       style={styles.photo}
@@ -94,17 +94,17 @@ const ProfilePhoto = ({
         <Image source={{ uri }} style={styles.photoImage} />
       ) : (
         <Svg width="100%" height="100%" viewBox="0 0 56 56">
-          <Circle cx="28" cy="22" r="9.5" fill="#fff" opacity={0.88} />
+          <Circle cx="28" cy="22" r="9.5" fill={Theme.colors.surface} opacity={0.88} />
           <Path
             d="M8 56c0-13 8-19 20-19s20 6 20 19z"
-            fill="#fff"
+            fill={Theme.colors.surface}
             opacity={0.88}
           />
         </Svg>
       )}
     </LinearGradient>
     <View style={styles.editBadge}>
-      <LineIcon size={14} color="#fff" strokeWidth={2.4}>
+      <LineIcon size={14} color={Theme.colors.surface} strokeWidth={2.4}>
         <Path d="M4 20l1-4L16.5 4.5a2 2 0 0 1 3 3L8 19l-4 1z" />
       </LineIcon>
     </View>
@@ -131,9 +131,9 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: C.magenta,
+    backgroundColor: Theme.colors.magenta,
     borderWidth: 2,
-    borderColor: C.surface,
+    borderColor: Theme.colors.surface,
     alignItems: "center",
     justifyContent: "center",
   },
