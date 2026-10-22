@@ -4,11 +4,8 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  StatusBar,
   StyleSheet,
   Text,
-  TextInput,
-  TextInputProps,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -20,8 +17,10 @@ import { useTranslation } from "react-i18next";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { setUser } from "@/store/userSlice";
 import { CONFIG } from "@/constants/config";
-import { C } from "@/components/profile/theme";
-import TopBarBack from "@/components/profile/TopBarBack";
+import { Theme } from "@/constants/theme";
+import ScreenBackground from "@/components/ui/ScreenBackground";
+import AuthTopBar from "@/components/ui/AuthTopBar";
+import CustomTextInput from "@/components/ui/CustomTextInput";
 import ProfilePhoto, {
   usePickProfileImage,
 } from "@/components/profile/ProfilePhoto";
@@ -33,21 +32,6 @@ type AccountForm = {
 };
 
 const EMPTY_FORM: AccountForm = { name: "", email: "", phoneNumber: "" };
-
-// Prototype `.field`: label above a bordered input
-const Field = ({
-  label,
-  ...inputProps
-}: { label: string } & TextInputProps) => (
-  <View style={styles.field}>
-    <Text style={styles.label}>{label}</Text>
-    <TextInput
-      style={styles.input}
-      placeholderTextColor={C.inkFaint}
-      {...inputProps}
-    />
-  </View>
-);
 
 const Account = () => {
   const user = useSelector((state: any) => state.user);
@@ -162,8 +146,8 @@ const Account = () => {
   const canSave = changes.length > 0 && !saving;
 
   return (
+    <ScreenBackground>
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -172,7 +156,7 @@ const Account = () => {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <TopBarBack title={t("profile.account")} />
+          <AuthTopBar title={t("profile.account")} />
           <View style={styles.content}>
             <View style={styles.photoBlock}>
               <ProfilePhoto uri={photo} onPress={pickImage} />
@@ -183,26 +167,31 @@ const Account = () => {
               </TouchableOpacity>
             </View>
 
-            <Field
+            <CustomTextInput
               label={t("profile.fullName")}
               value={form.name}
               onChangeText={setField("name")}
+              placeholder={t("profile.fullName")}
               autoCapitalize="words"
               textContentType="name"
             />
-            <Field
+            <CustomTextInput
               label={t("profile.email")}
+              type="email"
               value={form.email}
               onChangeText={setField("email")}
+              placeholder="name@email.com"
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
               textContentType="emailAddress"
             />
-            <Field
+            <CustomTextInput
               label={t("profile.phone")}
+              type="phone"
               value={form.phoneNumber}
               onChangeText={setField("phoneNumber")}
+              placeholder="(555) 214-0087"
               keyboardType="phone-pad"
               textContentType="telephoneNumber"
             />
@@ -217,7 +206,7 @@ const Account = () => {
                 <Text
                   style={[
                     styles.inputText,
-                    !dateOfBirth && { color: C.inkFaint },
+                    !dateOfBirth && { color: Theme.colors.placeholder },
                   ]}
                 >
                   {dateOfBirth
@@ -250,7 +239,7 @@ const Account = () => {
               accessibilityRole="button"
             >
               {saving ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color={Theme.colors.surface} />
               ) : (
                 <Text style={styles.buttonText}>
                   {t("profile.saveChanges")}
@@ -261,6 +250,7 @@ const Account = () => {
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
+    </ScreenBackground>
   );
 };
 
@@ -269,7 +259,6 @@ export default Account;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: C.bg,
   },
   flex: {
     flex: 1,
@@ -284,40 +273,39 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   changePhoto: {
-    fontFamily: "Manrope700",
+    fontFamily: Theme.typography.heading,
     fontSize: 13.5,
-    color: C.magenta,
+    color: Theme.colors.magenta,
     marginTop: 8,
   },
   field: {
     gap: 7,
   },
   label: {
-    fontFamily: "Manrope700",
+    fontFamily: Theme.typography.heading,
     fontSize: 12.5,
-    color: C.inkSoft,
+    color: Theme.colors.inkSoft,
   },
   input: {
     height: 52,
-    borderRadius: 8,
+    borderRadius: Theme.borderRadius.sm,
     borderWidth: 1.5,
-    borderColor: C.hairline,
-    backgroundColor: C.surface,
+    borderColor: Theme.colors.inputBorder,
+    backgroundColor: Theme.colors.inputBg,
     paddingHorizontal: 16,
-    fontFamily: "Manrope400",
-    fontSize: 14.5,
-    color: C.ink,
     justifyContent: "center",
   },
   inputText: {
-    fontFamily: "Manrope400",
-    fontSize: 14.5,
-    color: C.ink,
+    fontFamily: Theme.typography.body,
+    fontSize: 15,
+    // Match the inner padding Android adds to CustomTextInput's TextInput
+    paddingHorizontal: 4,
+    color: Theme.colors.ink,
   },
   button: {
     height: 52,
-    borderRadius: 8,
-    backgroundColor: C.magenta,
+    borderRadius: Theme.borderRadius.sm,
+    backgroundColor: Theme.colors.magenta,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -325,8 +313,8 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   buttonText: {
-    fontFamily: "Manrope700",
+    fontFamily: Theme.typography.heading,
     fontSize: 15,
-    color: "#fff",
+    color: Theme.colors.surface,
   },
 });
