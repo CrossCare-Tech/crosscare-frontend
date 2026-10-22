@@ -3,7 +3,6 @@ import {
   Text,
   View,
   TouchableOpacity,
-  Image,
   ScrollView,
   Alert,
   Linking,
@@ -12,30 +11,18 @@ import {
 import React, { useEffect, useState } from "react";
 import { useIsFocused } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
-import Svg, { Circle, Path, Rect } from "react-native-svg";
-import * as ImagePicker from "expo-image-picker";
+import { Circle, Path, Rect } from "react-native-svg";
 import { useDispatch, useSelector } from "react-redux";
 import { router } from "expo-router";
-import { removeToken, setUser } from "@/store/userSlice";
+import { removeToken } from "@/store/userSlice";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTranslation } from "react-i18next";
 import { CONFIG } from "@/constants/config";
-
-// Prototype "Original" palette (lp-cross.vercel.app)
-const C = {
-  bg: "#F8F9FA",
-  surface: "#FFFFFF",
-  sunken: "#F1EFF1",
-  hairline: "#E7E1E3",
-  ink: "#191C1D",
-  inkFaint: "#9C8890",
-  magenta: "#B3006B",
-  purple: "#5028A7",
-  sosTint: "#FDE7F0",
-  danger: "#B3261E",
-  dangerTint: "#FBE9E7",
-};
+import { C } from "@/components/profile/theme";
+import LineIcon from "@/components/profile/LineIcon";
+import ProfilePhoto, {
+  usePickProfileImage,
+} from "@/components/profile/ProfilePhoto";
 
 const LANGUAGE_NAMES: Record<string, string> = {
   en: "English",
@@ -43,31 +30,6 @@ const LANGUAGE_NAMES: Record<string, string> = {
   ht: "Kreyòl Ayisyen",
   pt: "Português",
 };
-
-const LineIcon = ({
-  size = 17,
-  color,
-  strokeWidth = 2,
-  children,
-}: {
-  size?: number;
-  color: string;
-  strokeWidth?: number;
-  children: React.ReactNode;
-}) => (
-  <Svg
-    width={size}
-    height={size}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke={color}
-    strokeWidth={strokeWidth}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    {children}
-  </Svg>
-);
 
 const ICONS: Record<string, React.ReactNode> = {
   account: (
@@ -228,58 +190,15 @@ const Profile = () => {
     }
   }, [user?.user_id]);
 
+  // Picks made on the Account screen land in Redux
+  useEffect(() => {
+    if (user?.user_photo) setPhoto(user.user_photo);
+  }, [user?.user_photo]);
+
+  const pickProfileImage = usePickProfileImage();
   const pickImage = async () => {
-    try {
-      const { status } =
-        await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-      if (status !== "granted") {
-        Alert.alert(
-          "Permission Required",
-          "Please allow access to your photo library to change your profile picture."
-        );
-        return;
-      }
-
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.7,
-      });
-
-      if (result.canceled || !result.assets?.length) return;
-
-      const selectedImage = result.assets[0];
-      setPhoto(selectedImage.uri);
-
-      const formData = new FormData();
-      formData.append("imageUrl", {
-        uri: selectedImage.uri,
-        type: "image/jpeg",
-        name: "profile-image.jpg",
-      } as any);
-
-      const response = await fetch(
-        `${CONFIG.API_BASE_URL}/user/${user?.user_id}/profile/image`,
-        {
-          method: "POST",
-          body: formData,
-          headers: {
-            "Content-Type": "multipart/form-data",
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`Upload failed with status ${response.status}`);
-      }
-
-      dispatch(setUser({ ...user, user_photo: selectedImage.uri }));
-    } catch (error) {
-      console.error("Error updating profile image:", error);
-    }
+    const uri = await pickProfileImage();
+    if (uri) setPhoto(uri);
   };
 
   const logout = async () => {
@@ -317,36 +236,7 @@ const Profile = () => {
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
           <View style={styles.header}>
-            <TouchableOpacity
-              onPress={pickImage}
-              activeOpacity={0.8}
-              accessibilityLabel="Edit photo"
-            >
-              <LinearGradient
-                colors={["#F6D3E4", "#D9CCF3"]}
-                start={{ x: 0.25, y: 0.07 }}
-                end={{ x: 0.75, y: 0.93 }}
-                style={styles.photo}
-              >
-                {photo ? (
-                  <Image source={{ uri: photo }} style={styles.photoImage} />
-                ) : (
-                  <Svg width="100%" height="100%" viewBox="0 0 56 56">
-                    <Circle cx="28" cy="22" r="9.5" fill="#fff" opacity={0.88} />
-                    <Path
-                      d="M8 56c0-13 8-19 20-19s20 6 20 19z"
-                      fill="#fff"
-                      opacity={0.88}
-                    />
-                  </Svg>
-                )}
-              </LinearGradient>
-              <View style={styles.editBadge}>
-                <LineIcon size={14} color="#fff" strokeWidth={2.4}>
-                  <Path d="M4 20l1-4L16.5 4.5a2 2 0 0 1 3 3L8 19l-4 1z" />
-                </LineIcon>
-              </View>
-            </TouchableOpacity>
+            <ProfilePhoto uri={photo} onPress={pickImage} />
             <Text style={styles.name}>{name}</Text>
             {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
           </View>
@@ -462,29 +352,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingTop: 6,
     paddingBottom: 4,
-  },
-  photo: {
-    width: 76,
-    height: 76,
-    borderRadius: 38,
-    overflow: "hidden",
-  },
-  photoImage: {
-    width: "100%",
-    height: "100%",
-  },
-  editBadge: {
-    position: "absolute",
-    right: -2,
-    bottom: 0,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: C.magenta,
-    borderWidth: 2,
-    borderColor: C.surface,
-    alignItems: "center",
-    justifyContent: "center",
   },
   name: {
     fontFamily: "Manrope700",
