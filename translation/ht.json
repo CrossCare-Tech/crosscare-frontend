@@ -54,6 +54,14 @@
     "noAppointments": "Pa gen randevou kap vini"
   },
   "profile": {
+    "dateOfBirth": "Dat nesans",
+    "selectDate": "Chwazi dat",
+    "changePhoto": "Chanje foto",
+    "fullName": "Non konplè",
+    "phone": "Telefòn",
+    "saveChanges": "Anrejistre chanjman yo",
+    "invalidEmail": "Tanpri antre yon imèl ki valab.",
+    "saveError": "Nou pa t kapab anrejistre chanjman yo. Tanpri eseye ankò.",
     "accountDetails": "Detay kont",
     "avatar": "Avatar",
     "preferences": "Preferans",

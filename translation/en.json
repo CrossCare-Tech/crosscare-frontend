@@ -54,6 +54,14 @@
     "noAppointments": "No upcoming appointments"
   },
   "profile": {
+    "dateOfBirth": "Date of birth",
+    "selectDate": "Select date",
+    "changePhoto": "Change photo",
+    "fullName": "Full name",
+    "phone": "Phone",
+    "saveChanges": "Save changes",
+    "invalidEmail": "Please enter a valid email address.",
+    "saveError": "Couldn't save your changes. Please try again.",
     "accountDetails": "Account details",
     "avatar": "Avatar",
     "preferences": "Preferences",

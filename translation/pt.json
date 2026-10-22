@@ -54,6 +54,14 @@
     "noAppointments": "Nenhum compromisso agendado"
   },
   "profile": {
+    "dateOfBirth": "Data de nascimento",
+    "selectDate": "Selecionar data",
+    "changePhoto": "Alterar foto",
+    "fullName": "Nome completo",
+    "phone": "Telefone",
+    "saveChanges": "Salvar alterações",
+    "invalidEmail": "Digite um e-mail válido.",
+    "saveError": "Não foi possível salvar as alterações. Tente novamente.",
     "accountDetails": "Detalhes da conta",
     "avatar": "Avatar",
     "preferences": "Preferências",
