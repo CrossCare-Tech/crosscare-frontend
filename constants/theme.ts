@@ -32,6 +32,9 @@ export const Theme = {
     photoFrom: '#F6D3E4', // profile photo placeholder gradient
     photoTo: '#D9CCF3',
 
+    // Overlays
+    scrim: 'rgba(25,28,29,0.4)', // backdrop behind modals
+
     // Feedback
     danger: '#B3261E',
     dangerTint: '#FBE9E7',
