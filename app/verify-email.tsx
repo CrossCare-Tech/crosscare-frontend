@@ -16,6 +16,7 @@ import { useNavigation, useRouter, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { CONFIG } from "@/constants/config";
 import { Theme } from "@/constants/theme";
+import ScreenBackground from "@/components/ui/ScreenBackground";
 import AuthTopBar from "@/components/ui/AuthTopBar";
 import AuthSuccess from "@/components/ui/AuthSuccess";
 import { useAuthDialog } from "@/components/ui/AuthDialog";
@@ -177,6 +178,7 @@ const VerifyEmail: FC = () => {
   }
 
   return (
+    <ScreenBackground>
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
         style={styles.container}
@@ -271,6 +273,7 @@ const VerifyEmail: FC = () => {
       </KeyboardAvoidingView>
       {dialog}
     </SafeAreaView>
+    </ScreenBackground>
   );
 };
 
@@ -279,7 +282,6 @@ export default VerifyEmail;
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Theme.colors.bg,
   },
   container: {
     flex: 1,
