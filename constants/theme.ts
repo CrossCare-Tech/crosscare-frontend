@@ -1,15 +1,17 @@
 export const Theme = {
   colors: {
-    bg: '#F8F9FA',
+    // Palette: Lilac Mist (client choice). `canvasTop` is the tint at the top of every screen, fading into `bg`.
+    bg: '#F8F4FD',
+    canvasTop: '#E9DEFA',
     surface: '#FFFFFF',
-    surfaceSunken: '#F1EFF1',
+    surfaceSunken: '#EFE8F8',
     surfaceSubtle: '#FAF7F8',
 
     // Tipografia / Textos
     ink: '#191C1D',
     inkSoft: '#594049',
-    inkFaint: '#9C8890',
-    hairline: '#E7E1E3',
+    inkFaint: '#6A565D',
+    hairline: '#E2D8F0',
     hairlineLight: '#F0ECEE',
 
     // Cores Principais do CrossCare Concierge
@@ -35,13 +37,13 @@ export const Theme = {
     successTint: '#E4F5E9',
 
     // Inputs e bordas
-    inputBorder: '#E7E1E3',
+    inputBorder: '#E2D8F0',
     inputBorderFocus: '#B3006B',
     inputBg: '#FFFFFF',
     placeholder: '#9C8890',
 
     // Social buttons
-    socialBorder: '#E7E1E3',
+    socialBorder: '#E2D8F0',
     socialBg: '#FFFFFF',
   },
   typography: {
