@@ -27,6 +27,11 @@ export const Theme = {
     teal: '#00838F',
     tealTint: '#E3F3F4',
 
+    // Profile
+    sosTint: '#FDE7F0', // emergency (911) icon chip
+    photoFrom: '#F6D3E4', // profile photo placeholder gradient
+    photoTo: '#D9CCF3',
+
     // Feedback
     danger: '#B3261E',
     dangerTint: '#FBE9E7',
