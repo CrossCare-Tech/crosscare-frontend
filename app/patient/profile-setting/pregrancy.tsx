@@ -5,7 +5,6 @@ import {
   Modal,
   Platform,
   ScrollView,
-  StatusBar,
   StyleSheet,
   Text,
   TextInput,
@@ -24,6 +23,7 @@ import { fruitForWeek } from "@/constants/babySize";
 import { Theme } from "@/constants/theme";
 import LineIcon from "@/components/profile/LineIcon";
 import AuthTopBar from "@/components/ui/AuthTopBar";
+import ScreenBackground from "@/components/ui/ScreenBackground";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -203,8 +203,8 @@ const YourPregnancy = () => {
   const fruit = fruitForWeek(week);
 
   return (
+    <ScreenBackground>
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={Theme.colors.bg} />
       <ScrollView showsVerticalScrollIndicator={false}>
         <AuthTopBar
           title={t("profile.yourpregnancy")}
@@ -354,6 +354,7 @@ const YourPregnancy = () => {
         </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
+    </ScreenBackground>
   );
 };
 
@@ -362,7 +363,6 @@ export default YourPregnancy;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Theme.colors.bg,
   },
   flex: {
     flex: 1,
@@ -524,7 +524,7 @@ const styles = StyleSheet.create({
   },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: "rgba(25,28,29,0.4)",
+    backgroundColor: Theme.colors.scrim,
     justifyContent: "center",
     padding: 22,
   },
