@@ -54,6 +54,14 @@
     "noAppointments": "Pa gen randevou kap vini"
   },
   "profile": {
+    "accountDetails": "Detay kont",
+    "avatar": "Avatar",
+    "preferences": "Preferans",
+    "emergency": "Ijans 911",
+    "emergencyDescription": "Rakousi pou rele 911",
+    "sourcesCitations": "Sous ak sitasyon",
+    "weekLabel": "Semèn {{week}}",
+    "logoutLabel": "Dekonekte",
     "title": "Pwofil",
     "account": "Kont",
     "name": "Non",

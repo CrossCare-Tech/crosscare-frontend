@@ -54,6 +54,14 @@
     "noAppointments": "Nenhum compromisso agendado"
   },
   "profile": {
+    "accountDetails": "Detalhes da conta",
+    "avatar": "Avatar",
+    "preferences": "Preferências",
+    "emergency": "Emergência 911",
+    "emergencyDescription": "Atalho rápido para ligar para o 911",
+    "sourcesCitations": "Fontes e citações",
+    "weekLabel": "Semana {{week}}",
+    "logoutLabel": "Sair",
     "title": "Perfil",
     "account": "Conta",
     "name": "Nome",

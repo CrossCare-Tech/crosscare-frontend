@@ -54,6 +54,14 @@
     "noAppointments": "No upcoming appointments"
   },
   "profile": {
+    "accountDetails": "Account details",
+    "avatar": "Avatar",
+    "preferences": "Preferences",
+    "emergency": "Emergency 911",
+    "emergencyDescription": "Quick shortcut to call 911",
+    "sourcesCitations": "Sources & citations",
+    "weekLabel": "Week {{week}}",
+    "logoutLabel": "Log out",
     "title": "Profile",
     "account": "Account",
     "name": "Name",
