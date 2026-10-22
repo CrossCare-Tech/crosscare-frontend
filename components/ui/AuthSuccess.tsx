@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { Theme } from "@/constants/theme";
+import ScreenBackground from "@/components/ui/ScreenBackground";
 
 interface AuthSuccessProps {
   title: string;
@@ -102,6 +103,7 @@ const AuthSuccess: React.FC<AuthSuccessProps> = ({
   const barWidth = progress.interpolate({ inputRange: [0, 1], outputRange: ["0%", "100%"] });
 
   return (
+    <ScreenBackground>
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.content}>
         <View style={styles.chipWrap}>
@@ -134,13 +136,13 @@ const AuthSuccess: React.FC<AuthSuccessProps> = ({
         <Text style={styles.buttonText}>{buttonLabel}</Text>
       </TouchableOpacity>
     </SafeAreaView>
+    </ScreenBackground>
   );
 };
 
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Theme.colors.bg,
     paddingHorizontal: 28,
     paddingBottom: 24,
   },
