@@ -19,6 +19,7 @@ import { Feather } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { CONFIG } from "@/constants/config";
 import { Theme } from "@/constants/theme";
+import ScreenBackground from "@/components/ui/ScreenBackground";
 import { useAuthDialog } from "@/components/ui/AuthDialog";
 import InlineNotice, { Notice } from "@/components/ui/InlineNotice";
 import AuthTopBar from "@/components/ui/AuthTopBar";
@@ -226,6 +227,7 @@ const SignUp: FC = () => {
   };
 
   return (
+    <ScreenBackground>
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
         style={styles.container}
@@ -460,6 +462,7 @@ const SignUp: FC = () => {
       </KeyboardAvoidingView>
       {dialog}
     </SafeAreaView>
+    </ScreenBackground>
   );
 };
 
@@ -468,7 +471,6 @@ export default SignUp;
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Theme.colors.bg,
   },
   container: {
     flex: 1,
