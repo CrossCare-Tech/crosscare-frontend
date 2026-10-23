@@ -54,6 +54,7 @@
     "noAppointments": "Nenhum compromisso agendado"
   },
   "profile": {
+    "readPrivacyPolicy": "Ler a Política de Privacidade completa",
     "searchHelp": "Buscar artigos de ajuda",
     "frequentlyAsked": "Perguntas frequentes",
     "stillNeedHelp": "Ainda precisa de ajuda?",

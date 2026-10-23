@@ -54,6 +54,7 @@
     "noAppointments": "No upcoming appointments"
   },
   "profile": {
+    "readPrivacyPolicy": "Read the full Privacy Policy",
     "searchHelp": "Search help articles",
     "frequentlyAsked": "Frequently asked",
     "stillNeedHelp": "Still need help?",

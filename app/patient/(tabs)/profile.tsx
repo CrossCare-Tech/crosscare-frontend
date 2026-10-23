@@ -296,9 +296,7 @@ const Profile = () => {
             <MenuRow
               icon="terms"
               title={t("profile.tnc")}
-              onPress={() =>
-                Linking.openURL("https://crosscaretech.com/privacy-policy")
-              }
+              onPress={() => router.push("/patient/profile-setting/tnc")}
             />
             <MenuRow
               icon="citations"

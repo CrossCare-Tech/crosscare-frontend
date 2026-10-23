@@ -170,6 +170,7 @@
   "notNow": "Ahora no",
   "errorChatClear": "No se pudo borrar el historial del chat. Inténtalo de nuevo.",
   "profile": {
+    "readPrivacyPolicy": "Leer la Política de Privacidad completa",
     "searchHelp": "Buscar artículos de ayuda",
     "frequentlyAsked": "Preguntas frecuentes",
     "stillNeedHelp": "¿Necesitas más ayuda?",
