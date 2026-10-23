@@ -186,7 +186,11 @@ const styles = StyleSheet.create({
     marginHorizontal: 22,
     minHeight: 48,
     borderRadius: Theme.borderRadius.full,
-    backgroundColor: Theme.colors.magentaTint,
+    // White instead of the prototype's magenta tint, which blends into the Lilac Mist canvas
+    backgroundColor: Theme.colors.surface,
+    borderWidth: 1,
+    borderColor: Theme.colors.hairline,
+    ...Theme.shadows.card,
   },
   editText: {
     fontFamily: Theme.typography.heading,
