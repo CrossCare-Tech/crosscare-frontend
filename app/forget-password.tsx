@@ -16,6 +16,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { CONFIG } from "@/constants/config";
 import { Theme } from "@/constants/theme";
+import ScreenBackground from "@/components/ui/ScreenBackground";
 import AuthTopBar from "@/components/ui/AuthTopBar";
 import AuthSuccess from "@/components/ui/AuthSuccess";
 import { useAuthDialog } from "@/components/ui/AuthDialog";
@@ -168,6 +169,7 @@ const ForgetScreen: FC = () => {
   }
 
   return (
+    <ScreenBackground>
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
         style={styles.container}
@@ -345,6 +347,7 @@ const ForgetScreen: FC = () => {
       </KeyboardAvoidingView>
       {dialog}
     </SafeAreaView>
+    </ScreenBackground>
   );
 };
 
@@ -353,7 +356,6 @@ export default ForgetScreen;
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Theme.colors.bg,
   },
   container: {
     flex: 1,

@@ -22,6 +22,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { CONFIG } from "@/constants/config";
 import { store } from "../store/store";
 import { Theme } from "@/constants/theme";
+import ScreenBackground from "@/components/ui/ScreenBackground";
 import { useAuthDialog } from "@/components/ui/AuthDialog";
 import InlineNotice, { Notice } from "@/components/ui/InlineNotice";
 import { FontAwesome5, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -196,6 +197,7 @@ const LoginContent: FC = () => {
   };
 
   return (
+    <ScreenBackground>
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
         style={styles.keyboardContainer}
@@ -346,6 +348,7 @@ const LoginContent: FC = () => {
       </KeyboardAvoidingView>
       {dialog}
     </SafeAreaView>
+    </ScreenBackground>
   );
 };
 
@@ -362,7 +365,6 @@ export default Login;
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Theme.colors.bg,
   },
   keyboardContainer: {
     flex: 1,
