@@ -1,306 +1,295 @@
-"use client";
-
 import {
+  AppState,
+  Linking,
+  ScrollView,
   StyleSheet,
   Text,
-  View,
   TouchableOpacity,
-  Switch,
-  Image,
-  ScrollView,
-  Alert,
-  Keyboard,
-  Linking,
+  View,
 } from "react-native";
-import { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Feather, Ionicons } from "@expo/vector-icons";
-import { useDispatch, useSelector } from "react-redux";
-import { StatusBar } from "react-native";
-import { TextInput } from "react-native";
 import * as Notifications from "expo-notifications";
-import { requestNotificationPermissions } from "../../../utils/NotificationManager";
-import { router } from "expo-router";
-import { removeToken, setToken, setUser } from "@/store/userSlice";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTranslation } from "react-i18next";
-import { CONFIG } from "@/constants/config";
+import {
+  areMedicationRemindersEnabled,
+  generateDefaultReminders,
+  loadReminders,
+  requestNotificationPermissions,
+  saveReminders,
+  scheduleDailyReminder,
+  setMedicationRemindersEnabled,
+} from "@/utils/NotificationManager";
+import { Theme } from "@/constants/theme";
+import ScreenBackground from "@/components/ui/ScreenBackground";
+import AuthTopBar from "@/components/ui/AuthTopBar";
+import InlineNotice from "@/components/ui/InlineNotice";
+import Toggle from "@/components/profile/Toggle";
 
-const notification = () => {
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [profile, setProfile] = useState();
-  const user = useSelector((state: any) => state.user);
-  const [name, setName] = useState(user?.user_name);
-  const [age, setAge] = useState(0);
-  const [updating, setUpdating] = useState(false);
-  const [email, setEmail] = useState(user?.user_email);
-  const [pregnancyWeek, setPregnancyWeek] = useState(0);
-  const [permissionStatus, setPermissionStatus] =
-    useState<Notifications.PermissionStatus | null>(null);
-  const token = useSelector((state: any) => state.user.token);
-  console.log("token", token);
-  console.log("userData1", user);
-  const dispatch = useDispatch();
+// Concierge suggestions and the weekly email do not exist yet; these toggles only
+// remember the user's choice on the device until the features are built.
+const PROACTIVE_SUGGESTIONS_KEY = "pref_proactive_suggestions";
+const WEEKLY_SUMMARY_KEY = "pref_weekly_summary";
 
-  // State for edit modes
-  const [isEditingName, setIsEditingName] = useState(false);
-  const [isEditingAge, setIsEditingAge] = useState(false);
-  const [isEditingEmail, setIsEditingEmail] = useState(false);
-  const [isEditingPregnancyWeek, setIsEditingPregnancyWeek] = useState(false);
+const Row = ({
+  title,
+  channel,
+  value,
+  onChange,
+  disabled,
+  isLast,
+}: {
+  title: string;
+  channel: string;
+  value: boolean;
+  onChange?: (value: boolean) => void;
+  disabled?: boolean;
+  isLast?: boolean;
+}) => (
+  <View style={[styles.row, isLast && styles.rowLast]}>
+    <View style={styles.rowText}>
+      <Text style={styles.rowTitle}>{title}</Text>
+      <Text style={styles.rowSub}>{channel}</Text>
+    </View>
+    <Toggle
+      value={value}
+      onChange={onChange}
+      disabled={disabled}
+      accessibilityLabel={title}
+    />
+  </View>
+);
 
-  const getProfile = async () => {
-    const response = await fetch(
-      `${CONFIG.API_BASE_URL}/user/${user?.user_id}/profile`,
-      {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      }
-    );
+const NotificationSettings = () => {
+  const { t } = useTranslation();
 
-    const data = await response.json();
-    console.log("Profile data:", data.name);
-    setAge(data.age || 0);
-    setName(data.name || "");
-    setEmail(data.email || "");
-    setPregnancyWeek(data.week || 0);
+  const [permissionGranted, setPermissionGranted] = useState(true);
+  const [medication, setMedication] = useState(true);
+  const [hydration, setHydration] = useState(true);
+  const [proactive, setProactive] = useState(true);
+  const [weeklySummary, setWeeklySummary] = useState(false);
 
-    // Extract and log question responses
-    setProfile(data);
-  };
-
-  useEffect(() => {
-    if (user?.user_id) {
-      getProfile();
+  const checkPermission = useCallback(async () => {
+    try {
+      const { status } = await Notifications.getPermissionsAsync();
+      setPermissionGranted(status === "granted");
+    } catch (error) {
+      console.error("Error checking notification permissions:", error);
     }
-  }, [user?.user_id]);
+  }, []);
 
   useEffect(() => {
-    const checkPermissions = async () => {
+    const loadPreferences = async () => {
       try {
-        const { status } = await Notifications.getPermissionsAsync();
-        setPermissionStatus(status);
-        setNotificationsEnabled(status === "granted");
+        setMedication(await areMedicationRemindersEnabled());
+
+        const reminders = await loadReminders();
+        const water = (reminders.length ? reminders : generateDefaultReminders()).filter(
+          (reminder) => reminder.type === "water"
+        );
+        setHydration(water.some((reminder) => reminder.enabled));
+
+        const [savedProactive, savedWeekly] = await Promise.all([
+          AsyncStorage.getItem(PROACTIVE_SUGGESTIONS_KEY),
+          AsyncStorage.getItem(WEEKLY_SUMMARY_KEY),
+        ]);
+        if (savedProactive !== null) setProactive(savedProactive === "true");
+        if (savedWeekly !== null) setWeeklySummary(savedWeekly === "true");
       } catch (error) {
-        console.error("Error checking notification permissions:", error);
+        console.error("Error loading notification preferences:", error);
       }
     };
 
-    checkPermissions();
-  }, []);
+    checkPermission();
+    loadPreferences();
 
-  const toggleNotifications = async () => {
-    try {
-      if (!notificationsEnabled) {
-        // Request permissions if notifications are being enabled
-        const permissionGranted = await requestNotificationPermissions();
-        setPermissionStatus(
-          permissionGranted
-            ? Notifications.PermissionStatus.GRANTED
-            : Notifications.PermissionStatus.DENIED
-        );
+    // Re-check when the user comes back from the system settings
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state === "active") checkPermission();
+    });
+    return () => subscription.remove();
+  }, [checkPermission]);
 
-        if (permissionGranted) {
-          setNotificationsEnabled(true);
-          Alert.alert(
-            t("profile.notificationsEnabled"),
-            t("profile.notificationsMessage"),
-            [{ text: "OK" }]
-          );
-        } else {
-          // If permission is denied, prompt the user to go to settings
-          Alert.alert(
-            t("profile.permissionRequired"),
-            t("profile.permissionMessage"),
-            [
-              {
-                text: t("profile.goToSettings"),
-                onPress: () => Linking.openSettings(),
-              },
-              { text: t("profile.cancel") },
-            ]
-          );
-        }
-      } else {
-        // Simply disable notifications in the app
-        setNotificationsEnabled(false);
-        Alert.alert(
-          t("profile.notificationsDisabled"),
-          t("profile.notificationsDisabledMessage"),
-          [{ text: "OK" }]
-        );
-      }
-    } catch (error) {
-      console.error("Error toggling notifications:", error);
-      Alert.alert(t("profile.error"), t("profile.errorMessage"), [
-        { text: "OK" },
-      ]);
+  const turnOnNotifications = async () => {
+    const granted = await requestNotificationPermissions();
+    if (granted) {
+      setPermissionGranted(true);
+    } else {
+      // Android only shows the prompt once; after that it has to be changed in settings
+      Linking.openSettings();
     }
   };
 
-  const { t } = useTranslation();
+  const toggleMedication = async (value: boolean) => {
+    setMedication(value);
+    await setMedicationRemindersEnabled(value);
+  };
+
+  // Turns every daily water reminder on or off and (re)schedules them
+  const toggleHydration = async (value: boolean) => {
+    setHydration(value);
+    try {
+      const saved = await loadReminders();
+      const reminders = (saved.length ? saved : generateDefaultReminders()).map(
+        (reminder) =>
+          reminder.type === "water" ? { ...reminder, enabled: value } : reminder
+      );
+      await saveReminders(reminders);
+      for (const reminder of reminders.filter((r) => r.type === "water")) {
+        await scheduleDailyReminder(reminder);
+      }
+    } catch (error) {
+      console.error("Error updating hydration reminders:", error);
+    }
+  };
+
+  const toggleLocalPreference =
+    (key: string, setter: (value: boolean) => void) => (value: boolean) => {
+      setter(value);
+      AsyncStorage.setItem(key, String(value)).catch((error) =>
+        console.error("Error saving notification preference:", error)
+      );
+    };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={"white"} />
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="chevron-back" size={20} color="black" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{t("profile.notifications")}</Text>
-        <View
-          style={{
-            width: 20,
-          }}
-        />
-      </View>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <View style={styles.content}>
-          <View style={styles.notificationContainer}>
-            <Text style={styles.notificationText}>
-              {t("allowNotification")}
-            </Text>
-            <Switch
-              trackColor={{ false: "#E5E5E5", true: "#F76CCF" }}
-              thumbColor={"#fff"}
-              ios_backgroundColor="#E5E5E5"
-              onValueChange={toggleNotifications}
-              value={notificationsEnabled}
-            />
+    <ScreenBackground>
+      <SafeAreaView style={styles.container}>
+        <ScrollView showsVerticalScrollIndicator={false}>
+          <AuthTopBar title={t("profile.notifications")} />
+          <View style={styles.content}>
+            {!permissionGranted && (
+              <View style={styles.permission}>
+                <InlineNotice
+                  notice={{ message: t("profile.notificationsOffNotice"), variant: "info" }}
+                />
+                <TouchableOpacity
+                  style={styles.button}
+                  onPress={turnOnNotifications}
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.buttonText}>
+                    {t("profile.turnOnNotifications")}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            <Text style={styles.sectionTitle}>{t("profile.healthReminders")}</Text>
+            <View style={styles.card}>
+              <Row
+                title={t("profile.medicationReminders")}
+                channel={t("profile.pushChannel")}
+                value={medication}
+                onChange={toggleMedication}
+              />
+              <Row
+                title={t("profile.hydrationNudges")}
+                channel={t("profile.pushChannel")}
+                value={hydration}
+                onChange={toggleHydration}
+                isLast
+              />
+            </View>
+
+            <Text style={styles.sectionTitle}>{t("profile.conciergeSection")}</Text>
+            <View style={styles.card}>
+              <Row
+                title={t("profile.proactiveSuggestions")}
+                channel={t("profile.pushChannel")}
+                value={proactive}
+                onChange={toggleLocalPreference(PROACTIVE_SUGGESTIONS_KEY, setProactive)}
+              />
+              <Row
+                title={t("profile.weeklySummary")}
+                channel={t("profile.emailChannel")}
+                value={weeklySummary}
+                onChange={toggleLocalPreference(WEEKLY_SUMMARY_KEY, setWeeklySummary)}
+                isLast
+              />
+            </View>
+
+            <Text style={styles.sectionTitle}>{t("profile.clinicalAlerts")}</Text>
+            <View style={styles.card}>
+              <Row
+                title={t("profile.acogAlerts")}
+                channel={t("profile.alwaysOn")}
+                value
+                disabled
+                isLast
+              />
+            </View>
           </View>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+        </ScrollView>
+      </SafeAreaView>
+    </ScreenBackground>
   );
 };
 
-export default notification;
+export default NotificationSettings;
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "white",
-  },
-  header: {
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    justifyContent: "space-between",
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontFamily: "DMSans600",
-    color: "#373737",
   },
   content: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
+    paddingHorizontal: 22,
+    paddingTop: 4,
+    paddingBottom: 28,
+    gap: 18,
   },
-  fieldContainer: {
-    backgroundColor: "rgba(229, 229, 229, 0.20)",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 24,
+  permission: {
+    gap: 10,
   },
-  fieldContent: {
+  sectionTitle: {
+    fontFamily: Theme.typography.heading,
+    fontSize: 11.5,
+    color: Theme.colors.inkFaint,
+    marginTop: 2,
+    marginBottom: -6,
+  },
+  card: {
+    backgroundColor: Theme.colors.surface,
+    borderRadius: 20,
+    paddingVertical: 2,
+    paddingHorizontal: Theme.spacing.md,
+    ...Theme.shadows.card,
+  },
+  row: {
     flexDirection: "row",
+    alignItems: "center",
     justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 8,
+    gap: 12,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: Theme.colors.hairline,
   },
-  fieldLabel: {
-    fontSize: 14,
-    color: "#7B7B7B",
-    fontFamily: "DMSans500",
+  rowLast: {
+    borderBottomWidth: 0,
   },
-  editActions: {
-    flexDirection: "row",
+  rowText: {
+    flex: 1,
+  },
+  rowTitle: {
+    fontFamily: Theme.typography.heading,
+    fontSize: 13,
+    color: Theme.colors.ink,
+  },
+  rowSub: {
+    fontFamily: Theme.typography.body,
+    fontSize: 11.5,
+    color: Theme.colors.inkFaint,
+  },
+  button: {
+    height: 52,
+    borderRadius: Theme.borderRadius.sm,
+    backgroundColor: Theme.colors.magenta,
     alignItems: "center",
-  },
-  editButton: {
-    padding: 4,
-  },
-  separator: {
-    height: 1,
-    backgroundColor: "#7B7B7B29",
-    marginBottom: 12,
-  },
-  fieldInput: {
-    fontSize: 16,
-    color: "#373737",
-    fontFamily: "DMSans600",
-    padding: 0,
-  },
-  fieldValue: {
-    fontSize: 16,
-    color: "#373737",
-    fontFamily: "DMSans600",
-  },
-  avatarContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    backgroundColor: "rgba(229, 229, 229, 0.20)",
-    alignItems: "center",
-    height: 53,
-    marginBottom: 24,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-  },
-  avatarText: {
-    fontSize: 16,
-    color: "#333",
-    fontFamily: "DMSans600",
-  },
-  avatarRight: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  avatarImage: {
-    width: 32,
-    height: 32,
-    borderRadius: 25,
-  },
-  ageInputContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  ageInput: {
-    fontSize: 16,
-    color: "#373737",
-    fontFamily: "DMSans600",
-    padding: 0,
-    // minWidth: 30,
-  },
-  notificationContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    backgroundColor: "rgba(229, 229, 229, 0.20)",
-    borderRadius: 12,
-    height: 53,
-    paddingHorizontal: 12,
-    marginBottom: 20,
-  },
-  notificationText: {
-    fontSize: 15,
-    color: "#333",
-    fontFamily: "DMSans600",
-  },
-  termsContainer: {
-    backgroundColor: "rgba(229, 229, 229, 0.20)",
-    height: 53,
-    marginBottom: 20,
     justifyContent: "center",
-    borderRadius: 12,
-    paddingHorizontal: 12,
   },
-  termsText: {
-    fontSize: 16,
-    color: "#E162BC",
-    fontFamily: "DMSans600",
+  buttonText: {
+    fontFamily: Theme.typography.heading,
+    fontSize: 15,
+    color: Theme.colors.surface,
   },
 });
