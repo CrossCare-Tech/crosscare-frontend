@@ -1,298 +1,80 @@
-"use client";
-
 import {
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
   StyleSheet,
   Text,
-  View,
   TouchableOpacity,
-  Switch,
-  Image,
-  ScrollView,
-  Alert,
-  Keyboard,
+  View,
 } from "react-native";
 import { useEffect, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Feather, Ionicons } from "@expo/vector-icons";
 import { useDispatch, useSelector } from "react-redux";
-import { StatusBar } from "react-native";
-import { TextInput } from "react-native";
-import * as Notifications from "expo-notifications";
-import { requestNotificationPermissions } from "../../../utils/NotificationManager";
 import { router } from "expo-router";
-import { removeToken, setToken, setUser } from "@/store/userSlice";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import Person from "@/assets/images/Svg/Person";
-import PregrantWomen from "@/assets/images/Svg/PregrantsWomen";
-import AvatarIcon from "@/assets/images/Svg/AvatarIcon";
-import Badge from "@/assets/images/Svg/Badge";
-import Globe from "@/assets/images/Svg/Globe";
-import Notification from "@/assets/images/Svg/Notification";
-import Help from "@/assets/images/Svg/Help";
-import Terms from "@/assets/images/Svg/Terms";
 import { useTranslation } from "react-i18next";
+import DateTimePicker from "@react-native-community/datetimepicker";
+import { setUser } from "@/store/userSlice";
 import { CONFIG } from "@/constants/config";
+import { Theme } from "@/constants/theme";
+import ScreenBackground from "@/components/ui/ScreenBackground";
+import AuthTopBar from "@/components/ui/AuthTopBar";
+import CustomTextInput from "@/components/ui/CustomTextInput";
+import ProfilePhoto, {
+  usePickProfileImage,
+} from "@/components/profile/ProfilePhoto";
 
-
-const ProfileField = ({
-  label,
-  value,
-  onEdit,
-}: {
-  label: string;
-  value: string;
-  onEdit: () => void;
-}) => {
-  return (
-    <View style={styles.fieldContainer}>
-      <View style={styles.fieldContent}>
-        <Text style={styles.fieldLabel}>{label}</Text>
-        <TouchableOpacity onPress={onEdit} style={styles.editButton}>
-          <Feather name="edit-2" size={16} color="#F76CCF" />
-        </TouchableOpacity>
-      </View>
-      <View style={styles.separator} />
-      <Text style={styles.fieldValue}>{value}</Text>
-    </View>
-  );
+type AccountForm = {
+  name: string;
+  email: string;
+  phoneNumber: string;
 };
 
-const EditableNameField = ({
-  label,
-  value,
-  onSave,
-  onCancel,
-}: {
-  label: string;
-  value: string;
-  onSave: (value: string) => void;
-  onCancel: () => void;
-}) => {
-  const { t } = useTranslation();
-  const [inputValue, setInputValue] = useState(value);
+const EMPTY_FORM: AccountForm = { name: "", email: "", phoneNumber: "" };
 
-  return (
-    <View style={styles.fieldContainer}>
-      <View style={styles.fieldContent}>
-        <Text style={styles.fieldLabel}>{label}</Text>
-        <View style={styles.editActions}>
-          {/* <TouchableOpacity
-            onPress={() => onCancel()}
-            style={styles.editButton}
-          >
-            <Text style={{
-              color: '#E162BC',
-              fontSize: 12,
-              fontFamily:'DMSans600',
-            }}>Cancel</Text>
-          </TouchableOpacity> */}
-          <TouchableOpacity
-            onPress={() => {
-              Keyboard.dismiss();
-              onSave(inputValue);
-            }}
-            style={[styles.editButton, { marginLeft: 10 }]}
-          >
-            <Text
-              style={{
-                color: "#E162BC",
-                fontSize: 14,
-                fontFamily: "DMSans600",
-              }}
-            >
-              {t("save")}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-      <View style={styles.separator} />
-      <TextInput
-        style={styles.fieldInput}
-        value={inputValue}
-        onChangeText={setInputValue}
-        autoFocus
-      />
-    </View>
-  );
-};
-
-// Editable age field component
-const EditableAgeField = ({
-  label,
-  age,
-  onSave,
-  onCancel,
-}: {
-  label: string;
-  age: number;
-  onSave: (age: number) => void;
-  onCancel: () => void;
-}) => {
-  const { t } = useTranslation();
-  const [inputValue, setInputValue] = useState(age.toString());
-
-  const handleSave = () => {
-    Keyboard.dismiss();
-    const newAge = Number.parseInt(inputValue);
-    if (!isNaN(newAge) && newAge > 0) {
-      onSave(newAge);
-    } else {
-      onCancel();
-    }
-  };
-
-  return (
-    <View style={styles.fieldContainer}>
-      <View style={styles.fieldContent}>
-        <Text style={styles.fieldLabel}>{label}</Text>
-        <View style={styles.editActions}>
-          {/* <TouchableOpacity onPress={onCancel} style={styles.editButton}>
-            <Text style={{
-              color: '#E162BC',
-              fontSize: 12,
-              fontFamily:'DMSans600',
-            }}>Cancel</Text>
-          </TouchableOpacity> */}
-          <TouchableOpacity
-            onPress={handleSave}
-            style={[styles.editButton, { marginLeft: 10 }]}
-          >
-            <Text
-              style={{
-                color: "#E162BC",
-                fontSize: 14,
-                fontFamily: "DMSans600",
-              }}
-            >
-              {t("save")}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-      <View style={styles.separator} />
-      <View style={styles.ageInputContainer}>
-        <TextInput
-          style={styles.ageInput}
-          value={inputValue}
-          onChangeText={setInputValue}
-          keyboardType="numeric"
-          autoFocus
-        />
-        <Text style={styles.fieldValue}> Years</Text>
-      </View>
-    </View>
-  );
-};
-
-const EditableEmailField = ({
-  label,
-  value,
-  onSave,
-  onCancel,
-}: {
-  label: string;
-  value: string;
-  onSave: (value: string) => void;
-  onCancel: () => void;
-}) => {
-  const { t } = useTranslation();
-  const [inputValue, setInputValue] = useState(value);
-
-  return (
-    <View style={styles.fieldContainer}>
-      <View style={styles.fieldContent}>
-        <Text style={styles.fieldLabel}>{label}</Text>
-        <View style={styles.editActions}>
-          {/* <TouchableOpacity
-            onPress={() => onCancel()}
-            style={styles.editButton}
-          >
-            <Text style={{
-              color: '#E162BC',
-              fontSize: 12,
-              fontFamily:'DMSans600',
-            }}>Cancel</Text>
-          </TouchableOpacity> */}
-          <TouchableOpacity
-            onPress={() => {
-              Keyboard.dismiss();
-              onSave(inputValue);
-            }}
-            style={[styles.editButton, { marginLeft: 10 }]}
-          >
-            <Text
-              style={{
-                color: "#E162BC",
-                fontSize: 14,
-                fontFamily: "DMSans600",
-              }}
-            >
-              {t("save")}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-      <View style={styles.separator} />
-      <TextInput
-        style={styles.fieldInput}
-        value={inputValue}
-        onChangeText={setInputValue}
-        keyboardType="email-address"
-        autoCapitalize="none"
-        autoCorrect={false}
-        autoFocus
-      />
-    </View>
-  );
-};
-
-const name = () => {
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [profile, setProfile] = useState();
+const Account = () => {
   const user = useSelector((state: any) => state.user);
-  const [name, setName] = useState(user?.user_name);
-  const [age, setAge] = useState(0);
-  const [updating, setUpdating] = useState(false);
-  const [email, setEmail] = useState(user?.user_email);
-  const [phoneNumber, setPhoneNumber] = useState("");
-  const [pregnancyWeek, setPregnancyWeek] = useState(0);
-  const [permissionStatus, setPermissionStatus] =
-    useState<Notifications.PermissionStatus | null>(null);
   const token = useSelector((state: any) => state.user.token);
-  console.log("token", token);
-  console.log("userData1", user);
   const dispatch = useDispatch();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const pickProfileImage = usePickProfileImage();
 
-  // State for edit modes
-  const [isEditingName, setIsEditingName] = useState(false);
-  const [isEditingAge, setIsEditingAge] = useState(false);
-  const [isEditingEmail, setIsEditingEmail] = useState(false);
-  const [isEditingPhoneNumber, setIsEditingPhoneNumber] = useState(false);
-  const [isEditingPregnancyWeek, setIsEditingPregnancyWeek] = useState(false);
+  const [photo, setPhoto] = useState<string>(user?.user_photo || "");
+  const [saved, setSaved] = useState<AccountForm>(EMPTY_FORM);
+  const [form, setForm] = useState<AccountForm>(EMPTY_FORM);
+  const [saving, setSaving] = useState(false);
+  const [dateOfBirth, setDateOfBirth] = useState<Date | null>(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
+  const setField = (key: keyof AccountForm) => (value: string) =>
+    setForm((prev) => ({ ...prev, [key]: value }));
 
   const getProfile = async () => {
-    const response = await fetch(
-      `${CONFIG.API_BASE_URL}/user/${user?.user_id}/profile`,
-      {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      }
-    );
+    try {
+      const response = await fetch(
+        `${CONFIG.API_BASE_URL}/user/${user?.user_id}/profile`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
-    const data = await response.json();
-    console.log("Profile data:", data.name);
-    setAge(data.age || 0);
-    setName(data.name || "");
-    setEmail(data.email || "");
-    setPhoneNumber(data.phoneNumber || "");
-    setPregnancyWeek(data.week || 0);
-
-    // Extract and log question responses
-    setProfile(data);
+      const data = await response.json();
+      const loaded: AccountForm = {
+        name: data.name || "",
+        email: data.email || "",
+        phoneNumber: data.phoneNumber || "",
+      };
+      setSaved(loaded);
+      setForm(loaded);
+      if (data.profileImage) setPhoto(data.profileImage);
+    } catch (error) {
+      console.error("Error fetching profile:", error);
+    }
   };
 
   useEffect(() => {
@@ -301,33 +83,33 @@ const name = () => {
     }
   }, [user?.user_id]);
 
-  useEffect(() => {
-    const checkPermissions = async () => {
-      try {
-        const { status } = await Notifications.getPermissionsAsync();
-        setPermissionStatus(status);
-        setNotificationsEnabled(status === "granted");
-      } catch (error) {
-        console.error("Error checking notification permissions:", error);
-      }
-    };
+  const pickImage = async () => {
+    const uri = await pickProfileImage();
+    if (uri) setPhoto(uri);
+  };
 
-    checkPermissions();
-  }, []);
+  // Only send fields that actually changed
+  const changes = (Object.keys(form) as (keyof AccountForm)[]).filter(
+    (key) => form[key].trim() !== saved[key]
+  );
 
-  const updateProfile = async (fieldName: string, value: string | number) => {
-    if (!user?.user_id || !token) {
-      Alert.alert("Error", "User ID or token not available");
+  const saveChanges = async () => {
+    const email = form.email.trim();
+    if (changes.includes("email") && !/^\S+@\S+\.\S+$/.test(email)) {
+      Alert.alert(t("profile.error"), t("profile.invalidEmail"));
       return;
     }
 
-    setUpdating(true);
+    const updateData: Record<string, string> = {};
+    for (const key of changes) {
+      const value = form[key].trim();
+      if (key !== "name" || value) updateData[key] = value;
+    }
 
+    if (Object.keys(updateData).length === 0) return;
+
+    setSaving(true);
     try {
-      // Create update payload
-      const updateData: Record<string, any> = {};
-      updateData[fieldName] = value;
-
       const response = await fetch(
         `${CONFIG.API_BASE_URL}/user/${user.user_id}/profile`,
         {
@@ -340,420 +122,199 @@ const name = () => {
         }
       );
 
+      const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(
-          `Failed to update profile: ${response.status} ${response.statusText}`
-        );
+        throw new Error(data?.message || t("profile.saveError"));
       }
 
-      const data = await response.json();
-      console.log("Profile updated:", data);
-
-      // Refresh profile data
-      getProfile();
-
-      const updatedUserData = { ...user };
-
-      // Update the specific fields in Redux based on what was changed
-      if (fieldName === "name") {
-        updatedUserData.user_name = value as string;
-      } else if (fieldName === "email") {
-        updatedUserData.user_email = value as string;
-      } else if (fieldName === "phoneNumber") {
-        updatedUserData.phoneNumber = value as string;
-      }
-
-      // Update Redux state with the updated user data
-      dispatch(setUser(updatedUserData));
-
-      // Alert.alert("Success", `Your ${fieldName} has been updated successfully.`)
-    } catch (error) {
+      dispatch(
+        setUser({
+          ...user,
+          user_name: (updateData.name as string) ?? user.user_name,
+          user_email: (updateData.email as string) ?? user.user_email,
+        })
+      );
+      router.back();
+    } catch (error: any) {
       console.error("Error updating profile:", error);
-      Alert.alert("Error", `Failed to update ${fieldName}. Please try again.`);
+      Alert.alert(t("profile.error"), error?.message || t("profile.saveError"));
     } finally {
-      setUpdating(false);
+      setSaving(false);
     }
   };
 
-  // Name handlers
-  const handleSaveName = async (newName: string) => {
-    if (newName.trim()) {
-      setName(newName);
-      await updateProfile("name", newName);
-    }
-    setIsEditingName(false);
-  };
-
-  // Email handlers
-  const handleSaveEmail = async (newEmail: string) => {
-    if (newEmail.trim() && newEmail.includes("@")) {
-      setEmail(newEmail);
-      await updateProfile("email", newEmail);
-    }
-    setIsEditingEmail(false);
-  };
-
-  // Age handlers
-  const handleSaveAge = async (newAge: number) => {
-    setAge(newAge);
-    await updateProfile("age", newAge);
-    setIsEditingAge(false);
-  };
-
-  // Phone Number handlers
-  const handleSavePhoneNumber = async (newPhoneNumber: string) => {
-    if (newPhoneNumber.trim()) {
-      setPhoneNumber(newPhoneNumber);
-      await updateProfile("phoneNumber", newPhoneNumber);
-    }
-    setIsEditingPhoneNumber(false);
-  };
-
-  // Pregnancy Week handlers
-  const handleSavePregnancyWeek = async (newWeek: number) => {
-    setPregnancyWeek(newWeek);
-    await updateProfile("week", newWeek);
-    setIsEditingPregnancyWeek(false);
-  };
-
-  // Notification handlers
-  const toggleNotifications = async () => {
-    try {
-      if (notificationsEnabled) {
-        // Disable notifications
-        setNotificationsEnabled(false);
-      } else {
-        // Request permission and enable notifications
-        const hasPermission = await requestNotificationPermissions();
-        setNotificationsEnabled(hasPermission);
-      }
-    } catch (error) {
-      console.error("Error toggling notifications:", error);
-    }
-  };
-
-  const logout = async () => {
-    await AsyncStorage.removeItem("userToken");
-    await AsyncStorage.removeItem("user");
-    await AsyncStorage.clear();
-
-    setToken(null);
-    setUser(null);
-    dispatch(removeToken());
-    router.replace("/login");
-  };
-
-  const MenuItem = ({
-    icon,
-    title,
-    subtitle,
-    onPress,
-  }: {
-    icon: React.ReactNode;
-    title: string;
-    subtitle: string;
-    onPress: () => void;
-  }) => {
-    return (
-      <TouchableOpacity style={styles.menuItem} onPress={onPress}>
-        <View style={styles.iconContainer}>{icon}</View>
-        <View style={styles.menuTextContainer}>
-          <Text style={styles.menuTitle}>{title}</Text>
-          <Text style={styles.menuSubtitle} numberOfLines={1}>
-            {subtitle}
-          </Text>
-        </View>
-      </TouchableOpacity>
-    );
-  };
+  const canSave = changes.length > 0 && !saving;
 
   return (
+    <ScreenBackground>
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={"white"} />
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={{
-            width: 20,
-            height: 20,
-            justifyContent: "center",
-            alignItems: "center",
-          }}
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
-          <Ionicons name="chevron-back" size={20} color="black" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{t("profile.account")}</Text>
-        <View
-          style={{
-            width: 20,
-          }}
-        />
-      </View>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <View style={styles.content}>
-          {isEditingName ? (
-            <EditableNameField
-              label={t("profile.name")}
-              value={name || ""}
-              onSave={handleSaveName}
-              onCancel={() => setIsEditingName(false)}
-            />
-          ) : (
-            <ProfileField
-              label={t("profile.name")}
-              value={name || ""}
-              onEdit={() => setIsEditingName(true)}
-            />
-          )}
-
-          {isEditingAge ? (
-            <EditableAgeField
-              label={t("profile.age")}
-              age={age}
-              onSave={handleSaveAge}
-              onCancel={() => setIsEditingAge(false)}
-            />
-          ) : (
-            <ProfileField
-              label={t("profile.age")}
-              value={`${age} Years`}
-              onEdit={() => setIsEditingAge(true)}
-            />
-          )}
-
-          {isEditingEmail ? (
-            <EditableEmailField
-              label={t("profile.email")}
-              value={email}
-              onSave={handleSaveEmail}
-              onCancel={() => setIsEditingEmail(false)}
-            />
-          ) : (
-            <ProfileField
-              label={t("profile.email")}
-              value={email}
-              onEdit={() => setIsEditingEmail(true)}
-            />
-          )}
-
-          {isEditingPhoneNumber ? (
-            <EditableNameField
-              label={t("profile.phoneNumber")}
-              value={phoneNumber}
-              onSave={handleSavePhoneNumber}
-              onCancel={() => setIsEditingPhoneNumber(false)}
-            />
-          ) : (
-            <ProfileField
-              label={t("profile.phoneNumber")}
-              value={phoneNumber}
-              onEdit={() => setIsEditingPhoneNumber(true)}
-            />
-          )}
-
-          {/* {isEditingPregnancyWeek ? (
-            <EditableAgeField
-              label={t('profile.pregnancyWeek')}
-              age={pregnancyWeek}
-              onSave={handleSavePregnancyWeek}
-              onCancel={() => setIsEditingPregnancyWeek(false)}
-            />
-          ) : (
-            <ProfileField
-              label={t('profile.pregnancyWeek')}
-              value={`Week ${pregnancyWeek}`}
-              onEdit={() => setIsEditingPregnancyWeek(true)}
-            />
-          )}
-
-          <TouchableOpacity
-            style={styles.avatarContainer}
-            onPress={() => router.push("/avatar")}
-          >
-            <Text style={styles.avatarText}>Customize your Avatar</Text>
-            <View style={styles.avatarRight}>
-              <Image
-                source={{
-                  uri: user?.avatar_url,
-                }}
-                style={styles.avatarImage}
-              />
-              <Ionicons name="chevron-forward" size={20} color="#E162BC" />
+          <AuthTopBar title={t("profile.account")} />
+          <View style={styles.content}>
+            <View style={styles.photoBlock}>
+              <ProfilePhoto uri={photo} onPress={pickImage} />
+              <TouchableOpacity onPress={pickImage}>
+                <Text style={styles.changePhoto}>
+                  {t("profile.changePhoto")}
+                </Text>
+              </TouchableOpacity>
             </View>
-          </TouchableOpacity>
 
-          <View style={styles.notificationContainer}>
-            <Text style={styles.notificationText}>Allow Notifications</Text>
-            <Switch
-              trackColor={{ false: "#E5E5E5", true: "#F76CCF" }}
-              thumbColor={"#fff"}
-              ios_backgroundColor="#E5E5E5"
-              onValueChange={toggleNotifications}
-              value={notificationsEnabled}
+            <CustomTextInput
+              label={t("profile.fullName")}
+              value={form.name}
+              onChangeText={setField("name")}
+              placeholder={t("profile.fullName")}
+              autoCapitalize="words"
+              textContentType="name"
             />
-          </View>
+            <CustomTextInput
+              label={t("profile.email")}
+              type="email"
+              value={form.email}
+              onChangeText={setField("email")}
+              placeholder="name@email.com"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              textContentType="emailAddress"
+            />
+            <CustomTextInput
+              label={t("profile.phone")}
+              type="phone"
+              value={form.phoneNumber}
+              onChangeText={setField("phoneNumber")}
+              placeholder="(555) 214-0087"
+              keyboardType="phone-pad"
+              textContentType="telephoneNumber"
+            />
+            {/* Visual only: the backend has no date-of-birth field yet, so this is not saved */}
+            <View style={styles.field}>
+              <Text style={styles.label}>{t("profile.dateOfBirth")}</Text>
+              <TouchableOpacity
+                style={styles.input}
+                onPress={() => setShowDatePicker(true)}
+                accessibilityRole="button"
+              >
+                <Text
+                  style={[
+                    styles.inputText,
+                    !dateOfBirth && { color: Theme.colors.placeholder },
+                  ]}
+                >
+                  {dateOfBirth
+                    ? dateOfBirth.toLocaleDateString(i18n.language, {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      })
+                    : t("profile.selectDate")}
+                </Text>
+              </TouchableOpacity>
+            </View>
+            {showDatePicker && (
+              <DateTimePicker
+                value={dateOfBirth || new Date(1995, 0, 1)}
+                mode="date"
+                display="default"
+                maximumDate={new Date()}
+                onChange={(_, date) => {
+                  setShowDatePicker(false);
+                  if (date) setDateOfBirth(date);
+                }}
+              />
+            )}
 
-          <TouchableOpacity style={styles.termsContainer}>
-            <Text style={styles.termsText}>Terms & Conditions</Text>
-          </TouchableOpacity> */}
-        </View>
-      </ScrollView>
+            <TouchableOpacity
+              style={[styles.button, !canSave && styles.buttonDisabled]}
+              onPress={saveChanges}
+              disabled={!canSave}
+              accessibilityRole="button"
+            >
+              {saving ? (
+                <ActivityIndicator color={Theme.colors.surface} />
+              ) : (
+                <Text style={styles.buttonText}>
+                  {t("profile.saveChanges")}
+                </Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
+    </ScreenBackground>
   );
 };
 
-export default name;
+export default Account;
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "white",
   },
-  header: {
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    justifyContent: "space-between",
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontFamily: "DMSans600",
-    color: "#373737",
-  },
-  content: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-  },
-  menuItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 16,
-    // borderBottomWidth: 1,
-    // borderBottomColor: "#F0F0F0",
-  },
-  iconContainer: {
-    width: 40,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 12,
-  },
-  menuTextContainer: {
+  flex: {
     flex: 1,
   },
-  menuTitle: {
-    fontSize: 16,
-    fontFamily: "DMSans600",
-    color: "#AF4D93", // Magenta/purple color from the image
-    marginBottom: 4,
+  content: {
+    paddingHorizontal: 22,
+    paddingTop: 4,
+    paddingBottom: 28,
+    gap: 18,
   },
-  menuSubtitle: {
-    fontSize: 14,
-    fontFamily: "DMSans500",
-    color: "#7B7B7B",
-  },
-  fieldContainer: {
-    backgroundColor: "rgba(229, 229, 229, 0.20)",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 24,
-  },
-  fieldContent: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 8,
-  },
-  fieldLabel: {
-    fontSize: 14,
-    color: "#7B7B7B",
-    fontFamily: "DMSans500",
-  },
-  editActions: {
-    flexDirection: "row",
+  photoBlock: {
     alignItems: "center",
   },
-  editButton: {
-    padding: 4,
+  changePhoto: {
+    fontFamily: Theme.typography.heading,
+    fontSize: 13.5,
+    color: Theme.colors.magenta,
+    marginTop: 8,
   },
-  separator: {
-    height: 1,
-    backgroundColor: "#7B7B7B29",
-    marginBottom: 12,
+  field: {
+    gap: 7,
   },
-  fieldInput: {
-    fontSize: 16,
-    color: "#373737",
-    fontFamily: "DMSans600",
-    padding: 0,
+  label: {
+    fontFamily: Theme.typography.heading,
+    fontSize: 12.5,
+    color: Theme.colors.inkSoft,
   },
-  fieldValue: {
-    fontSize: 16,
-    color: "#373737",
-    fontFamily: "DMSans600",
-  },
-  avatarContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    backgroundColor: "rgba(229, 229, 229, 0.20)",
-    alignItems: "center",
-    height: 53,
-    marginBottom: 24,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-  },
-  avatarText: {
-    fontSize: 16,
-    color: "#333",
-    fontFamily: "DMSans600",
-  },
-  avatarRight: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  avatarImage: {
-    width: 32,
-    height: 32,
-    borderRadius: 25,
-  },
-  ageInputContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  ageInput: {
-    fontSize: 16,
-    color: "#373737",
-    fontFamily: "DMSans600",
-    padding: 0,
-    // minWidth: 30,
-  },
-  notificationContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    backgroundColor: "rgba(229, 229, 229, 0.20)",
-    borderRadius: 12,
-    height: 53,
-    paddingHorizontal: 12,
-    marginBottom: 20,
-  },
-  notificationText: {
-    fontSize: 15,
-    color: "#333",
-    fontFamily: "DMSans600",
-  },
-  termsContainer: {
-    backgroundColor: "rgba(229, 229, 229, 0.20)",
-    height: 53,
-    marginBottom: 20,
+  input: {
+    height: 52,
+    borderRadius: Theme.borderRadius.sm,
+    borderWidth: 1.5,
+    borderColor: Theme.colors.inputBorder,
+    backgroundColor: Theme.colors.inputBg,
+    paddingHorizontal: 16,
     justifyContent: "center",
-    borderRadius: 12,
-    paddingHorizontal: 12,
   },
-  termsText: {
-    fontSize: 16,
-    color: "#E162BC",
-    fontFamily: "DMSans600",
+  inputText: {
+    fontFamily: Theme.typography.body,
+    fontSize: 15,
+    // Match the inner padding Android adds to CustomTextInput's TextInput
+    paddingHorizontal: 4,
+    color: Theme.colors.ink,
+  },
+  button: {
+    height: 52,
+    borderRadius: Theme.borderRadius.sm,
+    backgroundColor: Theme.colors.magenta,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  buttonDisabled: {
+    opacity: 0.5,
+  },
+  buttonText: {
+    fontFamily: Theme.typography.heading,
+    fontSize: 15,
+    color: Theme.colors.surface,
   },
 });

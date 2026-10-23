@@ -7,9 +7,10 @@ import { Theme } from "@/constants/theme";
 interface AuthTopBarProps {
   title: string;
   onBack?: () => void; // defaults to router.back(), or /login when there is no history
+  action?: { label: string; onPress: () => void }; // optional text action on the right (e.g. "Edit")
 }
 
-const AuthTopBar: React.FC<AuthTopBarProps> = ({ title, onBack }) => {
+const AuthTopBar: React.FC<AuthTopBarProps> = ({ title, onBack, action }) => {
   const router = useRouter();
   const handleBack = onBack ?? (() => (router.canGoBack() ? router.back() : router.replace("/login")));
 
@@ -25,7 +26,17 @@ const AuthTopBar: React.FC<AuthTopBarProps> = ({ title, onBack }) => {
       <Feather name="chevron-left" size={18} color={Theme.colors.ink} />
     </TouchableOpacity>
     <Text style={styles.title}>{title}</Text>
-    <View style={styles.spacer} />
+    {action ? (
+      <TouchableOpacity
+        onPress={action.onPress}
+        accessibilityRole="button"
+        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+      >
+        <Text style={styles.action}>{action.label}</Text>
+      </TouchableOpacity>
+    ) : (
+      <View style={styles.spacer} />
+    )}
   </View>
   );
 };
@@ -57,6 +68,11 @@ const styles = StyleSheet.create({
   },
   spacer: {
     width: 40,
+  },
+  action: {
+    fontSize: 13.5,
+    fontFamily: Theme.typography.heading,
+    color: Theme.colors.magenta,
   },
 });
 

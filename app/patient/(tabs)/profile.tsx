@@ -3,78 +3,183 @@ import {
   Text,
   View,
   TouchableOpacity,
-  Switch,
-  Image,
   ScrollView,
   Alert,
-  Keyboard,
   Linking,
 } from "react-native";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Feather, Ionicons } from "@expo/vector-icons";
+import { Circle, Path, Rect } from "react-native-svg";
 import { useDispatch, useSelector } from "react-redux";
-import { StatusBar } from "react-native";
-import { TextInput } from "react-native";
-import * as Notifications from "expo-notifications";
-import { requestNotificationPermissions } from "../../../utils/NotificationManager";
 import { router } from "expo-router";
-import { removeToken, setToken, setUser } from "@/store/userSlice";
+import { removeToken } from "@/store/userSlice";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import Person from "@/assets/images/Svg/Person";
-import PregrantWomen from "@/assets/images/Svg/PregrantsWomen";
-import AvatarIcon from "@/assets/images/Svg/AvatarIcon";
-import Badge from "@/assets/images/Svg/Badge";
-import Globe from "@/assets/images/Svg/Globe";
-import Notification from "@/assets/images/Svg/Notification";
-import Help from "@/assets/images/Svg/Help";
-import Terms from "@/assets/images/Svg/Terms";
-import Delete from "@/assets/images/Svg/Delete";
-import Logout from "@/assets/images/Svg/Logout";
-import { width, height } from "../../../constants/helper";
 import { useTranslation } from "react-i18next";
 import { CONFIG } from "@/constants/config";
-import Language from "../profile-setting/language";
+import { Theme } from "@/constants/theme";
+import ScreenBackground from "@/components/ui/ScreenBackground";
+import LineIcon from "@/components/profile/LineIcon";
+import ProfilePhoto, {
+  usePickProfileImage,
+} from "@/components/profile/ProfilePhoto";
+
+const LANGUAGE_NAMES: Record<string, string> = {
+  en: "English (US)",
+  es: "Español",
+  ht: "Kreyòl Ayisyen",
+  pt: "Português",
+};
+
+const ICONS: Record<string, React.ReactNode> = {
+  account: (
+    <>
+      <Circle cx="12" cy="8.2" r="3.4" />
+      <Path d="M4.8 19.5a7.2 7.2 0 0 1 14.4 0" />
+    </>
+  ),
+  pregnancy: (
+    <Path d="M12 20.5s-7.5-4.6-9.7-9.4C.9 7.6 3 4 6.5 4c2 0 3.5 1.1 4.5 2.6C12 5.1 13.5 4 15.5 4 19 4 21.1 7.6 19.7 11.1 17.5 15.9 12 20.5 12 20.5Z" />
+  ),
+  avatar: (
+    <>
+      <Rect x="4" y="4" width="7" height="7" rx="1.5" />
+      <Rect x="13" y="4" width="7" height="7" rx="1.5" />
+      <Rect x="4" y="13" width="7" height="7" rx="1.5" />
+      <Rect x="13" y="13" width="7" height="7" rx="1.5" />
+    </>
+  ),
+  fame: (
+    <Path d="M12 3.5l2.4 5 5.6.6-4.1 3.8 1.1 5.5L12 15.7l-5 2.7 1.1-5.5-4.1-3.8 5.6-.6Z" />
+  ),
+  language: (
+    <>
+      <Circle cx="12" cy="12" r="8.5" />
+      <Path d="M12 11v5.5M12 8v.1" />
+    </>
+  ),
+  notifications: (
+    <>
+      <Path d="M6 8a6 6 0 0 1 12 0c0 4 1.5 5.5 2 6.5H4c.5-1 2-2.5 2-6.5Z" />
+      <Path d="M10 19a2 2 0 0 0 4 0" />
+    </>
+  ),
+  emergency: (
+    <Path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z" />
+  ),
+  help: (
+    <>
+      <Path d="M7 3.5h7l4 4V20a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1Z" />
+      <Path d="M14 3.5V8h4" />
+    </>
+  ),
+  terms: (
+    <>
+      <Path d="M12 3.5 5 6v6c0 4.5 3 7.5 7 8.5 4-1 7-4 7-8.5V6l-7-2.5Z" />
+      <Path d="M9 12l2 2 4-4.2" />
+    </>
+  ),
+  citations: (
+    <>
+      <Path d="M6 4v6a4 4 0 0 0 8 0V4M6 4H4.5M14 4h1.5" />
+      <Circle cx="18.5" cy="16" r="2.2" />
+      <Path d="M10 14v1a4.5 4.5 0 0 0 6.5 4" />
+    </>
+  ),
+  logout: (
+    <>
+      <Path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4" />
+      <Path d="M10 16l-4-4 4-4M6 12h10" />
+    </>
+  ),
+  delete: (
+    <>
+      <Path d="M12 4 3 20h18Z" />
+      <Path d="M12 10v4M12 17.2v.1" />
+    </>
+  ),
+};
+
+type RowTone = "default" | "sos" | "danger";
+
+const CHIP_TONES: Record<RowTone, { bg: string; fg: string }> = {
+  default: { bg: Theme.colors.surfaceSunken, fg: Theme.colors.purple },
+  sos: { bg: Theme.colors.sosTint, fg: Theme.colors.magenta },
+  danger: { bg: Theme.colors.dangerTint, fg: Theme.colors.danger },
+};
+
+const MenuRow = ({
+  icon,
+  title,
+  subtitle,
+  tone = "default",
+  isLast,
+  onPress,
+}: {
+  icon: string;
+  title: string;
+  subtitle?: string;
+  tone?: RowTone;
+  isLast?: boolean;
+  onPress: () => void;
+}) => {
+  const chip = CHIP_TONES[tone];
+  return (
+    <TouchableOpacity
+      style={[styles.menuRow, isLast && styles.menuRowLast]}
+      onPress={onPress}
+      activeOpacity={0.6}
+      accessibilityRole="button"
+    >
+      <View style={[styles.iconChip, { backgroundColor: chip.bg }]}>
+        <LineIcon color={chip.fg}>{ICONS[icon]}</LineIcon>
+      </View>
+      <View style={styles.rowText}>
+        <Text
+          style={[
+            styles.rowTitle,
+            tone === "danger" && { color: Theme.colors.danger },
+          ]}
+        >
+          {title}
+        </Text>
+        {subtitle ? <Text style={styles.rowSub}>{subtitle}</Text> : null}
+      </View>
+      <LineIcon size={16} color={Theme.colors.ink}>
+        <Path d="M9 6l6 6-6 6" />
+      </LineIcon>
+    </TouchableOpacity>
+  );
+};
 
 const Profile = () => {
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [profile, setProfile] = useState();
   const user = useSelector((state: any) => state.user);
-  const [name, setName] = useState(user?.user_name);
-  const [age, setAge] = useState(0);
-  const [email, setEmail] = useState(user?.user_email);
-  const [pregnancyWeek, setPregnancyWeek] = useState(0);
-  const [permissionStatus, setPermissionStatus] =
-    useState<Notifications.PermissionStatus | null>(null);
   const token = useSelector((state: any) => state.user.token);
-  console.log("token", token);
-  console.log("userData1", user);
+  const [name, setName] = useState(user?.user_name);
+  const [pregnancyWeek, setPregnancyWeek] = useState(0);
+  const [photo, setPhoto] = useState<string>(user?.user_photo || "");
   const dispatch = useDispatch();
-  const { t } = useTranslation();
-
-  // State for edit modes
+  const { t, i18n } = useTranslation();
 
   const getProfile = async () => {
-    const response = await fetch(
-      `${CONFIG.API_BASE_URL}/user/${user?.user_id}/profile`,
-      {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      }
-    );
+    try {
+      const response = await fetch(
+        `${CONFIG.API_BASE_URL}/user/${user?.user_id}/profile`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
-    const data = await response.json();
-    console.log("Profile data:", data.name);
-    setAge(data.age || 0);
-    setName(data.name || "");
-    setEmail(data.email || "");
-    setPregnancyWeek(data.week || 0);
-
-    // Extract and log question responses
-    setProfile(data);
+      const data = await response.json();
+      setName(data.name || "");
+      setPregnancyWeek(data.week || 0);
+      if (data.profileImage) setPhoto(data.profileImage);
+    } catch (error) {
+      console.error("Error fetching profile:", error);
+    }
   };
 
   useEffect(() => {
@@ -83,19 +188,16 @@ const Profile = () => {
     }
   }, [user?.user_id]);
 
+  // Picks made on the Account screen land in Redux
   useEffect(() => {
-    const checkPermissions = async () => {
-      try {
-        const { status } = await Notifications.getPermissionsAsync();
-        setPermissionStatus(status);
-        setNotificationsEnabled(status === "granted");
-      } catch (error) {
-        console.error("Error checking notification permissions:", error);
-      }
-    };
+    if (user?.user_photo) setPhoto(user.user_photo);
+  }, [user?.user_photo]);
 
-    checkPermissions();
-  }, []);
+  const pickProfileImage = usePickProfileImage();
+  const pickImage = async () => {
+    const uri = await pickProfileImage();
+    if (uri) setPhoto(uri);
+  };
 
   const logout = async () => {
     Alert.alert(
@@ -104,160 +206,126 @@ const Profile = () => {
       [
         {
           text: t("profile.no"),
-          onPress: () => console.log("Logout Cancelled"),
           style: "cancel",
         },
         {
           text: t("profile.logoutSuccess"),
           onPress: async () => {
-            await AsyncStorage.removeItem("userToken");
-            await AsyncStorage.removeItem("user");
-            await AsyncStorage.removeItem("explorerBadgeAwarded");
             await AsyncStorage.clear();
-
-            setToken(null);
-            setUser(null);
             dispatch(removeToken());
-            // await AsyncStorage.removeItem('health');
-            // await AsyncStorage.removeItem('journal');
-            // await AsyncStorage.removeItem('self-care');
-            // await AsyncStorage.removeItem('heart_2');
-            // await AsyncStorage.removeItem('meal_1');
-            // await AsyncStorage.removeItem('medication_3');
-            // const weightVisited = await AsyncStorage.getItem('weight_4');
-            // const waterVisited = await AsyncStorage.getItem('water_5');
-            // const stepVisited = await AsyncStorage.getItem('step_6');
-            // const sleepVisited = await AsyncStorage.getItem('sleep_7');
             router.replace("/login");
           },
         },
       ],
-      { cancelable: false } // Makes the alert non-dismissible unless they confirm or cancel
+      { cancelable: false }
     );
   };
 
-  const MenuItem = ({
-    icon,
-    title,
-    subtitle,
-    onPress,
-  }: {
-    icon: React.ReactNode;
-    title: string;
-    subtitle: string;
-    onPress: () => void;
-  }) => {
-    return (
-      <TouchableOpacity style={styles.menuItem} onPress={onPress}>
-        <View style={styles.iconContainer}>{icon}</View>
-        <View style={styles.menuTextContainer}>
-          <Text style={styles.menuTitle}>{title}</Text>
-          <Text style={styles.menuSubtitle} numberOfLines={1}>
-            {subtitle}
-          </Text>
-        </View>
-      </TouchableOpacity>
-    );
-  };
+  const subtitle = pregnancyWeek
+    ? t("profile.weekLabel", { week: pregnancyWeek })
+    : user?.user_email;
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={"white"} />
-      <View style={styles.header}>
-        <View
-          style={{
-            width: 20,
-          }}
-        />
-        <Text style={styles.headerTitle}>{t("profile.title")}</Text>
-        <TouchableOpacity onPress={logout}>
-          <Logout width={20} height={20} />
-        </TouchableOpacity>
-      </View>
+    <ScreenBackground>
+    <SafeAreaView style={styles.container} edges={["top"]}>
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
-          <MenuItem
-            icon={<Person />}
-            title={t("profile.account")}
-            subtitle={`${t("profile.name")}, ${t("profile.age")}, ${t(
-              "profile.email"
-            )}`}
-            onPress={() => router.push("/patient/profile-setting/name")}
-          />
-          <MenuItem
-            icon={<PregrantWomen />}
-            title={t("profile.yourpregnancy")}
-            subtitle={`${t("profile.weekofpregnancy")}, ${t(
-              "profile.progresstracking"
-            )}`}
-            onPress={() => router.push("/patient/profile-setting/pregrancy")}
-          />
-          <MenuItem
-            icon={<AvatarIcon />}
-            title={t("profile.customizeyourdoula")}
-            subtitle={`${t("profile.voicetone")}, ${t("profile.hair")}, ${t(
-              "profile.dress"
-            )}, ${t("profile.language")}, ${t("profile.skintone")}`}
-            onPress={() => router.push("/avatar")}
-          />
-          <MenuItem
-            icon={<Badge />}
-            title={t("profile.halloffame")}
-            subtitle={`${t("profile.earnbadge")}, ${t("profile.rewards")}`}
-            onPress={() => router.push("/patient/profile-setting/earnbadge")}
-          />
-          <MenuItem
-            icon={<Globe />}
-            title={t("profile.language")}
-            subtitle={`${t("profile.changedoulalanguage")}`}
-            onPress={() => router.push("/patient/profile-setting/language")}
-          />
+          <View style={styles.header}>
+            <ProfilePhoto uri={photo} onPress={pickImage} />
+            <Text style={styles.name}>{name}</Text>
+            {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+          </View>
 
-          <MenuItem
-            icon={<Notification />}
-            title={t("profile.notifications")}
-            subtitle={`${t("profile.messages")}, ${t("profile.alerts")}`}
-            onPress={() => router.push("/patient/profile-setting/notification")}
-          />
+          <Text style={styles.sectionTitle}>{t("profile.account")}</Text>
+          <View style={styles.card}>
+            <MenuRow
+              icon="account"
+              title={t("profile.accountDetails")}
+              onPress={() => router.push("/patient/profile-setting/name")}
+            />
+            <MenuRow
+              icon="pregnancy"
+              title={t("profile.yourpregnancy")}
+              onPress={() => router.push("/patient/profile-setting/pregrancy")}
+            />
+            <MenuRow
+              icon="avatar"
+              title={t("profile.avatar")}
+              onPress={() => router.push("/avatar")}
+            />
+            <MenuRow
+              icon="fame"
+              title={t("profile.halloffame")}
+              isLast
+              onPress={() => router.push("/patient/profile-setting/earnbadge")}
+            />
+          </View>
 
-          <MenuItem
-            icon={<Help />}
-            title={`${t("profile.help")}`}
-            subtitle={`${t("profile.helpcenter")}, ${t("profile.support")}, ${t(
-              "profile.contactus"
-            )}`}
-            onPress={() => router.push("/patient/profile-setting/help")}
-          />
+          <Text style={styles.sectionTitle}>{t("profile.preferences")}</Text>
+          <View style={styles.card}>
+            <MenuRow
+              icon="language"
+              title={t("profile.language")}
+              subtitle={LANGUAGE_NAMES[i18n.language] || LANGUAGE_NAMES.en}
+              onPress={() => router.push("/patient/profile-setting/language")}
+            />
+            <MenuRow
+              icon="notifications"
+              title={t("profile.notifications")}
+              onPress={() =>
+                router.push("/patient/profile-setting/notification")
+              }
+            />
+            <MenuRow
+              icon="emergency"
+              tone="sos"
+              title={t("profile.emergency")}
+              subtitle={t("profile.emergencyDescription")}
+              isLast
+              onPress={() => Linking.openURL("tel:911")}
+            />
+          </View>
 
-          <MenuItem
-            icon={<Terms />}
-            title={`${t("profile.tnc")}`}
-            subtitle={`${t("profile.privacy")}, ${t("profile.Termsofuse")}`}
-            onPress={() =>
-              Linking.openURL("https://crosscaretech.com/privacy-policy")
-            }
-          />
+          <Text style={styles.sectionTitle}>{t("profile.support")}</Text>
+          <View style={styles.card}>
+            <MenuRow
+              icon="help"
+              title={t("profile.helpcenter")}
+              onPress={() => router.push("/patient/profile-setting/help")}
+            />
+            <MenuRow
+              icon="terms"
+              title={t("profile.tnc")}
+              onPress={() => router.push("/patient/profile-setting/tnc")}
+            />
+            <MenuRow
+              icon="citations"
+              title={t("profile.sourcesCitations")}
+              isLast
+              onPress={() => router.push("/patient/profile-setting/citations")}
+            />
+          </View>
 
-          <MenuItem
-            icon={<Globe />}
-            title={`${t("profile.citations")}`}
-            subtitle={`${t("profile.citationsDescription")}`}
-            onPress={() => {
-              router.push("/patient/profile-setting/citations");
-            }}
-          />
-
-          <MenuItem
-            icon={<Delete />}
-            title={`${t("profile.deleteaccount")}`}
-            subtitle={`${t("profile.deleteaccountDescription")}`}
-            onPress={() => {
-              router.push("/patient/profile-setting/delete-account");
-            }}
-          />
+          <View style={styles.card}>
+            <MenuRow
+              icon="logout"
+              title={t("profile.logoutLabel")}
+              onPress={logout}
+            />
+            <MenuRow
+              icon="delete"
+              tone="danger"
+              title={t("profile.deleteaccount")}
+              isLast
+              onPress={() =>
+                router.push("/patient/profile-setting/delete-account")
+              }
+            />
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
+    </ScreenBackground>
   );
 };
 
@@ -266,153 +334,74 @@ export default Profile;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "white",
-  },
-  header: {
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    justifyContent: "space-between",
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontFamily: "DMSans600",
-    color: "#373737",
   },
   content: {
-    paddingHorizontal: 20,
-    // paddingTop: 20,
+    paddingHorizontal: 22,
+    paddingTop: 4,
+    paddingBottom: 28,
+    gap: 18,
   },
-  menuItem: {
+  header: {
+    alignItems: "center",
+    paddingTop: 6,
+    paddingBottom: 4,
+  },
+  name: {
+    fontFamily: Theme.typography.heading,
+    fontSize: 16,
+    color: Theme.colors.ink,
+    marginTop: 10,
+  },
+  subtitle: {
+    fontFamily: Theme.typography.body,
+    fontSize: 12,
+    color: Theme.colors.inkFaint,
+  },
+  sectionTitle: {
+    fontFamily: Theme.typography.heading,
+    fontSize: 11.5,
+    color: Theme.colors.inkFaint,
+    marginTop: 2,
+    marginBottom: -6,
+  },
+  card: {
+    backgroundColor: Theme.colors.surface,
+    borderRadius: 20,
+    paddingVertical: 2,
+    paddingHorizontal: 14,
+    ...Theme.shadows.card,
+  },
+  menuRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 16,
-    // borderBottomWidth: 1,
-    // borderBottomColor: "#F0F0F0",
+    gap: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 2,
+    borderBottomWidth: 1,
+    borderBottomColor: Theme.colors.hairline,
   },
-  iconContainer: {
-    width: 40,
+  menuRowLast: {
+    borderBottomWidth: 0,
+  },
+  iconChip: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 12,
   },
-  menuTextContainer: {
+  rowText: {
     flex: 1,
   },
-  menuTitle: {
-    fontSize: 16,
-    fontFamily: "DMSans600",
-    color: "#F66DCE", // Magenta/purple color from the image
-    marginBottom: 4,
+  rowTitle: {
+    fontFamily: Theme.typography.heading,
+    fontSize: 13.5,
+    color: Theme.colors.ink,
   },
-  menuSubtitle: {
-    fontSize: 14,
-    fontFamily: "DMSans500",
-    color: "#7B7B7B",
-  },
-  fieldContainer: {
-    backgroundColor: "rgba(229, 229, 229, 0.20)",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 24,
-  },
-  fieldContent: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 8,
-  },
-  fieldLabel: {
-    fontSize: 14,
-    color: "#7B7B7B",
-    fontFamily: "DMSans500",
-  },
-  editActions: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  editButton: {
-    padding: 4,
-  },
-  separator: {
-    height: 1,
-    backgroundColor: "#7B7B7B29",
-    marginBottom: 12,
-  },
-  fieldInput: {
-    fontSize: 16,
-    color: "#373737",
-    fontFamily: "DMSans600",
-    padding: 0,
-  },
-  fieldValue: {
-    fontSize: 16,
-    color: "#373737",
-    fontFamily: "DMSans600",
-  },
-  avatarContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    backgroundColor: "rgba(229, 229, 229, 0.20)",
-    alignItems: "center",
-    height: 53,
-    marginBottom: 24,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-  },
-  avatarText: {
-    fontSize: 16,
-    color: "#333",
-    fontFamily: "DMSans600",
-  },
-  avatarRight: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  avatarImage: {
-    width: 32,
-    height: 32,
-    borderRadius: 25,
-  },
-  ageInputContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  ageInput: {
-    fontSize: 16,
-    color: "#373737",
-    fontFamily: "DMSans600",
-    padding: 0,
-    // minWidth: 30,
-  },
-  notificationContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    backgroundColor: "rgba(229, 229, 229, 0.20)",
-    borderRadius: 12,
-    height: 53,
-    paddingHorizontal: 12,
-    marginBottom: 20,
-  },
-  notificationText: {
-    fontSize: 15,
-    color: "#333",
-    fontFamily: "DMSans600",
-  },
-  termsContainer: {
-    backgroundColor: "rgba(229, 229, 229, 0.20)",
-    height: 53,
-    marginBottom: 20,
-    justifyContent: "center",
-    borderRadius: 12,
-    paddingHorizontal: 12,
-  },
-  termsText: {
-    fontSize: 16,
-    color: "#E162BC",
-    fontFamily: "DMSans600",
+  rowSub: {
+    fontFamily: Theme.typography.body,
+    fontSize: 11.5,
+    color: Theme.colors.inkFaint,
+    marginTop: 1,
   },
 });

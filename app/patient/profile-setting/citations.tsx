@@ -1,183 +1,147 @@
-import {
-  StyleSheet,
-  Text,
-  View,
-  TouchableOpacity,
-  ScrollView,
-  Linking,
-} from "react-native";
+import { Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { StatusBar } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { Path } from "react-native-svg";
 import { useTranslation } from "react-i18next";
+import { Theme } from "@/constants/theme";
+import ScreenBackground from "@/components/ui/ScreenBackground";
+import AuthTopBar from "@/components/ui/AuthTopBar";
+import LineIcon from "@/components/profile/LineIcon";
+
+// Medical sources shown to satisfy App Store guideline 1.4.1 (also linked from the
+// Ask Doula banner). Source copy stays in English, as it did before the redesign.
+const INTRO =
+  "The information in this app, as well as the medical guidance provided by the AI CrossCare Concierge, is based on trusted medical and health sources to ensure accuracy and reliability for expectant mothers. This content is intended for informational and educational purposes only and should not be used as a substitute for professional medical advice, diagnosis, or treatment. For any medical concerns or final decisions related to your health, please consult your qualified healthcare provider.";
+
+const SOURCES: { title: string; topic: string; url: string }[] = [
+  {
+    title: "American College of Obstetricians and Gynecologists (ACOG)",
+    topic: "Pregnancy health, fetal development and common questions during pregnancy",
+    url: "https://www.acog.org",
+  },
+  {
+    title: "Centers for Disease Control and Prevention (CDC)",
+    topic: "Maternal lead exposure, diabetes in pregnancy, breastfeeding and maternal health",
+    url: "https://www.cdc.gov",
+  },
+  {
+    title: "MedlinePlus (U.S. National Library of Medicine)",
+    topic: "Medical definitions, symptoms and treatment guidance",
+    url: "https://medlineplus.gov",
+  },
+  {
+    title: "PubMed Central (PMC)",
+    topic: "Studies on air pollution, thyroid disruption, stress and other prenatal risk factors",
+    url: "https://www.ncbi.nlm.nih.gov/pmc",
+  },
+  {
+    title: "National Center for Biotechnology Information (NCBI)",
+    topic: "Clinical overviews, environmental exposures and fetal development",
+    url: "https://www.ncbi.nlm.nih.gov",
+  },
+  {
+    title: "Eunice Kennedy Shriver National Institute of Child Health and Human Development (NICHD)",
+    topic: "Effects of stress during pregnancy and child development",
+    url: "https://www.nichd.nih.gov",
+  },
+  {
+    title: "Stanford Medicine Children's Health",
+    topic: "Lead exposure during pregnancy",
+    url: "https://www.stanfordchildrens.org",
+  },
+  {
+    title: "UMMS Health",
+    topic: "Environmental risks such as lead and litter exposure in pregnancy",
+    url: "https://www.umms.org",
+  },
+  {
+    title: "Harvard T.H. Chan School of Public Health",
+    topic: "Air pollution and pregnancy outcomes",
+    url: "https://www.hsph.harvard.edu",
+  },
+  {
+    title: "Johns Hopkins Bloomberg School of Public Health",
+    topic: "Long-term effects of low-level air pollution on fetal development",
+    url: "https://publichealth.jhu.edu",
+  },
+  {
+    title: "Nature Scientific Reports",
+    topic: "Air pollution's effect on pregnancy and adverse birth outcomes",
+    url: "https://www.nature.com",
+  },
+  {
+    title: "PubMed (NIH)",
+    topic: "Endocrine disruption, nutritional deficiency, environmental risks and health disparities",
+    url: "https://pubmed.ncbi.nlm.nih.gov",
+  },
+  {
+    title: "U.S. Congress – Congressional Research Service (CRS)",
+    topic: "Policy overviews on maternal and child health",
+    url: "https://sgp.fas.org/crs",
+  },
+  {
+    title: "National Academy of Medicine / Bookshelf (NIH)",
+    topic: "Medical research methods and care models",
+    url: "https://www.ncbi.nlm.nih.gov/books",
+  },
+  {
+    title: "National Academy for State Health Policy (NASHP)",
+    topic: "Social determinants of health and Medicaid maternal care policy",
+    url: "https://www.nashp.org",
+  },
+  {
+    title: "WebMD",
+    topic: "General wellness tips and hydration advice during pregnancy",
+    url: "https://www.webmd.com",
+  },
+];
+
+const openSource = async (url: string) => {
+  try {
+    await Linking.openURL(url);
+  } catch (error) {
+    console.error("Error opening link:", error);
+  }
+};
 
 const Citations = () => {
   const { t } = useTranslation();
 
-  const handleLinkPress = async (url: string) => {
-    try {
-      const supported = await Linking.canOpenURL(url);
-      if (supported) {
-        await Linking.openURL(url);
-      }
-    } catch (error) {
-      console.error("Error opening link:", error);
-    }
-  };
-
-  const LinkText = ({ children, url }: { children: string; url: string }) => (
-    <Text 
-      style={styles.linkText}
-      onPress={() => handleLinkPress(url)}
-    >
-      {children}
-    </Text>
-  );
-
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="white" />
-      
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <Ionicons name="arrow-back" size={24} color="#373737" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Sources and Medical Citations</Text>
-        <View style={{ width: 24 }} />
-      </View>
+    <ScreenBackground>
+      <SafeAreaView style={styles.container}>
+        <ScrollView showsVerticalScrollIndicator={false}>
+          <AuthTopBar title={t("profile.sourcesCitations")} />
+          <View style={styles.content}>
+            <Text style={styles.intro}>{INTRO}</Text>
 
-      {/* Citations Content */}
-      <ScrollView 
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
-        <Text style={styles.introText}>
-          The information in this app, as well as the medical guidance provided by the AI CrossCare Concierge, is based on trusted medical and health sources to ensure accuracy and reliability for expectant mothers. This content is intended for informational and educational purposes only and should not be used as a substitute for professional medical advice, diagnosis, or treatment. For any medical concerns or final decisions related to your health, please consult your qualified healthcare provider.
-        </Text>
-
-        <Text style={styles.subheading}>
-          Below are the primary sources used to develop content related to pregnancy health, risks, prevention, and wellness:
-        </Text>
-
-        <View style={styles.citationItem}>
-          <Text style={styles.citationTitle}>American College of Obstetricians and Gynecologists (ACOG)</Text>
-          <Text style={styles.citationDescription}>
-            General guidelines on pregnancy health, fetal development, and common questions during pregnancy are based on publications from <LinkText url="https://www.acog.org">https://www.acog.org</LinkText>.
-          </Text>
-        </View>
-
-        <View style={styles.citationItem}>
-          <Text style={styles.citationTitle}>Centers for Disease Control and Prevention (CDC)</Text>
-          <Text style={styles.citationDescription}>
-            Information about maternal lead exposure, diabetes during pregnancy, breastfeeding in special circumstances, and general maternal health guidance is based on resources from <LinkText url="https://www.cdc.gov">https://www.cdc.gov</LinkText>.
-          </Text>
-        </View>
-
-        <View style={styles.citationItem}>
-          <Text style={styles.citationTitle}>MedlinePlus (U.S. National Library of Medicine)</Text>
-          <Text style={styles.citationDescription}>
-            Medical definitions, symptoms, and treatment guidance referenced from <LinkText url="https://medlineplus.gov">https://medlineplus.gov</LinkText>.
-          </Text>
-        </View>
-
-        <View style={styles.citationItem}>
-          <Text style={styles.citationTitle}>PubMed Central (PMC)</Text>
-          <Text style={styles.citationDescription}>
-            Scientific studies and medical journal content used to support findings related to air pollution, thyroid disruption, stress in pregnancy, and other prenatal risk factors were sourced from <LinkText url="https://www.ncbi.nlm.nih.gov/pmc">https://www.ncbi.nlm.nih.gov/pmc</LinkText>.
-          </Text>
-        </View>
-
-        <View style={styles.citationItem}>
-          <Text style={styles.citationTitle}>National Center for Biotechnology Information (NCBI)</Text>
-          <Text style={styles.citationDescription}>
-            Clinical overviews, effects of environmental exposures, and fetal development factors were referenced from <LinkText url="https://www.ncbi.nlm.nih.gov">https://www.ncbi.nlm.nih.gov</LinkText>.
-          </Text>
-        </View>
-
-        <View style={styles.citationItem}>
-          <Text style={styles.citationTitle}>Eunice Kennedy Shriver National Institute of Child Health and Human Development (NICHD)</Text>
-          <Text style={styles.citationDescription}>
-            Insights into the effects of stress during pregnancy and child development sourced from <LinkText url="https://www.nichd.nih.gov">https://www.nichd.nih.gov</LinkText>.
-          </Text>
-        </View>
-
-        <View style={styles.citationItem}>
-          <Text style={styles.citationTitle}>Stanford Medicine Children's Health</Text>
-          <Text style={styles.citationDescription}>
-            Information about lead exposure during pregnancy is based on educational material published by <LinkText url="https://www.stanfordchildrens.org">https://www.stanfordchildrens.org</LinkText>.
-          </Text>
-        </View>
-
-        <View style={styles.citationItem}>
-          <Text style={styles.citationTitle}>UMMS Health</Text>
-          <Text style={styles.citationDescription}>
-            Guidance on environmental risks such as lead and litter exposure in pregnancy from <LinkText url="https://www.umms.org">https://www.umms.org</LinkText>.
-          </Text>
-        </View>
-
-        <View style={styles.citationItem}>
-          <Text style={styles.citationTitle}>Harvard T.H. Chan School of Public Health</Text>
-          <Text style={styles.citationDescription}>
-            Research findings on air pollution and pregnancy outcomes were sourced from <LinkText url="https://www.hsph.harvard.edu">https://www.hsph.harvard.edu</LinkText>.
-          </Text>
-        </View>
-
-        <View style={styles.citationItem}>
-          <Text style={styles.citationTitle}>Johns Hopkins Bloomberg School of Public Health</Text>
-          <Text style={styles.citationDescription}>
-            Studies on the long-term effects of low-level air pollution on fetal development are referenced from <LinkText url="https://publichealth.jhu.edu">https://publichealth.jhu.edu</LinkText>.
-          </Text>
-        </View>
-
-        <View style={styles.citationItem}>
-          <Text style={styles.citationTitle}>Nature Scientific Reports</Text>
-          <Text style={styles.citationDescription}>
-            Peer-reviewed data on air pollution's effect on pregnancy and adverse birth outcomes from <LinkText url="https://www.nature.com">https://www.nature.com</LinkText>.
-          </Text>
-        </View>
-
-        <View style={styles.citationItem}>
-          <Text style={styles.citationTitle}>PubMed (NIH)</Text>
-          <Text style={styles.citationDescription}>
-            Research on endocrine disruption, nutritional deficiency, environmental risks, and health disparities during pregnancy sourced from <LinkText url="https://pubmed.ncbi.nlm.nih.gov">https://pubmed.ncbi.nlm.nih.gov</LinkText>.
-          </Text>
-        </View>
-
-        <View style={styles.citationItem}>
-          <Text style={styles.citationTitle}>U.S. Congress – Congressional Research Service (CRS)</Text>
-          <Text style={styles.citationDescription}>
-            Policy overviews related to maternal and child health referenced from <LinkText url="https://sgp.fas.org/crs">https://sgp.fas.org/crs</LinkText>.
-          </Text>
-        </View>
-
-        <View style={styles.citationItem}>
-          <Text style={styles.citationTitle}>National Academy of Medicine / Bookshelf (NIH)</Text>
-          <Text style={styles.citationDescription}>
-            Used for reference on medical research methods and care models: <LinkText url="https://www.ncbi.nlm.nih.gov/books">https://www.ncbi.nlm.nih.gov/books</LinkText>.
-          </Text>
-        </View>
-
-        <View style={styles.citationItem}>
-          <Text style={styles.citationTitle}>National Academy for State Health Policy (NASHP)</Text>
-          <Text style={styles.citationDescription}>
-            Referenced for social determinants of health and policy strategies regarding Medicaid and maternal care from <LinkText url="https://www.nashp.org">https://www.nashp.org</LinkText>.
-          </Text>
-        </View>
-
-        <View style={styles.citationItem}>
-          <Text style={styles.citationTitle}>WebMD</Text>
-          <Text style={styles.citationDescription}>
-            General wellness tips and hydration advice during pregnancy referenced from <LinkText url="https://www.webmd.com">https://www.webmd.com</LinkText>.
-          </Text>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+            {SOURCES.map((source) => (
+              <TouchableOpacity
+                key={source.url}
+                style={styles.row}
+                onPress={() => openSource(source.url)}
+                activeOpacity={0.6}
+                accessibilityRole="link"
+              >
+                <View style={styles.iconChip}>
+                  <LineIcon size={17} color={Theme.colors.purple}>
+                    <Path d="M7 3.5h7l4 4V20a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1Z" />
+                    <Path d="M14 3.5V8h4" />
+                  </LineIcon>
+                </View>
+                <View style={styles.rowText}>
+                  <Text style={styles.title}>{source.title}</Text>
+                  <Text style={styles.topic}>{source.topic}</Text>
+                </View>
+                <LineIcon size={15} color={Theme.colors.inkSoft}>
+                  <Path d="M9 6H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3" />
+                  <Path d="M14 4h6v6M20 4 11 13" />
+                </LineIcon>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    </ScreenBackground>
   );
 };
 
@@ -186,74 +150,51 @@ export default Citations;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "white",
   },
-  header: {
+  content: {
+    paddingHorizontal: 22,
+    paddingTop: 4,
+    paddingBottom: 28,
+    gap: 12,
+  },
+  intro: {
+    fontFamily: Theme.typography.body,
+    fontSize: 12,
+    lineHeight: 19,
+    color: Theme.colors.inkSoft,
+    marginBottom: 6,
+  },
+  row: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F0F0F0",
+    gap: 14,
+    backgroundColor: Theme.colors.surface,
+    borderWidth: 1,
+    borderColor: Theme.colors.hairline,
+    borderRadius: Theme.borderRadius.md,
+    paddingVertical: 14,
+    paddingHorizontal: Theme.spacing.md,
   },
-  backButton: {
-    padding: 4,
+  iconChip: {
+    width: 44,
+    height: 44,
+    borderRadius: 13,
+    backgroundColor: Theme.colors.surfaceSunken,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  headerTitle: {
-    fontSize: 16,
-    fontFamily: "DMSans600",
-    color: "#373737",
-    textAlign: "center",
+  rowText: {
     flex: 1,
   },
-  scrollView: {
-    flex: 1,
+  title: {
+    fontFamily: Theme.typography.heading,
+    fontSize: 12.5,
+    color: Theme.colors.ink,
   },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-    paddingBottom: 40,
-  },
-  introText: {
-    fontSize: 14,
-    fontFamily: "DMSans400",
-    color: "#373737",
-    lineHeight: 22,
-    marginBottom: 20,
-    textAlign: "justify",
-  },
-  subheading: {
-    fontSize: 15,
-    fontFamily: "DMSans600",
-    color: "#373737",
-    marginBottom: 20,
-    lineHeight: 22,
-  },
-  citationItem: {
-    marginBottom: 20,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F0F0F0",
-  },
-  citationTitle: {
-    fontSize: 16,
-    fontFamily: "DMSans600",
-    color: "#F66DCE",
-    marginBottom: 8,
-    lineHeight: 22,
-  },
-  citationDescription: {
-    fontSize: 14,
-    fontFamily: "DMSans400",
-    color: "#373737",
-    lineHeight: 20,
-    textAlign: "justify",
-  },
-  linkText: {
-    fontSize: 14,
-    fontFamily: "DMSans500",
-    color: "#007AFF",
-    textDecorationLine: "underline",
+  topic: {
+    fontFamily: Theme.typography.body,
+    fontSize: 11,
+    color: Theme.colors.inkFaint,
+    marginTop: 1,
   },
 });
