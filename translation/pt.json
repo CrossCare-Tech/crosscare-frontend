@@ -94,6 +94,20 @@
     "permissionTitle": "Permissão necessária",
     "permissionText": "Permita o acesso para poder adicionar uma foto."
   },
+  "journalTimeline": {
+    "title": "Diário",
+    "today": "Hoje",
+    "yesterday": "Ontem",
+    "week": "Semana {{week}}",
+    "entries_one": "{{count}} registro",
+    "entries_other": "{{count}} registros",
+    "noteTag": "Nota",
+    "emptyTitle": "Comece seu diário",
+    "emptyText": "Guarde fotos e notas da sua gravidez. Elas aparecem aqui, das mais recentes para as mais antigas.",
+    "addFirst": "Adicione seu primeiro registro",
+    "newEntry": "Novo registro",
+    "loadError": "Não foi possível carregar seu diário. Puxe para baixo para tentar de novo."
+  },
   "profile": {
     "readPrivacyPolicy": "Ler a Política de Privacidade completa",
     "searchHelp": "Buscar artigos de ajuda",

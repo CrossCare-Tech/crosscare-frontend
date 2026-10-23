@@ -94,6 +94,20 @@
     "permissionTitle": "Otorizasyon obligatwa",
     "permissionText": "Tanpri bay aksè pou ou ka ajoute yon foto."
   },
+  "journalTimeline": {
+    "title": "Jounal",
+    "today": "Jodi a",
+    "yesterday": "Yè",
+    "week": "Semèn {{week}}",
+    "entries_one": "{{count}} antre",
+    "entries_other": "{{count}} antre",
+    "noteTag": "Nòt",
+    "emptyTitle": "Kòmanse jounal ou",
+    "emptyText": "Sere foto ak nòt sou gwosès ou. Yo ap parèt la a, sa ki pi nouvo an premye.",
+    "addFirst": "Ajoute premye antre ou",
+    "newEntry": "Nouvo antre",
+    "loadError": "Nou pa t kapab chaje jounal ou. Rale anba pou eseye ankò."
+  },
   "profile": {
     "readPrivacyPolicy": "Li tout Politik Konfidansyalite a",
     "searchHelp": "Chèche atik èd",

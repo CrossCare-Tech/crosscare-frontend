@@ -94,6 +94,20 @@
     "permissionTitle": "Permission required",
     "permissionText": "Please allow access so you can add a photo."
   },
+  "journalTimeline": {
+    "title": "Journal",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "week": "Week {{week}}",
+    "entries_one": "{{count}} entry",
+    "entries_other": "{{count}} entries",
+    "noteTag": "Note",
+    "emptyTitle": "Start your journal",
+    "emptyText": "Save photos and notes about your pregnancy. They will show up here, newest first.",
+    "addFirst": "Add your first entry",
+    "newEntry": "New entry",
+    "loadError": "Couldn't load your journal. Pull down to try again."
+  },
   "profile": {
     "readPrivacyPolicy": "Read the full Privacy Policy",
     "searchHelp": "Search help articles",
