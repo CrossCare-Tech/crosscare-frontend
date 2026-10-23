@@ -24,7 +24,7 @@ import ProfilePhoto, {
 } from "@/components/profile/ProfilePhoto";
 
 const LANGUAGE_NAMES: Record<string, string> = {
-  en: "English",
+  en: "English (US)",
   es: "Español",
   ht: "Kreyòl Ayisyen",
   pt: "Português",

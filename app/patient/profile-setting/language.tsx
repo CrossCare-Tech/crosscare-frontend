@@ -1,43 +1,25 @@
-import { StatusBar, StyleSheet, Text, TouchableOpacity, View, FlatList, Image } from "react-native"
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native"
 import { useEffect, useState } from "react"
 import { SafeAreaView } from "react-native-safe-area-context"
-import { Ionicons } from "@expo/vector-icons"
 import { router } from "expo-router"
 import AsyncStorage from "@react-native-async-storage/async-storage"
 import { useTranslation } from "react-i18next"
-import { useDispatch } from "react-redux"
+import { Path } from "react-native-svg"
 import { changeLanguage } from "@/translation/i18next"
+import { Theme } from "@/constants/theme"
+import ScreenBackground from "@/components/ui/ScreenBackground"
+import AuthTopBar from "@/components/ui/AuthTopBar"
+import LineIcon from "@/components/profile/LineIcon"
 
 const languages = [
-  {
-    id: "en",
-    name: "English",
-    nativeName: "English",
-    flag: "https://cdn.countryflags.com/thumbs/united-states-of-america/flag-400.png",
-  },
-  {
-    id: "es",
-    name: "Spanish",
-    nativeName: "Español",
-    flag: "https://cdn.countryflags.com/thumbs/spain/flag-400.png",
-  },
-  {
-    id: "ht",
-    name: "Haitian Creole",
-    nativeName: "Kreyòl Ayisyen",
-    flag: "https://cdn.countryflags.com/thumbs/haiti/flag-400.png",
-  },
-  {
-    id: "pt",
-    name: "Portuguese",
-    nativeName: "Português",
-    flag: "https://cdn.countryflags.com/thumbs/portugal/flag-400.png",
-  },
+  { id: "en", name: "English", nativeName: "English (US)" },
+  { id: "es", name: "Spanish", nativeName: "Español" },
+  { id: "pt", name: "Portuguese", nativeName: "Português" },
+  { id: "ht", name: "Haitian Creole", nativeName: "Kreyòl Ayisyen" },
 ]
 
 const Language = () => {
   const { t, i18n } = useTranslation()
-  const dispatch = useDispatch()
   const [selectedLanguage, setSelectedLanguage] = useState(i18n.language || "en")
 
   useEffect(() => {
@@ -56,70 +38,59 @@ const Language = () => {
     loadLanguage()
   }, [])
 
-  const handleLanguageSelect = async (langId) => {
+  const handleLanguageSelect = async (langId: string) => {
     try {
-      // Use the changeLanguage helper function
       await changeLanguage(langId)
-      
-      // if (success) {
-        // Update local state
-        setSelectedLanguage(langId)
-        
-        // Show success feedback
-        setTimeout(() => {
-          router.back()
-        }, 500)
-      // }
+      setSelectedLanguage(langId)
+
+      // Let the check mark show before going back
+      setTimeout(() => {
+        router.back()
+      }, 500)
     } catch (error) {
       console.error("Error saving language:", error)
     }
   }
 
-  const renderLanguageItem = ({ item }) => {
-    const isSelected = selectedLanguage === item.id
-
-    return (
-      <TouchableOpacity
-        style={[styles.languageItem, isSelected && styles.selectedLanguageItem]}
-        onPress={() => handleLanguageSelect(item.id)}
-      >
-        <View style={styles.languageContent}>
-          <Image source={{ uri: item.flag }} style={styles.flag} />
-          <View style={styles.languageTextContainer}>
-            <Text style={styles.languageName}>{item.name}</Text>
-            <Text style={styles.languageNativeName}>{item.nativeName}</Text>
-          </View>
-        </View>
-
-        {isSelected && <Ionicons name="checkmark-circle" size={24} color="#883B72" />}
-      </TouchableOpacity>
-    )
-  }
-
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={"white"} />
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="chevron-back" size={20} color="black" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{t('profile.language')}</Text>
-        <View style={{ width: 20 }} />
-      </View>
-
-      <View style={styles.contentContainer}>
-        <Text style={styles.subtitle}>
-          {t('language.title')}
-        </Text>
-
-        <FlatList
-          data={languages}
-          renderItem={renderLanguageItem}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.languageList}
-        />
-      </View>
-    </SafeAreaView>
+    <ScreenBackground>
+      <SafeAreaView style={styles.container}>
+        <ScrollView showsVerticalScrollIndicator={false}>
+          <AuthTopBar title={t("profile.language")} />
+          <View style={styles.content}>
+            {/* Prototype `.card-soft` with one `.rowline` per language */}
+            <View style={styles.card}>
+              {languages.map((item, index) => {
+                const isSelected = selectedLanguage === item.id
+                return (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={[
+                      styles.row,
+                      index === languages.length - 1 && styles.rowLast,
+                    ]}
+                    onPress={() => handleLanguageSelect(item.id)}
+                    activeOpacity={0.6}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: isSelected }}
+                  >
+                    <View>
+                      <Text style={styles.name}>{item.nativeName}</Text>
+                      <Text style={styles.sub}>{item.name}</Text>
+                    </View>
+                    {isSelected && (
+                      <LineIcon size={17} color={Theme.colors.magenta}>
+                        <Path d="M5 12.5l4.5 4.5L19 7" />
+                      </LineIcon>
+                    )}
+                  </TouchableOpacity>
+                )
+              })}
+            </View>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    </ScreenBackground>
   )
 }
 
@@ -128,72 +99,40 @@ export default Language
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "white",
   },
-  header: {
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    justifyContent: "space-between",
+  content: {
+    paddingHorizontal: 22,
+    paddingTop: 4,
+    paddingBottom: 28,
+  },
+  card: {
+    backgroundColor: Theme.colors.surface,
+    borderRadius: 20,
+    paddingVertical: 2,
+    paddingHorizontal: Theme.spacing.md,
+    ...Theme.shadows.card,
+  },
+  row: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
+    // 44px minimum touch target
+    minHeight: 56,
+    paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#F0F0F0",
+    borderBottomColor: Theme.colors.hairline,
   },
-  headerTitle: {
-    fontSize: 18,
-    fontFamily: "DMSans600",
-    color: "#373737",
+  rowLast: {
+    borderBottomWidth: 0,
   },
-  contentContainer: {
-    flex: 1,
-    padding: 20,
+  name: {
+    fontFamily: Theme.typography.heading,
+    fontSize: 13.5,
+    color: Theme.colors.ink,
   },
-  subtitle: {
-    fontSize: 14,
-    fontFamily: "DMSans400",
-    color: "#666",
-    marginBottom: 20,
-  },
-  languageList: {
-    paddingBottom: 20,
-  },
-  languageItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 15,
-    paddingHorizontal: 15,
-    borderRadius: 12,
-    marginBottom: 10,
-    backgroundColor: "#F9F9F9",
-    borderWidth: 1,
-    borderColor: "#EEEEEE",
-  },
-  selectedLanguageItem: {
-    borderColor: "#883B72",
-    backgroundColor: "#FFF8FD",
-  },
-  languageContent: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  flag: {
-    width: 30,
-    height: 20,
-    borderRadius: 4,
-    marginRight: 15,
-  },
-  languageTextContainer: {
-    flexDirection: "column",
-  },
-  languageName: {
-    fontSize: 16,
-    fontFamily: "DMSans500",
-    color: "#373737",
-  },
-  languageNativeName: {
-    fontSize: 14,
-    fontFamily: "DMSans400",
-    color: "#666",
+  sub: {
+    fontFamily: Theme.typography.body,
+    fontSize: 11,
+    color: Theme.colors.inkFaint,
   },
 })
