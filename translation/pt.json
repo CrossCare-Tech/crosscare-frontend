@@ -54,6 +54,8 @@
     "noAppointments": "Nenhum compromisso agendado"
   },
   "newEntry": {
+    "photoMenuTitle": "Foto",
+    "chooseAnother": "Escolher outra foto",
     "entryTitle": "Registro",
     "editTitle": "Editar registro",
     "editEntry": "Editar registro",

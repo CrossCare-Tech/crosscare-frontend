@@ -54,6 +54,8 @@
     "noAppointments": "No upcoming appointments"
   },
   "newEntry": {
+    "photoMenuTitle": "Photo",
+    "chooseAnother": "Choose another photo",
     "entryTitle": "Entry",
     "editTitle": "Edit entry",
     "editEntry": "Edit entry",

@@ -170,6 +170,8 @@
   "notNow": "Ahora no",
   "errorChatClear": "No se pudo borrar el historial del chat. Inténtalo de nuevo.",
   "newEntry": {
+    "photoMenuTitle": "Foto",
+    "chooseAnother": "Elegir otra foto",
     "entryTitle": "Entrada",
     "editTitle": "Editar entrada",
     "editEntry": "Editar entrada",

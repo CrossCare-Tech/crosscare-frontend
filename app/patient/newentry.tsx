@@ -123,15 +123,12 @@ const NewEntry = () => {
     if (!result.canceled && result.assets?.length) setPhoto(result.assets[0].uri);
   };
 
-  const choosePhoto = () => {
-    Alert.alert(photo ? t("newEntry.editPhoto") : t("newEntry.addPhoto"), undefined, [
-      { text: t("newEntry.takePhoto"), onPress: () => pickPhoto("camera") },
-      { text: t("newEntry.chooseLibrary"), onPress: () => pickPhoto("library") },
-      ...(photo && !editing
-        ? [{ text: t("newEntry.removePhoto"), style: "destructive" as const, onPress: () => setPhoto(null) }]
-        : []),
-      { text: t("profile.cancel"), style: "cancel" as const },
-    ]);
+  // Photo menu: pick from camera or library; with a photo, also replace or remove it
+  const [photoMenu, setPhotoMenu] = useState(false);
+  const choosePhoto = () => setPhotoMenu(true);
+  const fromMenu = (action: () => void) => () => {
+    setPhotoMenu(false);
+    action();
   };
 
   const confirmCustomTag = () => {
@@ -392,6 +389,50 @@ const NewEntry = () => {
           )}
         </KeyboardAvoidingView>
 
+        {/* Photo menu */}
+        <Modal
+          visible={photoMenu}
+          transparent
+          statusBarTranslucent
+          animationType="slide"
+          onRequestClose={() => setPhotoMenu(false)}
+        >
+          <TouchableOpacity
+            style={styles.sheetScrim}
+            activeOpacity={1}
+            onPress={() => setPhotoMenu(false)}
+          >
+            <View style={styles.sheet} onStartShouldSetResponder={() => true}>
+              <Text style={styles.sheetTitle}>{t("newEntry.photoMenuTitle")}</Text>
+              <TouchableOpacity
+                style={[styles.sheetButton, styles.sheetPrimary]}
+                onPress={fromMenu(() => pickPhoto("library"))}
+              >
+                <Text style={[styles.sheetText, { color: Theme.colors.magenta }]}>
+                  {photo ? t("newEntry.chooseAnother") : t("newEntry.chooseLibrary")}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.sheetButton} onPress={fromMenu(() => pickPhoto("camera"))}>
+                <Text style={styles.sheetText}>{t("newEntry.takePhoto")}</Text>
+              </TouchableOpacity>
+              {/* Editing can't turn a photo entry into a note, so removing is only for new entries */}
+              {photo && !editing && (
+                <TouchableOpacity
+                  style={[styles.sheetButton, styles.sheetDanger]}
+                  onPress={fromMenu(() => setPhoto(null))}
+                >
+                  <Text style={[styles.sheetText, { color: Theme.colors.danger }]}>
+                    {t("newEntry.removePhoto")}
+                  </Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity style={[styles.sheetButton, styles.sheetCancel]} onPress={() => setPhotoMenu(false)}>
+                <Text style={[styles.sheetText, { color: Theme.colors.inkSoft }]}>{t("profile.cancel")}</Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </Modal>
+
         {/* 4.5 — Discard changes */}
         <Modal
           visible={!!discardAction}
@@ -590,6 +631,51 @@ const styles = StyleSheet.create({
     fontSize: 10.5,
     color: Theme.colors.inkFaint,
     marginTop: Theme.spacing.sm,
+  },
+  sheetScrim: {
+    flex: 1,
+    backgroundColor: Theme.colors.scrim,
+    justifyContent: "flex-end",
+  },
+  sheet: {
+    backgroundColor: Theme.colors.surface,
+    borderTopLeftRadius: Theme.borderRadius.xl,
+    borderTopRightRadius: Theme.borderRadius.xl,
+    paddingTop: Theme.spacing.md,
+    paddingHorizontal: 18,
+    paddingBottom: 36,
+    gap: Theme.spacing.sm,
+  },
+  sheetTitle: {
+    textAlign: "center",
+    fontFamily: Theme.typography.display,
+    fontSize: 16,
+    color: Theme.colors.ink,
+    marginBottom: Theme.spacing.xs,
+  },
+  sheetButton: {
+    minHeight: 48,
+    borderRadius: Theme.borderRadius.full,
+    borderWidth: 1.5,
+    borderColor: Theme.colors.hairline,
+    backgroundColor: Theme.colors.surface,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  sheetPrimary: {
+    borderColor: Theme.colors.magenta,
+  },
+  sheetDanger: {
+    borderColor: "transparent",
+    backgroundColor: Theme.colors.dangerTint,
+  },
+  sheetCancel: {
+    borderColor: "transparent",
+  },
+  sheetText: {
+    fontFamily: Theme.typography.heading,
+    fontSize: 13.5,
+    color: Theme.colors.ink,
   },
   dialogScrim: {
     flex: 1,

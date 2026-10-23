@@ -54,6 +54,8 @@
     "noAppointments": "Pa gen randevou kap vini"
   },
   "newEntry": {
+    "photoMenuTitle": "Foto",
+    "chooseAnother": "Chwazi yon lòt foto",
     "entryTitle": "Antre",
     "editTitle": "Modifye antre",
     "editEntry": "Modifye antre",
