@@ -54,6 +54,12 @@
     "noAppointments": "Nenhum compromisso agendado"
   },
   "profile": {
+    "milestones_one": "{{count}} conquista",
+    "milestones_other": "{{count}} conquistas",
+    "milestonesSubtitle": "alcançadas na sua jornada até agora",
+    "badgeEarnedOn": "Conquistado em {{date}}",
+    "badgeLocked": "Ainda não conquistado",
+    "close": "Fechar",
     "estimatedDueDate": "Data prevista do parto",
     "weeksShort": "SEMANAS",
     "trimesterShort": "TRIMESTRE",

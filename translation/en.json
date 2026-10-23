@@ -54,6 +54,12 @@
     "noAppointments": "No upcoming appointments"
   },
   "profile": {
+    "milestones_one": "{{count}} milestone",
+    "milestones_other": "{{count}} milestones",
+    "milestonesSubtitle": "earned on your journey so far",
+    "badgeEarnedOn": "Earned on {{date}}",
+    "badgeLocked": "Not earned yet",
+    "close": "Close",
     "estimatedDueDate": "Estimated due date",
     "weeksShort": "WEEKS",
     "trimesterShort": "TRIMESTER",

@@ -54,6 +54,12 @@
     "noAppointments": "Pa gen randevou kap vini"
   },
   "profile": {
+    "milestones_one": "{{count}} reyalizasyon",
+    "milestones_other": "{{count}} reyalizasyon",
+    "milestonesSubtitle": "ou genyen sou wout ou jiska prezan",
+    "badgeEarnedOn": "Genyen nan dat {{date}}",
+    "badgeLocked": "Poko genyen",
+    "close": "Fèmen",
     "estimatedDueDate": "Dat akouchman prevwa",
     "weeksShort": "SEMÈN",
     "trimesterShort": "TRIMÈS",

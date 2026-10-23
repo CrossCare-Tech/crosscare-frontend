@@ -170,6 +170,12 @@
   "notNow": "Ahora no",
   "errorChatClear": "No se pudo borrar el historial del chat. Inténtalo de nuevo.",
   "profile": {
+    "milestones_one": "{{count}} logro",
+    "milestones_other": "{{count}} logros",
+    "milestonesSubtitle": "conseguidos en tu camino hasta ahora",
+    "badgeEarnedOn": "Conseguido el {{date}}",
+    "badgeLocked": "Aún no conseguido",
+    "close": "Cerrar",
     "estimatedDueDate": "Fecha probable de parto",
     "weeksShort": "SEMANAS",
     "trimesterShort": "TRIMESTRE",
