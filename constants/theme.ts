@@ -54,6 +54,34 @@ export const Theme = {
     socialBorder: '#E2D8F0',
     socialBg: '#FFFFFF',
   },
+  // Home (prototype version B): tile gradients, progress bars and accents
+  home: {
+    tiles: {
+      water: ['#EAF3FF', '#F7FAFF'] as [string, string],
+      food: ['#FFEAF2', '#FFF6F9'] as [string, string],
+      steps: ['#E6F8F1', '#F5FCF9'] as [string, string],
+      due: ['#EFE9FF', '#F8F5FF'] as [string, string],
+      pressure: ['#FFECEA', '#FFF7F6'] as [string, string],
+      glucose: ['#FFF3DE', '#FFFAF0'] as [string, string],
+    },
+    bars: {
+      water: ['#4DA3FF', '#3B6FE8'] as [string, string],
+      steps: ['#34D3A0', '#12A47A'] as [string, string],
+      default: ['#E61B8D', '#5028A7'] as [string, string],
+    },
+    tileBorder: 'rgba(255,255,255,0.8)',
+    tileChip: 'rgba(255,255,255,0.75)', // chevron chip on tiles
+    waterButton: '#4F86F0',
+    waterButtonDisabled: '#B8C6E6',
+    hero: ['#F4ECFF', '#FBE8F4', '#F1E8FF'] as [string, string, string],
+    heroTagBg: 'rgba(255,255,255,0.7)',
+    heroTagBorder: 'rgba(80,40,167,0.14)',
+    heroButtonEnd: '#6A46C2',
+    ringTrack: 'rgba(255,255,255,0.8)',
+    babyBg: '#F7F1E8',
+    sosBorder: '#F2C6DA',
+    dayInfoText: '#0A4A52',
+  },
   typography: {
     display: 'Fraunces600',
     heading: 'Manrope700',
