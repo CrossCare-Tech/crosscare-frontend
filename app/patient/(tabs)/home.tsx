@@ -1,7 +1,6 @@
 import {
   ActivityIndicator,
   Alert,
-  FlatList,
   ScrollView,
   StyleSheet,
   Text,
@@ -34,11 +33,19 @@ import {
 import User from "@/assets/images/Svg/User";
 import * as ImagePicker from "expo-image-picker";
 import { Linking } from "react-native";
-import PregnancyModal from "../modal/preagnancyModal";
 import { useMealStore } from "@/zustandStore/mealStore";
 import { CONFIG } from "@/constants/config";
 import { useFitbit } from "@/zustandStore/useFitbitStore";
 import { useAppleHealth } from "@/zustandStore/useAppleHealthStore";
+import { useSelfCareStore } from "@/zustandStore/contentfulStores/selfCareStore";
+import { LinearGradient } from "expo-linear-gradient";
+import Svg, { Circle, Defs, LinearGradient as SvgGradient, Path, Rect, Stop } from "react-native-svg";
+import { Theme } from "@/constants/theme";
+import { babyImageForWeek } from "@/constants/babyImages";
+import { fruitForWeek } from "@/constants/babySize";
+import ScreenBackground from "@/components/ui/ScreenBackground";
+import LineIcon from "@/components/profile/LineIcon";
+import { DueArt, FoodArt, GlucoseArt, PressureArt, StepsArt, WaterArt } from "@/components/home/TileArt";
 
 
 interface Progress {
@@ -53,7 +60,7 @@ const calculatePregnancyProgress = (pregnancyData: any): Progress => {
   // If we have pregnancy data from backend, use it
   if (pregnancyData) {
     const currentWeek = pregnancyData.week || 0;
-    const remainingDays = pregnancyData.remainingDays || 280;
+    const remainingDays = pregnancyData.remainingDays ?? 280;
     const dueDate = pregnancyData.dueDate || new Date().toISOString();
     
     // Calculate progress percentage
@@ -100,7 +107,7 @@ const Home = () => {
   const router = useRouter();
   const token = useSelector((state: any) => state.user.token);
   const user = useSelector((state: any) => state.user);
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const {
     calorieGoal,
     caloriesConsumed,
@@ -514,7 +521,7 @@ const Home = () => {
     setPregnancyData({
       week: data.week || 0,
       day: data.day || 0,
-      remainingDays: data.pregnancyData?.remainingDays || 280,
+      remainingDays: data.pregnancyData?.remainingDays ?? 280,
       dueDate: data.pregnancyData?.dueDate || new Date().toISOString(),
       totalDays: data.pregnancyData?.totalDays || 0,
       daysSinceAccountCreation: data.pregnancyData?.daysSinceAccountCreation || 0
@@ -681,913 +688,953 @@ const Home = () => {
     }
   }, [userId]);
 
-  const Header = () => {
-    return (
-      <View
-        style={{
-          flexDirection: "row",
-          justifyContent: "space-between",
-          alignItems: "center",
-          paddingHorizontal: 20,
-          paddingTop: Platform.OS === "ios" ? 10 : 10,
-          zIndex: 10,
-        }}
-      >
-        <TouchableOpacity
-          style={{
-            backgroundColor: "#F76CCF",
-            paddingHorizontal: 14,
-            paddingVertical: 6,
-            borderRadius: 30,
-            borderWidth: 2,
-            borderColor: "#E162BC",
-          }}
-          onPress={() => {
-            Linking.openURL("tel:911");
-          }}
-        >
-          <Text
-            style={{
-              color: "white",
-              fontFamily: "DMSans600",
-              fontSize: 16,
-            }}
-          >
-            911
-          </Text>
-        </TouchableOpacity>
 
-        <TouchableOpacity
-          style={{
-            width: 32,
-            height: 32,
-            borderRadius: 20,
-            backgroundColor: "white",
-            justifyContent: "center",
-            alignItems: "center",
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.8,
-            shadowRadius: 10,
-            elevation: 2,
-          }}
-          onPress={() => {
-            router.push({
-              pathname: "/patient/settings/reminder",
-            });
-          }}
-        >
-          <Ionicons name="notifications-outline" size={18} color="#666" />
-        </TouchableOpacity>
-      </View>
-    );
-  };
-
-  const renderCard = ({
-    item,
-  }: {
-    item: {
-      title: string;
-      description: string;
-      bg1: string;
-      bg2: string;
-      image1: string;
-      id: string;
-      onPress: () => void;
-    };
-  }) => (
-    <Card
-      title={item.title}
-      description={item.description}
-      bg1={item.bg1} // Ensure bg1 is a valid color string
-      bg2={item.bg2} // Ensure bg2 is a valid color string
-      image1={item.image1}
-      id={item.id}
-      onPress={item.onPress}
-    />
-  );
+  // ---------- Home version B (prototype) ----------
 
   const [image, setImage] = React.useState<string | null>(null);
-  const [isUploading, setIsUploading] = React.useState(false);
+  const [appointments, setAppointments] = useState<{ title: string; date: string }[]>([]);
+  const [selectedDay, setSelectedDay] = useState(() => new Date().toDateString());
+  const { routines, fetchRoutines } = useSelfCareStore();
 
-  // useEffect(() => {
-  //   const loadSavedImage = async () => {
-  //     try {
-  //       const savedImage = await AsyncStorage.getItem('profileImage');
-  //       if (savedImage) {
-  //         setImage(savedImage);
-  //       }
-  //     } catch (error) {
-  //       console.error("Error loading saved profile image:", error);
-  //     }
-  //   };
-
-  //   loadSavedImage();
-  // }, []);
-
-  const pickImage = async () => {
+  const fetchAppointments = useCallback(async () => {
+    if (!user?.user_id) return;
     try {
-      // Request permission
-      const { status } =
-        await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-      if (status !== "granted") {
-        Alert.alert(
-          "Permission Required",
-          "Please allow access to your photo library to change your profile picture."
-        );
-        return;
-      }
-
-      setIsUploading(true);
-
-      // Launch image picker
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.7,
-      });
-
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        const selectedImage = result.assets[0];
-
-        // Set the selected image locally
-        setImage(selectedImage.uri);
-
-        // Save to AsyncStorage for persistence between app sessions
-        try {
-          await AsyncStorage.setItem("profileImage", selectedImage.uri);
-        } catch (error) {
-          console.error("Error saving profile image to AsyncStorage:", error);
-        }
-
-        // Upload to server
-        try {
-          const formData = new FormData();
-          formData.append("imageUrl", {
-            uri: selectedImage.uri,
-            type: "image/jpeg",
-            name: "profile-image.jpg",
-          } as any);
-
-          const response = await fetch(
-            `${CONFIG.API_BASE_URL}/user/${user?.user_id}/profile/image`,
-            {
-              method: "POST",
-              body: formData,
-              headers: {
-                "Content-Type": "multipart/form-data",
-                Authorization: `Bearer ${token}`,
-              },
-            }
-          );
-
-          if (!response.ok) {
-            throw new Error(`Upload failed with status ${response.status}`);
-          }
-
-          // Update Redux state with the new image
-          dispatch(
-            setUser({
-              ...user,
-              user_photo: selectedImage.uri,
-            })
-          );
-
-          const title = `Week ${weeksComplete} of Pregnancy`;
-
-          // Add title to the FormData
-          const formData1 = new FormData();
-          formData1.append("title", title);
-
-          // Add note if provided
-
-          // Append the image to FormData
-          formData1.append("imageUrl", {
-            uri: selectedImage.uri,
-            type: "image/jpeg",
-            name: "upload.jpg",
-          } as any);
-
-          const response1 = await fetch(
-            `${CONFIG.API_BASE_URL}/user/activity/${user.user_id}/journal/upload`,
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "multipart/form-data", // Set correct content type for form data
-              },
-              body: formData1,
-            }
-          );
-
-          if (!response1.ok) {
-            throw new Error(`Failed to save note: ${response.statusText}`);
-          }
-
-          const data = await response.json();
-          console.log("Note saved successfully:", data);
-
-          // Optional: Get the response data if your API returns the updated image URL
-          // const data = await response.json();
-          // if (data && data.imageUrl) {
-          //   const serverImageUrl = data.imageUrl;
-          //   setImage(serverImageUrl);
-          //   await AsyncStorage.setItem('profileImage', serverImageUrl);
-          //   dispatch(setUser({...user, user_photo: serverImageUrl}));
-          // }
-        } catch (uploadError) {
-          console.error("Error uploading image to server:", uploadError);
-          // Don't show an alert here since the image is already saved locally
-        }
-      }
+      const response = await fetch(
+        `${CONFIG.API_BASE_URL}/user/activity/${user.user_id}/appointments`
+      );
+      if (!response.ok) return;
+      const data = await response.json();
+      if (Array.isArray(data)) setAppointments(data);
     } catch (error) {
-      console.error("Error picking image:", error);
-      Alert.alert("Error", "Failed to pick image. Please try again.");
-    } finally {
-      setIsUploading(false);
+      console.error("Error fetching appointments:", error);
+    }
+  }, [user?.user_id]);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchAppointments();
+    }, [fetchAppointments])
+  );
+
+  useEffect(() => {
+    if (!routines?.length) fetchRoutines?.();
+  }, []);
+
+  // One-tap "+" on the water tile: same request as the Water screen
+  const addGlass = async () => {
+    if (!user?.user_id || glassCount >= maxGlasses) return;
+    const next = glassCount + 1;
+    setGlassCount(next);
+    try {
+      const response = await fetch(`${CONFIG.API_BASE_URL}/user/activity/${user.user_id}/water`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ water: next }),
+      });
+      if (!response.ok) throw new Error(`API returned status ${response.status}`);
+    } catch (error) {
+      console.error("Error adding a glass of water:", error);
+      setGlassCount(next - 1);
     }
   };
 
   const userName = user.user_name.split(" ")[0];
+  const hour = new Date().getHours();
+  const greeting =
+    hour < 12 ? t("homeB.goodMorning") : hour < 18 ? t("homeB.goodAfternoon") : t("homeB.goodEvening");
+
+  const week = weeksComplete;
+  const trimesterIndex = week >= 28 ? 3 : week >= 14 ? 2 : 1;
+  const weeksToGo = Math.max(0, Math.ceil(remainingDays / 7));
+  const progress = Math.min(Math.max(progressPercentage, 0), 100);
+  const fruit = fruitForWeek(week);
+
+  // Sunday-to-Saturday strip for the current week, with a dot on days that have appointments
+  const today = new Date();
+  const weekDays = Array.from({ length: 7 }, (_, index) => {
+    const day = new Date(today);
+    day.setDate(today.getDate() - today.getDay() + index);
+    return day;
+  });
+  const appointmentsOn = (day: Date) =>
+    appointments.filter((item) => new Date(item.date).toDateString() === day.toDateString());
+  const selectedDate = weekDays.find((day) => day.toDateString() === selectedDay) ?? today;
+  const selectedAppointments = appointmentsOn(selectedDate);
+  const dayInfo = selectedAppointments.length
+    ? selectedAppointments
+        .map(
+          (item) =>
+            `${new Date(item.date).toLocaleTimeString(i18n.language, {
+              hour: "numeric",
+              minute: "2-digit",
+            })} ${item.title}`
+        )
+        .join(" · ")
+    : t("homeB.nothingBooked");
+
+  const shortcuts = [
+    {
+      key: "vitals",
+      label: t("homeB.logVitals"),
+      onPress: () => router.push("/patient/health"),
+      icon: <Path d="M3 12h4l2 7 4-14 2 7h6" />,
+    },
+    {
+      key: "reminders",
+      label: t("homeB.reminders"),
+      onPress: () => router.push("/patient/settings/reminder"),
+      icon: (
+        <>
+          <Path d="M6 8a6 6 0 0 1 12 0c0 4 1.5 5.5 2 6.5H4c.5-1 2-2.5 2-6.5Z" />
+          <Path d="M10 19a2 2 0 0 0 4 0" />
+        </>
+      ),
+    },
+    {
+      key: "journal",
+      label: t("homeB.journal"),
+      onPress: () => router.push("/patient/(tabs)/journal"),
+      icon: <Path d="M6 4h10a2 2 0 0 1 2 2v13a1 1 0 0 1-1.5.87L12 17l-4.5 2.87A1 1 0 0 1 6 19V4Z" />,
+    },
+    {
+      key: "visits",
+      label: t("homeB.visits"),
+      onPress: () => router.push("/patient/calendar"),
+      icon: (
+        <>
+          <Rect x="4" y="5.5" width="16" height="15" rx="2.5" />
+          <Path d="M8 3.5v4M16 3.5v4M4 10h16" />
+        </>
+      ),
+    },
+  ];
+
+  // The Calendar and MotherCare banners stay on the Home below the new sections
+  const banners = cardData.filter((item) => item.id === "2" || item.id === "3");
+  const routine = routines?.[0];
 
   return (
-    <SafeAreaView
-      style={{
-        flex: 1,
-        backgroundColor: "white",
-      }}
-    >
-      <StatusBar backgroundColor="#FAB5E8" barStyle="dark-content" />
-
-      <ScrollView
-        style={{
-          flex: 1,
-          // paddingTop: 10,
-        }}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.backgroundCurve} />
-
-        <Header />
-
-        <View
-          style={{
-            alignItems: "center",
-            marginTop: -35,
-          }}
-        >
-          <TouchableOpacity activeOpacity={0.9} onPress={pickImage}>
-            <View
-              style={{
-                width: 100,
-                height: 100,
-                borderRadius: 50,
-                borderWidth: 4,
-                borderColor: "white",
-                shadowColor: "#000",
-                shadowOffset: {
-                  width: 0,
-                  height: 2,
-                },
-                shadowOpacity: 0.25,
-                shadowRadius: 3.84,
-                elevation: 5,
-                overflow: "hidden",
-              }}
+    <ScreenBackground>
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+          {/* Header: photo, greeting, 911 and reminders */}
+          <View style={styles.header}>
+            <TouchableOpacity
+              onPress={() => router.push("/patient/profile-setting/name")}
+              accessibilityRole="button"
+              accessibilityLabel={t("homeB.editProfile")}
             >
-              {image ? (
-                <Image
-                  source={{ uri: image }}
-                  style={{
-                    width: "100%",
-                    height: "100%",
-                    borderRadius: 50,
-                  }}
-                  resizeMode="contain"
-                />
-              ) : (
-                <User width="100%" height="100%" color="#888" />
-              )}
-            </View>
-            {isUploading && (
-              <View
-                style={{
-                  position: "absolute",
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  backgroundColor: "rgba(0,0,0,0.3)",
-                  borderRadius: 50,
-                  justifyContent: "center",
-                  alignItems: "center",
-                }}
+              <LinearGradient
+                colors={[Theme.colors.photoFrom, Theme.colors.photoTo]}
+                start={{ x: 0.25, y: 0.07 }}
+                end={{ x: 0.75, y: 0.93 }}
+                style={styles.photo}
               >
-                <ActivityIndicator size="large" color="#F76CCF" />
+                {image || user?.user_photo ? (
+                  <Image source={{ uri: image || user.user_photo }} style={styles.photoImage} />
+                ) : (
+                  <Svg width="100%" height="100%" viewBox="0 0 56 56">
+                    <Circle cx="28" cy="22" r="9.5" fill={Theme.colors.surface} opacity={0.88} />
+                    <Path d="M8 56c0-13 8-19 20-19s20 6 20 19z" fill={Theme.colors.surface} opacity={0.88} />
+                  </Svg>
+                )}
+              </LinearGradient>
+              <View style={styles.photoBadge}>
+                <LineIcon size={9} color={Theme.colors.surface} strokeWidth={2.6}>
+                  <Path d="M4 20l1-4L16.5 4.5a2 2 0 0 1 3 3L8 19l-4 1z" />
+                </LineIcon>
               </View>
-            )}
-          </TouchableOpacity>
-        </View>
-
-        <View
-          style={{
-            alignItems: "center",
-            marginTop: 10,
-            paddingBottom: 10,
-          }}
-        >
-          <Text style={styles.userName}>{userName}</Text>
-          <Text style={styles.weekText}>
-            {" "}
-            {t("home.week")} {weeksComplete}
-          </Text>
-        </View>
-
-        <View
-          style={{
-            flexDirection: "row",
-            flexWrap: "wrap",
-            marginTop: 15,
-            justifyContent: "space-between",
-            paddingHorizontal: 20,
-          }}
-        >
-          {/* Water Intake Card */}
-          <TouchableOpacity
-            style={styles.statCard1}
-            onPress={() => router.push("/patient/water")}
-          >
-            <View style={styles.statHeader}>
-              <View
-                style={{
-                  width: 24,
-                  height: 24,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  backgroundColor: "#67B6FF3D",
-                  borderRadius: 12,
-                  marginRight: 6,
-                }}
-              >
-                <WaterIcon width={14} height={14} />
-              </View>
-              <Text
-                style={styles.statTitle}
-                numberOfLines={1}
-                ellipsizeMode="tail"
-              >
-                {t("home.waterIntake")}
+            </TouchableOpacity>
+            <View style={styles.headerText}>
+              <Text style={styles.greeting} numberOfLines={1}>
+                {greeting}
+              </Text>
+              <Text style={styles.name} numberOfLines={1}>
+                {userName}
               </Text>
             </View>
+            <TouchableOpacity
+              style={styles.sosPill}
+              onPress={() => Linking.openURL("tel:911")}
+              accessibilityRole="button"
+              accessibilityLabel={t("homeB.emergencyCall")}
+            >
+              <LineIcon size={14} color={Theme.colors.magenta} strokeWidth={2.2}>
+                <Path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z" />
+              </LineIcon>
+              <Text style={styles.sosText}>911</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.bell}
+              onPress={() => router.push("/patient/settings/reminder")}
+              accessibilityRole="button"
+              accessibilityLabel={t("homeB.reminders")}
+            >
+              <LineIcon size={18} color={Theme.colors.ink}>
+                <Path d="M6 8a6 6 0 0 1 12 0c0 4 1.5 5.5 2 6.5H4c.5-1 2-2.5 2-6.5Z" />
+                <Path d="M10 19a2 2 0 0 0 4 0" />
+              </LineIcon>
+            </TouchableOpacity>
+          </View>
 
-            <View style={styles.waterProgressBar}>
-              <View
-                style={[
-                  styles.waterProgress,
-                  {
-                    width:
-                      maxGlasses > 0
-                        ? `${(glassCount / maxGlasses) * 100}%` // Only calculate width if maxGlasses > 0
-                        : "0%", // Set width to 0% if maxGlasses is 0
-                  },
-                ]}
+          <View style={styles.content}>
+            {/* Pregnancy journey hero with the baby inside the progress ring */}
+            <LinearGradient
+              colors={Theme.home.hero}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.hero}
+            >
+              <View style={styles.heroMain}>
+                <Text style={styles.heroTag}>{t("homeB.journeyTag")}</Text>
+                <Text style={styles.heroWeek}>{t("homeB.week", { week })}</Text>
+                <Text style={styles.heroSub}>
+                  {t("homeB.weeksToGo", {
+                    trimester: t(`profile.trimester${trimesterIndex}`),
+                    weeks: weeksToGo,
+                  })}
+                </Text>
+                {week > 0 && (
+                  <View style={styles.heroMsg}>
+                    <Svg width={13} height={13} viewBox="0 0 24 24">
+                      <Path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" fill={Theme.colors.magentaVivid} />
+                    </Svg>
+                    <Text style={styles.heroMsgText}>
+                      {t("homeB.babySize", { fruit: t(`fruits.${fruit}`).toLowerCase() })}
+                    </Text>
+                  </View>
+                )}
+                <TouchableOpacity
+                  onPress={() =>
+                    router.push({
+                      pathname: "/patient/track",
+                      params: { weeksComplete: String(week) },
+                    })
+                  }
+                  accessibilityRole="button"
+                >
+                  <LinearGradient
+                    colors={[Theme.colors.purple, Theme.home.heroButtonEnd]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.heroButton}
+                  >
+                    <Text style={styles.heroButtonText}>{t("homeB.viewDetails")}</Text>
+                    <LineIcon size={13} color={Theme.colors.surface} strokeWidth={2.4}>
+                      <Path d="M5 12h14M13 6l6 6-6 6" />
+                    </LineIcon>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+              <View style={styles.ring}>
+                <Image source={babyImageForWeek(week)} style={styles.ringImage} />
+                <Svg width={RING} height={RING} viewBox="0 0 104 104" style={StyleSheet.absoluteFill}>
+                  <Defs>
+                    <SvgGradient id="ring" x1="0" y1="0" x2="1" y2="1">
+                      <Stop offset="0" stopColor={Theme.colors.magentaVivid} />
+                      <Stop offset="1" stopColor={Theme.colors.purple} />
+                    </SvgGradient>
+                  </Defs>
+                  <Circle cx="52" cy="52" r="47" stroke={Theme.home.ringTrack} strokeWidth={6} fill="none" />
+                  <Circle
+                    cx="52"
+                    cy="52"
+                    r="47"
+                    stroke="url(#ring)"
+                    strokeWidth={6}
+                    fill="none"
+                    strokeLinecap="round"
+                    strokeDasharray={`${(RING_LENGTH * progress) / 100} ${RING_LENGTH}`}
+                    transform="rotate(-90 52 52)"
+                  />
+                </Svg>
+                <Text style={styles.ringPct}>{Math.round(progress)}%</Text>
+              </View>
+            </LinearGradient>
+
+            {/* This week: tap a day to see what is booked */}
+            <View style={styles.strip} accessibilityRole="radiogroup">
+              {weekDays.map((day) => {
+                const isToday = day.toDateString() === today.toDateString();
+                const isSelected = day.toDateString() === selectedDate.toDateString();
+                const booked = appointmentsOn(day).length > 0;
+                return (
+                  <TouchableOpacity
+                    key={day.toDateString()}
+                    style={[styles.day, isToday && styles.dayToday, isSelected && !isToday && styles.daySelected]}
+                    onPress={() => setSelectedDay(day.toDateString())}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: isSelected }}
+                  >
+                    <Text style={[styles.dayName, isToday && styles.dayNameToday]}>
+                      {day.toLocaleDateString(i18n.language, { weekday: "short" })}
+                    </Text>
+                    <Text style={[styles.dayNumber, isToday && styles.dayNumberToday]}>{day.getDate()}</Text>
+                    <View style={[styles.dayDot, booked && (isToday ? styles.dayDotToday : styles.dayDotOn)]} />
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            <Text style={styles.dayInfo} accessibilityLiveRegion="polite">
+              <Text style={styles.dayInfoDate}>
+                {selectedDate.toLocaleDateString(i18n.language, {
+                  weekday: "short",
+                  month: "short",
+                  day: "numeric",
+                })}
+              </Text>
+              {" · "}
+              {dayInfo}
+            </Text>
+
+            {/* Tracker tiles */}
+            <View style={styles.tiles}>
+              <StatTile
+                title={t("homeB.waterIntake")}
+                value={String(glassCount)}
+                unit={t("homeB.ofGlasses", { goal: maxGlasses })}
+                progress={maxGlasses ? glassCount / maxGlasses : 0}
+                colors={Theme.home.tiles.water}
+                bar={Theme.home.bars.water}
+                art={<WaterArt />}
+                onPress={() => router.push("/patient/water")}
+                action={
+                  <TouchableOpacity
+                    style={[styles.plus, glassCount >= maxGlasses && styles.plusDisabled]}
+                    onPress={addGlass}
+                    disabled={glassCount >= maxGlasses}
+                    accessibilityRole="button"
+                    accessibilityLabel={t("homeB.addGlass")}
+                  >
+                    <Text style={styles.plusText}>+</Text>
+                  </TouchableOpacity>
+                }
+              />
+              <StatTile
+                title={t("homeB.food")}
+                value={Math.round(caloriesConsumed || 0).toLocaleString(i18n.language)}
+                unit={t("homeB.ofKcal", { goal: (calorieGoal || 0).toLocaleString(i18n.language) })}
+                progress={calorieGoal ? (caloriesConsumed || 0) / calorieGoal : 0}
+                colors={Theme.home.tiles.food}
+                art={<FoodArt />}
+                onPress={() => router.push("/patient/meals")}
+              />
+              <StatTile
+                title={t("homeB.steps")}
+                value={(stepsWalked || 0).toLocaleString(i18n.language)}
+                unit={t("homeB.ofSteps", { goal: (stepGoal || 0).toLocaleString(i18n.language) })}
+                progress={stepGoal ? (stepsWalked || 0) / stepGoal : 0}
+                colors={Theme.home.tiles.steps}
+                bar={Theme.home.bars.steps}
+                art={<StepsArt />}
+                onPress={() => router.push("/patient/steps")}
+              />
+              <StatTile
+                title={t("homeB.dueDate")}
+                value={String(remainingDays)}
+                unit={t("homeB.daysLeft")}
+                sub={
+                  pregnancyData?.dueDate
+                    ? new Date(pregnancyData.dueDate).toLocaleDateString(i18n.language, {
+                        month: "short",
+                        day: "numeric",
+                      })
+                    : dueDate
+                }
+                colors={Theme.home.tiles.due}
+                art={<DueArt />}
+                onPress={() =>
+                  router.push({
+                    pathname: "/patient/track",
+                    params: { weeksComplete: String(week) },
+                  })
+                }
+              />
+              {/* Not in version B: kept on the Home at the client's request */}
+              <StatTile
+                title={t("homeB.bloodPressure")}
+                value={bpSystolic !== null && bpDiastolic !== null ? `${bpSystolic}/${bpDiastolic}` : "--/--"}
+                unit="mmHg"
+                colors={Theme.home.tiles.pressure}
+                art={<PressureArt />}
+                onPress={() => router.push("/patient/bloodpressure")}
+              />
+              <StatTile
+                title={t("homeB.glucose")}
+                value={glucoseLevel !== null ? String(glucoseLevel) : "--"}
+                unit={glucoseUnit}
+                colors={Theme.home.tiles.glucose}
+                art={<GlucoseArt />}
+                onPress={() => router.push("/patient/glucose")}
               />
             </View>
 
-            <View style={styles.statValueContainer}>
-              <Text style={styles.statSuffix}>
-                {" "}
-                <Text style={styles.statValue}>{glassCount}</Text> /{" "}
-                {maxGlasses} {t("home.glasses")}
-              </Text>
-            </View>
-          </TouchableOpacity>
-
-          {/* Food Card */}
-          <TouchableOpacity
-            style={styles.statCard2}
-            onPress={() => router.push("/patient/meals")}
-          >
-            <View style={styles.statHeader}>
-              <View
-                style={{
-                  width: 24,
-                  height: 24,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  backgroundColor: "#38C47229",
-                  borderRadius: 12,
-                  marginRight: 6,
-                }}
-              >
-                <FoodIcon width={14} height={14} />
-              </View>
-              <Text style={styles.statTitle}>{t("home.food")}</Text>
+            {/* Shortcuts */}
+            <View style={styles.shortcuts}>
+              {shortcuts.map((item) => (
+                <TouchableOpacity
+                  key={item.key}
+                  style={styles.shortcut}
+                  onPress={item.onPress}
+                  accessibilityRole="button"
+                >
+                  <View style={styles.shortcutIcon}>
+                    <LineIcon size={20} color={Theme.colors.purple}>
+                      {item.icon}
+                    </LineIcon>
+                  </View>
+                  <Text style={styles.shortcutLabel}>{item.label}</Text>
+                </TouchableOpacity>
+              ))}
             </View>
 
-            <View style={styles.foodQualityContainer}>
-              <View style={styles.progressBar}>
-                <View
-                  style={[
-                    styles.progressFill,
-                    { width: `${(caloriesConsumed / calorieGoal) * 100}%` },
-                  ]}
-                />
-              </View>
-              <View style={styles.caloriesContainer}>
-                <Text style={styles.calorieText}>{caloriesConsumed}</Text>
-                <Text style={styles.calorieSubText}>
-                  {" "}
-                  / {calorieGoal} Calories
-                </Text>
-              </View>
-            </View>
-
-            <View
-              style={{
-                flexDirection: "row",
-                gap: 2,
-              }}
+            {/* Support */}
+            <Text style={styles.sectionLabel}>{t("homeB.support")}</Text>
+            <TouchableOpacity
+              style={styles.flatRow}
+              onPress={() =>
+                router.push({ pathname: "/patient/askdoula", params: { from_modal: "true" } })
+              }
+              accessibilityRole="button"
             >
-              <View style={styles.goodFoodBadge}>
-                <Text style={styles.goodFoodText}>
-                  Good Food: {goodFoodCount}
-                </Text>
+              <View style={[styles.iconChip, { backgroundColor: Theme.colors.purpleTint }]}>
+                <LineIcon size={20} color={Theme.colors.purple}>
+                  <Path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v7A2.5 2.5 0 0 1 17.5 16H10l-4.5 4v-4H6.5A2.5 2.5 0 0 1 4 13.5Z" />
+                </LineIcon>
               </View>
-              <View style={styles.badFoodBadge}>
-                <Text style={styles.badFoodText}>Bad Food: {badFoodCount}</Text>
+              <View style={styles.flex}>
+                <Text style={styles.rowTitle}>{t("homeB.askConcierge")}</Text>
+                <Text style={styles.rowSub}>{t("homeB.askConciergeSub")}</Text>
               </View>
-            </View>
-          </TouchableOpacity>
-
-          {/* Steps Card */}
-          <TouchableOpacity
-            style={styles.statCard3}
-            onPress={() => router.push("/patient/steps")}
-          >
-            <View style={styles.statHeader}>
-              <View
-                style={{
-                  width: 24,
-                  height: 24,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  backgroundColor: "#5E4FA233",
-                  borderRadius: 12,
-                  marginRight: 6,
-                }}
+              <LineIcon size={18} color={Theme.colors.ink}>
+                <Path d="M9 6l6 6-6 6" />
+              </LineIcon>
+            </TouchableOpacity>
+            {routine && (
+              <TouchableOpacity
+                style={styles.tipCard}
+                onPress={() => router.push("/patient/(tabs)/selfcare")}
+                accessibilityRole="button"
               >
-                <StepsIcon width={14} height={14} />
-              </View>
-              <Text style={styles.statTitle}>{t("home.steps")}</Text>
-            </View>
+                <View style={[styles.iconChip, { backgroundColor: Theme.colors.tealTint }]}>
+                  <LineIcon size={20} color={Theme.colors.teal}>
+                    <Path d="M9 18h6M10 21h4" />
+                    <Path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3Z" />
+                  </LineIcon>
+                </View>
+                <View style={styles.flex}>
+                  <Text style={styles.tipTitle}>{t("homeB.tryRoutine", { title: routine.title })}</Text>
+                  <Text style={styles.tipPill}>{t("homeB.selfCareTag")}</Text>
+                </View>
+              </TouchableOpacity>
+            )}
 
-            <Text style={styles.stepsValue}>{stepsWalked}</Text>
-            <Text
-              style={{
-                fontSize: 12,
-                fontFamily: "DMSans400",
-                marginTop: 5,
-              }}
-            >
-              <Text style={styles.stepsGoal}>{t("home.goal")}:</Text> {stepGoal}
-            </Text>
-          </TouchableOpacity>
-
-          {/* Due Date Card */}
-          <TouchableOpacity
-            style={styles.statCard4}
-            onPress={() =>
-              router.push({
-                pathname: "/patient/track",
-                params: { weeksComplete: weeksComplete.toString() },
-              })
-            }
-          >
-            <View style={styles.statHeader}>
-              <View
-                style={{
-                  width: 24,
-                  height: 24,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  backgroundColor: "#A855F71A",
-                  borderRadius: 12,
-                  marginRight: 6,
-                }}
-              >
-                <Calendar width={14} height={14} />
-              </View>
-              <Text style={styles.statTitle} numberOfLines={1}>
-                {t("home.due_date")}
-              </Text>
-            </View>
-            <Text
-              style={{
-                fontSize: 12,
-                fontFamily: "DMSans500",
-                color: "#434343",
-              }}
-            >
-              <Text
-                onPress={openPregnancyModal}
-                style={{
-                  fontSize: 16,
-                  fontFamily: "DMSans600",
-                  color: "#A855F7",
-                }}
-              >
-                {remainingDays}
-              </Text>{" "}
-              {t("daysLeft")}
-            </Text>
-            <Text
-              style={{
-                fontSize: 10,
-                fontFamily: "DMSans500",
-                color: "#434343",
-              }}
-            >
-              {dueDate}
-            </Text>
-          </TouchableOpacity>
-
-          {/* Blood Pressure Card */}
-          <TouchableOpacity
-            style={styles.statCard5}
-            onPress={() => router.push("/patient/bloodpressure")}
-          >
-            <View style={styles.statHeader}>
-              <View
-                style={{
-                  width: 24,
-                  height: 24,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  backgroundColor: "#E573731A",
-                  borderRadius: 12,
-                  marginRight: 6,
-                }}
-              >
-                <MaterialCommunityIcons
-                  name="heart-pulse"
-                  size={14}
-                  color="#E57373"
-                />
-              </View>
-              <Text style={styles.statTitle}>Blood Pressure</Text>
-            </View>
-
-            <Text style={styles.bpValue}>
-              {bpSystolic !== null && bpDiastolic !== null
-                ? `${bpSystolic}/${bpDiastolic}`
-                : "--/--"}
-            </Text>
-            <Text
-              style={{
-                fontSize: 12,
-                fontFamily: "DMSans400",
-                marginTop: 5,
-                color: "#434343",
-              }}
-            >
-              mmHg
-            </Text>
-          </TouchableOpacity>
-
-          {/* Glucose Card */}
-          <TouchableOpacity
-            style={styles.statCard6}
-            onPress={() => router.push("/patient/glucose")}
-          >
-            <View style={styles.statHeader}>
-              <View
-                style={{
-                  width: 24,
-                  height: 24,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  backgroundColor: "#8E44AD1A",
-                  borderRadius: 12,
-                  marginRight: 6,
-                }}
-              >
-                <MaterialCommunityIcons
-                  name="chart-line"
-                  size={14}
-                  color="#8E44AD"
-                />
-              </View>
-              <Text style={styles.statTitle}>Glucose</Text>
-            </View>
-
-            <Text style={styles.glucoseValue}>
-              {glucoseLevel !== null ? glucoseLevel : "--"}
-            </Text>
-            <Text
-              style={{
-                fontSize: 12,
-                fontFamily: "DMSans400",
-                marginTop: 5,
-                color: "#434343",
-              }}
-            >
-              {glucoseUnit}
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        <FlatList
-          data={cardData}
-          renderItem={renderCard}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.cardContainer}
-          showsVerticalScrollIndicator={false}
-        />
-        
-        {/* Copyright Notice */}
-<View style={styles.copyrightContainer}>
-  <Text style={styles.copyrightText}>© 2024 Cross Care Tech</Text>
-</View>
-      </ScrollView>
-
-      <PregnancyModal
-        visible={showPregnancyModal}
-        onClose={() => setShowPregnancyModal(false)}
-        onSave={handlePregnancySave}
-      />
-    </SafeAreaView>
+            {/* Calendar and MotherCare banners (kept at the client's request) */}
+            {banners.map((item) => (
+              <Card
+                key={item.id}
+                title={item.title}
+                description={item.description}
+                bg1={item.bg1}
+                bg2={item.bg2}
+                image1={item.image1}
+                id={item.id}
+                onPress={item.onPress}
+              />
+            ))}
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    </ScreenBackground>
   );
 };
 
 export default Home;
 
+const RING = 104;
+const RING_LENGTH = 2 * Math.PI * 47;
+
+// Prototype `.stat` tile: title, chevron chip, value, progress bar and illustration
+const StatTile = ({
+  title,
+  value,
+  unit,
+  sub,
+  progress,
+  colors,
+  bar = Theme.home.bars.default,
+  art,
+  action,
+  onPress,
+}: {
+  title: string;
+  value: string;
+  unit: string;
+  sub?: string;
+  progress?: number;
+  colors: [string, string];
+  bar?: [string, string];
+  art: React.ReactNode;
+  action?: React.ReactNode;
+  onPress: () => void;
+}) => (
+  <TouchableOpacity style={styles.tileWrap} onPress={onPress} activeOpacity={0.85} accessibilityRole="button">
+    <LinearGradient colors={colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.tile}>
+      <Text style={styles.tileTitle}>{title}</Text>
+      {action ?? (
+        <View style={styles.tileGo}>
+          <LineIcon size={12} color={Theme.colors.purple} strokeWidth={2.6}>
+            <Path d="M9 6l6 6-6 6" />
+          </LineIcon>
+        </View>
+      )}
+      <Text style={styles.tileValue}>{value}</Text>
+      <Text style={styles.tileUnit}>{unit}</Text>
+      {progress !== undefined && (
+        <View style={styles.tileBar}>
+          <LinearGradient
+            colors={bar}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={[styles.tileBarFill, { width: `${Math.min(Math.max(progress, 0), 1) * 100}%` }]}
+          />
+        </View>
+      )}
+      {sub ? <Text style={styles.tileSub}>{sub}</Text> : null}
+      <View style={styles.tileArt} pointerEvents="none">
+        {art}
+      </View>
+    </LinearGradient>
+  </TouchableOpacity>
+);
+
 const styles = StyleSheet.create({
-  copyrightContainer: {
-  alignItems: "center",
-  paddingVertical: 20,
-  paddingHorizontal: 20,
-  
-},
-copyrightText: {
-  fontSize: 12,
-  color: "#888",
-  fontFamily: "DMSans400",
-  textAlign: "center",
-},
-  cardContainer: {
-    // padding: 20,
-    marginTop: 10,
-    marginHorizontal: 20,
-    marginVertical: Platform.OS === "ios" ? 10 : 0,
-    paddingBottom: Platform.OS === "android" ? 10 : 40,
+  container: {
+    flex: 1,
   },
-  statCard1: {
-    width: "48%",
-    height: 103, // Fixed height for all cards
-    backgroundColor: "rgba(35, 149, 255, 0.05)",
-    boxShadow: "0px 0px 4px 0px rgba(0, 0, 0, 0.25)",
-    borderRadius: 15,
-    padding: 15,
-    marginBottom: 15,
-    justifyContent: "space-between",
+  flex: {
+    flex: 1,
   },
-  statCard2: {
-    width: "48%",
-    height: 103, // Fixed height for all cards
-    backgroundColor: "rgba(21, 135, 68, 0.05)",
-    boxShadow: "0px 0px 4px 0px rgba(0, 0, 0, 0.25)",
-    borderRadius: 15,
-    padding: 15,
-    marginBottom: 15,
-    justifyContent: "space-between",
+  scroll: {
+    paddingBottom: 120,
   },
-  statCard3: {
-    width: "48%",
-    height: 103, // Fixed height for all cards
-    backgroundColor: "rgba(168, 85, 247, 0.05)",
-    boxShadow: "0px 0px 4px 0px rgba(0, 0, 0, 0.25)",
-    borderRadius: 15,
-    padding: 15,
-    marginBottom: 15,
-    justifyContent: "space-between",
-  },
-  statCard4: {
-    width: "48%",
-    height: 103, // Fixed height for all cards
-    backgroundColor: "rgba(168, 85, 247, 0.05)",
-    boxShadow: "0px 0px 4px 0px rgba(0, 0, 0, 0.25)",
-    borderRadius: 15,
-    padding: 15,
-    marginBottom: 15,
-    justifyContent: "space-between",
-  },
-  statCard5: {
-    width: "48%",
-    height: 103,
-    backgroundColor: "rgba(229, 115, 115, 0.05)",
-    boxShadow: "0px 0px 4px 0px rgba(0, 0, 0, 0.25)",
-    borderRadius: 15,
-    padding: 15,
-    marginBottom: 15,
-    justifyContent: "space-between",
-  },
-  bpValue: {
-    fontSize: 22,
-    fontFamily: "DMSans600",
-    color: "#E57373",
-  },
-  statCard6: {
-    width: "48%",
-    height: 103,
-    backgroundColor: "rgba(142, 68, 173, 0.05)",
-    boxShadow: "0px 0px 4px 0px rgba(0, 0, 0, 0.25)",
-    borderRadius: 15,
-    padding: 15,
-    marginBottom: 15,
-    justifyContent: "space-between",
-  },
-  glucoseValue: {
-    fontSize: 22,
-    fontFamily: "DMSans600",
-    color: "#8E44AD",
-  },
-  userName: {
-    fontSize: 20,
-    fontFamily: "DMSans600",
-    color: "#87247D",
-  },
-  weekText: {
-    fontSize: 14,
-    color: "#F76CCF",
-    marginTop: 2,
-    fontFamily: "DMSans600",
-  },
-  backgroundCurve: {
-    backgroundColor: "#FAB5E8",
-    height: 2000,
-    position: "absolute",
-    top: -1 * (2000 - 70),
-    width: 2000,
-    borderRadius: 2000,
-    alignSelf: "center",
-    zIndex: -1,
-  },
-  statHeader: {
+  header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingRight: 20,
-    marginBottom: 5,
+    gap: 10,
+    paddingTop: 6,
+    paddingHorizontal: 18,
+    paddingBottom: 12,
   },
-  statIcon: {
-    fontSize: 16,
-    marginRight: 8,
-  },
-  statTitle: {
-    fontSize: 12,
-    fontFamily: "DMSans600",
-    color: "#373737",
-  },
-  statValueContainer: {
-    flexDirection: "row",
-    alignItems: "baseline",
-    // marginTop: 5,
-  },
-  statValue: {
-    fontSize: 16,
-    fontFamily: "DMSans600",
-    color: "#2395FF",
-  },
-  statSuffix: {
-    fontSize: 12,
-    color: "#373737",
-    fontFamily: "DMSans500",
-  },
-  waterProgressBar: {
-    height: 8,
-    width: "100%",
+  photo: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
     overflow: "hidden",
-    backgroundColor: "#E1EEFF",
-    borderRadius: 4,
-    marginVertical: 10,
   },
-  waterProgress: {
-    height: 8,
-    backgroundColor: "#4A9CFF",
-    borderRadius: 4,
-  },
-  foodQualityContainer: {
-    flexDirection: "column",
-    // marginVertical: 2,
-    gap: 5,
-  },
-  progressBar: {
-    height: 5,
+  photoImage: {
     width: "100%",
-    backgroundColor: "#E5F5EC",
-    borderRadius: 10,
-    overflow: "hidden",
-    // marginBottom: 12,
-  },
-  calorieText: {
-    fontSize: 14,
-    fontFamily: "DMSans600",
-    color: "rgba(70, 208, 45, 1)",
-  },
-  calorieSubText: {
-    fontSize: 10,
-    fontFamily: "DMSans500",
-    color: "rgba(55, 55, 55, 1)",
-  },
-  goodFoodBadge: {
-    backgroundColor: "rgba(112, 217, 92, 1)",
-    borderWidth: 0.5,
-    borderColor: "rgba(64, 206, 35, 1)",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 4,
-  },
-  goodFoodText: {
-    color: "#FFFFFF",
-    fontSize: 7,
-    fontFamily: "DMSans600",
-  },
-  badFoodBadge: {
-    borderWidth: 0.5,
-    borderColor: "rgba(252, 49, 48, 1)",
-    backgroundColor: "rgba(249, 98, 97, 1)",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 4,
-  },
-  badFoodText: {
-    color: "#FFFFFF",
-    fontSize: 7,
-    fontFamily: "DMSans600",
-  },
-  caloriesContainer: {
-    flexDirection: "row",
-    alignItems: "baseline",
-    // marginBottom: 8,
-  },
-  progressFill: {
     height: "100%",
-    borderRadius: 10,
-    backgroundColor: "rgba(70, 208, 45, 1)",
   },
-  qualityIndicator: {
-    height: 12,
-    marginHorizontal: 1,
-    borderRadius: 10,
+  photoBadge: {
+    position: "absolute",
+    right: -3,
+    bottom: -3,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: Theme.colors.purple,
+    borderWidth: 2,
+    borderColor: Theme.colors.surface,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  qualityScoreLabel: {
+  headerText: {
+    flex: 1,
+    minWidth: 0,
+  },
+  greeting: {
+    fontFamily: Theme.typography.subheading,
     fontSize: 12,
-    marginTop: 6,
-    // maxWidth:' 100%',
-    color: "#373737",
-    fontFamily: "DMSans500",
+    color: Theme.colors.inkSoft,
   },
-  qualityScoreValue: {
-    fontSize: 18,
-    color: "#22C800",
-    fontFamily: "DMSans600",
-    // marginLeft: 5,
+  name: {
+    fontFamily: Theme.typography.display,
+    fontSize: 22,
+    lineHeight: 26,
+    color: Theme.colors.ink,
   },
-  qualityScoreSuffix: {
-    fontSize: 14,
-    color: "#666",
-    marginLeft: 2,
-  },
-  stepsValue: {
-    fontSize: 16,
-    fontFamily: "DMSans600",
-    color: "#5E4FA2",
-    marginTop: 5,
-  },
-  stepsGoal: {
-    fontSize: 12,
-    color: "#373737",
-    fontFamily: "DMSans600",
-  },
-  dueDateContainer: {
+  sosPill: {
     flexDirection: "row",
-    alignItems: "baseline",
-    marginTop: 10,
+    alignItems: "center",
+    gap: 5,
+    height: 36,
+    paddingHorizontal: 11,
+    borderRadius: Theme.borderRadius.full,
+    backgroundColor: Theme.colors.surface,
+    borderWidth: 1.5,
+    borderColor: Theme.home.sosBorder,
   },
-  daysLeftValue: {
+  sosText: {
+    fontFamily: Theme.typography.heading,
+    fontSize: 12,
+    letterSpacing: 0.2,
+    color: Theme.colors.magenta,
+  },
+  bell: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Theme.colors.surface,
+    borderWidth: 1,
+    borderColor: Theme.colors.hairline,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  content: {
+    paddingHorizontal: 22,
+    paddingTop: 4,
+    gap: 18,
+  },
+  hero: {
+    borderRadius: Theme.borderRadius.xl,
+    paddingVertical: 18,
+    paddingLeft: 18,
+    paddingRight: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    ...Theme.shadows.soft,
+  },
+  heroMain: {
+    flex: 1,
+    alignItems: "flex-start",
+    gap: 4,
+  },
+  heroTag: {
+    fontFamily: Theme.typography.heading,
+    fontSize: 10.5,
+    color: Theme.colors.purple,
+    backgroundColor: Theme.home.heroTagBg,
+    borderWidth: 1,
+    borderColor: Theme.home.heroTagBorder,
+    borderRadius: Theme.borderRadius.full,
+    overflow: "hidden",
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    marginBottom: 4,
+  },
+  heroWeek: {
+    fontFamily: Theme.typography.display,
+    fontSize: 28,
+    lineHeight: 31,
+    color: Theme.colors.ink,
+  },
+  heroSub: {
+    fontFamily: Theme.typography.subheading,
+    fontSize: 11,
+    lineHeight: 15,
+    color: Theme.colors.inkSoft,
+  },
+  heroMsg: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 6,
+    marginTop: 6,
+  },
+  heroMsgText: {
+    flex: 1,
+    fontFamily: Theme.typography.heading,
+    fontSize: 11.5,
+    lineHeight: 15,
+    color: Theme.colors.purple,
+  },
+  heroButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: Theme.spacing.sm,
+    height: 34,
+    paddingHorizontal: 13,
+    borderRadius: Theme.borderRadius.full,
+  },
+  heroButtonText: {
+    fontFamily: Theme.typography.heading,
+    fontSize: 12,
+    color: Theme.colors.surface,
+  },
+  ring: {
+    width: RING,
+    height: RING,
+  },
+  ringImage: {
+    position: "absolute",
+    left: 12,
+    top: 12,
+    width: RING - 24,
+    height: RING - 24,
+    borderRadius: (RING - 24) / 2,
+    backgroundColor: Theme.home.babyBg,
+  },
+  ringPct: {
+    position: "absolute",
+    bottom: -6,
+    alignSelf: "center",
+    fontFamily: Theme.typography.heading,
+    fontSize: 11,
+    color: Theme.colors.purple,
+    backgroundColor: Theme.colors.surface,
+    borderRadius: Theme.borderRadius.full,
+    overflow: "hidden",
+    paddingHorizontal: 9,
+    paddingVertical: 2,
+    ...Theme.shadows.card,
+  },
+  strip: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 4,
+  },
+  day: {
+    flex: 1,
+    alignItems: "center",
+    gap: 5,
+    minHeight: 56,
+    paddingTop: Theme.spacing.sm,
+    paddingBottom: 7,
+    borderRadius: 14,
+  },
+  dayToday: {
+    backgroundColor: Theme.colors.magenta,
+  },
+  daySelected: {
+    borderWidth: 1.5,
+    borderColor: Theme.colors.purple,
+  },
+  dayName: {
+    fontFamily: Theme.typography.heading,
+    fontSize: 10,
+    color: Theme.colors.inkFaint,
+  },
+  dayNameToday: {
+    color: Theme.colors.surface,
+    opacity: 0.8,
+  },
+  dayNumber: {
+    fontFamily: Theme.typography.heading,
+    fontSize: 13.5,
+    color: Theme.colors.ink,
+  },
+  dayNumberToday: {
+    color: Theme.colors.surface,
+  },
+  dayDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+  },
+  dayDotOn: {
+    backgroundColor: Theme.colors.purple,
+  },
+  dayDotToday: {
+    backgroundColor: Theme.colors.surface,
+  },
+  dayInfo: {
+    marginTop: -6,
+    backgroundColor: Theme.colors.tealTint,
+    borderRadius: 14,
+    overflow: "hidden",
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    fontFamily: Theme.typography.body,
+    fontSize: 12.5,
+    lineHeight: 18,
+    color: Theme.home.dayInfoText,
+  },
+  dayInfoDate: {
+    fontFamily: Theme.typography.heading,
+    color: Theme.colors.ink,
+  },
+  tiles: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    rowGap: 10,
+  },
+  tileWrap: {
+    width: "48.5%",
+  },
+  tile: {
+    minHeight: 112,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: Theme.home.tileBorder,
+    paddingTop: 12,
+    paddingBottom: 12,
+    paddingLeft: 14,
+    paddingRight: 12,
+    gap: 4,
+    overflow: "hidden",
+    ...Theme.shadows.card,
+  },
+  tileTitle: {
+    fontFamily: Theme.typography.heading,
+    fontSize: 12,
+    color: Theme.colors.inkSoft,
+  },
+  tileGo: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: Theme.home.tileChip,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  tileValue: {
+    fontFamily: Theme.typography.display,
+    fontSize: 22,
+    lineHeight: 25,
+    color: Theme.colors.ink,
+    marginTop: 2,
+  },
+  tileUnit: {
+    fontFamily: Theme.typography.subheading,
+    fontSize: 10.5,
+    color: Theme.colors.inkFaint,
+  },
+  tileBar: {
+    width: "62%",
+    height: 6,
+    borderRadius: Theme.borderRadius.full,
+    backgroundColor: Theme.colors.surfaceSunken,
+    overflow: "hidden",
+    marginTop: 4,
+  },
+  tileBarFill: {
+    height: "100%",
+    borderRadius: Theme.borderRadius.full,
+  },
+  tileSub: {
+    fontFamily: Theme.typography.body,
+    fontSize: 10.5,
+    color: Theme.colors.inkFaint,
+    marginTop: 2,
+  },
+  tileArt: {
+    position: "absolute",
+    right: 6,
+    bottom: Theme.spacing.sm,
+  },
+  plus: {
+    position: "absolute",
+    top: 36,
+    right: 12,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Theme.home.waterButton,
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 2,
+    elevation: 3,
+  },
+  plusDisabled: {
+    backgroundColor: Theme.home.waterButtonDisabled,
+    elevation: 0,
+  },
+  plusText: {
+    fontFamily: Theme.typography.heading,
     fontSize: 24,
-    fontWeight: "600",
-    color: "#9966CC",
+    lineHeight: 28,
+    color: Theme.colors.surface,
   },
-  daysLeftLabel: {
-    fontSize: 14,
-    color: "#666",
-    marginLeft: 5,
+  shortcuts: {
+    flexDirection: "row",
+    gap: 10,
   },
-  dueDateText: {
-    fontSize: 14,
-    color: "#666",
-    marginTop: 5,
+  shortcut: {
+    flex: 1,
+    alignItems: "center",
+    gap: Theme.spacing.sm,
+  },
+  shortcutIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 13,
+    backgroundColor: Theme.colors.surface,
+    borderWidth: 1,
+    borderColor: Theme.colors.hairline,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  shortcutLabel: {
+    fontFamily: Theme.typography.heading,
+    fontSize: 10.5,
+    color: Theme.colors.inkSoft,
+    textAlign: "center",
+  },
+  sectionLabel: {
+    fontFamily: Theme.typography.heading,
+    fontSize: 12,
+    color: Theme.colors.inkFaint,
+    marginBottom: -6,
+  },
+  flatRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    backgroundColor: Theme.colors.surface,
+    borderWidth: 1,
+    borderColor: Theme.colors.hairline,
+    borderRadius: Theme.borderRadius.md,
+    paddingVertical: 14,
+    paddingHorizontal: Theme.spacing.md,
+  },
+  iconChip: {
+    width: 44,
+    height: 44,
+    borderRadius: 13,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  rowTitle: {
+    fontFamily: Theme.typography.heading,
+    fontSize: 13.5,
+    color: Theme.colors.ink,
+  },
+  rowSub: {
+    fontFamily: Theme.typography.body,
+    fontSize: 11.5,
+    color: Theme.colors.inkFaint,
+  },
+  tipCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    backgroundColor: Theme.colors.surface,
+    borderRadius: 20,
+    paddingVertical: 18,
+    paddingHorizontal: 20,
+    ...Theme.shadows.card,
+  },
+  tipTitle: {
+    fontFamily: Theme.typography.heading,
+    fontSize: 13,
+    color: Theme.colors.ink,
+    marginBottom: 6,
+  },
+  tipPill: {
+    alignSelf: "flex-start",
+    fontFamily: Theme.typography.heading,
+    fontSize: 10.5,
+    color: Theme.colors.teal,
+    backgroundColor: Theme.colors.tealTint,
+    borderRadius: Theme.borderRadius.full,
+    overflow: "hidden",
+    paddingHorizontal: 9,
+    paddingVertical: 3,
   },
 });
