@@ -1,0 +1,44 @@
+# Upload ignore list for EAS Build.
+#
+# IMPORTANT: when this file exists, EAS uses it INSTEAD of .gitignore -- not in
+# addition to it. Every pattern that must stay out of the build archive has to
+# be repeated here, including node_modules.
+
+# dependencies
+node_modules/
+
+# Generated native projects. EAS runs prebuild itself; a partial android/ or
+# ios/ directory makes EAS pick the bare workflow and skip that prebuild.
+android/
+ios/
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# Secrets. These are supplied as EAS environment variables and must never be
+# uploaded in the build archive.
+.env
+.env*.local
+*.jks
+*.p8
+*.p12
+*.key
+*.pem
+*.mobileprovision
+
+# Not needed by the build
+ios_backup/
+docs/
+app-example
+.qodo
+.git/
+
+# Native / debug / misc
+*.orig.*
+.metro-health-check*
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+.DS_Store
+*.tsbuildinfo
