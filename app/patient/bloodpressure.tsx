@@ -5,18 +5,19 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Dimensions,
   ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
-import { router, useFocusEffect } from "expo-router";
+import { useFocusEffect } from "expo-router";
 import { useSelector } from "react-redux";
-import { LinearGradient } from "expo-linear-gradient";
+import { useTranslation } from "react-i18next";
+import Svg, { Defs, LinearGradient as SvgGradient, Path, Polyline, Stop } from "react-native-svg";
 import BloodPressureModal from "./modal/bloodpressuremodal";
 import { CONFIG } from "@/constants/config";
-
-const { width } = Dimensions.get("window");
+import { Theme } from "@/constants/theme";
+import ScreenBackground from "@/components/ui/ScreenBackground";
+import AuthTopBar from "@/components/ui/AuthTopBar";
+import LineIcon from "@/components/profile/LineIcon";
 
 interface BPRecord {
   date: string;
@@ -24,8 +25,68 @@ interface BPRecord {
   diastolic: number;
 }
 
+type Tone = "success" | "warning" | "danger";
+
+// Same ranges the app already used; the pill tone follows the prototype's semantic colors
+const getBPCategory = (sys: number, dia: number): { key: string; tone: Tone } => {
+  if (sys < 120 && dia < 80) return { key: "normal", tone: "success" };
+  if (sys < 130 && dia < 80) return { key: "elevated", tone: "warning" };
+  if (sys < 140 || dia < 90) return { key: "high1", tone: "warning" };
+  return { key: "high2", tone: "danger" };
+};
+
+const TONES: Record<Tone, { bg: string; fg: string }> = {
+  success: { bg: Theme.colors.successTint, fg: Theme.colors.success },
+  warning: { bg: Theme.colors.warningTint, fg: Theme.colors.warning },
+  danger: { bg: Theme.colors.dangerTint, fg: Theme.colors.danger },
+};
+
+const Pill = ({ label, tone }: { label: string; tone: Tone }) => (
+  <Text style={[styles.pill, { backgroundColor: TONES[tone].bg, color: TONES[tone].fg }]}>
+    {label}
+  </Text>
+);
+
+// Prototype sparkline: systolic values over the last readings (viewBox 260 x 64)
+const Sparkline = ({ values }: { values: number[] }) => {
+  if (values.length === 0) return null;
+  const min = Math.min(...values) - 10;
+  const max = Math.max(...values) + 10;
+  const step = values.length > 1 ? 245 / (values.length - 1) : 0;
+  const points = values
+    .map((value, index) => {
+      const x = values.length > 1 ? index * step : 122;
+      const y = 56 - ((value - min) / (max - min)) * 48;
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(" ");
+  const area = `M${points.split(" ").join(" L")} L${values.length > 1 ? 245 : 122},64 L0,64 Z`;
+
+  return (
+    <Svg width="100%" height={64} viewBox="0 0 260 64" preserveAspectRatio="none">
+      <Defs>
+        <SvgGradient id="sg" x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0" stopColor={Theme.colors.magenta} stopOpacity={0.12} />
+          <Stop offset="1" stopColor={Theme.colors.surface} stopOpacity={0} />
+        </SvgGradient>
+      </Defs>
+      {values.length > 1 && <Path d={area} fill="url(#sg)" />}
+      <Polyline
+        points={points}
+        fill="none"
+        stroke={Theme.colors.magenta}
+        strokeWidth={2.5}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+};
+
+// 5.1 — Blood Pressure Log
 const BloodPressureScreen = () => {
   const user = useSelector((state: any) => state.user);
+  const { t, i18n } = useTranslation();
   const [records, setRecords] = useState<BPRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
@@ -74,308 +135,225 @@ const BloodPressureScreen = () => {
     }, [user?.token, user?.user_id])
   );
 
-  const latest = records.length > 0 ? records[records.length - 1] : null;
-
   const today = new Date();
-  const startOfWeek = new Date(today);
-  startOfWeek.setDate(today.getDate() - today.getDay());
   const pad = (n: number) => String(n).padStart(2, "0");
-  const fmt = (d: Date) =>
-    `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const fmt = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   const todayStr = fmt(today);
 
-  // Same UTC-midnight off-by-one workaround as glucose: detect by looking at
+  // Same UTC-midnight off-by-one workaround as before: detect by looking at
   // the most recent record that actually has a non-zero reading.
-  const latestNonZero = [...records]
-    .reverse()
-    .find((r) => r.systolic > 0 || r.diastolic > 0);
+  const latestNonZero = [...records].reverse().find((r) => r.systolic > 0 || r.diastolic > 0);
   const shouldShift = !!latestNonZero && latestNonZero.date < todayStr;
-  const recordsByDate = new Map<string, BPRecord>();
-  records.forEach((r) => {
-    let key = r.date;
-    if (shouldShift) {
-      const d = new Date(`${r.date}T12:00:00`);
-      d.setDate(d.getDate() + 1);
-      key = fmt(d);
-    }
-    recordsByDate.set(key, r);
-  });
-
-  const chartData = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(startOfWeek);
-    d.setDate(startOfWeek.getDate() + i);
-    const dateStr = fmt(d);
-    const record = recordsByDate.get(dateStr);
-    return {
-      day: d.toLocaleDateString("en-US", { weekday: "short" }).charAt(0),
-      date: dateStr,
-      systolic: record?.systolic ?? 0,
-      diastolic: record?.diastolic ?? 0,
-    };
-  });
-
-  const maxVal = Math.max(...chartData.map((d) => d.systolic || 0), 160);
-  const BAR_WIDTH = 18;
-  const MAX_BAR_HEIGHT = 160;
-
-  const getBPCategory = (sys: number, dia: number) => {
-    if (sys < 120 && dia < 80) return { label: "Normal", color: "#4CAF50" };
-    if (sys < 130 && dia < 80) return { label: "Elevated", color: "#FFC107" };
-    if (sys < 140 || dia < 90) return { label: "High Stage 1", color: "#FF9800" };
-    return { label: "High Stage 2", color: "#F44336" };
+  const shiftDate = (date: string) => {
+    if (!shouldShift) return date;
+    const d = new Date(`${date}T12:00:00`);
+    d.setDate(d.getDate() + 1);
+    return fmt(d);
   };
 
-  const category = latest ? getBPCategory(latest.systolic, latest.diastolic) : null;
+  // Days with a reading, oldest first
+  const readings = records
+    .filter((r) => r.systolic > 0 || r.diastolic > 0)
+    .map((r) => ({ ...r, date: shiftDate(r.date) }));
+  const latest = readings.length > 0 ? readings[readings.length - 1] : null;
+  const latestCategory = latest ? getBPCategory(latest.systolic, latest.diastolic) : null;
+
+  const dayLabel = (date: string) => {
+    const yesterday = new Date(today);
+    yesterday.setDate(today.getDate() - 1);
+    if (date === todayStr) return t("bloodPressureLog.today");
+    if (date === fmt(yesterday)) return t("bloodPressureLog.yesterday");
+    return new Date(`${date}T12:00:00`).toLocaleDateString(i18n.language, {
+      month: "short",
+      day: "numeric",
+    });
+  };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={24} color="#373737" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Blood Pressure</Text>
-        <View style={{ width: 40 }} />
-      </View>
-
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
-        <LinearGradient colors={["#E57373", "#C62828"]} style={styles.card}>
-          <Text style={styles.cardLabel}>Latest Reading</Text>
-          {latest ? (
-            <>
-              <Text style={styles.cardValue}>
-                {latest.systolic}/{latest.diastolic}
-                <Text style={styles.cardUnit}> mmHg</Text>
-              </Text>
-              <View style={[styles.categoryBadge, { backgroundColor: category?.color + "33" }]}>
-                <Text style={[styles.categoryText, { color: "#fff" }]}>
-                  {category?.label}
+    <ScreenBackground>
+      <SafeAreaView style={styles.container}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+          <AuthTopBar title={t("bloodPressureLog.title")} />
+          <View style={styles.content}>
+            {loading && readings.length === 0 ? (
+              <ActivityIndicator color={Theme.colors.magenta} />
+            ) : latest && latestCategory ? (
+              <View style={styles.current}>
+                <Text style={styles.currentLabel}>{t("bloodPressureLog.currentReading")}</Text>
+                <Text style={styles.currentValue}>
+                  {latest.systolic}
+                  <Text style={styles.currentDiastolic}>/{latest.diastolic}</Text>
                 </Text>
+                <Pill
+                  label={
+                    latestCategory.key === "normal"
+                      ? t("bloodPressureLog.normalRange")
+                      : t(`bloodPressureLog.${latestCategory.key}`)
+                  }
+                  tone={latestCategory.tone}
+                />
               </View>
-              <Text style={styles.cardDate}>{latest.date}</Text>
-            </>
-          ) : (
-            <Text style={styles.noDataText}>No readings yet</Text>
-          )}
-        </LinearGradient>
+            ) : (
+              <Text style={styles.empty}>{t("bloodPressureLog.noReadings")}</Text>
+            )}
 
-        <View style={styles.chartSection}>
-          <Text style={styles.sectionTitle}>Last 7 Days</Text>
-          {loading ? (
-            <ActivityIndicator color="#E57373" style={{ marginTop: 20 }} />
-          ) : (
-            <View style={styles.chartContainer}>
-              {chartData.map((item, index) => {
-                const barHeight = maxVal > 0
-                  ? Math.max((item.systolic / maxVal) * MAX_BAR_HEIGHT, item.systolic > 0 ? 6 : 0)
-                  : 0;
-                const diaHeight = maxVal > 0
-                  ? Math.max((item.diastolic / maxVal) * MAX_BAR_HEIGHT, item.diastolic > 0 ? 4 : 0)
-                  : 0;
-                const hasData = item.systolic > 0;
-
-                return (
-                  <View key={index} style={styles.barColumn}>
-                    <View style={styles.barsRow}>
-                      <View
-                        style={[
-                          styles.bar,
-                          {
-                            height: barHeight || 4,
-                            backgroundColor: hasData ? "#E57373" : "#f0f0f0",
-                            width: BAR_WIDTH / 2 - 1,
-                            borderRadius: 4,
-                          },
-                        ]}
-                      />
-                      <View
-                        style={[
-                          styles.bar,
-                          {
-                            height: diaHeight || 4,
-                            backgroundColor: hasData ? "#C62828" : "#f0f0f0",
-                            width: BAR_WIDTH / 2 - 1,
-                            borderRadius: 4,
-                          },
-                        ]}
-                      />
-                    </View>
-                    {hasData && (
-                      <Text style={styles.barValue}>{item.systolic}</Text>
-                    )}
-                    <Text style={styles.barDay}>{item.day}</Text>
+            {readings.length > 0 && (
+              <>
+                <View style={styles.card}>
+                  <View style={styles.rowBetween}>
+                    <Text style={styles.sectionLabel}>{t("bloodPressureLog.lastReadings")}</Text>
+                    <LineIcon size={16} color={Theme.colors.ink}>
+                      <Path d="M4 16l5-5 4 4 7-8" />
+                      <Path d="M15 6h5v5" />
+                    </LineIcon>
                   </View>
-                );
-              })}
-            </View>
-          )}
+                  <Sparkline values={readings.map((r) => r.systolic)} />
+                </View>
 
-          <View style={styles.legend}>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendDot, { backgroundColor: "#E57373" }]} />
-              <Text style={styles.legendText}>Systolic</Text>
-            </View>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendDot, { backgroundColor: "#C62828" }]} />
-              <Text style={styles.legendText}>Diastolic</Text>
-            </View>
+                <View style={[styles.card, styles.listCard]}>
+                  {[...readings].reverse().map((r, index, list) => {
+                    const category = getBPCategory(r.systolic, r.diastolic);
+                    return (
+                      <View
+                        key={r.date}
+                        style={[styles.reading, index === list.length - 1 && styles.readingLast]}
+                      >
+                        <Text style={styles.readingDate}>{dayLabel(r.date)}</Text>
+                        <Text style={styles.readingValue}>
+                          {r.systolic}/{r.diastolic}
+                        </Text>
+                        <Pill label={t(`bloodPressureLog.${category.key}`)} tone={category.tone} />
+                      </View>
+                    );
+                  })}
+                </View>
+              </>
+            )}
+
+            <TouchableOpacity
+              style={styles.button}
+              onPress={() => setModalVisible(true)}
+              accessibilityRole="button"
+            >
+              <Text style={styles.buttonText}>{t("bloodPressureLog.logNew")}</Text>
+            </TouchableOpacity>
           </View>
-        </View>
+        </ScrollView>
 
-        <View style={styles.referenceSection}>
-          <Text style={styles.sectionTitle}>Reference Ranges</Text>
-          {[
-            { label: "Normal", range: "< 120/80", color: "#4CAF50" },
-            { label: "Elevated", range: "120–129 / < 80", color: "#FFC107" },
-            { label: "High Stage 1", range: "130–139 / 80–89", color: "#FF9800" },
-            { label: "High Stage 2", range: "≥ 140 / ≥ 90", color: "#F44336" },
-          ].map((ref) => (
-            <View key={ref.label} style={styles.refRow}>
-              <View style={[styles.refDot, { backgroundColor: ref.color }]} />
-              <Text style={styles.refLabel}>{ref.label}</Text>
-              <Text style={styles.refRange}>{ref.range}</Text>
-            </View>
-          ))}
-        </View>
-
-        {records.length > 0 && (
-          <View style={styles.historySection}>
-            <Text style={styles.sectionTitle}>History</Text>
-            {[...records].reverse().map((r, i) => (
-              <View key={i} style={styles.historyRow}>
-                <Ionicons name="heart" size={16} color="#E57373" />
-                <Text style={styles.historyDate}>{r.date}</Text>
-                <Text style={styles.historyValue}>
-                  {r.systolic}/{r.diastolic} <Text style={styles.historyUnit}>mmHg</Text>
-                </Text>
-              </View>
-            ))}
-          </View>
-        )}
-
-        <View style={{ height: 100 }} />
-      </ScrollView>
-
-      <View style={styles.addButtonContainer}>
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => setModalVisible(true)}
-        >
-          <Ionicons name="add" size={20} color="#fff" />
-          <Text style={styles.addButtonText}>Add Log</Text>
-        </TouchableOpacity>
-      </View>
-
-      <BloodPressureModal
-        visible={modalVisible}
-        onClose={() => setModalVisible(false)}
-        reload={fetchHistory}
-      />
-    </SafeAreaView>
+        <BloodPressureModal
+          visible={modalVisible}
+          onClose={() => setModalVisible(false)}
+          reload={fetchHistory}
+        />
+      </SafeAreaView>
+    </ScreenBackground>
   );
 };
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  backBtn: { width: 40, alignItems: "flex-start" },
-  headerTitle: { fontSize: 18, fontFamily: "DMSans600", color: "#373737" },
-  scroll: { paddingHorizontal: 16, paddingTop: 8 },
-  card: {
-    borderRadius: 20,
-    padding: 24,
-    alignItems: "center",
-    marginBottom: 24,
-  },
-  cardLabel: { fontSize: 13, fontFamily: "DMSans400", color: "rgba(255,255,255,0.8)", marginBottom: 6 },
-  cardValue: { fontSize: 48, fontFamily: "DMSans700", color: "#fff" },
-  cardUnit: { fontSize: 16, fontFamily: "DMSans400", color: "rgba(255,255,255,0.8)" },
-  categoryBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 20,
-    marginTop: 8,
-  },
-  categoryText: { fontSize: 13, fontFamily: "DMSans600" },
-  cardDate: { fontSize: 12, color: "rgba(255,255,255,0.6)", marginTop: 6, fontFamily: "DMSans400" },
-  noDataText: { fontSize: 16, color: "rgba(255,255,255,0.7)", fontFamily: "DMSans400", marginTop: 8 },
-  chartSection: {
-    backgroundColor: "#fafafa",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 20,
-  },
-  sectionTitle: { fontSize: 15, fontFamily: "DMSans600", color: "#373737", marginBottom: 16 },
-  chartContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-end",
-    height: 200,
-    paddingBottom: 8,
-  },
-  barColumn: { alignItems: "center", flex: 1 },
-  barsRow: { flexDirection: "row", alignItems: "flex-end", gap: 1, justifyContent: "center" },
-  bar: { alignSelf: "flex-end" },
-  barValue: { fontSize: 8, color: "#E57373", fontFamily: "DMSans500", marginTop: 2 },
-  barDay: { fontSize: 11, color: "#999", fontFamily: "DMSans400", marginTop: 2 },
-  legend: { flexDirection: "row", justifyContent: "center", gap: 20, marginTop: 12 },
-  legendItem: { flexDirection: "row", alignItems: "center", gap: 6 },
-  legendDot: { width: 10, height: 10, borderRadius: 5 },
-  legendText: { fontSize: 12, fontFamily: "DMSans400", color: "#666" },
-  referenceSection: {
-    backgroundColor: "#fafafa",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 20,
-  },
-  refRow: { flexDirection: "row", alignItems: "center", marginBottom: 10 },
-  refDot: { width: 10, height: 10, borderRadius: 5, marginRight: 10 },
-  refLabel: { fontSize: 13, fontFamily: "DMSans500", color: "#373737", width: 110 },
-  refRange: { fontSize: 13, fontFamily: "DMSans400", color: "#666" },
-  historySection: {
-    backgroundColor: "#fafafa",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 20,
-  },
-  historyRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
-    gap: 10,
-  },
-  historyDate: { flex: 1, fontSize: 13, fontFamily: "DMSans400", color: "#666" },
-  historyValue: { fontSize: 15, fontFamily: "DMSans600", color: "#373737" },
-  historyUnit: { fontSize: 12, fontFamily: "DMSans400", color: "#999" },
-  addButtonContainer: {
-    position: "absolute",
-    bottom: 30,
-    left: 0,
-    right: 0,
-    alignItems: "center",
-  },
-  addButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#E57373",
-    paddingHorizontal: 32,
-    paddingVertical: 14,
-    borderRadius: 30,
-    gap: 8,
-    shadowColor: "#E57373",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  addButtonText: { fontSize: 16, fontFamily: "DMSans600", color: "#fff" },
-});
-
 export default BloodPressureScreen;
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  scroll: {
+    paddingBottom: Theme.spacing.xl,
+  },
+  content: {
+    paddingHorizontal: 22,
+    paddingTop: 4,
+    gap: 18,
+  },
+  current: {
+    alignItems: "center",
+  },
+  currentLabel: {
+    fontFamily: Theme.typography.heading,
+    fontSize: 12,
+    color: Theme.colors.inkSoft,
+  },
+  currentValue: {
+    fontFamily: Theme.typography.display,
+    fontSize: 40,
+    lineHeight: 48,
+    color: Theme.colors.ink,
+    marginVertical: 2,
+  },
+  currentDiastolic: {
+    fontSize: 22,
+    color: Theme.colors.inkFaint,
+  },
+  empty: {
+    fontFamily: Theme.typography.body,
+    fontSize: 13,
+    color: Theme.colors.inkFaint,
+    textAlign: "center",
+    paddingVertical: Theme.spacing.lg,
+  },
+  pill: {
+    fontFamily: Theme.typography.heading,
+    fontSize: 11.5,
+    borderRadius: Theme.borderRadius.full,
+    overflow: "hidden",
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+  },
+  card: {
+    backgroundColor: Theme.colors.surface,
+    borderRadius: 20,
+    paddingVertical: 18,
+    paddingHorizontal: 20,
+    ...Theme.shadows.card,
+  },
+  listCard: {
+    paddingVertical: 6,
+    paddingHorizontal: 18,
+  },
+  rowBetween: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: Theme.spacing.sm,
+  },
+  sectionLabel: {
+    fontFamily: Theme.typography.heading,
+    fontSize: 12,
+    color: Theme.colors.inkFaint,
+  },
+  reading: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 11,
+    borderBottomWidth: 1,
+    borderBottomColor: Theme.colors.hairline,
+  },
+  readingLast: {
+    borderBottomWidth: 0,
+  },
+  readingDate: {
+    flex: 1,
+    fontFamily: Theme.typography.body,
+    fontSize: 12.5,
+    color: Theme.colors.inkSoft,
+  },
+  readingValue: {
+    flex: 1,
+    textAlign: "center",
+    fontFamily: Theme.typography.heading,
+    fontSize: 13.5,
+    color: Theme.colors.ink,
+  },
+  button: {
+    height: 52,
+    borderRadius: Theme.borderRadius.sm,
+    backgroundColor: Theme.colors.magenta,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  buttonText: {
+    fontFamily: Theme.typography.heading,
+    fontSize: 15,
+    color: Theme.colors.surface,
+  },
+});

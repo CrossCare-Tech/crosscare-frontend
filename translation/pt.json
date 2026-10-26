@@ -86,6 +86,20 @@
     "tryRoutine": "Experimente hoje: {{title}}",
     "editProfile": "Editar perfil"
   },
+  "bloodPressureLog": {
+    "title": "Pressão arterial",
+    "currentReading": "Leitura atual",
+    "lastReadings": "Últimas 7 leituras",
+    "noReadings": "Ainda não há leituras nos últimos 7 dias.",
+    "logNew": "Registrar nova leitura",
+    "today": "Hoje",
+    "yesterday": "Ontem",
+    "normal": "Normal",
+    "normalRange": "Faixa normal",
+    "elevated": "Elevada",
+    "high1": "Alta estágio 1",
+    "high2": "Alta estágio 2"
+  },
   "profile": {
     "readPrivacyPolicy": "Ler a Política de Privacidade completa",
     "searchHelp": "Buscar artigos de ajuda",

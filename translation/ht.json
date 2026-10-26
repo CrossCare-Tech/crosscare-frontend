@@ -86,6 +86,20 @@
     "tryRoutine": "Eseye jodi a: {{title}}",
     "editProfile": "Modifye pwofil"
   },
+  "bloodPressureLog": {
+    "title": "Tansyon",
+    "currentReading": "Dènye mezi",
+    "lastReadings": "7 dènye mezi",
+    "noReadings": "Poko gen mezi nan 7 dènye jou yo.",
+    "logNew": "Anrejistre yon nouvo mezi",
+    "today": "Jodi a",
+    "yesterday": "Yè",
+    "normal": "Nòmal",
+    "normalRange": "Nivo nòmal",
+    "elevated": "Wo",
+    "high1": "Wo etap 1",
+    "high2": "Wo etap 2"
+  },
   "profile": {
     "readPrivacyPolicy": "Li tout Politik Konfidansyalite a",
     "searchHelp": "Chèche atik èd",

@@ -86,6 +86,20 @@
     "tryRoutine": "Try {{title}} today",
     "editProfile": "Edit profile"
   },
+  "bloodPressureLog": {
+    "title": "Blood pressure",
+    "currentReading": "Current reading",
+    "lastReadings": "Last 7 readings",
+    "noReadings": "No readings in the last 7 days yet.",
+    "logNew": "Log new reading",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "normal": "Normal",
+    "normalRange": "Normal range",
+    "elevated": "Elevated",
+    "high1": "High stage 1",
+    "high2": "High stage 2"
+  },
   "profile": {
     "readPrivacyPolicy": "Read the full Privacy Policy",
     "searchHelp": "Search help articles",
