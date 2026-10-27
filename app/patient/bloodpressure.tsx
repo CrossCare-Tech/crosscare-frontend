@@ -11,13 +11,14 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect } from "expo-router";
 import { useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
-import Svg, { Defs, LinearGradient as SvgGradient, Path, Polyline, Stop } from "react-native-svg";
+import { Path } from "react-native-svg";
 import BloodPressureModal from "./modal/bloodpressuremodal";
 import { CONFIG } from "@/constants/config";
 import { Theme } from "@/constants/theme";
 import ScreenBackground from "@/components/ui/ScreenBackground";
 import AuthTopBar from "@/components/ui/AuthTopBar";
 import LineIcon from "@/components/profile/LineIcon";
+import { Pill, Sparkline, Tone } from "@/components/vitals/VitalsUI";
 
 interface BPRecord {
   date: string;
@@ -25,62 +26,12 @@ interface BPRecord {
   diastolic: number;
 }
 
-type Tone = "success" | "warning" | "danger";
-
 // Same ranges the app already used; the pill tone follows the prototype's semantic colors
 const getBPCategory = (sys: number, dia: number): { key: string; tone: Tone } => {
   if (sys < 120 && dia < 80) return { key: "normal", tone: "success" };
   if (sys < 130 && dia < 80) return { key: "elevated", tone: "warning" };
   if (sys < 140 || dia < 90) return { key: "high1", tone: "warning" };
   return { key: "high2", tone: "danger" };
-};
-
-const TONES: Record<Tone, { bg: string; fg: string }> = {
-  success: { bg: Theme.colors.successTint, fg: Theme.colors.success },
-  warning: { bg: Theme.colors.warningTint, fg: Theme.colors.warning },
-  danger: { bg: Theme.colors.dangerTint, fg: Theme.colors.danger },
-};
-
-const Pill = ({ label, tone }: { label: string; tone: Tone }) => (
-  <Text style={[styles.pill, { backgroundColor: TONES[tone].bg, color: TONES[tone].fg }]}>
-    {label}
-  </Text>
-);
-
-// Prototype sparkline: systolic values over the last readings (viewBox 260 x 64)
-const Sparkline = ({ values }: { values: number[] }) => {
-  if (values.length === 0) return null;
-  const min = Math.min(...values) - 10;
-  const max = Math.max(...values) + 10;
-  const step = values.length > 1 ? 245 / (values.length - 1) : 0;
-  const points = values
-    .map((value, index) => {
-      const x = values.length > 1 ? index * step : 122;
-      const y = 56 - ((value - min) / (max - min)) * 48;
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
-    })
-    .join(" ");
-  const area = `M${points.split(" ").join(" L")} L${values.length > 1 ? 245 : 122},64 L0,64 Z`;
-
-  return (
-    <Svg width="100%" height={64} viewBox="0 0 260 64" preserveAspectRatio="none">
-      <Defs>
-        <SvgGradient id="sg" x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0" stopColor={Theme.colors.magenta} stopOpacity={0.12} />
-          <Stop offset="1" stopColor={Theme.colors.surface} stopOpacity={0} />
-        </SvgGradient>
-      </Defs>
-      {values.length > 1 && <Path d={area} fill="url(#sg)" />}
-      <Polyline
-        points={points}
-        fill="none"
-        stroke={Theme.colors.magenta}
-        strokeWidth={2.5}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </Svg>
-  );
 };
 
 // 5.1 — Blood Pressure Log
@@ -289,14 +240,6 @@ const styles = StyleSheet.create({
     color: Theme.colors.inkFaint,
     textAlign: "center",
     paddingVertical: Theme.spacing.lg,
-  },
-  pill: {
-    fontFamily: Theme.typography.heading,
-    fontSize: 11.5,
-    borderRadius: Theme.borderRadius.full,
-    overflow: "hidden",
-    paddingHorizontal: 12,
-    paddingVertical: 5,
   },
   card: {
     backgroundColor: Theme.colors.surface,

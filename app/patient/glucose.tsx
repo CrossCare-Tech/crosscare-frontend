@@ -1,21 +1,17 @@
-import React, { useEffect, useMemo, useState } from "react";
-import {
-  ActivityIndicator,
-  Dimensions,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import React, { useEffect, useState } from "react";
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from "expo-router";
 import { useSelector } from "react-redux";
+import { useTranslation } from "react-i18next";
+import { Path } from "react-native-svg";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import GlucoseModal from "./modal/glucosemodal";
+import GlucoseModal, { GLUCOSE_CONTEXTS } from "./modal/glucosemodal";
 import { CONFIG } from "@/constants/config";
+import { Theme } from "@/constants/theme";
+import ScreenBackground from "@/components/ui/ScreenBackground";
+import AuthTopBar from "@/components/ui/AuthTopBar";
+import LineIcon from "@/components/profile/LineIcon";
+import { Pill, Sparkline, Tone } from "@/components/vitals/VitalsUI";
 
 interface GlucoseEntry {
   day: string;
@@ -38,84 +34,31 @@ interface GlucoseStatusResponse {
   };
 }
 
-const MAX_HEIGHT = 200;
-const BAR_WIDTH = 28;
-const SPACING = (Dimensions.get("window").width - BAR_WIDTH * 10) / 8;
+// Pregnancy glucose targets (ACOG): fasting below 95 mg/dL, after meals below 140 mg/dL.
+// Readings that are not marked as fasting use the after-meal target.
+const getGlucoseCategory = (
+  level: number,
+  unit: string,
+  context: string | null
+): { key: string; tone: Tone } => {
+  const mgdl = unit?.toLowerCase().includes("mmol") ? level * 18 : level;
+  if (mgdl < 70) return { key: "low", tone: "warning" };
+  const limit = context === "Fasting" ? 95 : 140;
+  return mgdl < limit ? { key: "normal", tone: "success" } : { key: "elevated", tone: "warning" };
+};
 
+// 5.2 — Glucose Log
 const GlucoseScreen = () => {
   const user = useSelector((state: any) => state.user);
   const userId = user?.user_id;
   const token = user?.token;
+  const { t, i18n } = useTranslation();
   const [modalVisible, setModalVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [glucoseData, setGlucoseData] = useState<GlucoseEntry[]>([]);
-  const [lastGlucose, setLastGlucose] = useState<number | null>(null);
   const [glucoseUnit, setGlucoseUnit] = useState("mg/dL");
-  const [mealContext, setMealContext] = useState<string | null>(null);
   const [todayGlucose, setTodayGlucose] = useState<number | null>(null);
-  const [todayGlucoseUnit, setTodayGlucoseUnit] = useState("mg/dL");
   const [todayMealContext, setTodayMealContext] = useState<string | null>(null);
-
-  const { yAxisLabels, roundedMax } = useMemo(() => {
-    const maxGlucose = Math.max(...glucoseData.map((item) => item.glucoseLevel ?? 0), 120);
-    const rounded = Math.ceil(maxGlucose / 20) * 20;
-    const step = rounded <= 120 ? 20 : Math.ceil(rounded / 4 / 10) * 10;
-    const labels = [];
-
-    for (let value = 0; value <= rounded; value += step) {
-      labels.push(value);
-    }
-
-    return {
-      yAxisLabels: labels.reverse(),
-      roundedMax: rounded,
-    };
-  }, [glucoseData]);
-
-  const chartData = useMemo(() => {
-    const today = new Date();
-    const startOfWeek = new Date(today);
-    startOfWeek.setDate(today.getDate() - today.getDay());
-    const pad = (n: number) => String(n).padStart(2, "0");
-    const fmt = (d: Date) =>
-      `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-    const todayStr = fmt(today);
-
-    // Backend stores activities at UTC midnight then formats dates with local
-    // components, which produces dates one day before the actual local logging
-    // day for users west of UTC during most hours. Detect by looking at the
-    // most recent entry that actually has a value: if its date string is
-    // strictly before today, the off-by-one is active and we shift everything
-    // forward by 1 for column matching.
-    const latestNonNull = [...glucoseData]
-      .reverse()
-      .find((e) => e.glucoseLevel != null);
-    const shouldShift = !!latestNonNull && latestNonNull.date < todayStr;
-    const dataByDate = new Map<string, GlucoseEntry>();
-    glucoseData.forEach((entry) => {
-      let key = entry.date;
-      if (shouldShift) {
-        const d = new Date(`${entry.date}T12:00:00`);
-        d.setDate(d.getDate() + 1);
-        key = fmt(d);
-      }
-      dataByDate.set(key, entry);
-    });
-
-    return Array.from({ length: 7 }, (_, i) => {
-      const d = new Date(startOfWeek);
-      d.setDate(startOfWeek.getDate() + i);
-      const dateStr = fmt(d);
-      const entry = dataByDate.get(dateStr);
-      return {
-        date: dateStr,
-        glucoseLevel: entry?.glucoseLevel ?? null,
-        glucoseUnit: entry?.glucoseUnit ?? "mg/dL",
-        glucoseMealContext: entry?.glucoseMealContext ?? null,
-        displayDay: d.toLocaleDateString("en-US", { weekday: "short" }).charAt(0),
-      };
-    });
-  }, [glucoseData]);
 
   useEffect(() => {
     const setVisited = async () => {
@@ -154,19 +97,13 @@ const GlucoseScreen = () => {
       }
 
       setGlucoseData(result.data.glucoseData || []);
-      setLastGlucose(result.data.lastGlucose ?? null);
       setGlucoseUnit(result.data.glucoseUnit || "mg/dL");
-      setMealContext(result.data.glucoseMealContext || null);
       setTodayGlucose(result.data.todayGlucose ?? null);
-      setTodayGlucoseUnit(result.data.todayGlucoseUnit || "mg/dL");
       setTodayMealContext(result.data.todayGlucoseMealContext || null);
     } catch (error) {
       setGlucoseData([]);
-      setLastGlucose(null);
       setGlucoseUnit("mg/dL");
-      setMealContext(null);
       setTodayGlucose(null);
-      setTodayGlucoseUnit("mg/dL");
       setTodayMealContext(null);
       console.warn("Error fetching glucose status:", error);
     } finally {
@@ -178,266 +115,238 @@ const GlucoseScreen = () => {
     getGlucoseStatus();
   }, [token, userId]);
 
+  const today = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const fmt = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const todayStr = fmt(today);
+
+  // Same UTC-midnight off-by-one workaround as before: detect by looking at
+  // the most recent entry that actually has a reading.
+  const latestWithReading = [...glucoseData].reverse().find((entry) => entry.glucoseLevel !== null);
+  const shouldShift = !!latestWithReading && latestWithReading.date < todayStr;
+  const shiftDate = (date: string) => {
+    if (!shouldShift) return date;
+    const d = new Date(`${date}T12:00:00`);
+    d.setDate(d.getDate() + 1);
+    return fmt(d);
+  };
+
+  // Days with a reading, oldest first
+  const readings = glucoseData
+    .filter((entry) => entry.glucoseLevel !== null)
+    .map((entry) => ({ ...entry, date: shiftDate(entry.date), level: entry.glucoseLevel as number }));
+  const latest = readings.length > 0 ? readings[readings.length - 1] : null;
+
+  const contextLabel = (context: string | null) => {
+    const option = GLUCOSE_CONTEXTS.find((item) => item.value === context);
+    return option ? t(`vitalsEntry.${option.key}`).toLowerCase() : null;
+  };
+
+  const dayLabel = (date: string) => {
+    const yesterday = new Date(today);
+    yesterday.setDate(today.getDate() - 1);
+    if (date === todayStr) return t("bloodPressureLog.today");
+    if (date === fmt(yesterday)) return t("bloodPressureLog.yesterday");
+    return new Date(`${date}T12:00:00`).toLocaleDateString(i18n.language, {
+      month: "short",
+      day: "numeric",
+    });
+  };
+
+  const latestCategory = latest
+    ? getGlucoseCategory(latest.level, latest.glucoseUnit || glucoseUnit, latest.glucoseMealContext)
+    : null;
+  const latestContext = latest ? contextLabel(latest.glucoseMealContext) : null;
+
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="white" />
-
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="chevron-back" size={24} color="#000" />
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.titleRow}>
-          <MaterialCommunityIcons name="chart-line" size={28} color="#8E44AD" />
-          <Text style={styles.title}>Glucose</Text>
-        </View>
-
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryLabel}>Latest Reading</Text>
-          <Text style={styles.summaryValue}>
-            {lastGlucose !== null ? `${lastGlucose} ${glucoseUnit}` : "No readings yet"}
-          </Text>
-          {mealContext ? <Text style={styles.summaryHint}>{mealContext}</Text> : null}
-        </View>
-
-        <TouchableOpacity style={styles.addButton} onPress={() => setModalVisible(true)}>
-          <Text style={styles.addButtonText}>
-            {todayGlucose !== null ? "Edit Today's Reading" : "Add Glucose Reading"}
-          </Text>
-        </TouchableOpacity>
-
-        <View style={styles.analysisContainer}>
-          <View style={styles.analysisHeader}>
-            <View style={styles.analysisTab}>
-              <MaterialCommunityIcons name="chart-bar" size={18} color="#C084FC" />
-              <Text style={styles.analysisTabText}>Analysis</Text>
-            </View>
-            <View style={styles.periodSelector}>
-              <Text style={styles.periodSelectorText}>Last 7 Days</Text>
-            </View>
-          </View>
-
-          {isLoading ? (
-            <ActivityIndicator size="large" color="#8E44AD" style={styles.loader} />
-          ) : (
-            <View style={styles.chartContainer}>
-              <View style={styles.yAxisContainer}>
-                {yAxisLabels.map((label) => (
-                  <Text key={label} style={styles.yAxisLabel}>
-                    {label}
-                  </Text>
-                ))}
+    <ScreenBackground>
+      <SafeAreaView style={styles.container}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+          <AuthTopBar title={t("glucoseLog.title")} />
+          <View style={styles.content}>
+            {isLoading && readings.length === 0 ? (
+              <ActivityIndicator color={Theme.colors.magenta} />
+            ) : latest && latestCategory ? (
+              <View style={styles.current}>
+                <Text style={styles.currentLabel}>
+                  {t("glucoseLog.currentReading")}
+                  {latestContext ? ` · ${latestContext}` : ""}
+                </Text>
+                <Text style={styles.currentValue}>
+                  {latest.level}
+                  <Text style={styles.currentUnit}> {latest.glucoseUnit || glucoseUnit}</Text>
+                </Text>
+                <Pill
+                  label={
+                    latestCategory.key === "normal"
+                      ? t("glucoseLog.normalRange")
+                      : t(`glucoseLog.${latestCategory.key}`)
+                  }
+                  tone={latestCategory.tone}
+                />
               </View>
+            ) : (
+              <Text style={styles.empty}>{t("glucoseLog.noReadings")}</Text>
+            )}
 
-              <View style={styles.chartArea}>
-                {yAxisLabels.map((_, index) => (
-                  <View
-                    key={`grid-${index}`}
-                    style={[
-                      styles.gridLine,
-                      { top: (MAX_HEIGHT / (yAxisLabels.length - 1 || 1)) * index },
-                    ]}
-                  />
-                ))}
+            {readings.length > 0 && (
+              <>
+                <View style={styles.card}>
+                  <View style={styles.rowBetween}>
+                    <Text style={styles.sectionLabel}>{t("glucoseLog.lastReadings")}</Text>
+                    <LineIcon size={16} color={Theme.colors.ink}>
+                      <Path d="M4 16l5-5 4 4 7-8" />
+                      <Path d="M15 6h5v5" />
+                    </LineIcon>
+                  </View>
+                  <Sparkline values={readings.map((entry) => entry.level)} />
+                </View>
 
-                <View style={styles.barsRow}>
-                  {chartData.map((entry) => {
-                    const hasReading = entry.glucoseLevel !== null;
-                    const height =
-                      hasReading && roundedMax > 0
-                        ? Math.max(((entry.glucoseLevel ?? 0) / roundedMax) * MAX_HEIGHT, 2)
-                        : 0;
-
+                <View style={[styles.card, styles.listCard]}>
+                  {[...readings].reverse().map((entry, index, list) => {
+                    const unit = entry.glucoseUnit || glucoseUnit;
+                    const category = getGlucoseCategory(entry.level, unit, entry.glucoseMealContext);
+                    const context = contextLabel(entry.glucoseMealContext);
                     return (
-                      <View key={entry.date} style={styles.barColumn}>
-                        <View
-                          style={[
-                            styles.bar,
-                            hasReading ? { height } : styles.emptyBar,
-                          ]}
-                        />
-                        <Text style={styles.barLabel}>{entry.displayDay}</Text>
+                      <View
+                        key={entry.date}
+                        style={[styles.reading, index === list.length - 1 && styles.readingLast]}
+                      >
+                        <Text style={styles.readingDate} numberOfLines={1}>
+                          {dayLabel(entry.date)}
+                          {context ? `, ${context}` : ""}
+                        </Text>
+                        <Text style={styles.readingValue}>
+                          {entry.level} {unit}
+                        </Text>
+                        <Pill label={t(`glucoseLog.${category.key}`)} tone={category.tone} />
                       </View>
                     );
                   })}
                 </View>
-              </View>
-            </View>
-          )}
-        </View>
-      </ScrollView>
+              </>
+            )}
 
-      <GlucoseModal
-        visible={modalVisible}
-        onClose={() => setModalVisible(false)}
-        reload={getGlucoseStatus}
-        initialGlucoseLevel={todayGlucose}
-        initialMealContext={todayMealContext}
-        initialGlucoseUnit={todayGlucoseUnit}
-      />
-    </SafeAreaView>
+            <TouchableOpacity
+              style={styles.button}
+              onPress={() => setModalVisible(true)}
+              accessibilityRole="button"
+            >
+              <Text style={styles.buttonText}>{t("glucoseLog.logNew")}</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+
+        <GlucoseModal
+          visible={modalVisible}
+          onClose={() => setModalVisible(false)}
+          reload={getGlucoseStatus}
+          initialGlucoseLevel={todayGlucose}
+          initialMealContext={todayMealContext}
+          initialGlucoseUnit={glucoseUnit}
+        />
+      </SafeAreaView>
+    </ScreenBackground>
   );
 };
+
+export default GlucoseScreen;
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
   },
-  header: {
-    paddingHorizontal: 16,
-    paddingVertical: 15,
+  scroll: {
+    paddingBottom: Theme.spacing.xl,
   },
   content: {
-    paddingHorizontal: 20,
-    paddingBottom: 32,
+    paddingHorizontal: 22,
+    paddingTop: 4,
+    gap: 18,
   },
-  titleRow: {
-    flexDirection: "row",
+  current: {
     alignItems: "center",
-    gap: 10,
-    marginBottom: 20,
   },
-  title: {
-    fontSize: 24,
-    fontFamily: "DMSans700",
-    color: "#1B2559",
-  },
-  summaryCard: {
-    backgroundColor: "#F8F1FC",
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
-  },
-  summaryLabel: {
-    fontSize: 14,
-    fontFamily: "Inter500",
-    color: "#8E44AD",
-    marginBottom: 8,
-  },
-  summaryValue: {
-    fontSize: 28,
-    fontFamily: "DMSans700",
-    color: "#1B2559",
-  },
-  summaryHint: {
-    marginTop: 8,
-    fontSize: 13,
-    color: "#6B7280",
-    fontFamily: "Inter400",
-  },
-  addButton: {
-    backgroundColor: "#8E44AD",
-    borderRadius: 999,
-    paddingVertical: 14,
-    alignItems: "center",
-    marginBottom: 24,
-  },
-  addButtonText: {
-    color: "#FFFFFF",
-    fontSize: 15,
-    fontFamily: "Inter600",
-  },
-  loader: {
-    marginTop: 32,
-  },
-  analysisContainer: {
-    marginTop: 8,
-    paddingBottom: 24,
-  },
-  analysisHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 18,
-  },
-  analysisTab: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  analysisTabText: {
-    fontSize: 16,
-    fontFamily: "DMSans600",
-    color: "#1B2559",
-  },
-  periodSelector: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#E9D5FF",
-    backgroundColor: "#FAF5FF",
-  },
-  periodSelectorText: {
-    color: "#A855F7",
-    fontFamily: "Inter500",
-    fontSize: 14,
-  },
-  chartContainer: {
-    flexDirection: "row",
-    minHeight: MAX_HEIGHT + 30,
-  },
-  yAxisContainer: {
-    width: 34,
-    height: MAX_HEIGHT,
-    justifyContent: "space-between",
-    marginRight: 8,
-  },
-  yAxisLabel: {
+  currentLabel: {
+    fontFamily: Theme.typography.heading,
     fontSize: 12,
-    color: "#9CA3AF",
-    fontFamily: "Inter400",
+    color: Theme.colors.inkSoft,
   },
-  chartArea: {
-    flex: 1,
-    height: MAX_HEIGHT + 26,
-    justifyContent: "flex-end",
-    position: "relative",
+  currentValue: {
+    fontFamily: Theme.typography.display,
+    fontSize: 40,
+    lineHeight: 48,
+    color: Theme.colors.ink,
+    marginVertical: 2,
   },
-  gridLine: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    height: 1,
-    backgroundColor: "#F1F5F9",
+  currentUnit: {
+    fontSize: 18,
+    color: Theme.colors.inkFaint,
   },
-  barsRow: {
+  empty: {
+    fontFamily: Theme.typography.body,
+    fontSize: 13,
+    color: Theme.colors.inkFaint,
+    textAlign: "center",
+    paddingVertical: Theme.spacing.lg,
+  },
+  card: {
+    backgroundColor: Theme.colors.surface,
+    borderRadius: 20,
+    paddingVertical: 18,
+    paddingHorizontal: 20,
+    ...Theme.shadows.card,
+  },
+  listCard: {
+    paddingVertical: 6,
+    paddingHorizontal: 18,
+  },
+  rowBetween: {
     flexDirection: "row",
-    alignItems: "flex-end",
-    justifyContent: "space-between",
-    height: MAX_HEIGHT + 22,
-    paddingHorizontal: 4,
-  },
-  barColumn: {
     alignItems: "center",
-    width: BAR_WIDTH + SPACING / 2,
+    justifyContent: "space-between",
+    marginBottom: Theme.spacing.sm,
   },
-  bar: {
-    width: BAR_WIDTH,
-    backgroundColor: "#C084FC",
-    borderTopLeftRadius: 10,
-    borderTopRightRadius: 10,
-    minHeight: 2,
+  sectionLabel: {
+    fontFamily: Theme.typography.heading,
+    fontSize: 12,
+    color: Theme.colors.inkFaint,
   },
-  emptyBar: {
-    backgroundColor: "transparent",
-    minHeight: 0,
-    height: 0,
+  reading: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: Theme.spacing.sm,
+    paddingVertical: 11,
+    borderBottomWidth: 1,
+    borderBottomColor: Theme.colors.hairline,
   },
-  barLabel: {
-    marginTop: 8,
-    fontSize: 14,
-    color: "#6B7280",
-    fontFamily: "Inter500",
+  readingLast: {
+    borderBottomWidth: 0,
   },
-  entryValue: {
-    fontSize: 16,
-    fontFamily: "DMSans700",
-    color: "#8E44AD",
+  readingDate: {
+    flex: 1.3,
+    fontFamily: Theme.typography.body,
+    fontSize: 12.5,
+    color: Theme.colors.inkSoft,
+  },
+  readingValue: {
+    flex: 1,
+    textAlign: "center",
+    fontFamily: Theme.typography.heading,
+    fontSize: 13.5,
+    color: Theme.colors.ink,
+  },
+  button: {
+    height: 52,
+    borderRadius: Theme.borderRadius.sm,
+    backgroundColor: Theme.colors.magenta,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  buttonText: {
+    fontFamily: Theme.typography.heading,
+    fontSize: 15,
+    color: Theme.colors.surface,
   },
 });
-
-export default GlucoseScreen;
