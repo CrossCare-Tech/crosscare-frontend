@@ -17,12 +17,13 @@ import LineIcon from "@/components/profile/LineIcon";
 
 // Shared pieces of the vital sign screens (prototype 5.1–5.3)
 
-export type Tone = "success" | "warning" | "danger";
+export type Tone = "success" | "warning" | "danger" | "teal";
 
 const TONES: Record<Tone, { bg: string; fg: string }> = {
   success: { bg: Theme.colors.successTint, fg: Theme.colors.success },
   warning: { bg: Theme.colors.warningTint, fg: Theme.colors.warning },
   danger: { bg: Theme.colors.dangerTint, fg: Theme.colors.danger },
+  teal: { bg: Theme.colors.tealTint, fg: Theme.colors.teal },
 };
 
 // Prototype `.pill` with a semantic color

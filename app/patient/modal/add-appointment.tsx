@@ -4,13 +4,14 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  TextInput,
   KeyboardAvoidingView,
   Platform,
   Alert,
+  Modal,
+  Pressable,
 } from "react-native";
-import { FontAwesome5 } from "@expo/vector-icons";
-import { router, useLocalSearchParams } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useSelector } from "react-redux";
 import {
@@ -20,6 +21,12 @@ import {
   debugNotifications,
 } from "../../../utils/NotificationManager";
 import { CONFIG } from "@/constants/config";
+import { Theme } from "@/constants/theme";
+import CustomTextInput from "@/components/ui/CustomTextInput";
+import { ChipSelect, vitalsStyles } from "@/components/vitals/VitalsUI";
+
+// Quick picks that fill the description (prototype 10.2 "Type"); the API only stores a title
+const APPOINTMENT_TYPES = ["typeCheckup", "typeUltrasound", "typeLab"];
 
 interface AppointmentForm {
   description: string;
@@ -27,18 +34,26 @@ interface AppointmentForm {
   time: Date;
 }
 
-const AddAppointmentScreen = () => {
-  const params = useLocalSearchParams<{
-    isEditing?: string;
-    appointmentId?: string;
-    title?: string;
-    date?: string;
-  }>();
+export interface EditableAppointment {
+  id: string;
+  title: string;
+  date: string;
+}
 
-  const isEditing = params.isEditing === "true";
-  const appointmentId = params.appointmentId || "";
+interface AppointmentModalProps {
+  visible: boolean;
+  appointment?: EditableAppointment | null; // set when editing
+  onClose: () => void;
+  onSaved: () => void; // reloads the calendar after a save or delete
+}
+
+// 10.2 — Add & Delete Appointment, shown as a sheet like the reminder one
+const AppointmentModal = ({ visible, appointment, onClose, onSaved }: AppointmentModalProps) => {
+  const isEditing = !!appointment;
+  const appointmentId = appointment?.id || "";
 
   const user = useSelector((state: any) => state.user);
+  const { t, i18n } = useTranslation();
   const [form, setForm] = useState<AppointmentForm>({
     description: "",
     date: new Date(),
@@ -49,18 +64,20 @@ const AddAppointmentScreen = () => {
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Load existing appointment data if in edit mode
+  // Fill the form every time the sheet opens (empty for a new appointment)
   useEffect(() => {
-    if (isEditing && params.title && params.date) {
-      const appointmentDate = new Date(params.date);
-
-      setForm({
-        description: params.title,
-        date: appointmentDate,
-        time: appointmentDate,
-      });
+    if (!visible) {
+      return;
     }
-  }, [isEditing, params.title, params.date]);
+    const appointmentDate = appointment ? new Date(appointment.date) : new Date();
+    setForm({
+      description: appointment?.title || "",
+      date: appointmentDate,
+      time: appointmentDate,
+    });
+    setShowDatePicker(false);
+    setShowTimePicker(false);
+  }, [visible, appointment]);
 
   const handleDateChange = (event: any, selectedDate?: Date) => {
     setShowDatePicker(Platform.OS === "ios");
@@ -76,31 +93,22 @@ const AddAppointmentScreen = () => {
     }
   };
 
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  };
+  const formatDate = (date: Date) =>
+    date.toLocaleDateString(i18n.language, { month: "short", day: "numeric", year: "numeric" });
 
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
+  const formatTime = (date: Date) =>
+    date.toLocaleTimeString(i18n.language, { hour: "numeric", minute: "2-digit" });
 
   const handleDelete = async () => {
     if (!isEditing || !appointmentId) return;
 
     Alert.alert(
-      "Delete Appointment",
-      "Are you sure you want to delete this appointment?",
+      t("appointments.deleteTitle"),
+      t("appointments.deleteConfirm"),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t("appointments.cancel"), style: "cancel" },
         {
-          text: "Delete",
+          text: t("appointments.delete"),
           style: "destructive",
           onPress: async () => {
             try {
@@ -126,17 +134,14 @@ const AddAppointmentScreen = () => {
               // Cancel any scheduled reminders
               await cancelAppointmentReminders(appointmentId);
 
-              // Navigate back
-              router.back();
+              onClose();
+              onSaved();
             } catch (error) {
               console.error(
                 "Error deleting appointment:",
                 JSON.stringify(error, null, 2)
               );
-              Alert.alert(
-                "Error",
-                "Failed to delete appointment. Please try again."
-              );
+              Alert.alert(t("appointments.errorTitle"), t("appointments.deleteFailed"));
             } finally {
               setIsSubmitting(false);
             }
@@ -148,7 +153,7 @@ const AddAppointmentScreen = () => {
 
   const handleSaveAppointment = async () => {
     if (!form.description.trim()) {
-      Alert.alert("Error", "Please enter a description for the appointment");
+      Alert.alert(t("appointments.errorTitle"), t("appointments.descriptionMissing"));
       return;
     }
 
@@ -272,202 +277,217 @@ const AddAppointmentScreen = () => {
         );
       }
 
-      // Navigate back to calendar screen
-      router.back();
+      onClose();
+      onSaved();
     } catch (error) {
       console.error(
         "Error saving appointment:",
         JSON.stringify(error, null, 2)
       );
-      Alert.alert("Error", "Failed to save appointment. Please try again.");
+      Alert.alert(t("appointments.errorTitle"), t("appointments.saveFailed"));
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={styles.container}
+    <Modal
+      visible={visible}
+      transparent
+      statusBarTranslucent
+      animationType="slide"
+      onRequestClose={onClose}
     >
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.backButton}
-        >
-          <FontAwesome5 name="chevron-left" size={20} color="#000" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>
-          {isEditing ? "Edit Appointment" : "Add New Appointment"}
-        </Text>
-
-        {/* Delete button for edit mode */}
-        {isEditing && (
-          <TouchableOpacity onPress={handleDelete} style={styles.deleteButton}>
-            <FontAwesome5 name="trash" size={20} color="#FF6B6B" />
-          </TouchableOpacity>
-        )}
-      </View>
-
-      <View style={styles.formContainer}>
-        {/* Description Input */}
-        <View style={styles.formGroup}>
-          <Text style={styles.label}>Description</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Appointment Description"
-            value={form.description}
-            onChangeText={(text) => setForm({ ...form, description: text })}
-          />
-        </View>
-
-        {/* Date & Time Section */}
-        <View style={styles.formGroup}>
-          <Text style={styles.label}>Date & Time</Text>
-          <View style={styles.dateTimeContainer}>
-            {/* Date Picker */}
-            <TouchableOpacity
-              style={styles.dateInput}
-              onPress={() => setShowDatePicker(true)}
-            >
-              <Text>{formatDate(form.date)}</Text>
-              <FontAwesome5 name="calendar" size={16} color="#777" />
-            </TouchableOpacity>
-
-            {/* Time Picker */}
-            <TouchableOpacity
-              style={styles.timeInput}
-              onPress={() => setShowTimePicker(true)}
-            >
-              <Text>{formatTime(form.time)}</Text>
-              <FontAwesome5 name="clock" size={16} color="#777" />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Date Picker Modal */}
-        {showDatePicker && (
-          <DateTimePicker
-            value={form.date}
-            mode="date"
-            display={Platform.OS === "ios" ? "spinner" : "default"}
-            onChange={handleDateChange}
-            minimumDate={new Date()}
-          />
-        )}
-
-        {/* Time Picker Modal */}
-        {showTimePicker && (
-          <DateTimePicker
-            value={form.time}
-            mode="time"
-            display={Platform.OS === "ios" ? "spinner" : "default"}
-            onChange={handleTimeChange}
-          />
-        )}
-      </View>
-
-      {/* Save Button */}
-      <TouchableOpacity
-        style={styles.saveButton}
-        onPress={handleSaveAppointment}
-        disabled={isSubmitting}
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <Text style={styles.saveButtonText}>
-          {isSubmitting
-            ? "Saving..."
-            : isEditing
-            ? "Update Appointment"
-            : "Save & Continue"}
-        </Text>
-      </TouchableOpacity>
-    </KeyboardAvoidingView>
+        <Pressable style={styles.overlay} onPress={onClose}>
+          <Pressable style={styles.sheet}>
+            <View style={styles.handle} />
+            <View style={styles.sheetHeader}>
+              <Text style={styles.title}>
+                {isEditing ? t("appointments.editTitle") : t("appointments.newTitle")}
+              </Text>
+              <TouchableOpacity
+                onPress={onClose}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                accessibilityRole="button"
+                accessibilityLabel={t("appointments.cancel")}
+              >
+                <Ionicons name="close" size={20} color={Theme.colors.inkFaint} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={vitalsStyles.field}>
+              <Text style={vitalsStyles.label}>{t("appointments.type")}</Text>
+              <View style={vitalsStyles.chips}>
+                {APPOINTMENT_TYPES.map((key) => {
+                  const label = t(`appointments.${key}`);
+                  return (
+                    <ChipSelect
+                      key={key}
+                      label={label}
+                      selected={form.description.trim() === label}
+                      onPress={() => setForm({ ...form, description: label })}
+                    />
+                  );
+                })}
+              </View>
+            </View>
+
+            <CustomTextInput
+              label={t("appointments.description")}
+              value={form.description}
+              onChangeText={(text) => setForm({ ...form, description: text })}
+              placeholder={t("appointments.descriptionPlaceholder")}
+            />
+
+            <View style={vitalsStyles.row}>
+              <View style={[vitalsStyles.field, styles.flex]}>
+                <Text style={vitalsStyles.label}>{t("appointments.date")}</Text>
+                <TouchableOpacity style={styles.picker} onPress={() => setShowDatePicker(true)}>
+                  <Text style={styles.pickerText}>{formatDate(form.date)}</Text>
+                  <Ionicons name="calendar-outline" size={17} color={Theme.colors.inkFaint} />
+                </TouchableOpacity>
+              </View>
+              <View style={[vitalsStyles.field, styles.flex]}>
+                <Text style={vitalsStyles.label}>{t("appointments.time")}</Text>
+                <TouchableOpacity style={styles.picker} onPress={() => setShowTimePicker(true)}>
+                  <Text style={styles.pickerText}>{formatTime(form.time)}</Text>
+                  <Ionicons name="time-outline" size={17} color={Theme.colors.inkFaint} />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {showDatePicker && (
+              <DateTimePicker
+                value={form.date}
+                mode="date"
+                display={Platform.OS === "ios" ? "spinner" : "default"}
+                onChange={handleDateChange}
+                minimumDate={new Date()}
+              />
+            )}
+
+            {showTimePicker && (
+              <DateTimePicker
+                value={form.time}
+                mode="time"
+                display={Platform.OS === "ios" ? "spinner" : "default"}
+                onChange={handleTimeChange}
+              />
+            )}
+
+            <TouchableOpacity
+              style={[styles.button, isSubmitting && styles.buttonDisabled]}
+              onPress={handleSaveAppointment}
+              disabled={isSubmitting}
+              accessibilityRole="button"
+            >
+              <Text style={styles.buttonText}>
+                {isSubmitting ? t("appointments.saving") : t("appointments.save")}
+              </Text>
+            </TouchableOpacity>
+
+            {isEditing && (
+              <TouchableOpacity
+                style={styles.deleteLink}
+                onPress={handleDelete}
+                disabled={isSubmitting}
+                accessibilityRole="button"
+              >
+                <Ionicons name="trash-outline" size={16} color={Theme.colors.danger} />
+                <Text style={styles.deleteText}>{t("appointments.deleteButton")}</Text>
+              </TouchableOpacity>
+            )}
+          </Pressable>
+        </Pressable>
+      </KeyboardAvoidingView>
+    </Modal>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingTop: 60,
-    paddingBottom: 20,
-  },
-  backButton: {
-    padding: 8,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    marginLeft: 16,
+  flex: {
     flex: 1,
   },
-  deleteButton: {
-    padding: 8,
-  },
-  formContainer: {
+  overlay: {
     flex: 1,
-    paddingHorizontal: 20,
+    backgroundColor: Theme.colors.scrim,
+    justifyContent: "flex-end",
   },
-  formGroup: {
-    marginBottom: 24,
+  sheet: {
+    backgroundColor: Theme.colors.surface,
+    borderTopLeftRadius: Theme.borderRadius.xl,
+    borderTopRightRadius: Theme.borderRadius.xl,
+    paddingHorizontal: 22,
+    paddingTop: 10,
+    paddingBottom: 28,
+    gap: Theme.spacing.md,
   },
-  label: {
-    fontSize: 16,
-    fontWeight: "500",
-    marginBottom: 8,
+  handle: {
+    alignSelf: "center",
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: Theme.colors.hairline,
   },
-  input: {
-    borderWidth: 1,
-    borderColor: "#E0E0E0",
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
-  },
-  dateTimeContainer: {
+  sheetHeader: {
     flexDirection: "row",
+    alignItems: "center",
     justifyContent: "space-between",
+    marginTop: 4,
   },
-  dateInput: {
+  title: {
+    fontSize: 20,
+    fontFamily: Theme.typography.display,
+    color: Theme.colors.ink,
+  },
+  picker: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#E0E0E0",
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    width: "48%",
+    justifyContent: "space-between",
+    height: 52,
+    borderRadius: Theme.borderRadius.sm,
+    borderWidth: 1.5,
+    borderColor: Theme.colors.inputBorder,
+    backgroundColor: Theme.colors.inputBg,
+    paddingHorizontal: 14,
   },
-  timeInput: {
+  pickerText: {
+    fontSize: 14.5,
+    fontFamily: Theme.typography.body,
+    color: Theme.colors.ink,
+  },
+  button: {
+    height: 52,
+    borderRadius: Theme.borderRadius.sm,
+    backgroundColor: Theme.colors.magenta,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 4,
+  },
+  buttonDisabled: {
+    opacity: 0.6,
+  },
+  buttonText: {
+    fontSize: 15,
+    fontFamily: Theme.typography.heading,
+    color: Theme.colors.surface,
+  },
+  deleteLink: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#E0E0E0",
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    width: "48%",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: Theme.spacing.xs,
   },
-  saveButton: {
-    backgroundColor: "#F9A826",
-    marginHorizontal: 20,
-    marginBottom: 30,
-    borderRadius: 30,
-    paddingVertical: 16,
-    alignItems: "center",
-  },
-  saveButtonText: {
-    color: "#FFFFFF",
-    fontWeight: "600",
-    fontSize: 16,
+  deleteText: {
+    fontSize: 14,
+    fontFamily: Theme.typography.heading,
+    color: Theme.colors.danger,
   },
 });
 
-export default AddAppointmentScreen;
+export default AppointmentModal;
