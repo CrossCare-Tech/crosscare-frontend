@@ -370,6 +370,20 @@ export const UrgentAlert = ({
   </View>
 );
 
+// Shortcut to the reminders screen, preset to one reminder type
+export const ReminderCard = ({ title, hint, onPress }: { title: string; hint: string; onPress: () => void }) => (
+  <TouchableOpacity style={[styles.card, styles.list, styles.reading]} onPress={onPress} accessibilityRole="button">
+    <View style={styles.iconChip}>
+      <Feather name="bell" size={18} color={Theme.colors.purple} />
+    </View>
+    <View style={styles.readingText}>
+      <Text style={styles.readingValue}>{title}</Text>
+      <Text style={styles.readingWhen}>{hint}</Text>
+    </View>
+    <Feather name="chevron-right" size={18} color={Theme.colors.inkFaint} />
+  </TouchableOpacity>
+);
+
 // "Add reading", pinned below the scroll so it stays in the thumb zone
 export const AddReadingButton = ({ label, onPress }: { label: string; onPress: () => void }) => (
   <View style={styles.foot}>
@@ -579,6 +593,14 @@ const styles = StyleSheet.create({
     fontFamily: Theme.typography.subheading,
     fontSize: 11.5,
     color: Theme.colors.inkFaint,
+  },
+  iconChip: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: Theme.colors.surfaceSunken,
+    alignItems: "center",
+    justifyContent: "center",
   },
   urgent: {
     backgroundColor: Theme.colors.plum,

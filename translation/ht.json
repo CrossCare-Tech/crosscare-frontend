@@ -245,6 +245,22 @@
     "addReading": "Ajoute yon mezi",
     "latest": "Dènye"
   },
+  "weightLog": {
+    "title": "Pwa",
+    "noReadings": "Ou poko anrejistre pwa w.",
+    "units": "Inite",
+    "sinceLast": "{{value}} depi dènye a",
+    "sameAsLast": "Menm jan ak dènye a",
+    "firstReading": "Premye mezi",
+    "soFar": "{{value}} jiska prezan",
+    "legend": "Pwa",
+    "guide": "Konbyen pou w pran depann de pwa ou te genyen okòmansman. **Ekip swen ou fikse objektif ou**; mande nan pwochen vizit ou.",
+    "reminder": "Mete yon rapèl",
+    "reminderHint": "Peze tèt ou menm lè a chak semèn",
+    "inputLabel": "Pwa ({{unit}})",
+    "missing": "Tanpri antre pwa w.",
+    "invalid": "Tanpri antre yon pwa ki valab."
+  },
   "profile": {
     "readPrivacyPolicy": "Li tout Politik Konfidansyalite a",
     "searchHelp": "Chèche atik èd",

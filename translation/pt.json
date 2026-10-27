@@ -245,6 +245,22 @@
     "addReading": "Adicionar leitura",
     "latest": "Última"
   },
+  "weightLog": {
+    "title": "Peso",
+    "noReadings": "Você ainda não registrou seu peso.",
+    "units": "Unidades",
+    "sinceLast": "{{value}} desde o último",
+    "sameAsLast": "Igual ao último",
+    "firstReading": "Primeiro registro",
+    "soFar": "{{value}} até agora",
+    "legend": "Peso",
+    "guide": "Quanto ganhar depende do seu peso inicial. **Sua equipe de cuidado define sua meta**; pergunte na próxima consulta.",
+    "reminder": "Criar um lembrete",
+    "reminderHint": "Pese-se no mesmo horário toda semana",
+    "inputLabel": "Peso ({{unit}})",
+    "missing": "Informe seu peso.",
+    "invalid": "Informe um peso válido."
+  },
   "profile": {
     "readPrivacyPolicy": "Ler a Política de Privacidade completa",
     "searchHelp": "Buscar artigos de ajuda",

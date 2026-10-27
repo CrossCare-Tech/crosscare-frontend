@@ -245,6 +245,22 @@
     "addReading": "Add reading",
     "latest": "Latest"
   },
+  "weightLog": {
+    "title": "Weight",
+    "noReadings": "No weight logged yet.",
+    "units": "Units",
+    "sinceLast": "{{value}} since last",
+    "sameAsLast": "Same as last",
+    "firstReading": "First reading",
+    "soFar": "{{value}} so far",
+    "legend": "Weight",
+    "guide": "How much to gain depends on your starting weight. **Your care team sets your target**; ask at your next visit.",
+    "reminder": "Set a reminder",
+    "reminderHint": "Weigh in at the same time each week",
+    "inputLabel": "Weight ({{unit}})",
+    "missing": "Please enter your weight.",
+    "invalid": "Please enter a valid weight."
+  },
   "profile": {
     "readPrivacyPolicy": "Read the full Privacy Policy",
     "searchHelp": "Search help articles",
