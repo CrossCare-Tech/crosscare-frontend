@@ -1,201 +1,228 @@
-import { useState, useCallback } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  ActivityIndicator,
-} from "react-native";
+import { useCallback, useEffect, useState } from "react";
+import { ActivityIndicator, Alert, ScrollView, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useFocusEffect } from "expo-router";
-import { useSelector } from "react-redux";
+import { router, useFocusEffect } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTranslation } from "react-i18next";
-import { Path } from "react-native-svg";
 import BloodPressureModal from "./modal/bloodpressuremodal";
-import { CONFIG } from "@/constants/config";
+import { scheduleBloodPressureRecheck } from "../../utils/NotificationManager";
 import { Theme } from "@/constants/theme";
 import ScreenBackground from "@/components/ui/ScreenBackground";
 import AuthTopBar from "@/components/ui/AuthTopBar";
-import LineIcon from "@/components/profile/LineIcon";
-import { Pill, Sparkline, Tone } from "@/components/vitals/VitalsUI";
+import { Tone } from "@/components/vitals/VitalsUI";
+import {
+  AddReadingButton,
+  ChartCard,
+  daysAgo,
+  fmtDate,
+  GuideNote,
+  MetricEmpty,
+  MetricHero,
+  metricStyles,
+  Period,
+  periodAxis,
+  periodWindow,
+  RangeBarsChart,
+  ReadingList,
+  SectionLabel,
+  Segmented,
+  UrgentAlert,
+  useActivityHistory,
+} from "@/components/vitals/MetricUI";
 
-interface BPRecord {
-  date: string;
-  systolic: number;
-  diastolic: number;
-}
-
-// Same ranges the app already used; the pill tone follows the prototype's semantic colors
+// Same ranges the app already used. Stage 2 (140/90 or higher) is the pregnancy safe limit,
+// shown in yellow with words rather than red (prototype 5.5)
 const getBPCategory = (sys: number, dia: number): { key: string; tone: Tone } => {
   if (sys < 120 && dia < 80) return { key: "normal", tone: "success" };
   if (sys < 130 && dia < 80) return { key: "elevated", tone: "warning" };
-  if (sys < 140 || dia < 90) return { key: "high1", tone: "warning" };
-  return { key: "high2", tone: "danger" };
+  if (sys < 140 && dia < 90) return { key: "high1", tone: "warning" };
+  return { key: "high2", tone: "warning" };
 };
 
-// 5.1 — Blood Pressure Log
+const BAR_WIDTH: Record<Period, number> = { "7": 14, "30": 6, "90": 3 };
+
+// The alert can be hidden for one reading: until the recheck reminder, or for the rest of the day
+const ALERT_STATE_KEY = "bp-alert-state";
+const RECHECK_MINUTES = 15;
+type AlertState = { reading: string; until: number };
+
+// 5.1 — Blood pressure, with the 5.5 high reading alert
 const BloodPressureScreen = () => {
-  const user = useSelector((state: any) => state.user);
   const { t, i18n } = useTranslation();
-  const [records, setRecords] = useState<BPRecord[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [period, setPeriod] = useState<Period>("7");
   const [modalVisible, setModalVisible] = useState(false);
+  const { activities, loading, reload } = useActivityHistory();
 
-  const fetchHistory = async () => {
-    if (!user?.user_id || !user?.token) {
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const res = await fetch(
-        `${CONFIG.API_BASE_URL}/user/activity/${user.user_id}/bpstatus`,
-        {
-          headers: {
-            Accept: "application/json",
-            Authorization: `Bearer ${user.token}`,
-          },
-        }
-      );
-
-      if (!res.ok) {
-        throw new Error(`Failed to fetch BP history (${res.status})`);
-      }
-
-      const data = await res.json();
-
-      if (data?.data?.bloodPressureData) {
-        const mapped = data.data.bloodPressureData.map((entry: any) => ({
-          date: entry.date,
-          systolic: entry.systolic ?? 0,
-          diastolic: entry.diastolic ?? 0,
-        }));
-        setRecords(mapped);
-      }
-    } catch (e) {
-      console.warn("Failed to fetch BP history:", e);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Days with a reading, oldest first
+  const readings = activities
+    .filter((activity) => activity.details?.bloodPressure?.systolic > 0)
+    .map((activity) => ({
+      date: activity.date,
+      systolic: activity.details.bloodPressure.systolic as number,
+      diastolic: (activity.details.bloodPressure.diastolic as number) || 0,
+    }));
+  const latest = readings.length > 0 ? readings[readings.length - 1] : null;
+  const latestCategory = latest ? getBPCategory(latest.systolic, latest.diastolic) : null;
+  const todayStr = fmtDate(daysAgo(0));
+  const readingKey = latest ? `${latest.date} ${latest.systolic}/${latest.diastolic}` : "";
+  const [alertState, setAlertState] = useState<AlertState | null>(null);
+  const [now, setNow] = useState(Date.now());
 
   useFocusEffect(
     useCallback(() => {
-      fetchHistory();
-    }, [user?.token, user?.user_id])
+      setNow(Date.now());
+      AsyncStorage.getItem(ALERT_STATE_KEY)
+        .then((value) => setAlertState(value ? JSON.parse(value) : null))
+        .catch(() => setAlertState(null));
+    }, [])
   );
 
-  const today = new Date();
-  const pad = (n: number) => String(n).padStart(2, "0");
-  const fmt = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-  const todayStr = fmt(today);
+  const hidden = !!alertState && alertState.reading === readingKey && alertState.until > now;
 
-  // Same UTC-midnight off-by-one workaround as before: detect by looking at
-  // the most recent record that actually has a non-zero reading.
-  const latestNonZero = [...records].reverse().find((r) => r.systolic > 0 || r.diastolic > 0);
-  const shouldShift = !!latestNonZero && latestNonZero.date < todayStr;
-  const shiftDate = (date: string) => {
-    if (!shouldShift) return date;
-    const d = new Date(`${date}T12:00:00`);
-    d.setDate(d.getDate() + 1);
-    return fmt(d);
+  // Bring the alert back when the recheck time comes while the screen is open
+  useEffect(() => {
+    if (!hidden || !alertState) return;
+    const timer = setTimeout(() => setNow(Date.now()), alertState.until - now);
+    return () => clearTimeout(timer);
+  }, [hidden, alertState, now]);
+
+  const hideAlert = async (until: number) => {
+    const state = { reading: readingKey, until };
+    setAlertState(state);
+    setNow(Date.now());
+    await AsyncStorage.setItem(ALERT_STATE_KEY, JSON.stringify(state)).catch(() => undefined);
   };
 
-  // Days with a reading, oldest first
-  const readings = records
-    .filter((r) => r.systolic > 0 || r.diastolic > 0)
-    .map((r) => ({ ...r, date: shiftDate(r.date) }));
-  const latest = readings.length > 0 ? readings[readings.length - 1] : null;
-  const latestCategory = latest ? getBPCategory(latest.systolic, latest.diastolic) : null;
+  const showAlert = !!latest && latest.date === todayStr && latestCategory?.key === "high2" && !hidden;
 
   const dayLabel = (date: string) => {
-    const yesterday = new Date(today);
-    yesterday.setDate(today.getDate() - 1);
     if (date === todayStr) return t("bloodPressureLog.today");
-    if (date === fmt(yesterday)) return t("bloodPressureLog.yesterday");
-    return new Date(`${date}T12:00:00`).toLocaleDateString(i18n.language, {
-      month: "short",
-      day: "numeric",
-    });
+    if (date === fmtDate(daysAgo(1))) return t("bloodPressureLog.yesterday");
+    return new Date(`${date}T12:00:00`).toLocaleDateString(i18n.language, { month: "short", day: "numeric" });
   };
+
+  const handleRecheck = async () => {
+    const scheduled = await scheduleBloodPressureRecheck(
+      t("bloodPressureLog.recheckTitle"),
+      t("bloodPressureLog.recheckBody"),
+      RECHECK_MINUTES
+    );
+    if (scheduled) {
+      await hideAlert(Date.now() + RECHECK_MINUTES * 60000);
+    }
+    Alert.alert(
+      t("bloodPressureLog.title"),
+      scheduled ? t("bloodPressureLog.recheckScheduled") : t("bloodPressureLog.recheckFailed")
+    );
+  };
+
+  const handleDismiss = () => {
+    const endOfDay = new Date();
+    endOfDay.setHours(23, 59, 59, 999);
+    hideAlert(endOfDay.getTime());
+  };
+
+  const range = periodWindow(period);
+  const inRange = readings.filter((reading) => range.contains(reading.date));
 
   return (
     <ScreenBackground>
       <SafeAreaView style={styles.container}>
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
-          <AuthTopBar title={t("bloodPressureLog.title")} />
-          <View style={styles.content}>
-            {loading && readings.length === 0 ? (
-              <ActivityIndicator color={Theme.colors.magenta} />
-            ) : latest && latestCategory ? (
-              <View style={styles.current}>
-                <Text style={styles.currentLabel}>{t("bloodPressureLog.currentReading")}</Text>
-                <Text style={styles.currentValue}>
-                  {latest.systolic}
-                  <Text style={styles.currentDiastolic}>/{latest.diastolic}</Text>
-                </Text>
-                <Pill
-                  label={
-                    latestCategory.key === "normal"
-                      ? t("bloodPressureLog.normalRange")
-                      : t(`bloodPressureLog.${latestCategory.key}`)
-                  }
-                  tone={latestCategory.tone}
-                />
-              </View>
-            ) : (
-              <Text style={styles.empty}>{t("bloodPressureLog.noReadings")}</Text>
-            )}
+        <AuthTopBar title={t("bloodPressureLog.title")} />
 
-            {readings.length > 0 && (
-              <>
-                <View style={styles.card}>
-                  <View style={styles.rowBetween}>
-                    <Text style={styles.sectionLabel}>{t("bloodPressureLog.lastReadings")}</Text>
-                    <LineIcon size={16} color={Theme.colors.ink}>
-                      <Path d="M4 16l5-5 4 4 7-8" />
-                      <Path d="M15 6h5v5" />
-                    </LineIcon>
-                  </View>
-                  <Sparkline values={readings.map((r) => r.systolic)} />
-                </View>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={metricStyles.content}>
+          {showAlert && latest && (
+            <UrgentAlert
+              title={t("bloodPressureLog.alertTitle")}
+              body={t("bloodPressureLog.alertBody", { value: `${latest.systolic}/${latest.diastolic}` })}
+              primary={{
+                label: t("bloodPressureLog.alertContact"),
+                onPress: () => router.push({ pathname: "/patient/askdoula", params: { from_modal: "true" } }),
+              }}
+              secondary={{ label: t("bloodPressureLog.alertRecheck"), onPress: handleRecheck }}
+              onDismiss={handleDismiss}
+              dismissLabel={t("bloodPressureLog.alertDismiss")}
+            />
+          )}
 
-                <View style={[styles.card, styles.listCard]}>
-                  {[...readings].reverse().map((r, index, list) => {
-                    const category = getBPCategory(r.systolic, r.diastolic);
-                    return (
-                      <View
-                        key={r.date}
-                        style={[styles.reading, index === list.length - 1 && styles.readingLast]}
-                      >
-                        <Text style={styles.readingDate}>{dayLabel(r.date)}</Text>
-                        <Text style={styles.readingValue}>
-                          {r.systolic}/{r.diastolic}
-                        </Text>
-                        <Pill label={t(`bloodPressureLog.${category.key}`)} tone={category.tone} />
-                      </View>
-                    );
+          {loading && readings.length === 0 ? (
+            <ActivityIndicator color={Theme.colors.magenta} style={styles.loader} />
+          ) : latest && latestCategory ? (
+            <MetricHero
+              when={`${t("metric.latest")} · ${dayLabel(latest.date)}`}
+              value={`${latest.systolic}/${latest.diastolic}`}
+              unit="mmHg"
+              pill={{
+                label:
+                  latestCategory.key === "high2"
+                    ? t("bloodPressureLog.aboveSafe")
+                    : t(`bloodPressureLog.${latestCategory.key}`),
+                tone: latestCategory.tone,
+              }}
+              source={t("metric.enteredByYou")}
+              manual
+            />
+          ) : (
+            <MetricEmpty text={t("bloodPressureLog.noReadings")} />
+          )}
+
+          <Segmented
+            options={[
+              { id: "7", label: t("metric.days7") },
+              { id: "30", label: t("metric.days30") },
+              { id: "90", label: t("metric.days90") },
+            ]}
+            value={period}
+            onChange={setPeriod}
+          />
+
+          <ChartCard
+            axis={periodAxis(period, i18n.language)}
+            legend={[
+              { mark: "line", label: t("bloodPressureLog.legendLatest") },
+              { mark: "earlier", label: t("bloodPressureLog.legendEarlier") },
+              { mark: "band", label: t("bloodPressureLog.legendNormal") },
+            ]}
+          >
+            <RangeBarsChart
+              bars={inRange.map((reading) => ({
+                x: range.x(reading.date),
+                high: reading.systolic,
+                low: reading.diastolic,
+              }))}
+              min={Math.min(60, ...inRange.map((reading) => reading.diastolic)) - 5}
+              max={Math.max(150, ...inRange.map((reading) => reading.systolic)) + 5}
+              band={[60, 120]}
+              barWidth={BAR_WIDTH[period]}
+            />
+          </ChartCard>
+
+          <GuideNote text={t("bloodPressureLog.guide")} />
+
+          {inRange.length > 0 && (
+            <>
+              <SectionLabel>{t("metric.recent")}</SectionLabel>
+              <ReadingList
+                items={[...inRange]
+                  .reverse()
+                  .slice(0, 7)
+                  .map((reading) => {
+                    const category = getBPCategory(reading.systolic, reading.diastolic);
+                    return {
+                      key: reading.date,
+                      value: `${reading.systolic}/${reading.diastolic} mmHg`,
+                      when: `${dayLabel(reading.date)} · ${t("metric.enteredByYou")}`,
+                      pill: { label: t(`bloodPressureLog.${category.key}`), tone: category.tone },
+                    };
                   })}
-                </View>
-              </>
-            )}
-
-            <TouchableOpacity
-              style={styles.button}
-              onPress={() => setModalVisible(true)}
-              accessibilityRole="button"
-            >
-              <Text style={styles.buttonText}>{t("bloodPressureLog.logNew")}</Text>
-            </TouchableOpacity>
-          </View>
+              />
+            </>
+          )}
         </ScrollView>
 
-        <BloodPressureModal
-          visible={modalVisible}
-          onClose={() => setModalVisible(false)}
-          reload={fetchHistory}
-        />
+        <AddReadingButton label={t("metric.addReading")} onPress={() => setModalVisible(true)} />
+
+        <BloodPressureModal visible={modalVisible} onClose={() => setModalVisible(false)} reload={reload} />
       </SafeAreaView>
     </ScreenBackground>
   );
@@ -207,96 +234,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  scroll: {
-    paddingBottom: Theme.spacing.xl,
-  },
-  content: {
-    paddingHorizontal: 22,
-    paddingTop: 4,
-    gap: 18,
-  },
-  current: {
-    alignItems: "center",
-  },
-  currentLabel: {
-    fontFamily: Theme.typography.heading,
-    fontSize: 12,
-    color: Theme.colors.inkSoft,
-  },
-  currentValue: {
-    fontFamily: Theme.typography.display,
-    fontSize: 40,
-    lineHeight: 48,
-    color: Theme.colors.ink,
-    marginVertical: 2,
-  },
-  currentDiastolic: {
-    fontSize: 22,
-    color: Theme.colors.inkFaint,
-  },
-  empty: {
-    fontFamily: Theme.typography.body,
-    fontSize: 13,
-    color: Theme.colors.inkFaint,
-    textAlign: "center",
-    paddingVertical: Theme.spacing.lg,
-  },
-  card: {
-    backgroundColor: Theme.colors.surface,
-    borderRadius: 20,
-    paddingVertical: 18,
-    paddingHorizontal: 20,
-    ...Theme.shadows.card,
-  },
-  listCard: {
-    paddingVertical: 6,
-    paddingHorizontal: 18,
-  },
-  rowBetween: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: Theme.spacing.sm,
-  },
-  sectionLabel: {
-    fontFamily: Theme.typography.heading,
-    fontSize: 12,
-    color: Theme.colors.inkFaint,
-  },
-  reading: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 11,
-    borderBottomWidth: 1,
-    borderBottomColor: Theme.colors.hairline,
-  },
-  readingLast: {
-    borderBottomWidth: 0,
-  },
-  readingDate: {
-    flex: 1,
-    fontFamily: Theme.typography.body,
-    fontSize: 12.5,
-    color: Theme.colors.inkSoft,
-  },
-  readingValue: {
-    flex: 1,
-    textAlign: "center",
-    fontFamily: Theme.typography.heading,
-    fontSize: 13.5,
-    color: Theme.colors.ink,
-  },
-  button: {
-    height: 52,
-    borderRadius: Theme.borderRadius.sm,
-    backgroundColor: Theme.colors.magenta,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  buttonText: {
-    fontFamily: Theme.typography.heading,
-    fontSize: 15,
-    color: Theme.colors.surface,
+  loader: {
+    marginVertical: Theme.spacing.lg,
   },
 });

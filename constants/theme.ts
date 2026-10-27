@@ -22,6 +22,7 @@ export const Theme = {
 
     purple: '#5028A7',
     purpleTint: '#F1ECFB',
+    purpleSoft: '#C9B8F0', // earlier days on vitals bar charts
     plum: '#2B1B45',
 
     teal: '#00838F',
@@ -34,6 +35,8 @@ export const Theme = {
 
     // Overlays
     scrim: 'rgba(25,28,29,0.4)', // backdrop behind modals
+    onInkSoft: 'rgba(255,255,255,0.82)', // body text on the plum alert card
+    onInkLine: 'rgba(255,255,255,0.4)', // outline button on the plum alert card
 
     // Feedback
     danger: '#B3261E',
