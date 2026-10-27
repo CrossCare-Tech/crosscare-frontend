@@ -251,6 +251,17 @@
     "elevated": "Elevada",
     "low": "Baja"
   },
+  "reminderForm": {
+    "newReminder": "Nuevo recordatorio",
+    "title": "Título",
+    "time": "Hora",
+    "save": "Guardar recordatorio"
+  },
+  "reminderEmpty": {
+    "title": "Tus recordatorios, a tu manera",
+    "body": "Lleva el control de tus vitaminas, chequeos, hidratación y pequeños momentos de autocuidado.",
+    "cta": "Crea tu primer recordatorio"
+  },
   "profile": {
     "readPrivacyPolicy": "Leer la Política de Privacidad completa",
     "searchHelp": "Buscar artículos de ayuda",

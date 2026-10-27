@@ -135,6 +135,17 @@
     "elevated": "Elevada",
     "low": "Baixa"
   },
+  "reminderForm": {
+    "newReminder": "Novo lembrete",
+    "title": "Título",
+    "time": "Horário",
+    "save": "Salvar lembrete"
+  },
+  "reminderEmpty": {
+    "title": "Seus lembretes, do seu jeito",
+    "body": "Acompanhe vitaminas, consultas, hidratação e pequenos momentos de autocuidado.",
+    "cta": "Criar seu primeiro lembrete"
+  },
   "profile": {
     "readPrivacyPolicy": "Ler a Política de Privacidade completa",
     "searchHelp": "Buscar artigos de ajuda",

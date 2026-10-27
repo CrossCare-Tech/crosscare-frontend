@@ -135,6 +135,17 @@
     "elevated": "Elevated",
     "low": "Low"
   },
+  "reminderForm": {
+    "newReminder": "New reminder",
+    "title": "Title",
+    "time": "Time",
+    "save": "Save reminder"
+  },
+  "reminderEmpty": {
+    "title": "Your reminders, your way",
+    "body": "Keep track of vitamins, check-ups, hydration, and little moments of self-care.",
+    "cta": "Create your first reminder"
+  },
   "profile": {
     "readPrivacyPolicy": "Read the full Privacy Policy",
     "searchHelp": "Search help articles",

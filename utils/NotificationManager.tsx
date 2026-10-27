@@ -140,6 +140,16 @@ export async function saveReminders(reminders: ReminderSettings[]) {
 }
 
 // Load reminders from storage
+// True once reminders were saved at least once (even if the user later deleted them all)
+export async function hasSavedReminders(): Promise<boolean> {
+  try {
+    return (await AsyncStorage.getItem(REMINDER_STORAGE_KEY)) !== null;
+  } catch (error) {
+    console.error('Error checking reminders:', error);
+    return false;
+  }
+}
+
 export async function loadReminders(): Promise<ReminderSettings[]> {
   try {
     const storedReminders = await AsyncStorage.getItem(REMINDER_STORAGE_KEY);

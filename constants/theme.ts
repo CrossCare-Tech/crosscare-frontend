@@ -82,6 +82,24 @@ export const Theme = {
     sosBorder: '#F2C6DA',
     dayInfoText: '#0A4A52',
   },
+  // Health Reminders: accent of each reminder type (icons only; text stays ink)
+  reminderTypes: {
+    water: '#4F86F0',
+    steps: '#12A47A',
+    sleep: '#7B4FC9',
+    heart: '#D64545',
+    weight: '#00838F',
+    medication: '#C77A12',
+  } as Record<string, string>,
+  // Health Reminders empty state illustration
+  reminderEmpty: {
+    halo: '#FCE9EE',
+    calendarTop: '#DCD0F2',
+    calendarDot: '#EADFF7',
+    check: '#E07A93',
+    heart: '#E8A3B4',
+    leaf: '#A9D3CB',
+  },
   typography: {
     display: 'Fraunces600',
     heading: 'Manrope700',

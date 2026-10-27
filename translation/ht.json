@@ -135,6 +135,17 @@
     "elevated": "Wo",
     "low": "Ba"
   },
+  "reminderForm": {
+    "newReminder": "Nouvo rapèl",
+    "title": "Tit",
+    "time": "Lè",
+    "save": "Anrejistre rapèl"
+  },
+  "reminderEmpty": {
+    "title": "Rapèl ou yo, jan ou vle",
+    "body": "Swiv vitamin ou, randevou ou, idratasyon ou ak ti moman pou pran swen tèt ou.",
+    "cta": "Kreye premye rapèl ou"
+  },
   "profile": {
     "readPrivacyPolicy": "Li tout Politik Konfidansyalite a",
     "searchHelp": "Chèche atik èd",
