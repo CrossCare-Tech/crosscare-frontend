@@ -127,7 +127,7 @@ const TrackingOptionsScreen = () => {
   return (
     <ScreenBackground>
       <SafeAreaView style={styles.container}>
-        <AuthTopBar title={t('cards.motherCare.title')} />
+        <AuthTopBar title={t('cards.motherCare.title')} onBack={() => router.replace('/patient/(tabs)/home')} />
 
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           {sections.map((section) => (
