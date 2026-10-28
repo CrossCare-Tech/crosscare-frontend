@@ -3,6 +3,7 @@ import { Alert } from "react-native";
 import { useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
 import { useUnitStore, convertWeight } from "@/zustandStore/unitStore";
+import { warnIfBackdateIgnored } from "@/components/vitals/backdate";
 import { CONFIG } from "@/constants/config";
 import CustomTextInput from "@/components/ui/CustomTextInput";
 import { ReadingModal, useRecordedAt } from "@/components/vitals/VitalsUI";
@@ -69,9 +70,16 @@ const WeightModal = ({ visible, onClose, reload, initialWeight = null }: WeightM
       }
 
       setWeight("");
+      const savedAt = reading.recordedAt;
       reading.reset();
       onClose();
       reload();
+      warnIfBackdateIgnored({
+        recordedAt: savedAt,
+        user,
+        hasReading: (details) => details?.weight?.value > 0,
+        t,
+      });
     } catch (error: any) {
       console.warn("Error adding weight:", error?.message);
       Alert.alert(t("vitalsEntry.errorTitle"), t("vitalsEntry.saveFailed"));

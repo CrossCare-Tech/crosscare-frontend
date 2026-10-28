@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Alert } from "react-native";
 import { useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
+import { warnIfBackdateIgnored } from "@/components/vitals/backdate";
 import { CONFIG } from "@/constants/config";
 import CustomTextInput from "@/components/ui/CustomTextInput";
 import { ReadingModal, useRecordedAt } from "@/components/vitals/VitalsUI";
@@ -64,9 +65,16 @@ const HeartRateModal = ({ visible, onClose, reload, initialHeartRate = null }: H
       }
 
       setHeartRate("");
+      const savedAt = reading.recordedAt;
       reading.reset();
       onClose();
       reload();
+      warnIfBackdateIgnored({
+        recordedAt: savedAt,
+        user,
+        hasReading: (details) => details?.heart > 0,
+        t,
+      });
     } catch (error: any) {
       console.warn("Error adding heart rate:", error?.message);
       Alert.alert(t("vitalsEntry.errorTitle"), t("vitalsEntry.saveFailed"));

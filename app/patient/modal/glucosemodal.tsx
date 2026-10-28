@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Alert, Text, View } from "react-native";
 import { useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
+import { warnIfBackdateIgnored } from "@/components/vitals/backdate";
 import { CONFIG } from "@/constants/config";
 import CustomTextInput from "@/components/ui/CustomTextInput";
 import { ChipSelect, ReadingModal, useRecordedAt, vitalsStyles } from "@/components/vitals/VitalsUI";
@@ -103,9 +104,16 @@ const GlucoseModal = ({
 
       setGlucoseLevel("");
       setGlucoseMealContext("");
+      const savedAt = reading.recordedAt;
       reading.reset();
       onClose();
       reload();
+      warnIfBackdateIgnored({
+        recordedAt: savedAt,
+        user,
+        hasReading: (details) => details?.glucose?.value > 0,
+        t,
+      });
     } catch (error: any) {
       console.warn("Error adding glucose:", error?.message);
       Alert.alert(t("vitalsEntry.errorTitle"), t("vitalsEntry.saveFailed"));

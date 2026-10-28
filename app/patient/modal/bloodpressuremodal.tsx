@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Alert, View } from "react-native";
 import { useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
+import { warnIfBackdateIgnored } from "@/components/vitals/backdate";
 import { CONFIG } from "@/constants/config";
 import CustomTextInput from "@/components/ui/CustomTextInput";
 import { ReadingModal, useRecordedAt, vitalsStyles } from "@/components/vitals/VitalsUI";
@@ -61,9 +62,16 @@ const BloodPressureModal = ({ visible, onClose, reload }: BloodPressureModalProp
 
       setSystolic("");
       setDiastolic("");
+      const savedAt = reading.recordedAt;
       reading.reset();
       onClose();
       reload();
+      warnIfBackdateIgnored({
+        recordedAt: savedAt,
+        user,
+        hasReading: (details) => details?.bloodPressure?.systolic > 0,
+        t,
+      });
     } catch (error: any) {
       console.warn("Error saving blood pressure:", error?.message);
       Alert.alert(t("vitalsEntry.errorTitle"), t("vitalsEntry.saveFailed"));
