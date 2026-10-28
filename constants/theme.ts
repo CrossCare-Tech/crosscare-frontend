@@ -37,6 +37,11 @@ export const Theme = {
     scrim: 'rgba(25,28,29,0.4)', // backdrop behind modals
     onInkSoft: 'rgba(255,255,255,0.82)', // body text on the plum alert card
     onInkLine: 'rgba(255,255,255,0.4)', // outline button on the plum alert card
+    photoShade: 'rgba(20,10,30,0.62)', // bottom fade behind captions on photos
+    tagOnPhoto: 'rgba(255,255,255,0.88)', // tag pill drawn over photos
+    dropzoneBorder: '#CDBFE9', // dashed border of the "Add a photo" area
+    disabledBg: '#E4DDE6', // primary button while disabled
+    disabledText: '#9A8FA0',
 
     // Feedback
     danger: '#B3261E',
