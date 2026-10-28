@@ -109,6 +109,18 @@ export const Theme = {
     heart: '#E8A3B4',
     leaf: '#A9D3CB',
   },
+  // Concierge chat and full-screen call (prototype /concierge/)
+  concierge: {
+    presence: '#1E9B6A', // "online" dot on the guide's avatar
+    sendIdle: '#E6DCE2', // send button before there is text
+    sendIdleIcon: '#8E7A85',
+    callGradient: ['#F3DCE2', '#B98AA3', '#5B3A70', '#2A1B3A'] as [string, string, string, string],
+    callFade: '#9E7394', // callGradient at the point where the portrait ends (45% of the screen)
+    callGlass: 'rgba(255,255,255,0.2)', // round buttons and the state pill on the call
+    callPill: 'rgba(255,255,255,0.92)',
+    callTimer: 'rgba(0,0,0,0.35)',
+    callEnd: '#191C1D',
+  },
   typography: {
     display: 'Fraunces600',
     heading: 'Manrope700',

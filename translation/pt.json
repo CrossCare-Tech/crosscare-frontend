@@ -4,6 +4,59 @@
     "concierge": "Concierge",
     "main": "Navegação principal"
   },
+  "conciergeMeet": {
+    "title": "Concierge CrossCare",
+    "hi": "Oi, eu sou",
+    "intro": "Sou sua Concierge CrossCare. Posso responder suas perguntas, registrar como você está se sentindo e lembrar das suas consultas, e sempre ajudo você a falar com sua equipe de cuidado.",
+    "acog": "Baseada nas diretrizes da ACOG",
+    "notDoctor": "Não sou médica",
+    "sources": "Toque em \"fontes\" quando quiser",
+    "start": "Iniciar uma conversa",
+    "choose": "Escolher outra guia"
+  },
+  "conciergeVoice": {
+    "title": "Fale com",
+    "body": "Fale em vez de digitar para uma conversa sem usar as mãos. Você pode voltar a digitar quando quiser.",
+    "allow": "Permitir microfone",
+    "notNow": "Agora não",
+    "note": "A voz chega em breve — apenas pré-visualização."
+  },
+  "conciergeChat": {
+    "send": "Enviar",
+    "notMedical": "não é aconselhamento médico",
+    "sources": "Fontes",
+    "more": "Mais opções",
+    "live": "Fale em voz alta com sua guia",
+    "online": "Concierge CrossCare"
+  },
+  "conciergeCall": {
+    "listening": "Ouvindo…",
+    "sample": "“Tenho me sentido muito cansada ultimamente.”",
+    "back": "Voltar ao chat",
+    "end": "Encerrar chamada",
+    "mute": "Silenciar",
+    "unmute": "Ativar microfone",
+    "preview": "Prévia de voz"
+  },
+  "conciergeName": {
+    "title": "O nome dela",
+    "heading": "Como você quer chamá-la?",
+    "lead": "Por padrão ela é {{name}}. Escolha o nome que preferir.",
+    "label": "Nome",
+    "hint": "Você pode renomeá-la depois nas configurações.",
+    "start": "Começar a conversar",
+    "keep": "Manter “{{name}}”"
+  },
+  "conciergeHistory": {
+    "title": "Conversas",
+    "settings": "Configurações da guia",
+    "rowSub": "Mude o visual e o nome dela",
+    "newChat": "Nova conversa",
+    "today": "Hoje",
+    "yesterday": "Ontem",
+    "earlier": "Anteriores",
+    "empty": "Ainda não há conversas. Diga oi para começar."
+  },
   "back": "Voltar",
   "next": "Próximo",
   "cancel": "Cancelar",
