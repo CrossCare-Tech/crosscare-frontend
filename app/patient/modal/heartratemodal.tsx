@@ -2,9 +2,10 @@ import React, { useEffect, useState } from "react";
 import { Alert } from "react-native";
 import { useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
+import { warnIfBackdateIgnored } from "@/components/vitals/backdate";
 import { CONFIG } from "@/constants/config";
 import CustomTextInput from "@/components/ui/CustomTextInput";
-import { ReadingModal } from "@/components/vitals/VitalsUI";
+import { ReadingModal, useRecordedAt } from "@/components/vitals/VitalsUI";
 
 interface HeartRateModalProps {
   visible: boolean;
@@ -17,6 +18,7 @@ interface HeartRateModalProps {
 const HeartRateModal = ({ visible, onClose, reload, initialHeartRate = null }: HeartRateModalProps) => {
   const [heartRate, setHeartRate] = useState("");
   const [loading, setLoading] = useState(false);
+  const reading = useRecordedAt();
   const user = useSelector((state: any) => state.user);
   const { t } = useTranslation();
 
@@ -55,7 +57,7 @@ const HeartRateModal = ({ visible, onClose, reload, initialHeartRate = null }: H
           Accept: "application/json",
           ...(user.token ? { Authorization: `Bearer ${user.token}` } : {}),
         },
-        body: JSON.stringify({ heartRate: bpm }),
+        body: JSON.stringify({ heartRate: bpm, ...reading.payload }),
       });
 
       if (!response.ok) {
@@ -63,8 +65,16 @@ const HeartRateModal = ({ visible, onClose, reload, initialHeartRate = null }: H
       }
 
       setHeartRate("");
+      const savedAt = reading.recordedAt;
+      reading.reset();
       onClose();
       reload();
+      warnIfBackdateIgnored({
+        recordedAt: savedAt,
+        user,
+        hasReading: (details) => details?.heart > 0,
+        t,
+      });
     } catch (error: any) {
       console.warn("Error adding heart rate:", error?.message);
       Alert.alert(t("vitalsEntry.errorTitle"), t("vitalsEntry.saveFailed"));
@@ -75,11 +85,19 @@ const HeartRateModal = ({ visible, onClose, reload, initialHeartRate = null }: H
 
   const handleCancel = () => {
     setHeartRate("");
+    reading.reset();
     onClose();
   };
 
   return (
-    <ReadingModal visible={visible} loading={loading} onSave={handleSave} onClose={handleCancel}>
+    <ReadingModal
+      visible={visible}
+      loading={loading}
+      onSave={handleSave}
+      onClose={handleCancel}
+      recordedAt={reading.recordedAt}
+      onRecordedAtChange={reading.setRecordedAt}
+    >
       <CustomTextInput
         label={t("heartLog.inputLabel")}
         value={heartRate}

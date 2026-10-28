@@ -3,9 +3,10 @@ import { Alert } from "react-native";
 import { useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
 import { useUnitStore, convertWeight } from "@/zustandStore/unitStore";
+import { warnIfBackdateIgnored } from "@/components/vitals/backdate";
 import { CONFIG } from "@/constants/config";
 import CustomTextInput from "@/components/ui/CustomTextInput";
-import { ReadingModal } from "@/components/vitals/VitalsUI";
+import { ReadingModal, useRecordedAt } from "@/components/vitals/VitalsUI";
 
 interface WeightModalProps {
   visible: boolean;
@@ -18,6 +19,7 @@ interface WeightModalProps {
 const WeightModal = ({ visible, onClose, reload, initialWeight = null }: WeightModalProps) => {
   const [weight, setWeight] = useState("");
   const [loading, setLoading] = useState(false);
+  const reading = useRecordedAt();
   const user = useSelector((state: any) => state.user);
   const { weightUnit } = useUnitStore();
   const { t } = useTranslation();
@@ -59,6 +61,7 @@ const WeightModal = ({ visible, onClose, reload, initialWeight = null }: WeightM
         body: JSON.stringify({
           weight: weightUnit === "lbs" ? convertWeight(value, "lbs", "kg") : value,
           weight_unit: "kg",
+          ...reading.payload,
         }),
       });
 
@@ -67,8 +70,16 @@ const WeightModal = ({ visible, onClose, reload, initialWeight = null }: WeightM
       }
 
       setWeight("");
+      const savedAt = reading.recordedAt;
+      reading.reset();
       onClose();
       reload();
+      warnIfBackdateIgnored({
+        recordedAt: savedAt,
+        user,
+        hasReading: (details) => details?.weight?.value > 0,
+        t,
+      });
     } catch (error: any) {
       console.warn("Error adding weight:", error?.message);
       Alert.alert(t("vitalsEntry.errorTitle"), t("vitalsEntry.saveFailed"));
@@ -79,11 +90,19 @@ const WeightModal = ({ visible, onClose, reload, initialWeight = null }: WeightM
 
   const handleCancel = () => {
     setWeight("");
+    reading.reset();
     onClose();
   };
 
   return (
-    <ReadingModal visible={visible} loading={loading} onSave={handleSave} onClose={handleCancel}>
+    <ReadingModal
+      visible={visible}
+      loading={loading}
+      onSave={handleSave}
+      onClose={handleCancel}
+      recordedAt={reading.recordedAt}
+      onRecordedAtChange={reading.setRecordedAt}
+    >
       <CustomTextInput
         label={t("weightLog.inputLabel", { unit: weightUnit })}
         value={weight}

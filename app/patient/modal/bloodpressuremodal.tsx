@@ -2,9 +2,10 @@ import React, { useState } from "react";
 import { Alert, View } from "react-native";
 import { useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
+import { warnIfBackdateIgnored } from "@/components/vitals/backdate";
 import { CONFIG } from "@/constants/config";
 import CustomTextInput from "@/components/ui/CustomTextInput";
-import { ReadingModal, vitalsStyles } from "@/components/vitals/VitalsUI";
+import { ReadingModal, useRecordedAt, vitalsStyles } from "@/components/vitals/VitalsUI";
 
 interface BloodPressureModalProps {
   visible: boolean;
@@ -17,6 +18,7 @@ const BloodPressureModal = ({ visible, onClose, reload }: BloodPressureModalProp
   const [systolic, setSystolic] = useState("");
   const [diastolic, setDiastolic] = useState("");
   const [loading, setLoading] = useState(false);
+  const reading = useRecordedAt();
   const user = useSelector((state: any) => state.user);
   const { t } = useTranslation();
 
@@ -44,6 +46,7 @@ const BloodPressureModal = ({ visible, onClose, reload }: BloodPressureModalProp
           body: JSON.stringify({
             systolic: parseInt(systolic),
             diastolic: parseInt(diastolic),
+            ...reading.payload,
           }),
         }
       );
@@ -59,8 +62,16 @@ const BloodPressureModal = ({ visible, onClose, reload }: BloodPressureModalProp
 
       setSystolic("");
       setDiastolic("");
+      const savedAt = reading.recordedAt;
+      reading.reset();
       onClose();
       reload();
+      warnIfBackdateIgnored({
+        recordedAt: savedAt,
+        user,
+        hasReading: (details) => details?.bloodPressure?.systolic > 0,
+        t,
+      });
     } catch (error: any) {
       console.warn("Error saving blood pressure:", error?.message);
       Alert.alert(t("vitalsEntry.errorTitle"), t("vitalsEntry.saveFailed"));
@@ -72,11 +83,19 @@ const BloodPressureModal = ({ visible, onClose, reload }: BloodPressureModalProp
   const handleCancel = () => {
     setSystolic("");
     setDiastolic("");
+    reading.reset();
     onClose();
   };
 
   return (
-    <ReadingModal visible={visible} loading={loading} onSave={handleSave} onClose={handleCancel}>
+    <ReadingModal
+      visible={visible}
+      loading={loading}
+      onSave={handleSave}
+      onClose={handleCancel}
+      recordedAt={reading.recordedAt}
+      onRecordedAtChange={reading.setRecordedAt}
+    >
       <View style={vitalsStyles.row}>
         <View style={{ flex: 1 }}>
           <CustomTextInput
