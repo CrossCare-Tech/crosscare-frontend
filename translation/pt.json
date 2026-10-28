@@ -1,4 +1,9 @@
 {
+  "nav": {
+    "health": "Saúde",
+    "concierge": "Concierge",
+    "main": "Navegação principal"
+  },
   "back": "Voltar",
   "next": "Próximo",
   "cancel": "Cancelar",
