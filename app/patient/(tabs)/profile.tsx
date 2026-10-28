@@ -22,6 +22,8 @@ import LineIcon from "@/components/profile/LineIcon";
 import ProfilePhoto, {
   usePickProfileImage,
 } from "@/components/profile/ProfilePhoto";
+import { PremiumBadge } from "@/components/premium/PremiumUI";
+import { usePremiumStore } from "@/zustandStore/premiumStore";
 
 const LANGUAGE_NAMES: Record<string, string> = {
   en: "English (US)",
@@ -50,6 +52,9 @@ const ICONS: Record<string, React.ReactNode> = {
   ),
   fame: (
     <Path d="M12 3.5l2.4 5 5.6.6-4.1 3.8 1.1 5.5L12 15.7l-5 2.7 1.1-5.5-4.1-3.8 5.6-.6Z" />
+  ),
+  premium: (
+    <Path d="M12 2.5l2.2 6.8L21 11.5l-6.8 2.2L12 20.5l-2.2-6.8L3 11.5l6.8-2.2z" />
   ),
   language: (
     <>
@@ -113,6 +118,7 @@ const MenuRow = ({
   subtitle,
   tone = "default",
   isLast,
+  trailing,
   onPress,
 }: {
   icon: string;
@@ -120,6 +126,7 @@ const MenuRow = ({
   subtitle?: string;
   tone?: RowTone;
   isLast?: boolean;
+  trailing?: React.ReactNode; // shown before the chevron (e.g. a status pill)
   onPress: () => void;
 }) => {
   const chip = CHIP_TONES[tone];
@@ -144,6 +151,7 @@ const MenuRow = ({
         </Text>
         {subtitle ? <Text style={styles.rowSub}>{subtitle}</Text> : null}
       </View>
+      {trailing}
       <LineIcon size={16} color={Theme.colors.ink}>
         <Path d="M9 6l6 6-6 6" />
       </LineIcon>
@@ -159,6 +167,7 @@ const Profile = () => {
   const [photo, setPhoto] = useState<string>(user?.user_photo || "");
   const dispatch = useDispatch();
   const { t, i18n } = useTranslation();
+  const premiumStatus = usePremiumStore((state) => state.status);
 
   const getProfile = async () => {
     try {
@@ -242,6 +251,12 @@ const Profile = () => {
               icon="account"
               title={t("profile.accountDetails")}
               onPress={() => router.push("/patient/profile-setting/name")}
+            />
+            <MenuRow
+              icon="premium"
+              title={t("premium.title")}
+              trailing={<PremiumBadge status={premiumStatus} />}
+              onPress={() => router.push("/patient/profile-setting/premium")}
             />
             <MenuRow
               icon="pregnancy"

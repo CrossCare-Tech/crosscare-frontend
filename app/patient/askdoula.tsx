@@ -53,6 +53,9 @@ import {
 import { CONFIG } from "@/constants/config";
 import i18n from "@/translation/i18next";
 import { deepgramTTS, speakWithDeepgram } from "@/utils/deepgramTTS";
+import { hasPremiumAccess, usePremiumStore } from "@/zustandStore/premiumStore";
+import PremiumLocked from "@/components/premium/PremiumLocked";
+import { PremiumBadge } from "@/components/premium/PremiumUI";
 
 
 interface PauseStateStorage {
@@ -69,7 +72,14 @@ interface Message {
   isEducational?: boolean;
 }
 
+// The AI Concierge is a Premium feature: without access, the patient sees why instead of the chat
 export default function askdoula() {
+  const { status } = usePremiumStore();
+  return hasPremiumAccess(status) ? <AskDoulaChat /> : <PremiumLocked />;
+}
+
+function AskDoulaChat() {
+  const premiumStatus = usePremiumStore((state) => state.status);
   const guide = useGuide();
   const [inputText, setInputText] = useState("");
   const [showOptions, setShowOptions] = useState(true);
@@ -1966,6 +1976,17 @@ export default function askdoula() {
           </TouchableOpacity>
         </View>
 
+        {/* Premium status of the AI Concierge, opens the Premium screen */}
+        <TouchableOpacity
+          onPress={() => router.push("/patient/profile-setting/premium")}
+          style={styles.premiumBar}
+          accessibilityRole="button"
+        >
+          <PremiumBadge status={premiumStatus} label={t(`premium.chatBadge_${premiumStatus}`)} />
+          <Text style={styles.premiumBarLink}>{t("premium.details")}</Text>
+          <Feather name="chevron-right" size={16} color={Theme.colors.magenta} />
+        </TouchableOpacity>
+
         {(questionnaireManager.isActive ||
           questionnaireManager.isPaused ||
           !questionnaireManager.isCompleted) && (
@@ -2265,6 +2286,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 8,
     paddingBottom: 12,
+  },
+  premiumBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 16,
+    paddingBottom: 10,
+  },
+  premiumBarLink: {
+    flex: 1,
+    textAlign: "right",
+    fontFamily: Theme.typography.heading,
+    fontSize: 12.5,
+    color: Theme.colors.magenta,
   },
   headerTitle: {
     color: Theme.colors.ink,
