@@ -16,7 +16,6 @@ import { useColorScheme } from "@/hooks/useColorScheme";
 import { supabase } from "@/supabase/supabase";
 import { store } from "../store/store";
 import { setToken, setUser } from "../store/userSlice";
-import { FloatingProvider } from "@/context/FloatingContext";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import '../translation/i18next'
 import { loadSavedLanguage } from "@/translation/i18next";
@@ -172,9 +171,7 @@ export default function RootLayout() {
       }}
     >
       <Provider store={store}>
-        <FloatingProvider>
-          <RootLayoutNav />
-        </FloatingProvider>
+        <RootLayoutNav />
       </Provider>
     </GestureHandlerRootView>
   );
