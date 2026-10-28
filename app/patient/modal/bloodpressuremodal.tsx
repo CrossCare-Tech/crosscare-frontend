@@ -4,7 +4,7 @@ import { useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
 import { CONFIG } from "@/constants/config";
 import CustomTextInput from "@/components/ui/CustomTextInput";
-import { ReadingModal, vitalsStyles } from "@/components/vitals/VitalsUI";
+import { ReadingModal, useRecordedAt, vitalsStyles } from "@/components/vitals/VitalsUI";
 
 interface BloodPressureModalProps {
   visible: boolean;
@@ -17,6 +17,7 @@ const BloodPressureModal = ({ visible, onClose, reload }: BloodPressureModalProp
   const [systolic, setSystolic] = useState("");
   const [diastolic, setDiastolic] = useState("");
   const [loading, setLoading] = useState(false);
+  const reading = useRecordedAt();
   const user = useSelector((state: any) => state.user);
   const { t } = useTranslation();
 
@@ -44,6 +45,7 @@ const BloodPressureModal = ({ visible, onClose, reload }: BloodPressureModalProp
           body: JSON.stringify({
             systolic: parseInt(systolic),
             diastolic: parseInt(diastolic),
+            ...reading.payload,
           }),
         }
       );
@@ -59,6 +61,7 @@ const BloodPressureModal = ({ visible, onClose, reload }: BloodPressureModalProp
 
       setSystolic("");
       setDiastolic("");
+      reading.reset();
       onClose();
       reload();
     } catch (error: any) {
@@ -72,11 +75,19 @@ const BloodPressureModal = ({ visible, onClose, reload }: BloodPressureModalProp
   const handleCancel = () => {
     setSystolic("");
     setDiastolic("");
+    reading.reset();
     onClose();
   };
 
   return (
-    <ReadingModal visible={visible} loading={loading} onSave={handleSave} onClose={handleCancel}>
+    <ReadingModal
+      visible={visible}
+      loading={loading}
+      onSave={handleSave}
+      onClose={handleCancel}
+      recordedAt={reading.recordedAt}
+      onRecordedAtChange={reading.setRecordedAt}
+    >
       <View style={vitalsStyles.row}>
         <View style={{ flex: 1 }}>
           <CustomTextInput

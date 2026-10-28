@@ -4,7 +4,7 @@ import { useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
 import { CONFIG } from "@/constants/config";
 import CustomTextInput from "@/components/ui/CustomTextInput";
-import { ReadingModal } from "@/components/vitals/VitalsUI";
+import { ReadingModal, useRecordedAt } from "@/components/vitals/VitalsUI";
 
 interface HeartRateModalProps {
   visible: boolean;
@@ -17,6 +17,7 @@ interface HeartRateModalProps {
 const HeartRateModal = ({ visible, onClose, reload, initialHeartRate = null }: HeartRateModalProps) => {
   const [heartRate, setHeartRate] = useState("");
   const [loading, setLoading] = useState(false);
+  const reading = useRecordedAt();
   const user = useSelector((state: any) => state.user);
   const { t } = useTranslation();
 
@@ -55,7 +56,7 @@ const HeartRateModal = ({ visible, onClose, reload, initialHeartRate = null }: H
           Accept: "application/json",
           ...(user.token ? { Authorization: `Bearer ${user.token}` } : {}),
         },
-        body: JSON.stringify({ heartRate: bpm }),
+        body: JSON.stringify({ heartRate: bpm, ...reading.payload }),
       });
 
       if (!response.ok) {
@@ -63,6 +64,7 @@ const HeartRateModal = ({ visible, onClose, reload, initialHeartRate = null }: H
       }
 
       setHeartRate("");
+      reading.reset();
       onClose();
       reload();
     } catch (error: any) {
@@ -75,11 +77,19 @@ const HeartRateModal = ({ visible, onClose, reload, initialHeartRate = null }: H
 
   const handleCancel = () => {
     setHeartRate("");
+    reading.reset();
     onClose();
   };
 
   return (
-    <ReadingModal visible={visible} loading={loading} onSave={handleSave} onClose={handleCancel}>
+    <ReadingModal
+      visible={visible}
+      loading={loading}
+      onSave={handleSave}
+      onClose={handleCancel}
+      recordedAt={reading.recordedAt}
+      onRecordedAtChange={reading.setRecordedAt}
+    >
       <CustomTextInput
         label={t("heartLog.inputLabel")}
         value={heartRate}

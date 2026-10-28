@@ -4,7 +4,7 @@ import { useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
 import { CONFIG } from "@/constants/config";
 import CustomTextInput from "@/components/ui/CustomTextInput";
-import { ChipSelect, ReadingModal, vitalsStyles } from "@/components/vitals/VitalsUI";
+import { ChipSelect, ReadingModal, useRecordedAt, vitalsStyles } from "@/components/vitals/VitalsUI";
 
 interface GlucoseModalProps {
   visible: boolean;
@@ -37,6 +37,7 @@ const GlucoseModal = ({
   const [glucoseLevel, setGlucoseLevel] = useState("");
   const [glucoseMealContext, setGlucoseMealContext] = useState("");
   const [loading, setLoading] = useState(false);
+  const reading = useRecordedAt();
   const user = useSelector((state: any) => state.user);
   const { t } = useTranslation();
 
@@ -86,6 +87,7 @@ const GlucoseModal = ({
             glucoseLevel: parsedGlucoseLevel,
             glucoseUnit: initialGlucoseUnit,
             glucoseMealContext: glucoseMealContext.trim() || null,
+            ...reading.payload,
           }),
         }
       );
@@ -101,6 +103,7 @@ const GlucoseModal = ({
 
       setGlucoseLevel("");
       setGlucoseMealContext("");
+      reading.reset();
       onClose();
       reload();
     } catch (error: any) {
@@ -114,11 +117,19 @@ const GlucoseModal = ({
   const handleCancel = () => {
     setGlucoseLevel("");
     setGlucoseMealContext("");
+    reading.reset();
     onClose();
   };
 
   return (
-    <ReadingModal visible={visible} loading={loading} onSave={handleSave} onClose={handleCancel}>
+    <ReadingModal
+      visible={visible}
+      loading={loading}
+      onSave={handleSave}
+      onClose={handleCancel}
+      recordedAt={reading.recordedAt}
+      onRecordedAtChange={reading.setRecordedAt}
+    >
       <CustomTextInput
         label={t("vitalsEntry.glucoseLevel", { unit: initialGlucoseUnit })}
         value={glucoseLevel}
