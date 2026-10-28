@@ -94,7 +94,14 @@
     "backToJournal": "Retounen nan jounal la",
     "saveError": "Nou pa t kapab sere antre ou. Tanpri eseye ankò.",
     "permissionTitle": "Otorizasyon obligatwa",
-    "permissionText": "Tanpri bay aksè pou ou ka ajoute yon foto."
+    "permissionText": "Tanpri bay aksè pou ou ka ajoute yon foto.",
+    "deleteEntry": "Efase antre",
+    "deleteTitle": "Efase antre sa a?",
+    "deleteText": "Antre sa a pral retire nan jounal ou. Ou pa ka defèt sa.",
+    "delete": "Efase",
+    "deletedTitle": "Antre a efase",
+    "deletedText": "Antre ou retire nan jounal ou.",
+    "deleteError": "Nou pa t kapab efase antre ou. Tanpri eseye ankò."
   },
   "journalTimeline": {
     "title": "Jounal",

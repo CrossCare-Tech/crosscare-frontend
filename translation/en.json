@@ -94,7 +94,14 @@
     "backToJournal": "Back to journal",
     "saveError": "Couldn't save your entry. Please try again.",
     "permissionTitle": "Permission required",
-    "permissionText": "Please allow access so you can add a photo."
+    "permissionText": "Please allow access so you can add a photo.",
+    "deleteEntry": "Delete entry",
+    "deleteTitle": "Delete this entry?",
+    "deleteText": "This entry will be removed from your journal. You can't undo this.",
+    "delete": "Delete",
+    "deletedTitle": "Entry deleted",
+    "deletedText": "Your entry was removed from your journal.",
+    "deleteError": "Couldn't delete your entry. Please try again."
   },
   "journalTimeline": {
     "title": "Journal",

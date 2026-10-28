@@ -94,7 +94,14 @@
     "backToJournal": "Voltar ao diário",
     "saveError": "Não foi possível salvar o registro. Tente novamente.",
     "permissionTitle": "Permissão necessária",
-    "permissionText": "Permita o acesso para poder adicionar uma foto."
+    "permissionText": "Permita o acesso para poder adicionar uma foto.",
+    "deleteEntry": "Excluir registro",
+    "deleteTitle": "Excluir este registro?",
+    "deleteText": "Este registro será removido do seu diário. Não é possível desfazer.",
+    "delete": "Excluir",
+    "deletedTitle": "Registro excluído",
+    "deletedText": "Seu registro foi removido do seu diário.",
+    "deleteError": "Não foi possível excluir o registro. Tente novamente."
   },
   "journalTimeline": {
     "title": "Diário",

@@ -210,7 +210,14 @@
     "backToJournal": "Volver al diario",
     "saveError": "No se pudo guardar tu entrada. Inténtalo de nuevo.",
     "permissionTitle": "Permiso necesario",
-    "permissionText": "Permite el acceso para poder añadir una foto."
+    "permissionText": "Permite el acceso para poder añadir una foto.",
+    "deleteEntry": "Eliminar entrada",
+    "deleteTitle": "¿Eliminar esta entrada?",
+    "deleteText": "Esta entrada se quitará de tu diario. No se puede deshacer.",
+    "delete": "Eliminar",
+    "deletedTitle": "Entrada eliminada",
+    "deletedText": "Tu entrada se quitó de tu diario.",
+    "deleteError": "No se pudo eliminar tu entrada. Inténtalo de nuevo."
   },
   "journalTimeline": {
     "title": "Diario",
