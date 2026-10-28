@@ -19,6 +19,7 @@ export const Theme = {
     magentaVivid: '#E61B8D',
     magentaTint: '#FDEAF3',
     magentaHover: '#98005A',
+    magentaWash: '#FEF7FA', // faint magenta panel (baby hero, "big thing" and notice cards)
 
     purple: '#5028A7',
     purpleTint: '#F1ECFB',
