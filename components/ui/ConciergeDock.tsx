@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import Svg, { Path } from "react-native-svg";
 import * as Haptics from "expo-haptics";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import HomeIcon from "@/assets/images/Svg/HomeIcon";
 import JournalIcon from "@/assets/images/Svg/JournalIcon";
 import ProfileIcon from "@/assets/images/Svg/ProfileIcon";
@@ -50,9 +51,11 @@ const ConciergeDock: React.FC<BottomTabBarProps> = ({ state, navigation }) => {
     if (activeName !== name && !event.defaultPrevented) navigation.navigate(route.name, route.params);
   };
 
-  const openConcierge = () => {
+  const openConcierge = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    router.push({ pathname: "/patient/askdoula", params: { from_modal: "true" } });
+    // First time: meet the guide. Afterwards: the conversations, where the chat's back arrow lands.
+    const met = await AsyncStorage.getItem("concierge.met").catch(() => null);
+    router.push(met ? "/patient/concierge-history" : "/patient/concierge-meet");
   };
 
   return (
