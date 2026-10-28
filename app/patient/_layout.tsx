@@ -39,6 +39,11 @@ const PatientStack = () => {
         <Stack.Screen name='medication/medications'/>
         <Stack.Screen name='medication/addmedication'/>
         <Stack.Screen name='askdoula'/>
+        <Stack.Screen name='concierge-meet'/>
+        <Stack.Screen name='concierge-name'/>
+        <Stack.Screen name='concierge-history'/>
+        <Stack.Screen name='concierge-voice'/>
+        <Stack.Screen name='concierge-call'/>
         <Stack.Screen name='sleep'/>
         <Stack.Screen name='tracksleep'/>
         <Stack.Screen name='bedtime'/>

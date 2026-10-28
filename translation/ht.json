@@ -4,6 +4,59 @@
     "concierge": "Konsyèj",
     "main": "Navigasyon prensipal"
   },
+  "conciergeMeet": {
+    "title": "Konsyèj CrossCare",
+    "hi": "Bonjou, mwen se",
+    "intro": "Mwen se konsyèj CrossCare ou. Mwen ka reponn kesyon ou yo, anrejistre kijan ou santi w epi raple w rendez-vou, e mwen toujou ap ede w jwenn ekip swen ou.",
+    "acog": "Baze sou gid ACOG yo",
+    "notDoctor": "Mwen pa doktè",
+    "sources": "Peze \"sous\" nenpòt lè",
+    "start": "Kòmanse yon konvèsasyon",
+    "choose": "Chwazi yon lòt gid"
+  },
+  "conciergeVoice": {
+    "title": "Pale ak",
+    "body": "Pale olye w tape pou yon konvèsasyon san men w. Ou ka tounen tape nenpòt lè.",
+    "allow": "Pèmèt mikwofòn",
+    "notNow": "Pa kounye a",
+    "note": "Vwa a ap vini byento — aperçu sèlman."
+  },
+  "conciergeChat": {
+    "send": "Voye",
+    "notMedical": "se pa konsèy medikal",
+    "sources": "Sous",
+    "more": "Plis opsyon",
+    "live": "Pale ak gid ou a byen fò",
+    "online": "Konsyèj CrossCare"
+  },
+  "conciergeCall": {
+    "listening": "Ap koute…",
+    "sample": "“Mwen te santi m two fatige dènyèman.”",
+    "back": "Tounen nan chat",
+    "end": "Fini apèl la",
+    "mute": "Koupe son",
+    "unmute": "Louvri mikwo",
+    "preview": "Aperçu vwa"
+  },
+  "conciergeName": {
+    "title": "Non li",
+    "heading": "Ki jan ou ta renmen rele li?",
+    "lead": "Pa defo li rele {{name}}. Chwazi non ou pi pito.",
+    "label": "Non",
+    "hint": "Ou ka chanje non li pita nan paramèt yo.",
+    "start": "Kòmanse chat",
+    "keep": "Kenbe “{{name}}”"
+  },
+  "conciergeHistory": {
+    "title": "Konvèsasyon",
+    "settings": "Paramèt gid la",
+    "rowSub": "Chanje aparans li ak non li",
+    "newChat": "Nouvo konvèsasyon",
+    "today": "Jodi a",
+    "yesterday": "Yè",
+    "earlier": "Anvan",
+    "empty": "Poko gen konvèsasyon. Di bonjou pou kòmanse."
+  },
   "back": "Tounen",
   "next": "Pwochen",
   "cancel": "Anile",

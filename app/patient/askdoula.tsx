@@ -6,7 +6,6 @@ import {
   Image,
   TextInput,
   TouchableOpacity,
-  StatusBar,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
@@ -30,6 +29,10 @@ import {
   type QuestionnaireResponse,
 } from "@/constants/questionaireData";
 import { useLocalSearchParams } from "expo-router";
+import ScreenBackground from "@/components/ui/ScreenBackground";
+import { Theme } from "@/constants/theme";
+import { useGuide } from "@/constants/conciergeGuide";
+import LiveBars from "@/components/ui/LiveBars";
 import User from "@/assets/images/Svg/User";
 import {
   fetchHealthData,
@@ -67,7 +70,9 @@ interface Message {
 }
 
 export default function askdoula() {
+  const guide = useGuide();
   const [inputText, setInputText] = useState("");
+  const [showOptions, setShowOptions] = useState(true);
   const [isTyping, setIsTyping] = useState(false);
   const { t, i18n } = useTranslation();
   const currentLanguage = i18n.language;
@@ -1925,44 +1930,41 @@ export default function askdoula() {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
     >
+      <ScreenBackground>
       <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="dark-content" backgroundColor={"white"} />
 
-        {/* Header */}
-        {fromModal && (
-          <View style={styles.header}>
-            {/* {fromModal && ( */}
-            <View
-              style={{
-                flexDirection: "row",
-                gap: 20,
-                alignItems: "center",
-              }}
-            >
-              <TouchableOpacity onPress={() => handleGoBack()}>
-                <Ionicons name="chevron-back" size={20} color="#434343" />
-              </TouchableOpacity>
-              {/* )} */}
-              <Text style={styles.headerTitle}>{t("askDoula.title")}</Text>
-            </View>
-            <View style={{ flexDirection: "row" }}>
-              {}
-              <TouchableOpacity
-                onPress={clearChatHistory}
-                style={{ marginRight: 12 }}
-              >
-                <Feather
-                  name="trash-2"
-                  size={20}
-                  color={messages.length > 0 ? "#434343" : "#f5f5f5"}
-                />
-              </TouchableOpacity>
-              {/* <TouchableOpacity>
-                <Feather name="more-vertical" size={20} color="#E5E5E5" />
-              </TouchableOpacity> */}
-            </View>
+        {/* Header: the guide, with a presence dot (prototype /concierge/) */}
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => handleGoBack()}
+            style={styles.backButton}
+            accessibilityRole="button"
+            accessibilityLabel={t("back")}
+          >
+            <Ionicons name="chevron-back" size={18} color={Theme.colors.ink} />
+          </TouchableOpacity>
+          <View>
+            <Image source={guide.portrait} style={styles.headerAvatar} />
+            <View style={styles.presence} />
           </View>
-        )}
+          <View style={styles.headerText}>
+            <Text style={styles.headerName}>{guide.name}</Text>
+            <Text style={styles.headerSub}>{t("conciergeChat.online")}</Text>
+          </View>
+          <TouchableOpacity
+            onPress={clearChatHistory}
+            disabled={messages.length === 0}
+            accessibilityRole="button"
+            accessibilityLabel={t("delete")}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Feather
+              name="trash-2"
+              size={20}
+              color={messages.length > 0 ? Theme.colors.inkSoft : Theme.colors.hairline}
+            />
+          </TouchableOpacity>
+        </View>
 
         {(questionnaireManager.isActive ||
           questionnaireManager.isPaused ||
@@ -2004,11 +2006,11 @@ export default function askdoula() {
           accessibilityRole="link"
           accessibilityLabel="View medical sources and citations"
         >
-          <Ionicons name="information-circle-outline" size={16} color="#87247D" />
+          <Ionicons name="shield-checkmark-outline" size={16} color={Theme.colors.purple} />
           <Text style={styles.sourcesBannerText}>
-            Medical information — tap to view trusted sources
+            <Text style={styles.sourcesBannerBold}>{t("conciergeChat.online")}</Text> · {t("conciergeChat.notMedical")}
           </Text>
-          <Ionicons name="chevron-forward" size={14} color="#87247D" />
+          <Text style={styles.sourcesLink}>{t("conciergeChat.sources")}</Text>
         </TouchableOpacity>
 
         {/* Chat Container */}
@@ -2026,14 +2028,7 @@ export default function askdoula() {
           {messages.length === 0 ? (
             <View style={styles.profileSection}>
               <View style={styles.profileImageContainer}>
-                <Image
-                  source={
-                    user?.avatar_url
-                      ? { uri: user.avatar_url } // If avatar_url exists, use the URI
-                      : require("../../assets/images/hairs/h1/face/c1.png") // Fallback to local image if no avatar_url
-                  }
-                  style={styles.profileImage}
-                />
+                <Image source={guide.portrait} style={styles.profileImage} />
               </View>
 
               <Text style={styles.greeting}>
@@ -2062,14 +2057,7 @@ export default function askdoula() {
                   ]}
                 >
                   {!message.isUser && (
-                    <Image
-                      source={user.avatar_url?
-                        {uri:
-                        user.avatar_url} :
-                          require("../../assets/images/doulaImg.png")
-                      }
-                      style={styles.doulaAvatar}
-                    />
+                    <Image source={guide.portrait} style={styles.doulaAvatar} />
                   )}
 
                   {message.type === "text" ? (
@@ -2141,30 +2129,6 @@ export default function askdoula() {
                     />
                   )}
 
-                  {message.isUser && (
-                    <>
-                      {user?.user_photo ? (
-                        <Image
-                          source={{ uri: user.user_photo }}
-                          style={styles.userAvatar}
-                        />
-                      ) : (
-                        <>
-                          <View
-                            style={{
-                              borderWidth: 1.44,
-                              borderRadius: 25,
-                              borderColor: "#FDE8F8",
-                              boxShadow:
-                                "0px 0px 0.72px 0px rgba(0, 0, 0, 0.30);",
-                            }}
-                          >
-                            <User width={36} height={36} />
-                          </View>
-                        </>
-                      )}
-                    </>
-                  )}
                 </View>
               ))}
 
@@ -2180,6 +2144,7 @@ export default function askdoula() {
             gap: 10,
           }}
         >
+          {showOptions && (
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -2228,13 +2193,23 @@ export default function askdoula() {
               <Text style={styles.optionText}>{t("options.travelSafety")}</Text>
             </TouchableOpacity>
           </ScrollView>
+          )}
 
           <View style={styles.inputContainer}>
             <View style={styles.inputWrapper}>
+              <TouchableOpacity
+                style={styles.plusButton}
+                onPress={() => setShowOptions((v) => !v)}
+                accessibilityRole="button"
+                accessibilityState={{ expanded: showOptions }}
+                accessibilityLabel={t("conciergeChat.more")}
+              >
+                <Feather name="plus" size={20} color={Theme.colors.inkSoft} />
+              </TouchableOpacity>
               <TextInput
                 style={styles.input}
                 placeholder={t("inputPlaceholder")}
-                placeholderTextColor="#999"
+                placeholderTextColor={Theme.colors.placeholder}
                 value={inputText}
                 onChangeText={(text) => setInputText(text)}
                 onSubmitEditing={(e) => sendMessage(e.nativeEvent.text)}
@@ -2249,21 +2224,31 @@ export default function askdoula() {
                 isProcessing={isProcessing}
                 setIsProcessing={setIsProcessing}
               />
+              {inputText.trim() ? (
+                <TouchableOpacity
+                  style={[styles.sendButton, isTyping && styles.sendButtonDisabled]}
+                  onPress={() => sendMessage()}
+                  disabled={isTyping}
+                  accessibilityRole="button"
+                  accessibilityLabel={t("send")}
+                >
+                  <Feather name="send" size={18} color={Theme.colors.surface} />
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  style={styles.liveButton}
+                  onPress={() => router.push("/patient/concierge-call")}
+                  accessibilityRole="button"
+                  accessibilityLabel={t("conciergeChat.live")}
+                >
+                  <LiveBars color={Theme.colors.surface} size={20} />
+                </TouchableOpacity>
+              )}
             </View>
-
-            <TouchableOpacity
-              style={[
-                styles.sendButton,
-                (!inputText.trim() || isTyping) && styles.sendButtonDisabled,
-              ]}
-              onPress={() => sendMessage()}
-              disabled={!inputText.trim() || isTyping}
-            >
-              <Feather name="send" size={20} color="white" />
-            </TouchableOpacity>
           </View>
         </View>
       </SafeAreaView>
+      </ScreenBackground>
     </KeyboardAvoidingView>
   );
 }
@@ -2271,27 +2256,28 @@ export default function askdoula() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "white",
     justifyContent: "space-between",
   },
   header: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
+    gap: 10,
     paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingTop: 8,
+    paddingBottom: 12,
   },
   headerTitle: {
-    color: "#434343",
+    color: Theme.colors.ink,
     fontSize: 16,
-    fontFamily: "DMSans600",
+    fontFamily: Theme.typography.heading,
   },
   // Add these to your styles
   questionnaireStatusContainer: {
-    padding: 16,
-    backgroundColor: "#FFF",
-    borderBottomWidth: 1,
-    borderBottomColor: "#F0F0F0",
+    padding: 12,
+    marginHorizontal: 16,
+    marginBottom: 8,
+    backgroundColor: Theme.colors.surface,
+    borderRadius: Theme.borderRadius.md,
   },
   statusTextContainer: {
     flexDirection: "row",
@@ -2369,20 +2355,20 @@ const styles = StyleSheet.create({
   sourcesBanner: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FBE8F6",
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    backgroundColor: Theme.colors.purpleTint,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     marginHorizontal: 16,
-    marginTop: 8,
-    marginBottom: 4,
-    borderRadius: 10,
+    marginTop: 0,
+    marginBottom: 8,
+    borderRadius: Theme.borderRadius.md,
     gap: 8,
   },
   sourcesBannerText: {
     flex: 1,
-    fontSize: 12,
-    fontFamily: "DMSans500",
-    color: "#87247D",
+    fontSize: 11.5,
+    fontFamily: Theme.typography.body,
+    color: Theme.colors.inkSoft,
   },
   chatContent: {
     flexGrow: 1,
@@ -2394,17 +2380,13 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   userBubble: {
-    backgroundColor: "#FEF0FA",
+    backgroundColor: Theme.colors.magenta,
     borderBottomRightRadius: 4,
-    borderWidth: 1,
-    borderColor: "#FBBBE9",
-    marginRight: 8,
+    marginRight: 0,
   },
   doulaBubble: {
-    backgroundColor: "#FFF",
+    backgroundColor: Theme.colors.purpleTint,
     borderTopLeftRadius: 4,
-    borderWidth: 0.5,
-    borderColor: "#E5E5E5",
     marginLeft: 8,
   },
   messageText: {
@@ -2413,21 +2395,18 @@ const styles = StyleSheet.create({
     fontFamily: "Inter400",
   },
   userMessageText: {
-    color: "#E162BC",
+    color: Theme.colors.surface,
   },
   doulaMessageText: {
-    color: "#434343",
+    color: Theme.colors.ink,
     fontSize: 14,
     lineHeight: 22,
-    fontFamily: "Inter400",
+    fontFamily: Theme.typography.body,
   },
   doulaAvatar: {
     width: 36,
     height: 36,
-    borderWidth: 1.44,
-    borderColor: "#FDE8F8",
     borderRadius: 18,
-    boxShadow: "0px 0px 0.72px 0px rgba(0, 0, 0, 0.30);",
   },
   userAvatar: {
     width: 36,
@@ -2439,11 +2418,9 @@ const styles = StyleSheet.create({
   },
   typingIndicator: {
     flexDirection: "row",
-    backgroundColor: "#FFF",
+    backgroundColor: Theme.colors.purpleTint,
     borderRadius: 20,
     borderTopLeftRadius: 4,
-    borderWidth: 0.5,
-    borderColor: "#E5E5E5",
     padding: 12,
     marginLeft: 8,
     alignItems: "center",
@@ -2455,18 +2432,17 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: "#E162BC",
+    backgroundColor: Theme.colors.purple,
     marginHorizontal: 4,
   },
   profileImageContainer: {
     width: 100,
     height: 100,
     borderWidth: 3,
-    borderColor: "#FDD1F0",
+    borderColor: Theme.colors.surface,
     borderRadius: 50,
-    boxShadow: "0px 0px 2px 0px rgba(0, 0, 0, 0.30);",
     overflow: "hidden",
-    backgroundColor: "#FF80AB",
+    ...Theme.shadows.soft,
   },
   profileImage: {
     width: "100%",
@@ -2475,24 +2451,29 @@ const styles = StyleSheet.create({
   greeting: {
     marginTop: 16,
     fontSize: 18,
+    fontFamily: Theme.typography.body,
+    color: Theme.colors.ink,
   },
   name: {
-    fontWeight: "bold",
+    fontFamily: Theme.typography.heading,
   },
   title: {
     fontSize: 24,
-    fontWeight: "600",
     marginTop: 8,
     textAlign: "center",
+    fontFamily: Theme.typography.display,
+    color: Theme.colors.ink,
   },
   highlight: {
-    color: "#F66DCE",
+    color: Theme.colors.magenta,
   },
   subtitle: {
-    fontSize: 12,
-    color: "#7B7B7B",
-    fontFamily: "DMSans400",
+    fontSize: 13,
+    lineHeight: 19,
+    color: Theme.colors.inkFaint,
+    fontFamily: Theme.typography.body,
     marginTop: 4,
+    paddingHorizontal: 16,
     textAlign: "center",
   },
   optionsContainer: {
@@ -2503,43 +2484,46 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   optionButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
     borderRadius: 20,
-    marginRight: 10,
+    marginRight: 8,
     borderWidth: 1,
-    backgroundColor: "#FFF8FD",
-    borderColor: "#FBBBE9",
+    backgroundColor: Theme.colors.surface,
+    borderColor: Theme.colors.hairline,
   },
   optionText: {
-    color: "#F76CCF",
-    fontSize: 12,
-    fontFamily: "Inter400",
+    color: Theme.colors.purple,
+    fontSize: 12.5,
+    fontFamily: Theme.typography.heading,
   },
   inputContainer: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     marginTop: "auto",
-    paddingTop: 10,
-    paddingBottom: Platform.OS === "ios" ? 10 : 10,
+    paddingTop: 4,
+    paddingBottom: 12,
   },
   inputWrapper: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
+    backgroundColor: Theme.colors.surface,
     borderWidth: 1,
-    borderColor: "#E0E0E0",
-    borderRadius: 50,
-    paddingLeft: 16,
-    paddingRight: 0,
-    height: 48,
+    borderColor: Theme.colors.hairline,
+    borderRadius: 30,
+    paddingLeft: 8,
+    paddingRight: 8,
+    minHeight: 56,
+    gap: 8,
+    ...Theme.shadows.soft,
   },
   input: {
     flex: 1,
-    fontFamily: "DMSans400",
-    fontSize: 12,
-    // height: 48,
+    fontFamily: Theme.typography.body,
+    fontSize: 15,
+    color: Theme.colors.ink,
     height: "100%",
   },
   micButton: {
@@ -2559,19 +2543,61 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   sendButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "#F76CCF",
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: Theme.colors.magenta,
     justifyContent: "center",
-    borderWidth: 2,
-    borderColor: "#F989D9",
     alignItems: "center",
-    marginLeft: 8,
-    boxShadow:
-      "0px 0px 4px 0px rgba(0, 0, 0, 0.25) inset, 0px 0px 2.6px 0px rgba(0, 0, 0, 0.32);",
   },
   sendButtonDisabled: {
     opacity: 0.5,
+  },
+  backButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: Theme.colors.surface,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: Theme.colors.surface,
+  },
+  presence: {
+    position: "absolute",
+    right: 0,
+    bottom: 0,
+    width: 11,
+    height: 11,
+    borderRadius: 6,
+    backgroundColor: Theme.concierge.presence,
+    borderWidth: 2,
+    borderColor: Theme.colors.surface,
+  },
+  headerText: { flex: 1 },
+  headerName: { fontFamily: Theme.typography.heading, fontSize: 16, color: Theme.colors.ink },
+  headerSub: { fontFamily: Theme.typography.subheading, fontSize: 11.5, color: Theme.colors.teal },
+  sourcesBannerBold: { fontFamily: Theme.typography.heading, color: Theme.colors.ink },
+  sourcesLink: { fontFamily: Theme.typography.heading, fontSize: 11.5, color: Theme.colors.purple },
+  plusButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: Theme.colors.surfaceSunken,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  liveButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: Theme.colors.purple,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

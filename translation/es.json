@@ -4,6 +4,59 @@
     "concierge": "Conserje",
     "main": "Navegación principal"
   },
+  "conciergeMeet": {
+    "title": "Conserje CrossCare",
+    "hi": "Hola, soy",
+    "intro": "Soy tu conserje de CrossCare. Puedo responder tus preguntas, registrar cómo te sientes y recordarte tus citas, y siempre te ayudaré a contactar a tu equipo de atención.",
+    "acog": "Basada en las guías de ACOG",
+    "notDoctor": "No soy médica",
+    "sources": "Toca \"fuentes\" cuando quieras",
+    "start": "Iniciar una conversación",
+    "choose": "Elegir otra guía"
+  },
+  "conciergeVoice": {
+    "title": "Habla con",
+    "body": "Habla en lugar de escribir para una conversación sin manos. Puedes volver a escribir cuando quieras.",
+    "allow": "Permitir micrófono",
+    "notNow": "Ahora no",
+    "note": "La voz llegará pronto — solo vista previa."
+  },
+  "conciergeChat": {
+    "send": "Enviar",
+    "notMedical": "no es consejo médico",
+    "sources": "Fuentes",
+    "more": "Más opciones",
+    "live": "Habla con tu guía en voz alta",
+    "online": "Conserje CrossCare"
+  },
+  "conciergeCall": {
+    "listening": "Escuchando…",
+    "sample": "“Me he sentido muy cansada últimamente.”",
+    "back": "Volver al chat",
+    "end": "Terminar llamada",
+    "mute": "Silenciar",
+    "unmute": "Activar micrófono",
+    "preview": "Vista previa de voz"
+  },
+  "conciergeName": {
+    "title": "Su nombre",
+    "heading": "¿Cómo te gustaría llamarla?",
+    "lead": "Por defecto se llama {{name}}. Elige el nombre que prefieras.",
+    "label": "Nombre",
+    "hint": "Puedes cambiarle el nombre más tarde en ajustes.",
+    "start": "Empezar a chatear",
+    "keep": "Mantener “{{name}}”"
+  },
+  "conciergeHistory": {
+    "title": "Conversaciones",
+    "settings": "Ajustes de la guía",
+    "rowSub": "Cambia su aspecto y su nombre",
+    "newChat": "Nueva conversación",
+    "today": "Hoy",
+    "yesterday": "Ayer",
+    "earlier": "Anteriores",
+    "empty": "Aún no hay conversaciones. Saluda para empezar."
+  },
   "back": "Atrás",
   "next": "Siguiente",
   "cancel": "Cancelar",
