@@ -228,6 +228,8 @@
     "dateTime": "Data e hora",
     "todayAt": "Hoje, {{time}}",
     "changeDateTime": "Alterar data e hora",
+    "backdateIgnoredTitle": "Salvo com a data de hoje",
+    "backdateIgnoredBody": "Sua medição foi salva, mas com a data de hoje. O servidor ainda não aceita datas anteriores.",
     "saveReading": "Salvar leitura",
     "cancel": "Cancelar",
     "glucoseLevel": "Glicose ({{unit}})",
