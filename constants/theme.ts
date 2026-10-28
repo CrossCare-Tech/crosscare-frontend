@@ -22,6 +22,7 @@ export const Theme = {
 
     purple: '#5028A7',
     purpleTint: '#F1ECFB',
+    purpleSoft: '#C9B8F0', // earlier days on vitals bar charts
     plum: '#2B1B45',
 
     teal: '#00838F',
@@ -34,6 +35,8 @@ export const Theme = {
 
     // Overlays
     scrim: 'rgba(25,28,29,0.4)', // backdrop behind modals
+    onInkSoft: 'rgba(255,255,255,0.82)', // body text on the plum alert card
+    onInkLine: 'rgba(255,255,255,0.4)', // outline button on the plum alert card
     photoShade: 'rgba(20,10,30,0.62)', // bottom fade behind captions on photos
     tagOnPhoto: 'rgba(255,255,255,0.88)', // tag pill drawn over photos
     dropzoneBorder: '#CDBFE9', // dashed border of the "Add a photo" area
@@ -86,6 +89,24 @@ export const Theme = {
     babyBg: '#F7F1E8',
     sosBorder: '#F2C6DA',
     dayInfoText: '#0A4A52',
+  },
+  // Health Reminders: accent of each reminder type (icons only; text stays ink)
+  reminderTypes: {
+    water: '#4F86F0',
+    steps: '#12A47A',
+    sleep: '#7B4FC9',
+    heart: '#D64545',
+    weight: '#00838F',
+    medication: '#C77A12',
+  } as Record<string, string>,
+  // Health Reminders empty state illustration
+  reminderEmpty: {
+    halo: '#FCE9EE',
+    calendarTop: '#DCD0F2',
+    calendarDot: '#EADFF7',
+    check: '#E07A93',
+    heart: '#E8A3B4',
+    leaf: '#A9D3CB',
   },
   typography: {
     display: 'Fraunces600',

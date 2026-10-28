@@ -1,18 +1,10 @@
 import React, { useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  Modal,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
-import { Picker } from "@react-native-picker/picker";
+import { Alert, Text, View } from "react-native";
 import { useSelector } from "react-redux";
+import { useTranslation } from "react-i18next";
 import { CONFIG } from "@/constants/config";
+import CustomTextInput from "@/components/ui/CustomTextInput";
+import { ChipSelect, ReadingModal, vitalsStyles } from "@/components/vitals/VitalsUI";
 
 interface GlucoseModalProps {
   visible: boolean;
@@ -23,16 +15,17 @@ interface GlucoseModalProps {
   initialGlucoseUnit?: string;
 }
 
-const GLUCOSE_CONTEXT_OPTIONS = [
-  { label: "Select reading type", value: "" },
-  { label: "Daily check-in", value: "Daily check-in" },
-  { label: "Fasting", value: "Fasting" },
-  { label: "Morning", value: "Morning" },
-  { label: "Afternoon", value: "Afternoon" },
-  { label: "Evening", value: "Evening" },
-  { label: "Before bed", value: "Before bed" },
+// Values stored by the API (in English) and their translation keys
+export const GLUCOSE_CONTEXTS = [
+  { value: "Daily check-in", key: "ctxDaily" },
+  { value: "Fasting", key: "ctxFasting" },
+  { value: "Morning", key: "ctxMorning" },
+  { value: "Afternoon", key: "ctxAfternoon" },
+  { value: "Evening", key: "ctxEvening" },
+  { value: "Before bed", key: "ctxBeforeBed" },
 ];
 
+// 5.3 — Manual entry for glucose (pop-up)
 const GlucoseModal = ({
   visible,
   onClose,
@@ -44,8 +37,8 @@ const GlucoseModal = ({
   const [glucoseLevel, setGlucoseLevel] = useState("");
   const [glucoseMealContext, setGlucoseMealContext] = useState("");
   const [loading, setLoading] = useState(false);
-  const [showContextPicker, setShowContextPicker] = useState(false);
   const user = useSelector((state: any) => state.user);
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (!visible) {
@@ -58,23 +51,22 @@ const GlucoseModal = ({
         : ""
     );
     setGlucoseMealContext(initialMealContext || "");
-    setShowContextPicker(false);
   }, [initialGlucoseLevel, initialMealContext, visible]);
 
   const handleSave = async () => {
     if (!glucoseLevel) {
-      Alert.alert("Error", "Please enter your glucose reading.");
+      Alert.alert(t("vitalsEntry.errorTitle"), t("vitalsEntry.glucoseMissing"));
       return;
     }
 
     const parsedGlucoseLevel = Number(glucoseLevel);
     if (!Number.isFinite(parsedGlucoseLevel) || parsedGlucoseLevel <= 0) {
-      Alert.alert("Error", "Please enter a valid glucose reading.");
+      Alert.alert(t("vitalsEntry.errorTitle"), t("vitalsEntry.glucoseInvalid"));
       return;
     }
 
     if (!user?.token) {
-      Alert.alert("Error", "Please log in again to save glucose.");
+      Alert.alert(t("vitalsEntry.errorTitle"), t("vitalsEntry.loginAgain"));
       return;
     }
 
@@ -112,9 +104,8 @@ const GlucoseModal = ({
       onClose();
       reload();
     } catch (error: any) {
-      const rawMessage = error?.message || "Failed to save glucose.";
-      console.warn("Error adding glucose:", rawMessage);
-      Alert.alert("Error", rawMessage);
+      console.warn("Error adding glucose:", error?.message);
+      Alert.alert(t("vitalsEntry.errorTitle"), t("vitalsEntry.saveFailed"));
     } finally {
       setLoading(false);
     }
@@ -123,171 +114,36 @@ const GlucoseModal = ({
   const handleCancel = () => {
     setGlucoseLevel("");
     setGlucoseMealContext("");
-    setShowContextPicker(false);
     onClose();
   };
 
   return (
-    <Modal transparent visible={visible} animationType="fade" onRequestClose={onClose}>
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContainer}>
-          <Text style={styles.modalTitle}>
-            {initialGlucoseLevel !== null ? "Edit Glucose Reading" : "Add Glucose Reading"}
-          </Text>
-          <Text style={styles.modalSubtitle}>
-            One glucose reading is saved each day. Saving again updates today&apos;s entry.
-          </Text>
-
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={styles.input}
-              value={glucoseLevel}
-              onChangeText={setGlucoseLevel}
-              keyboardType="numeric"
-              placeholder={`-- ${initialGlucoseUnit}`}
-              placeholderTextColor="#ccc"
+    <ReadingModal visible={visible} loading={loading} onSave={handleSave} onClose={handleCancel}>
+      <CustomTextInput
+        label={t("vitalsEntry.glucoseLevel", { unit: initialGlucoseUnit })}
+        value={glucoseLevel}
+        onChangeText={(value) => setGlucoseLevel(value.replace(/[^\d.]/g, ""))}
+        placeholder="92"
+        keyboardType="decimal-pad"
+        maxLength={5}
+      />
+      <View style={vitalsStyles.field}>
+        <Text style={vitalsStyles.label}>{t("vitalsEntry.readingType")}</Text>
+        <View style={vitalsStyles.chips}>
+          {GLUCOSE_CONTEXTS.map((option) => (
+            <ChipSelect
+              key={option.value}
+              label={t(`vitalsEntry.${option.key}`)}
+              selected={glucoseMealContext === option.value}
+              onPress={() =>
+                setGlucoseMealContext(glucoseMealContext === option.value ? "" : option.value)
+              }
             />
-          </View>
-
-          <View style={styles.inputContainer}>
-            <Pressable style={styles.selector} onPress={() => setShowContextPicker((value) => !value)}>
-              <Text
-                style={[
-                  styles.selectorText,
-                  !glucoseMealContext && styles.selectorPlaceholder,
-              ]}
-              >
-                {glucoseMealContext || "Select reading type"}
-              </Text>
-            </Pressable>
-
-            {showContextPicker ? (
-              <View style={styles.pickerContainer}>
-                <Picker
-                  selectedValue={glucoseMealContext}
-                  onValueChange={(value) => {
-                    setGlucoseMealContext(value);
-                    setShowContextPicker(false);
-                  }}
-                >
-                  {GLUCOSE_CONTEXT_OPTIONS.map((option) => (
-                    <Picker.Item key={option.value || "empty"} label={option.label} value={option.value} />
-                  ))}
-                </Picker>
-              </View>
-            ) : null}
-          </View>
-
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
-              <Text style={styles.cancelButtonText}>Cancel</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-              {loading ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <Text style={styles.saveButtonText}>Save</Text>
-              )}
-            </TouchableOpacity>
-          </View>
+          ))}
         </View>
       </View>
-    </Modal>
+    </ReadingModal>
   );
 };
-
-const styles = StyleSheet.create({
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  modalContainer: {
-    width: "85%",
-    backgroundColor: "white",
-    borderRadius: 15,
-    padding: 20,
-    alignItems: "center",
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontFamily: "Inter600",
-    color: "#8E44AD",
-    marginBottom: 8,
-  },
-  modalSubtitle: {
-    fontSize: 13,
-    lineHeight: 18,
-    color: "#6B7280",
-    fontFamily: "Inter400",
-    textAlign: "center",
-    marginBottom: 20,
-  },
-  inputContainer: {
-    width: "100%",
-    marginBottom: 14,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#E8D6F2",
-    borderRadius: 10,
-    padding: 12,
-    fontSize: 16,
-    textAlign: "center",
-    fontFamily: "Inter500",
-  },
-  selector: {
-    borderWidth: 1,
-    borderColor: "#E8D6F2",
-    borderRadius: 10,
-    paddingVertical: 16,
-    paddingHorizontal: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  selectorText: {
-    fontSize: 16,
-    fontFamily: "Inter500",
-    color: "#1B2559",
-  },
-  selectorPlaceholder: {
-    color: "#ccc",
-  },
-  pickerContainer: {
-    borderWidth: 1,
-    borderColor: "#E8D6F2",
-    borderRadius: 10,
-    marginTop: 10,
-    overflow: "hidden",
-  },
-  buttonContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    width: "100%",
-    marginTop: 8,
-  },
-  cancelButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-  },
-  cancelButtonText: {
-    color: "#7B7B7B",
-    fontSize: 14,
-    fontFamily: "Inter500",
-  },
-  saveButton: {
-    backgroundColor: "#8E44AD",
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 32,
-  },
-  saveButtonText: {
-    color: "white",
-    fontSize: 14,
-    fontFamily: "Inter500",
-  },
-});
 
 export default GlucoseModal;

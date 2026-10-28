@@ -140,6 +140,16 @@ export async function saveReminders(reminders: ReminderSettings[]) {
 }
 
 // Load reminders from storage
+// True once reminders were saved at least once (even if the user later deleted them all)
+export async function hasSavedReminders(): Promise<boolean> {
+  try {
+    return (await AsyncStorage.getItem(REMINDER_STORAGE_KEY)) !== null;
+  } catch (error) {
+    console.error('Error checking reminders:', error);
+    return false;
+  }
+}
+
 export async function loadReminders(): Promise<ReminderSettings[]> {
   try {
     const storedReminders = await AsyncStorage.getItem(REMINDER_STORAGE_KEY);
@@ -320,6 +330,24 @@ export async function scheduleAppointmentReminder(
   } catch (error) {
     console.error('❌ Error scheduling appointment reminder:', error);
     return null;
+  }
+}
+
+// One-off reminder to measure blood pressure again after a high reading (5.5 "Recheck in 15 minutes")
+export async function scheduleBloodPressureRecheck(title: string, body: string, minutes = 15): Promise<boolean> {
+  try {
+    if (!(await requestNotificationPermissions())) {
+      return false;
+    }
+    await Notifications.scheduleNotificationAsync({
+      content: { title, body, data: { screen: '/patient/bloodpressure' }, sound: true },
+      trigger: { type: SchedulableTriggerInputTypes.TIME_INTERVAL, seconds: minutes * 60 },
+      identifier: 'bp-recheck',
+    });
+    return true;
+  } catch (error) {
+    console.error('Error scheduling blood pressure recheck:', error);
+    return false;
   }
 }
 
