@@ -4,6 +4,59 @@
     "concierge": "Concierge",
     "main": "Main navigation"
   },
+  "conciergeMeet": {
+    "title": "CrossCare Concierge",
+    "hi": "Hi, I'm",
+    "intro": "I'm your CrossCare Concierge. I can answer your questions, log how you're feeling and remind you about appointments, and I'll always help you reach your care team.",
+    "acog": "Based on ACOG guidance",
+    "notDoctor": "I'm not a doctor",
+    "sources": "Tap \"sources\" any time",
+    "start": "Start a conversation",
+    "choose": "Choose a different guide"
+  },
+  "conciergeVoice": {
+    "title": "Talk with",
+    "body": "Speak instead of typing for a hands-free conversation. You can switch back to typing at any time.",
+    "allow": "Allow microphone",
+    "notNow": "Not now",
+    "note": "Voice is coming soon — preview only."
+  },
+  "conciergeChat": {
+    "send": "Send",
+    "notMedical": "not medical advice",
+    "sources": "Sources",
+    "more": "More options",
+    "live": "Talk with your guide out loud",
+    "online": "CrossCare Concierge"
+  },
+  "conciergeCall": {
+    "listening": "Listening…",
+    "sample": "“I have been feeling really tired lately.”",
+    "back": "Back to chat",
+    "end": "End call",
+    "mute": "Mute",
+    "unmute": "Unmute",
+    "preview": "Voice preview"
+  },
+  "conciergeName": {
+    "title": "Her name",
+    "heading": "What would you like to call her?",
+    "lead": "She's {{name}} by default. Pick any name that feels right.",
+    "label": "Name",
+    "hint": "You can rename her later in settings.",
+    "start": "Start chatting",
+    "keep": "Keep “{{name}}”"
+  },
+  "conciergeHistory": {
+    "title": "Conversations",
+    "settings": "Guide settings",
+    "rowSub": "Change her look and name",
+    "newChat": "New conversation",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "earlier": "Earlier",
+    "empty": "No conversations yet. Say hello to start."
+  },
   "back": "Back",
   "next": "Next",
   "cancel": "Cancel",
