@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, StatusBar, ScrollView } from 'react-native';
-import { Ionicons, FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import FoodIcon from '@/assets/images/Svg/FoodIcon';
@@ -12,180 +12,198 @@ import StepsIcon from '@/assets/images/Svg/StepsIcon';
 import SleepIcon from '@/assets/images/Svg/SleepIcon';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSelector } from 'react-redux';
-import i18n from 'i18next';
 import { useTranslation } from 'react-i18next';
+import { Theme } from '@/constants/theme';
+import ScreenBackground from '@/components/ui/ScreenBackground';
+import AuthTopBar from '@/components/ui/AuthTopBar';
 
-
-
+interface TrackingOption {
+  id: string;
+  title: string;
+  icon: React.ReactNode;
+  onPress: () => void;
+}
 
 const TrackingOptionsScreen = () => {
 
   const user = useSelector((state:any) => state.user);
   const userId = user?.user_id;
-  
+
   const {t} = useTranslation();
 
   useEffect(() => {
     const setHealthVisited = async () => {
       await AsyncStorage.setItem('health', 'true');
     };
-    
+
     setHealthVisited();
   }, [userId]);
 
-  const trackingOptions = [
-  { 
-    id: 'food', 
-    title: t('food'), 
-    icon: <FoodIcon width={24} height={24}  />,
-    onPress: ()=> router.push('/patient/meals')
-  },
-  {
-    id: 'heart-rate',
-    title: t('heartRate'),
-    icon: <HeartIcon width={24} height={24}  />,
-    onPress: () => router.push('/patient/heart'),
-  },
-  {
-    id: 'blood-pressure',
-    title: 'Blood Pressure',
-    icon: <MaterialCommunityIcons name="heart-pulse" size={24} color="#E57373" />,
-    onPress: () => router.push('/patient/bloodpressure'),
-  },
-  {
-    id: 'glucose',
-    title: 'Glucose',
-    icon: <MaterialCommunityIcons name="chart-line" size={24} color="#8E44AD" />,
-    onPress: () => router.push('/patient/glucose'),
-  },
-  {
-    id: 'mood',
-    title: 'Mood',
-    icon: <MaterialCommunityIcons name="emoticon-happy-outline" size={24} color="#5E4FA2" />,
-    onPress: () => router.push('/patient/mood'),
-  },
-  {
-    id: 'symptoms',
-    title: 'Symptoms',
-    icon: <MaterialCommunityIcons name="medical-bag" size={24} color="#E74C3C" />,
-    onPress: () => router.push('/patient/symptoms'),
-  },
-  { 
-    id: 'medication', 
-    title: t('medication'), 
-    icon: <MedicationIcon width={24} height={24}  />,
-    onPress: ()=> router.push('/patient/medication/medications')
-  },
-  { 
-    id: 'weight', 
-    title: t('weight'),  
-    icon: <WeightIcon width={24} height={24}  />,
-    onPress: ()=> router.push('/patient/weight')
-  },
-  { 
-    id: 'water', 
-    title: t('water'),   
-    icon: <WaterIcon width={24} height={24}  />,
-    onPress : () => router.push('/patient/water'),
-  },
-  { 
-    id: 'steps', 
-    title: t('steps'), 
-    icon: <StepsIcon width={24} height={24}  />,
-    onPress : () => router.push('/patient/steps'),
-  },
-  { 
-    id: 'sleep', 
-    title: t('sleep'),  
-    icon: <SleepIcon width={24} height={24}  />,
-    onPress : () => router.push('/patient/sleep'),
-  },
-];
-
+  // Same trackers as before, grouped so the list reads like the other redesigned screens
+  const sections: { title: string; options: TrackingOption[] }[] = [
+    {
+      title: t('motherCare.vitals'),
+      options: [
+        {
+          id: 'heart-rate',
+          title: t('motherCare.heartRate'),
+          icon: <HeartIcon width={22} height={22} />,
+          onPress: () => router.push('/patient/heart'),
+        },
+        {
+          id: 'blood-pressure',
+          title: t('motherCare.bloodPressure'),
+          icon: <MaterialCommunityIcons name="heart-pulse" size={22} color={Theme.reminderTypes.heart} />,
+          onPress: () => router.push('/patient/bloodpressure'),
+        },
+        {
+          id: 'glucose',
+          title: t('motherCare.glucose'),
+          icon: <MaterialCommunityIcons name="chart-line" size={22} color={Theme.colors.purple} />,
+          onPress: () => router.push('/patient/glucose'),
+        },
+        {
+          id: 'weight',
+          title: t('motherCare.weight'),
+          icon: <WeightIcon width={22} height={22} />,
+          onPress: () => router.push('/patient/weight'),
+        },
+      ],
+    },
+    {
+      title: t('motherCare.habits'),
+      options: [
+        {
+          id: 'food',
+          title: t('motherCare.food'),
+          icon: <FoodIcon width={22} height={22} />,
+          onPress: () => router.push('/patient/meals'),
+        },
+        {
+          id: 'water',
+          title: t('motherCare.water'),
+          icon: <WaterIcon width={22} height={22} />,
+          onPress: () => router.push('/patient/water'),
+        },
+        {
+          id: 'steps',
+          title: t('motherCare.steps'),
+          icon: <StepsIcon width={22} height={22} />,
+          onPress: () => router.push('/patient/steps'),
+        },
+        {
+          id: 'sleep',
+          title: t('motherCare.sleep'),
+          icon: <SleepIcon width={22} height={22} />,
+          onPress: () => router.push('/patient/sleep'),
+        },
+      ],
+    },
+    {
+      title: t('motherCare.wellbeing'),
+      options: [
+        {
+          id: 'mood',
+          title: t('motherCare.mood'),
+          icon: <MaterialCommunityIcons name="emoticon-happy-outline" size={22} color={Theme.colors.magenta} />,
+          onPress: () => router.push('/patient/mood'),
+        },
+        {
+          id: 'symptoms',
+          title: t('motherCare.symptoms'),
+          icon: <MaterialCommunityIcons name="medical-bag" size={22} color={Theme.colors.teal} />,
+          onPress: () => router.push('/patient/symptoms'),
+        },
+        {
+          id: 'medication',
+          title: t('motherCare.medication'),
+          icon: <MedicationIcon width={22} height={22} />,
+          onPress: () => router.push('/patient/medication/medications'),
+        },
+      ],
+    },
+  ];
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={'white'} />
-      
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity 
-        
-          onPress={() => router.back()}
-        >
-          <Ionicons name="chevron-back" size={24} color="#000" />
-        </TouchableOpacity>
-      </View>
-      
-      {/* Title */}
-      <Text style={styles.title}>{t('track_title')}</Text>
-      
-      {/* Tracking Options List */}
-      <ScrollView
-        style={styles.optionsContainer}
-        contentContainerStyle={{ paddingBottom: 40 }}
-        showsVerticalScrollIndicator={false}
-      >
-        {trackingOptions.map((option) => (
-          <TouchableOpacity
-            key={option.id}
-            style={styles.optionItem}
-            onPress={option.onPress}
-          >
-            <View style={styles.optionIconContainer}>
-              {option.icon}
+    <ScreenBackground>
+      <SafeAreaView style={styles.container}>
+        <AuthTopBar title={t('cards.motherCare.title')} />
+
+        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+          {sections.map((section) => (
+            <View key={section.title} style={styles.section}>
+              <Text style={styles.sectionLabel}>{section.title}</Text>
+              <View style={styles.card}>
+                {section.options.map((option, index) => (
+                  <TouchableOpacity
+                    key={option.id}
+                    style={[styles.row, index > 0 && styles.rowDivider]}
+                    onPress={option.onPress}
+                    accessibilityRole="button"
+                  >
+                    <View style={styles.iconChip}>{option.icon}</View>
+                    <Text style={styles.rowTitle}>{option.title}</Text>
+                    <Feather name="chevron-right" size={18} color={Theme.colors.inkFaint} />
+                  </TouchableOpacity>
+                ))}
+              </View>
             </View>
-            <Text style={styles.optionText}>{option.title}</Text>
-            <Ionicons name="chevron-forward" size={20} color="black" />
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-    </SafeAreaView>
+          ))}
+        </ScrollView>
+      </SafeAreaView>
+    </ScreenBackground>
   );
 };
-
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
   },
-  header: {
+  content: {
+    paddingHorizontal: 22,
+    paddingTop: 4,
+    paddingBottom: 120,
+    gap: 18,
+  },
+  section: {
+    gap: 8,
+  },
+  sectionLabel: {
+    fontSize: 12,
+    fontFamily: Theme.typography.heading,
+    color: Theme.colors.inkFaint,
+  },
+  card: {
+    backgroundColor: Theme.colors.surface,
+    borderWidth: 1,
+    borderColor: Theme.colors.hairline,
+    borderRadius: Theme.borderRadius.md,
+    ...Theme.shadows.card,
+  },
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 14,
+    paddingVertical: 12,
     paddingHorizontal: 16,
-    paddingVertical: 15,
-    paddingTop: 15,
   },
-  backButton: {
-    // padding: 4,
+  rowDivider: {
+    borderTopWidth: 1,
+    borderTopColor: Theme.colors.hairlineLight,
   },
-  title: {
-    fontSize: 18,
-    fontFamily:'DMSans600',
-    marginTop: 8,
-    marginBottom: 10,
-    paddingHorizontal: 20,
-  },
-  optionsContainer: {
-    paddingHorizontal: 20,
-  },
-  optionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 25,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F5F5F5',
-  },
-  optionIconContainer: {
+  iconChip: {
     width: 40,
-    alignItems: 'flex-start',
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: Theme.colors.surfaceSunken,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  optionText: {
+  rowTitle: {
     flex: 1,
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#333333',
+    fontSize: 14,
+    fontFamily: Theme.typography.subheading,
+    color: Theme.colors.ink,
   },
 });
 

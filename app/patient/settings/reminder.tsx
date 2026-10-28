@@ -6,14 +6,17 @@ import {
   Switch,
   TouchableOpacity,
   FlatList,
-  TextInput,
   Alert,
   Modal,
   ActivityIndicator,
-  Dimensions,
   ScrollView,
+  Pressable,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Notifications from 'expo-notifications';
@@ -26,9 +29,72 @@ import {
   ReminderSettings,
   displayTestNotification,
   getAllScheduledNotifications,
+  hasSavedReminders,
 } from '../../../utils/NotificationManager';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { Theme } from '@/constants/theme';
+import ScreenBackground from '@/components/ui/ScreenBackground';
+import CustomTextInput from '@/components/ui/CustomTextInput';
+
+// Calendar, heart and leaf drawn next to the illustration (prototype empty state)
+const EmptyIllustration = () => (
+  <View style={styles.emptyArt}>
+    <View style={styles.emptyHalo} />
+    <Image
+      source={require('@/assets/images/reminders/empty-mother.png')}
+      style={styles.emptyMother}
+      resizeMode="contain"
+    />
+    <Svg width={140} height={190} viewBox="0 0 140 190" style={styles.emptyDecor}>
+      {/* Heart */}
+      <Path
+        d="M78 22c-3-6-12-6-13 1-1 6 6 11 13 16 7-5 14-10 13-16-1-7-10-7-13-1z"
+        fill="none"
+        stroke={Theme.reminderEmpty.heart}
+        strokeWidth={2.5}
+        strokeLinejoin="round"
+      />
+      {/* Calendar */}
+      <Rect x={20} y={60} width={92} height={78} rx={8} fill={Theme.colors.surface} />
+      <Rect x={20} y={60} width={92} height={22} rx={8} fill={Theme.reminderEmpty.calendarTop} />
+      <Rect x={20} y={74} width={92} height={8} fill={Theme.reminderEmpty.calendarTop} />
+      {[38, 56, 74, 92].map((x) => (
+        <Rect key={x} x={x - 2} y={52} width={4} height={14} rx={2} fill={Theme.reminderEmpty.calendarTop} />
+      ))}
+      {[0, 1, 2].map((row) =>
+        [0, 1, 2, 3].map((col) =>
+          row === 2 && col > 1 ? null : (
+            <Rect
+              key={`${row}-${col}`}
+              x={30 + col * 18}
+              y={92 + row * 14}
+              width={9}
+              height={8}
+              rx={2}
+              fill={Theme.reminderEmpty.calendarDot}
+            />
+          )
+        )
+      )}
+      <Circle cx={90} cy={118} r={12} fill={Theme.reminderEmpty.check} />
+      <Path d="M84 118l4.5 4.5L96 114" fill="none" stroke={Theme.colors.surface} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+      {/* Leaf */}
+      <Path d="M78 186c8-20 22-36 44-48" fill="none" stroke={Theme.reminderEmpty.leaf} strokeWidth={2} strokeLinecap="round" />
+      <Path d="M122 138c-2 12-10 18-20 18 2-10 10-17 20-18z" fill={Theme.reminderEmpty.leaf} />
+      <Path d="M100 156c-2 10-9 15-17 15 1-9 8-14 17-15z" fill={Theme.reminderEmpty.leaf} />
+      <Path d="M96 158c-10-3-16-10-15-19 9 2 15 9 15 19z" fill={Theme.reminderEmpty.leaf} opacity={0.75} />
+    </Svg>
+  </View>
+);
+
+const REMINDER_TYPES: ReminderSettings['type'][] = ['water', 'steps', 'sleep', 'heart', 'weight', 'medication'];
+
+// "HH:MM" for the current time
+const currentTime = () => {
+  const now = new Date();
+  return `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+};
 
 export default function RemindersScreen() {
   const params = useLocalSearchParams<{ type?: string }>();
@@ -42,19 +108,21 @@ export default function RemindersScreen() {
   );
   const {t} = useTranslation();
   const [newReminderMessage, setNewReminderMessage] = useState('');
+  const [newReminderTime, setNewReminderTime] = useState(currentTime());
+  const [showNewTimePicker, setShowNewTimePicker] = useState(false);
   const [activeFilter, setActiveFilter] = useState<ReminderSettings['type'] | 'all'>(
     (params.type as any) || 'all'
   );
-  
+
   // Load reminders on mount
   useEffect(() => {
     loadExistingReminders();
   }, []);
-  
+
   async function loadExistingReminders() {
     try {
       setLoading(true);
-      
+
       // Check for permissions first
       const hasPermission = await requestNotificationPermissions();
       if (!hasPermission) {
@@ -64,16 +132,16 @@ export default function RemindersScreen() {
           [{ text: 'OK' }]
         );
       }
-      
+
       // Load saved reminders
       let savedReminders = await loadReminders();
-      
-      // If no reminders exist, create defaults
-      if (savedReminders.length === 0) {
+
+      // Create the defaults only on the first visit, so deleting every reminder shows the empty state
+      if (savedReminders.length === 0 && !(await hasSavedReminders())) {
         savedReminders = generateDefaultReminders();
         await saveReminders(savedReminders);
       }
-      
+
       setReminders(savedReminders);
     } catch (error) {
       console.error('Error loading reminders:', error);
@@ -82,7 +150,7 @@ export default function RemindersScreen() {
       setLoading(false);
     }
   }
-  
+
   async function toggleReminder(id: string) {
     const updatedReminders = reminders.map(reminder => {
       if (reminder.id === id) {
@@ -90,34 +158,34 @@ export default function RemindersScreen() {
       }
       return reminder;
     });
-    
+
     setReminders(updatedReminders);
     await saveReminders(updatedReminders);
-    
+
     // Schedule or cancel the reminder based on its new state
     const reminder = updatedReminders.find(r => r.id === id);
     if (reminder) {
       await scheduleDailyReminder(reminder);
     }
   }
-  
+
   function showTimePickerFor(reminder: ReminderSettings) {
     setCurrentReminder(reminder);
     setShowTimePicker(true);
   }
-  
+
   async function handleTimeChange(event: any, selectedDate?: Date) {
     setShowTimePicker(false);
-    
+
     if (event.type === 'dismissed' || !selectedDate || !currentReminder) {
       return;
     }
-    
+
     // Format time as HH:MM
     const hours = selectedDate.getHours().toString().padStart(2, '0');
     const minutes = selectedDate.getMinutes().toString().padStart(2, '0');
     const newTime = `${hours}:${minutes}`;
-    
+
     // Update the reminder
     const updatedReminders = reminders.map(reminder => {
       if (reminder.id === currentReminder.id) {
@@ -125,54 +193,65 @@ export default function RemindersScreen() {
       }
       return reminder;
     });
-    
+
     setReminders(updatedReminders);
     await saveReminders(updatedReminders);
-    
+
     // Reschedule the updated reminder
     const updatedReminder = updatedReminders.find(r => r.id === currentReminder.id);
     if (updatedReminder) {
       await scheduleDailyReminder(updatedReminder);
     }
   }
-  
+
+  function handleNewTimeChange(event: any, selectedDate?: Date) {
+    setShowNewTimePicker(false);
+    if (event.type === 'dismissed' || !selectedDate) {
+      return;
+    }
+    const hours = selectedDate.getHours().toString().padStart(2, '0');
+    const minutes = selectedDate.getMinutes().toString().padStart(2, '0');
+    setNewReminderTime(`${hours}:${minutes}`);
+  }
+
+  function openAddModal() {
+    setNewReminderMessage('');
+    setNewReminderTime(currentTime());
+    setShowAddModal(true);
+  }
+
+  function closeAddModal() {
+    setShowAddModal(false);
+    setShowNewTimePicker(false);
+  }
+
   async function addNewReminder() {
     // Generate a unique ID
     const id = `${newReminderType}-${Date.now()}`;
-    
-    // Get current time
-    const now = new Date();
-    const hours = now.getHours().toString().padStart(2, '0');
-    const minutes = now.getMinutes().toString().padStart(2, '0');
-    const time = `${hours}:${minutes}`;
-    
+
     // Create new reminder
     const newReminder: ReminderSettings = {
       id,
       type: newReminderType,
-      time,
+      time: newReminderTime,
       enabled: true,
       days: [], // Empty array means every day
       message: newReminderMessage || `Time to track your ${newReminderType}!`,
     };
-    
+
     // Add to list
     const updatedReminders = [...reminders, newReminder];
     setReminders(updatedReminders);
     await saveReminders(updatedReminders);
-    
+
     // Schedule the new reminder
     await scheduleDailyReminder(newReminder);
-    
+
     // Close modal and reset fields
-    setShowAddModal(false);
+    closeAddModal();
     setNewReminderMessage('');
-    
-    // Show time picker for the new reminder
-    setCurrentReminder(newReminder);
-    setShowTimePicker(true);
   }
-  
+
   async function deleteReminder(id: string) {
     Alert.alert(
       t('deleteReminder'),
@@ -195,7 +274,7 @@ export default function RemindersScreen() {
       ]
     );
   }
-  
+
   // Format time for display
   function formatTime(timeString: string) {
     const [hours, minutes] = timeString.split(':').map(Number);
@@ -203,7 +282,15 @@ export default function RemindersScreen() {
     const displayHours = hours % 12 || 12;
     return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
   }
-  
+
+  // "HH:MM" as a Date for the time pickers
+  function timeToDate(timeString: string) {
+    const [hours, minutes] = timeString.split(':').map(Number);
+    const date = new Date();
+    date.setHours(hours, minutes, 0, 0);
+    return date;
+  }
+
   // Get reminder title
   function getReminderTitle(type: string) {
     switch(type) {
@@ -217,7 +304,7 @@ default: return t('reminder.healthTracking');
     }
   }
 
-  
+
   // Get icon for reminder type
   function getIconForType(type: string) {
     switch(type) {
@@ -230,124 +317,105 @@ default: return t('reminder.healthTracking');
       default: return 'notifications-outline';
     }
   }
-  
-  
+
+
   // Get color for reminder type
   function getColorForType(type: string): string {
-    switch (type) {
-      case 'water': return '#67B6FF';
-      case 'steps': return '#7B9E6B';
-      case 'sleep': return '#9E6BB7';
-      case 'heart': return '#E16262';
-      case 'weight': return '#62A9E1';
-      case 'medication': return '#E79D42';
-      default: return '#E162BC';
-    }
+    return Theme.reminderTypes[type] ?? Theme.colors.magenta;
   }
-  
+
   // Debug function to show all scheduled notifications
   async function showAllScheduledNotifications() {
     const scheduledNotifications = await getAllScheduledNotifications();
     console.log('All scheduled notifications:', JSON.stringify(scheduledNotifications, null, 2));
-    
+
     Alert.alert(
       t('scheduledNotifications'),
       t('foundScheduledNotifications', {count: scheduledNotifications.length}),
       [{ text: 'OK' }]
     );
   }
-  
+
   // Filter reminders based on active filter
-  const filteredReminders = activeFilter === 'all' 
-    ? reminders 
+  const filteredReminders = activeFilter === 'all'
+    ? reminders
     : reminders.filter(reminder => reminder.type === activeFilter);
-  
+
   // Render a reminder item
   const renderReminderItem = ({ item }: { item: ReminderSettings }) => (
     <View style={styles.reminderItem}>
-      <View style={[styles.reminderIconContainer, { backgroundColor: `${getColorForType(item.type)}20` }]}>
-        <Ionicons 
-          name={getIconForType(item.type) as any} 
-          size={24} 
-          color={getColorForType(item.type)} 
+      <View style={[styles.reminderIconContainer, { backgroundColor: `${getColorForType(item.type)}1A` }]}>
+        <Ionicons
+          name={getIconForType(item.type) as any}
+          size={22}
+          color={getColorForType(item.type)}
         />
       </View>
-      
+
       <View style={styles.reminderInfo}>
-        <Text style={[styles.reminderTitle, { color: getColorForType(item.type) }]}>
+        <Text style={styles.reminderTitle}>
           {getReminderTitle(item.type)}
         </Text>
-        
+
         <TouchableOpacity onPress={() => showTimePickerFor(item)}>
           <Text style={styles.reminderTime}>{formatTime(item.time)}</Text>
         </TouchableOpacity>
-        
+
         <Text style={styles.reminderMessage}>{item.message}</Text>
       </View>
-      
+
       <View style={styles.reminderActions}>
         <Switch
           value={item.enabled}
           onValueChange={() => toggleReminder(item.id)}
-          trackColor={{ false: '#E0E0E0', true: `${getColorForType(item.type)}80` }}
-          thumbColor={item.enabled ? getColorForType(item.type) : '#f4f3f4'}
+          trackColor={{ false: Theme.colors.surfaceSunken, true: Theme.colors.magenta }}
+          thumbColor={Theme.colors.surface}
         />
-        
-        <TouchableOpacity 
+
+        <TouchableOpacity
           style={styles.deleteButton}
           onPress={() => deleteReminder(item.id)}
+          accessibilityRole="button"
+          accessibilityLabel={t('deleteReminder')}
         >
-          <Ionicons name="trash-outline" size={18} color="#999" />
+          <Ionicons name="trash-outline" size={18} color={Theme.colors.inkFaint} />
         </TouchableOpacity>
       </View>
     </View>
   );
-  
+
   // Render filter buttons
  const renderFilterButton = (type: 'all' | ReminderSettings['type'], labelKey: string) => (
   <TouchableOpacity
-    style={[
-      styles.filterButton,
-      activeFilter === type && { 
-        backgroundColor: type === 'all' ? '#F3F3F3' : `${getColorForType(type)}20`,
-        borderColor: type === 'all' ? '#DDD' : getColorForType(type),
-      }
-    ]}
+    style={[styles.filterButton, activeFilter === type && styles.filterButtonActive]}
     onPress={() => setActiveFilter(type)}
   >
-    <Text 
-      style={[
-        styles.filterButtonText, 
-        activeFilter === type && { 
-          color: type === 'all' ? '#333' : getColorForType(type),
-          fontWeight: '600'
-        }
-      ]}
-    >
+    <Text style={[styles.filterButtonText, activeFilter === type && styles.filterButtonTextActive]}>
       {t(labelKey)} {/* This dynamically loads the translated label */}
     </Text>
   </TouchableOpacity>
 );
 
-  
+
   return (
+    <ScreenBackground>
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="chevron-back" size={24} color="#434343" />
+        <TouchableOpacity style={styles.headerButton} onPress={() => router.back()} accessibilityLabel="Go back">
+          <Ionicons name="chevron-back" size={20} color={Theme.colors.ink} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{t('healthReminders')}</Text>
-        <TouchableOpacity onPress={() => {
+        <TouchableOpacity style={styles.headerButton} onPress={() => {
           displayTestNotification();
           showAllScheduledNotifications();
         }}>
-          <Ionicons name="notifications-outline" size={24} color="#434343" />
+          <Ionicons name="notifications-outline" size={20} color={Theme.colors.ink} />
         </TouchableOpacity>
       </View>
-      
+
       {/* Filter buttons */}
       <View style={styles.filterContainer}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterContent}>
          {renderFilterButton('all', 'all')}
 {renderFilterButton('water', 'water')}
 {renderFilterButton('steps', 'steps')}
@@ -357,12 +425,33 @@ default: return t('reminder.healthTracking');
 {renderFilterButton('medication', 'medication')}
         </ScrollView>
       </View>
-      
+
       {loading ? (
         <View style={styles.loaderContainer}>
-          <ActivityIndicator size="large" color="#E162BC" />
+          <ActivityIndicator size="large" color={Theme.colors.magenta} />
           <Text style={styles.loaderText}>{t('loadingReminders')}</Text>
         </View>
+      ) : reminders.length === 0 ? (
+        <>
+          <ScrollView contentContainerStyle={styles.emptyState}>
+            <EmptyIllustration />
+            <Text style={styles.emptyTitle}>{t('reminderEmpty.title')}</Text>
+            <Text style={styles.emptyBody}>{t('reminderEmpty.body')}</Text>
+            <TouchableOpacity style={styles.emptyButton} onPress={openAddModal} accessibilityRole="button">
+              <Ionicons name="add" size={20} color={Theme.colors.surface} />
+              <Text style={styles.emptyButtonText}>{t('reminderEmpty.cta')}</Text>
+            </TouchableOpacity>
+          </ScrollView>
+
+          <TouchableOpacity 
+            style={styles.addButton}
+            onPress={openAddModal}
+            accessibilityRole="button"
+            accessibilityLabel={t('reminderForm.newReminder')}
+          >
+            <Ionicons name="add" size={26} color={Theme.colors.surface} />
+          </TouchableOpacity>
+        </>
       ) : (
         <>
           <FlatList
@@ -377,162 +466,203 @@ default: return t('reminder.healthTracking');
               </View>
             }
           />
-          
-          <TouchableOpacity 
+
+          <TouchableOpacity
             style={styles.addButton}
-            onPress={() => setShowAddModal(true)}
+            onPress={openAddModal}
+            accessibilityRole="button"
+            accessibilityLabel={t('reminderForm.newReminder')}
           >
-            <Ionicons name="add" size={24} color="white" />
+            <Ionicons name="add" size={26} color={Theme.colors.surface} />
           </TouchableOpacity>
         </>
       )}
-      
+
       {/* Time Picker */}
       {showTimePicker && currentReminder && (
         <DateTimePicker
-          value={(() => {
-            const [hours, minutes] = currentReminder.time.split(':').map(Number);
-            const date = new Date();
-            date.setHours(hours, minutes, 0, 0);
-            return date;
-          })()}
+          value={timeToDate(currentReminder.time)}
           mode="time"
           is24Hour={false}
           display="spinner"
           onChange={handleTimeChange}
         />
       )}
-      
-      {/* Add Reminder Modal */}
+
+      {/* Add Reminder sheet (prototype "New reminder") */}
       <Modal
         visible={showAddModal}
         transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowAddModal(false)}
+        statusBarTranslucent
+        animationType="slide"
+        onRequestClose={closeAddModal}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <Text style={styles.modalTitle}>{t('createNewReminder')}</Text>
-            
-            <Text style={styles.modalLabel}>{t('reminderType')}</Text>
-            <View style={styles.typeButtons}>
-              {['water', 'steps', 'sleep', 'heart', 'weight', 'medication'].map((type) => (
+        <KeyboardAvoidingView
+          style={styles.flex}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <Pressable style={styles.modalOverlay} onPress={closeAddModal}>
+            <Pressable style={styles.sheet}>
+              <View style={styles.sheetHandle} />
+              <View style={styles.sheetHeader}>
+                <Text style={styles.modalTitle}>{t('reminderForm.newReminder')}</Text>
                 <TouchableOpacity
-                  key={type}
-                  style={[
-                    styles.typeButton,
-                    newReminderType === type && {
-                      backgroundColor: `${getColorForType(type)}20`,
-                      borderColor: getColorForType(type),
-                    }
-                  ]}
-                  onPress={() => setNewReminderType(type as ReminderSettings['type'])}
+                  onPress={closeAddModal}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('cancel')}
                 >
-                  <Ionicons 
-                    name={getIconForType(type) as any} 
-                    size={24} 
-                    color={getColorForType(type)} 
-                  />
-                  <Text numberOfLines={1} style={styles.typeButtonText}>
-                    {t(type)}
-                  </Text>
+                  <Ionicons name="close" size={20} color={Theme.colors.inkFaint} />
                 </TouchableOpacity>
-              ))}
-            </View>
-            
-            <TextInput
-              style={styles.messageInput}
-              value={newReminderMessage}
-              onChangeText={(text: string) => setNewReminderMessage(text)}
-             placeholder={t('newremainder', { type: t(newReminderType) })}
-              placeholderTextColor="#999"
-              multiline
-            />
-            <View style={styles.modalButtons}>
-              <TouchableOpacity 
-                style={styles.cancelButton}
-                onPress={() => setShowAddModal(false)}
-              >
-                <Text style={styles.cancelButtonText}>{t('cancel')}</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={[styles.createButton, { backgroundColor: getColorForType(newReminderType) }]}
+              </View>
+
+              <CustomTextInput
+                label={t('reminderForm.title')}
+                value={newReminderMessage}
+                onChangeText={(text: string) => setNewReminderMessage(text)}
+                placeholder={t('newremainder', { type: t(newReminderType) })}
+                maxLength={80}
+              />
+
+              <View style={styles.field}>
+                <Text style={styles.modalLabel}>{t('reminderType')}</Text>
+                <View style={styles.typeButtons}>
+                  {REMINDER_TYPES.map((type) => (
+                    <TouchableOpacity
+                      key={type}
+                      style={[styles.typeButton, newReminderType === type && styles.typeButtonActive]}
+                      onPress={() => setNewReminderType(type)}
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected: newReminderType === type }}
+                    >
+                      <Ionicons
+                        name={getIconForType(type) as any}
+                        size={22}
+                        color={getColorForType(type)}
+                      />
+                      <Text
+                        numberOfLines={1}
+                        style={[styles.typeButtonText, newReminderType === type && styles.typeButtonTextActive]}
+                      >
+                        {t(type)}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              <View style={styles.field}>
+                <Text style={styles.modalLabel}>{t('reminderForm.time')}</Text>
+                <TouchableOpacity
+                  style={styles.timeField}
+                  onPress={() => setShowNewTimePicker(true)}
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.timeFieldText}>{formatTime(newReminderTime)}</Text>
+                  <Ionicons name="time-outline" size={18} color={Theme.colors.inkFaint} />
+                </TouchableOpacity>
+              </View>
+
+              {showNewTimePicker && (
+                <DateTimePicker
+                  value={timeToDate(newReminderTime)}
+                  mode="time"
+                  is24Hour={false}
+                  display="spinner"
+                  onChange={handleNewTimeChange}
+                />
+              )}
+
+              <TouchableOpacity
+                style={styles.createButton}
                 onPress={addNewReminder}
+                accessibilityRole="button"
               >
-                <Text style={styles.createButtonText}>{t('create')}</Text>
+                <Text style={styles.createButtonText}>{t('reminderForm.save')}</Text>
               </TouchableOpacity>
-            </View>
-          </View>
-        </View>
+            </Pressable>
+          </Pressable>
+        </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
+    </ScreenBackground>
   );
 }
 
-const { width } = Dimensions.get('window');
-
 const styles = StyleSheet.create({
+  flex: {
+    flex: 1,
+  },
   container: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 12,
+  },
+  headerButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 11,
+    backgroundColor: Theme.colors.surface,
+    borderWidth: 1,
+    borderColor: Theme.colors.hairline,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerTitle: {
-    fontSize: 18,
-    fontFamily: 'DMSans600',
-    color: '#434343',
+    fontSize: 16.5,
+    fontFamily: Theme.typography.heading,
+    color: Theme.colors.ink,
   },
   filterContainer: {
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    paddingVertical: 8,
+  },
+  filterContent: {
+    paddingHorizontal: 16,
   },
   filterButton: {
     paddingHorizontal: 16,
     paddingVertical: 8,
-    borderRadius: 20,
+    borderRadius: Theme.borderRadius.full,
     marginHorizontal: 4,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    backgroundColor: '#F9F9F9',
+    borderWidth: 1.5,
+    borderColor: Theme.colors.hairline,
+    backgroundColor: Theme.colors.surface,
+  },
+  filterButtonActive: {
+    borderColor: Theme.colors.magenta,
+    backgroundColor: Theme.colors.magentaTint,
   },
   filterButtonText: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 13,
+    fontFamily: Theme.typography.subheading,
+    color: Theme.colors.inkSoft,
+  },
+  filterButtonTextActive: {
+    color: Theme.colors.magenta,
   },
   listContent: {
-    padding: 16,
-    paddingBottom: 80, // Space for floating button
+    padding: 20,
+    paddingBottom: 96, // Space for floating button
   },
   reminderItem: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    backgroundColor: Theme.colors.surface,
+    borderRadius: 20,
     marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#F0F0F0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    ...Theme.shadows.card,
   },
   reminderIconContainer: {
     width: 44,
     height: 44,
-    borderRadius: 22,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 14,
@@ -541,25 +671,25 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   reminderTitle: {
-    fontSize: 16,
-    fontFamily: 'DMSans600',
-    marginBottom: 4,
+    fontSize: 14.5,
+    fontFamily: Theme.typography.heading,
+    color: Theme.colors.ink,
+    marginBottom: 2,
   },
   reminderTime: {
     fontSize: 24,
-    fontFamily: 'DMSans700',
-    color: '#333',
-    marginBottom: 6,
+    fontFamily: Theme.typography.display,
+    color: Theme.colors.ink,
+    marginBottom: 4,
   },
   reminderMessage: {
-    fontSize: 14,
-    fontFamily: 'DMSans400',
-    color: '#7B7B7B',
+    fontSize: 13,
+    fontFamily: Theme.typography.body,
+    color: Theme.colors.inkFaint,
   },
   reminderActions: {
     alignItems: 'flex-end',
     justifyContent: 'space-between',
-    // height: '100%',
     paddingVertical: 4,
   },
   deleteButton: {
@@ -574,8 +704,8 @@ const styles = StyleSheet.create({
   loaderText: {
     marginTop: 10,
     fontSize: 14,
-    fontFamily: 'DMSans400',
-    color: '#7B7B7B',
+    fontFamily: Theme.typography.body,
+    color: Theme.colors.inkFaint,
   },
   emptyContainer: {
     flex: 1,
@@ -585,14 +715,79 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    fontFamily: 'DMSans500',
-    color: '#666',
+    fontFamily: Theme.typography.subheading,
+    color: Theme.colors.ink,
     marginBottom: 8,
   },
   emptySubtext: {
     fontSize: 14,
-    fontFamily: 'DMSans400',
-    color: '#999',
+    fontFamily: Theme.typography.body,
+    color: Theme.colors.inkFaint,
+  },
+  emptyState: {
+    flexGrow: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+    paddingBottom: 96,
+  },
+  emptyArt: {
+    width: 270,
+    height: 240,
+    marginBottom: Theme.spacing.lg,
+  },
+  emptyHalo: {
+    position: 'absolute',
+    left: 20,
+    top: 10,
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    backgroundColor: Theme.reminderEmpty.halo,
+  },
+  emptyMother: {
+    position: 'absolute',
+    left: 18,
+    top: 0,
+    width: 150,
+    height: 234,
+  },
+  emptyDecor: {
+    position: 'absolute',
+    right: 0,
+    top: 20,
+  },
+  emptyTitle: {
+    maxWidth: 260, // breaks after "Your reminders," as in the prototype
+    fontSize: 28,
+    lineHeight: 34,
+    fontFamily: Theme.typography.display,
+    color: Theme.colors.ink,
+    textAlign: 'center',
+  },
+  emptyBody: {
+    marginTop: 10,
+    fontSize: 15,
+    lineHeight: 22,
+    fontFamily: Theme.typography.body,
+    color: Theme.colors.inkFaint,
+    textAlign: 'center',
+  },
+  emptyButton: {
+    marginTop: Theme.spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Theme.spacing.sm,
+    height: 52,
+    paddingHorizontal: 28,
+    borderRadius: Theme.borderRadius.full,
+    backgroundColor: Theme.colors.magenta,
+    ...Theme.shadows.soft,
+  },
+  emptyButtonText: {
+    fontSize: 15,
+    fontFamily: Theme.typography.heading,
+    color: Theme.colors.surface,
   },
   addButton: {
     position: 'absolute',
@@ -601,102 +796,108 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#E162BC',
+    backgroundColor: Theme.colors.magenta,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
+    ...Theme.shadows.soft,
     elevation: 5,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: Theme.colors.scrim,
+    justifyContent: 'flex-end',
   },
-  modalContainer: {
-    width: width * 0.85,
-    backgroundColor: 'white',
-    borderRadius: 16,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+  sheet: {
+    backgroundColor: Theme.colors.surface,
+    borderTopLeftRadius: Theme.borderRadius.xl,
+    borderTopRightRadius: Theme.borderRadius.xl,
+    paddingHorizontal: 22,
+    paddingTop: 10,
+    paddingBottom: 28,
+    gap: Theme.spacing.md,
+  },
+  sheetHandle: {
+    alignSelf: 'center',
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: Theme.colors.hairline,
+  },
+  sheetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 4,
   },
   modalTitle: {
     fontSize: 20,
-    fontFamily: 'DMSans600',
-    color: '#333',
-    marginBottom: 20,
-    textAlign: 'center',
+    fontFamily: Theme.typography.display,
+    color: Theme.colors.ink,
+  },
+  field: {
+    gap: 7,
   },
   modalLabel: {
-    fontSize: 16,
-    fontFamily: 'DMSans500',
-    color: '#555',
-    marginBottom: 8,
+    fontSize: 12.5,
+    fontFamily: Theme.typography.heading,
+    color: Theme.colors.inkSoft,
   },
   typeButtons: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    marginBottom: 20,
+    rowGap: 10,
   },
   typeButton: {
-    width: '30%',
-    aspectRatio: 1,
+    width: '31.5%',
+    paddingVertical: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 12,
-    backgroundColor: '#F9F9F9',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    marginBottom: 12,
+    borderRadius: Theme.borderRadius.md,
+    backgroundColor: Theme.colors.surface,
+    borderWidth: 1.5,
+    borderColor: Theme.colors.hairline,
+  },
+  typeButtonActive: {
+    borderColor: Theme.colors.magenta,
+    backgroundColor: Theme.colors.magentaTint,
   },
   typeButtonText: {
     fontSize: 12,
-    fontFamily: 'DMSans500',
-    color: '#666',
-    marginTop: 8,
+    fontFamily: Theme.typography.subheading,
+    color: Theme.colors.inkSoft,
+    marginTop: 6,
   },
-  messageInput: {
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 14,
-    fontFamily: 'DMSans400',
-    color: '#333',
-    minHeight: 80,
-    textAlignVertical: 'top',
-    marginBottom: 20,
+  typeButtonTextActive: {
+    color: Theme.colors.magenta,
   },
-  modalButtons: {
+  timeField: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
+    height: 52,
+    borderRadius: Theme.borderRadius.sm,
+    borderWidth: 1.5,
+    borderColor: Theme.colors.inputBorder,
+    backgroundColor: Theme.colors.inputBg,
+    paddingHorizontal: Theme.spacing.md,
   },
-  cancelButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-  },
-  cancelButtonText: {
-    fontSize: 16,
-    fontFamily: 'DMSans500',
-    color: '#999',
+  timeFieldText: {
+    fontSize: 15,
+    fontFamily: Theme.typography.body,
+    color: Theme.colors.ink,
   },
   createButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 24,
-    backgroundColor: '#E162BC',
+    height: 52,
+    borderRadius: Theme.borderRadius.sm,
+    backgroundColor: Theme.colors.magenta,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 4,
   },
   createButtonText: {
-    fontSize: 16,
-    fontFamily: 'DMSans600',
-    color: 'white',
+    fontSize: 15,
+    fontFamily: Theme.typography.heading,
+    color: Theme.colors.surface,
   },
 });

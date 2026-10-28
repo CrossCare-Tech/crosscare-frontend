@@ -1,381 +1,240 @@
-import { useState, useCallback } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  Dimensions,
-  ActivityIndicator,
-} from "react-native";
+import { useCallback, useEffect, useState } from "react";
+import { ActivityIndicator, Alert, ScrollView, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
-import { useSelector } from "react-redux";
-import { LinearGradient } from "expo-linear-gradient";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useTranslation } from "react-i18next";
 import BloodPressureModal from "./modal/bloodpressuremodal";
-import { CONFIG } from "@/constants/config";
+import { scheduleBloodPressureRecheck } from "../../utils/NotificationManager";
+import { Theme } from "@/constants/theme";
+import ScreenBackground from "@/components/ui/ScreenBackground";
+import AuthTopBar from "@/components/ui/AuthTopBar";
+import { Tone } from "@/components/vitals/VitalsUI";
+import {
+  AddReadingButton,
+  ChartCard,
+  daysAgo,
+  fmtDate,
+  GuideNote,
+  MetricEmpty,
+  MetricHero,
+  metricStyles,
+  Period,
+  periodAxis,
+  periodWindow,
+  RangeBarsChart,
+  ReadingList,
+  SectionLabel,
+  Segmented,
+  UrgentAlert,
+  useActivityHistory,
+} from "@/components/vitals/MetricUI";
 
-const { width } = Dimensions.get("window");
+// Same ranges the app already used. Stage 2 (140/90 or higher) is the pregnancy safe limit,
+// shown in yellow with words rather than red (prototype 5.5)
+const getBPCategory = (sys: number, dia: number): { key: string; tone: Tone } => {
+  if (sys < 120 && dia < 80) return { key: "normal", tone: "success" };
+  if (sys < 130 && dia < 80) return { key: "elevated", tone: "warning" };
+  if (sys < 140 && dia < 90) return { key: "high1", tone: "warning" };
+  return { key: "high2", tone: "warning" };
+};
 
-interface BPRecord {
-  date: string;
-  systolic: number;
-  diastolic: number;
-}
+const BAR_WIDTH: Record<Period, number> = { "7": 14, "30": 6, "90": 3 };
 
+// The alert can be hidden for one reading: until the recheck reminder, or for the rest of the day
+const ALERT_STATE_KEY = "bp-alert-state";
+const RECHECK_MINUTES = 15;
+type AlertState = { reading: string; until: number };
+
+// 5.1 — Blood pressure, with the 5.5 high reading alert
 const BloodPressureScreen = () => {
-  const user = useSelector((state: any) => state.user);
-  const [records, setRecords] = useState<BPRecord[]>([]);
-  const [loading, setLoading] = useState(false);
+  const { t, i18n } = useTranslation();
+  const [period, setPeriod] = useState<Period>("7");
   const [modalVisible, setModalVisible] = useState(false);
+  const { activities, loading, reload } = useActivityHistory();
 
-  const fetchHistory = async () => {
-    if (!user?.user_id || !user?.token) {
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const res = await fetch(
-        `${CONFIG.API_BASE_URL}/user/activity/${user.user_id}/bpstatus`,
-        {
-          headers: {
-            Accept: "application/json",
-            Authorization: `Bearer ${user.token}`,
-          },
-        }
-      );
-
-      if (!res.ok) {
-        throw new Error(`Failed to fetch BP history (${res.status})`);
-      }
-
-      const data = await res.json();
-
-      if (data?.data?.bloodPressureData) {
-        const mapped = data.data.bloodPressureData.map((entry: any) => ({
-          date: entry.date,
-          systolic: entry.systolic ?? 0,
-          diastolic: entry.diastolic ?? 0,
-        }));
-        setRecords(mapped);
-      }
-    } catch (e) {
-      console.warn("Failed to fetch BP history:", e);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Days with a reading, oldest first
+  const readings = activities
+    .filter((activity) => activity.details?.bloodPressure?.systolic > 0)
+    .map((activity) => ({
+      date: activity.date,
+      systolic: activity.details.bloodPressure.systolic as number,
+      diastolic: (activity.details.bloodPressure.diastolic as number) || 0,
+    }));
+  const latest = readings.length > 0 ? readings[readings.length - 1] : null;
+  const latestCategory = latest ? getBPCategory(latest.systolic, latest.diastolic) : null;
+  const todayStr = fmtDate(daysAgo(0));
+  const readingKey = latest ? `${latest.date} ${latest.systolic}/${latest.diastolic}` : "";
+  const [alertState, setAlertState] = useState<AlertState | null>(null);
+  const [now, setNow] = useState(Date.now());
 
   useFocusEffect(
     useCallback(() => {
-      fetchHistory();
-    }, [user?.token, user?.user_id])
+      setNow(Date.now());
+      AsyncStorage.getItem(ALERT_STATE_KEY)
+        .then((value) => setAlertState(value ? JSON.parse(value) : null))
+        .catch(() => setAlertState(null));
+    }, [])
   );
 
-  const latest = records.length > 0 ? records[records.length - 1] : null;
+  const hidden = !!alertState && alertState.reading === readingKey && alertState.until > now;
 
-  const today = new Date();
-  const startOfWeek = new Date(today);
-  startOfWeek.setDate(today.getDate() - today.getDay());
-  const pad = (n: number) => String(n).padStart(2, "0");
-  const fmt = (d: Date) =>
-    `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-  const todayStr = fmt(today);
+  // Bring the alert back when the recheck time comes while the screen is open
+  useEffect(() => {
+    if (!hidden || !alertState) return;
+    const timer = setTimeout(() => setNow(Date.now()), alertState.until - now);
+    return () => clearTimeout(timer);
+  }, [hidden, alertState, now]);
 
-  // Same UTC-midnight off-by-one workaround as glucose: detect by looking at
-  // the most recent record that actually has a non-zero reading.
-  const latestNonZero = [...records]
-    .reverse()
-    .find((r) => r.systolic > 0 || r.diastolic > 0);
-  const shouldShift = !!latestNonZero && latestNonZero.date < todayStr;
-  const recordsByDate = new Map<string, BPRecord>();
-  records.forEach((r) => {
-    let key = r.date;
-    if (shouldShift) {
-      const d = new Date(`${r.date}T12:00:00`);
-      d.setDate(d.getDate() + 1);
-      key = fmt(d);
-    }
-    recordsByDate.set(key, r);
-  });
-
-  const chartData = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(startOfWeek);
-    d.setDate(startOfWeek.getDate() + i);
-    const dateStr = fmt(d);
-    const record = recordsByDate.get(dateStr);
-    return {
-      day: d.toLocaleDateString("en-US", { weekday: "short" }).charAt(0),
-      date: dateStr,
-      systolic: record?.systolic ?? 0,
-      diastolic: record?.diastolic ?? 0,
-    };
-  });
-
-  const maxVal = Math.max(...chartData.map((d) => d.systolic || 0), 160);
-  const BAR_WIDTH = 18;
-  const MAX_BAR_HEIGHT = 160;
-
-  const getBPCategory = (sys: number, dia: number) => {
-    if (sys < 120 && dia < 80) return { label: "Normal", color: "#4CAF50" };
-    if (sys < 130 && dia < 80) return { label: "Elevated", color: "#FFC107" };
-    if (sys < 140 || dia < 90) return { label: "High Stage 1", color: "#FF9800" };
-    return { label: "High Stage 2", color: "#F44336" };
+  const hideAlert = async (until: number) => {
+    const state = { reading: readingKey, until };
+    setAlertState(state);
+    setNow(Date.now());
+    await AsyncStorage.setItem(ALERT_STATE_KEY, JSON.stringify(state)).catch(() => undefined);
   };
 
-  const category = latest ? getBPCategory(latest.systolic, latest.diastolic) : null;
+  const showAlert = !!latest && latest.date === todayStr && latestCategory?.key === "high2" && !hidden;
+
+  const dayLabel = (date: string) => {
+    if (date === todayStr) return t("bloodPressureLog.today");
+    if (date === fmtDate(daysAgo(1))) return t("bloodPressureLog.yesterday");
+    return new Date(`${date}T12:00:00`).toLocaleDateString(i18n.language, { month: "short", day: "numeric" });
+  };
+
+  const handleRecheck = async () => {
+    const scheduled = await scheduleBloodPressureRecheck(
+      t("bloodPressureLog.recheckTitle"),
+      t("bloodPressureLog.recheckBody"),
+      RECHECK_MINUTES
+    );
+    if (scheduled) {
+      await hideAlert(Date.now() + RECHECK_MINUTES * 60000);
+    }
+    Alert.alert(
+      t("bloodPressureLog.title"),
+      scheduled ? t("bloodPressureLog.recheckScheduled") : t("bloodPressureLog.recheckFailed")
+    );
+  };
+
+  const handleDismiss = () => {
+    const endOfDay = new Date();
+    endOfDay.setHours(23, 59, 59, 999);
+    hideAlert(endOfDay.getTime());
+  };
+
+  const range = periodWindow(period);
+  const inRange = readings.filter((reading) => range.contains(reading.date));
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={24} color="#373737" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Blood Pressure</Text>
-        <View style={{ width: 40 }} />
-      </View>
+    <ScreenBackground>
+      <SafeAreaView style={styles.container}>
+        <AuthTopBar title={t("bloodPressureLog.title")} />
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
-        <LinearGradient colors={["#E57373", "#C62828"]} style={styles.card}>
-          <Text style={styles.cardLabel}>Latest Reading</Text>
-          {latest ? (
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={metricStyles.content}>
+          {showAlert && latest && (
+            <UrgentAlert
+              title={t("bloodPressureLog.alertTitle")}
+              body={t("bloodPressureLog.alertBody", { value: `${latest.systolic}/${latest.diastolic}` })}
+              primary={{
+                label: t("bloodPressureLog.alertContact"),
+                onPress: () => router.push({ pathname: "/patient/askdoula", params: { from_modal: "true" } }),
+              }}
+              secondary={{ label: t("bloodPressureLog.alertRecheck"), onPress: handleRecheck }}
+              onDismiss={handleDismiss}
+              dismissLabel={t("bloodPressureLog.alertDismiss")}
+            />
+          )}
+
+          {loading && readings.length === 0 ? (
+            <ActivityIndicator color={Theme.colors.magenta} style={styles.loader} />
+          ) : latest && latestCategory ? (
+            <MetricHero
+              when={`${t("metric.latest")} · ${dayLabel(latest.date)}`}
+              value={`${latest.systolic}/${latest.diastolic}`}
+              unit="mmHg"
+              pill={{
+                label:
+                  latestCategory.key === "high2"
+                    ? t("bloodPressureLog.aboveSafe")
+                    : t(`bloodPressureLog.${latestCategory.key}`),
+                tone: latestCategory.tone,
+              }}
+              source={t("metric.enteredByYou")}
+              manual
+            />
+          ) : (
+            <MetricEmpty text={t("bloodPressureLog.noReadings")} />
+          )}
+
+          <Segmented
+            options={[
+              { id: "7", label: t("metric.days7") },
+              { id: "30", label: t("metric.days30") },
+              { id: "90", label: t("metric.days90") },
+            ]}
+            value={period}
+            onChange={setPeriod}
+          />
+
+          <ChartCard
+            axis={periodAxis(period, i18n.language)}
+            legend={[
+              { mark: "line", label: t("bloodPressureLog.legendLatest") },
+              { mark: "earlier", label: t("bloodPressureLog.legendEarlier") },
+              { mark: "band", label: t("bloodPressureLog.legendNormal") },
+            ]}
+          >
+            <RangeBarsChart
+              bars={inRange.map((reading) => ({
+                x: range.x(reading.date),
+                high: reading.systolic,
+                low: reading.diastolic,
+              }))}
+              min={Math.min(60, ...inRange.map((reading) => reading.diastolic)) - 5}
+              max={Math.max(150, ...inRange.map((reading) => reading.systolic)) + 5}
+              band={[60, 120]}
+              barWidth={BAR_WIDTH[period]}
+            />
+          </ChartCard>
+
+          <GuideNote text={t("bloodPressureLog.guide")} />
+
+          {inRange.length > 0 && (
             <>
-              <Text style={styles.cardValue}>
-                {latest.systolic}/{latest.diastolic}
-                <Text style={styles.cardUnit}> mmHg</Text>
-              </Text>
-              <View style={[styles.categoryBadge, { backgroundColor: category?.color + "33" }]}>
-                <Text style={[styles.categoryText, { color: "#fff" }]}>
-                  {category?.label}
-                </Text>
-              </View>
-              <Text style={styles.cardDate}>{latest.date}</Text>
+              <SectionLabel>{t("metric.recent")}</SectionLabel>
+              <ReadingList
+                items={[...inRange]
+                  .reverse()
+                  .slice(0, 7)
+                  .map((reading) => {
+                    const category = getBPCategory(reading.systolic, reading.diastolic);
+                    return {
+                      key: reading.date,
+                      value: `${reading.systolic}/${reading.diastolic} mmHg`,
+                      when: `${dayLabel(reading.date)} · ${t("metric.enteredByYou")}`,
+                      pill: { label: t(`bloodPressureLog.${category.key}`), tone: category.tone },
+                    };
+                  })}
+              />
             </>
-          ) : (
-            <Text style={styles.noDataText}>No readings yet</Text>
           )}
-        </LinearGradient>
+        </ScrollView>
 
-        <View style={styles.chartSection}>
-          <Text style={styles.sectionTitle}>Last 7 Days</Text>
-          {loading ? (
-            <ActivityIndicator color="#E57373" style={{ marginTop: 20 }} />
-          ) : (
-            <View style={styles.chartContainer}>
-              {chartData.map((item, index) => {
-                const barHeight = maxVal > 0
-                  ? Math.max((item.systolic / maxVal) * MAX_BAR_HEIGHT, item.systolic > 0 ? 6 : 0)
-                  : 0;
-                const diaHeight = maxVal > 0
-                  ? Math.max((item.diastolic / maxVal) * MAX_BAR_HEIGHT, item.diastolic > 0 ? 4 : 0)
-                  : 0;
-                const hasData = item.systolic > 0;
+        <AddReadingButton label={t("metric.addReading")} onPress={() => setModalVisible(true)} />
 
-                return (
-                  <View key={index} style={styles.barColumn}>
-                    <View style={styles.barsRow}>
-                      <View
-                        style={[
-                          styles.bar,
-                          {
-                            height: barHeight || 4,
-                            backgroundColor: hasData ? "#E57373" : "#f0f0f0",
-                            width: BAR_WIDTH / 2 - 1,
-                            borderRadius: 4,
-                          },
-                        ]}
-                      />
-                      <View
-                        style={[
-                          styles.bar,
-                          {
-                            height: diaHeight || 4,
-                            backgroundColor: hasData ? "#C62828" : "#f0f0f0",
-                            width: BAR_WIDTH / 2 - 1,
-                            borderRadius: 4,
-                          },
-                        ]}
-                      />
-                    </View>
-                    {hasData && (
-                      <Text style={styles.barValue}>{item.systolic}</Text>
-                    )}
-                    <Text style={styles.barDay}>{item.day}</Text>
-                  </View>
-                );
-              })}
-            </View>
-          )}
-
-          <View style={styles.legend}>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendDot, { backgroundColor: "#E57373" }]} />
-              <Text style={styles.legendText}>Systolic</Text>
-            </View>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendDot, { backgroundColor: "#C62828" }]} />
-              <Text style={styles.legendText}>Diastolic</Text>
-            </View>
-          </View>
-        </View>
-
-        <View style={styles.referenceSection}>
-          <Text style={styles.sectionTitle}>Reference Ranges</Text>
-          {[
-            { label: "Normal", range: "< 120/80", color: "#4CAF50" },
-            { label: "Elevated", range: "120–129 / < 80", color: "#FFC107" },
-            { label: "High Stage 1", range: "130–139 / 80–89", color: "#FF9800" },
-            { label: "High Stage 2", range: "≥ 140 / ≥ 90", color: "#F44336" },
-          ].map((ref) => (
-            <View key={ref.label} style={styles.refRow}>
-              <View style={[styles.refDot, { backgroundColor: ref.color }]} />
-              <Text style={styles.refLabel}>{ref.label}</Text>
-              <Text style={styles.refRange}>{ref.range}</Text>
-            </View>
-          ))}
-        </View>
-
-        {records.length > 0 && (
-          <View style={styles.historySection}>
-            <Text style={styles.sectionTitle}>History</Text>
-            {[...records].reverse().map((r, i) => (
-              <View key={i} style={styles.historyRow}>
-                <Ionicons name="heart" size={16} color="#E57373" />
-                <Text style={styles.historyDate}>{r.date}</Text>
-                <Text style={styles.historyValue}>
-                  {r.systolic}/{r.diastolic} <Text style={styles.historyUnit}>mmHg</Text>
-                </Text>
-              </View>
-            ))}
-          </View>
-        )}
-
-        <View style={{ height: 100 }} />
-      </ScrollView>
-
-      <View style={styles.addButtonContainer}>
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => setModalVisible(true)}
-        >
-          <Ionicons name="add" size={20} color="#fff" />
-          <Text style={styles.addButtonText}>Add Log</Text>
-        </TouchableOpacity>
-      </View>
-
-      <BloodPressureModal
-        visible={modalVisible}
-        onClose={() => setModalVisible(false)}
-        reload={fetchHistory}
-      />
-    </SafeAreaView>
+        <BloodPressureModal visible={modalVisible} onClose={() => setModalVisible(false)} reload={reload} />
+      </SafeAreaView>
+    </ScreenBackground>
   );
 };
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  backBtn: { width: 40, alignItems: "flex-start" },
-  headerTitle: { fontSize: 18, fontFamily: "DMSans600", color: "#373737" },
-  scroll: { paddingHorizontal: 16, paddingTop: 8 },
-  card: {
-    borderRadius: 20,
-    padding: 24,
-    alignItems: "center",
-    marginBottom: 24,
-  },
-  cardLabel: { fontSize: 13, fontFamily: "DMSans400", color: "rgba(255,255,255,0.8)", marginBottom: 6 },
-  cardValue: { fontSize: 48, fontFamily: "DMSans700", color: "#fff" },
-  cardUnit: { fontSize: 16, fontFamily: "DMSans400", color: "rgba(255,255,255,0.8)" },
-  categoryBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 20,
-    marginTop: 8,
-  },
-  categoryText: { fontSize: 13, fontFamily: "DMSans600" },
-  cardDate: { fontSize: 12, color: "rgba(255,255,255,0.6)", marginTop: 6, fontFamily: "DMSans400" },
-  noDataText: { fontSize: 16, color: "rgba(255,255,255,0.7)", fontFamily: "DMSans400", marginTop: 8 },
-  chartSection: {
-    backgroundColor: "#fafafa",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 20,
-  },
-  sectionTitle: { fontSize: 15, fontFamily: "DMSans600", color: "#373737", marginBottom: 16 },
-  chartContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-end",
-    height: 200,
-    paddingBottom: 8,
-  },
-  barColumn: { alignItems: "center", flex: 1 },
-  barsRow: { flexDirection: "row", alignItems: "flex-end", gap: 1, justifyContent: "center" },
-  bar: { alignSelf: "flex-end" },
-  barValue: { fontSize: 8, color: "#E57373", fontFamily: "DMSans500", marginTop: 2 },
-  barDay: { fontSize: 11, color: "#999", fontFamily: "DMSans400", marginTop: 2 },
-  legend: { flexDirection: "row", justifyContent: "center", gap: 20, marginTop: 12 },
-  legendItem: { flexDirection: "row", alignItems: "center", gap: 6 },
-  legendDot: { width: 10, height: 10, borderRadius: 5 },
-  legendText: { fontSize: 12, fontFamily: "DMSans400", color: "#666" },
-  referenceSection: {
-    backgroundColor: "#fafafa",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 20,
-  },
-  refRow: { flexDirection: "row", alignItems: "center", marginBottom: 10 },
-  refDot: { width: 10, height: 10, borderRadius: 5, marginRight: 10 },
-  refLabel: { fontSize: 13, fontFamily: "DMSans500", color: "#373737", width: 110 },
-  refRange: { fontSize: 13, fontFamily: "DMSans400", color: "#666" },
-  historySection: {
-    backgroundColor: "#fafafa",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 20,
-  },
-  historyRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
-    gap: 10,
-  },
-  historyDate: { flex: 1, fontSize: 13, fontFamily: "DMSans400", color: "#666" },
-  historyValue: { fontSize: 15, fontFamily: "DMSans600", color: "#373737" },
-  historyUnit: { fontSize: 12, fontFamily: "DMSans400", color: "#999" },
-  addButtonContainer: {
-    position: "absolute",
-    bottom: 30,
-    left: 0,
-    right: 0,
-    alignItems: "center",
-  },
-  addButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#E57373",
-    paddingHorizontal: 32,
-    paddingVertical: 14,
-    borderRadius: 30,
-    gap: 8,
-    shadowColor: "#E57373",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  addButtonText: { fontSize: 16, fontFamily: "DMSans600", color: "#fff" },
-});
-
 export default BloodPressureScreen;
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  loader: {
+    marginVertical: Theme.spacing.lg,
+  },
+});
