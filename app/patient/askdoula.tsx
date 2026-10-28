@@ -50,6 +50,10 @@ import {
 import { CONFIG } from "@/constants/config";
 import i18n from "@/translation/i18next";
 import { deepgramTTS, speakWithDeepgram } from "@/utils/deepgramTTS";
+import { Theme } from "@/constants/theme";
+import { hasPremiumAccess, usePremiumStore } from "@/zustandStore/premiumStore";
+import PremiumLocked from "@/components/premium/PremiumLocked";
+import { PremiumBadge } from "@/components/premium/PremiumUI";
 
 
 interface PauseStateStorage {
@@ -66,7 +70,14 @@ interface Message {
   isEducational?: boolean;
 }
 
+// The AI Concierge is a Premium feature: without access, the patient sees why instead of the chat
 export default function askdoula() {
+  const { status } = usePremiumStore();
+  return hasPremiumAccess(status) ? <AskDoulaChat /> : <PremiumLocked />;
+}
+
+function AskDoulaChat() {
+  const premiumStatus = usePremiumStore((state) => state.status);
   const [inputText, setInputText] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const { t, i18n } = useTranslation();
@@ -1946,7 +1957,6 @@ export default function askdoula() {
               <Text style={styles.headerTitle}>{t("askDoula.title")}</Text>
             </View>
             <View style={{ flexDirection: "row" }}>
-              {}
               <TouchableOpacity
                 onPress={clearChatHistory}
                 style={{ marginRight: 12 }}
@@ -1963,6 +1973,17 @@ export default function askdoula() {
             </View>
           </View>
         )}
+
+        {/* Premium status of the AI Concierge, opens the Premium screen */}
+        <TouchableOpacity
+          onPress={() => router.push("/patient/profile-setting/premium")}
+          style={styles.premiumBar}
+          accessibilityRole="button"
+        >
+          <PremiumBadge status={premiumStatus} label={t(`premium.chatBadge_${premiumStatus}`)} />
+          <Text style={styles.premiumBarLink}>{t("premium.details")}</Text>
+          <Feather name="chevron-right" size={16} color={Theme.colors.magenta} />
+        </TouchableOpacity>
 
         {(questionnaireManager.isActive ||
           questionnaireManager.isPaused ||
@@ -2280,6 +2301,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 16,
+  },
+  premiumBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 16,
+    paddingBottom: 10,
+  },
+  premiumBarLink: {
+    flex: 1,
+    textAlign: "right",
+    fontFamily: Theme.typography.heading,
+    fontSize: 12.5,
+    color: Theme.colors.magenta,
   },
   headerTitle: {
     color: "#434343",
