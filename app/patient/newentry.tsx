@@ -55,14 +55,14 @@ const NewEntry = () => {
   const [saved, setSaved] = useState(false);
   const [discardAction, setDiscardAction] = useState<any>(null);
   const [keyboardOpen, setKeyboardOpen] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleted, setDeleted] = useState(false);
 
   const dirty = editing
     ? photo !== initialPhoto || note.trim() !== initialNote.trim() || !!tag
     : !!photo || note.trim().length > 0 || !!tag;
   const hasContent = !!photo || note.trim().length > 0;
   const canSave = hasContent && (!editing || dirty) && !saving;
-  // The API can't turn a note into a photo entry (or back), so editing keeps the kind
-  const showPhoto = editing?.kind !== "note";
   // Lets the leave guard know when leaving is intended (after saving or discarding)
   const allowLeave = useRef(false);
 
@@ -152,20 +152,9 @@ const NewEntry = () => {
       } else if (photo) {
         // Photo entries keep the note as their caption. The API requires a title,
         // so a photo without a note sends a single space (trimmed by the timeline).
-        const formData = new FormData();
-        formData.append("title", text || " ");
-        formData.append("imageUrl", { uri: photo, type: "image/jpeg", name: "journal.jpg" } as any);
-        response = await fetch(`${CONFIG.API_BASE_URL}/user/activity/${user.user_id}/journal/upload`, {
-          method: "POST",
-          headers: { "Content-Type": "multipart/form-data" },
-          body: formData,
-        });
+        response = await createPhotoEntry(text);
       } else {
-        response = await fetch(`${CONFIG.API_BASE_URL}/user/activity/${user.user_id}/note`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ title: noteTitle(text), description: text }),
-        });
+        response = await createNoteEntry(text);
       }
       if (!response.ok) throw new Error(`Save failed with status ${response.status}`);
       allowLeave.current = true;
@@ -178,7 +167,42 @@ const NewEntry = () => {
     }
   };
 
-  const saveChanges = (entry: JournalEntryParam, text: string) => {
+  const journalUrl = (suffix = "") =>
+    `${CONFIG.API_BASE_URL}/user/activity/${user.user_id}/journal${suffix}`;
+  const noteUrl = (suffix = "") => `${CONFIG.API_BASE_URL}/user/activity/${user.user_id}/note${suffix}`;
+
+  const createPhotoEntry = (text: string) => {
+    const formData = new FormData();
+    formData.append("title", text || " ");
+    formData.append("imageUrl", { uri: photo, type: "image/jpeg", name: "journal.jpg" } as any);
+    return fetch(journalUrl("/upload"), {
+      method: "POST",
+      headers: { "Content-Type": "multipart/form-data" },
+      body: formData,
+    });
+  };
+
+  const createNoteEntry = (text: string) =>
+    fetch(noteUrl(), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: noteTitle(text), description: text }),
+    });
+
+  const deleteEntry = (entry: JournalEntryParam) =>
+    fetch(entry.kind === "photo" ? journalUrl(`/${entry.id}`) : noteUrl(`/${entry.id}`), {
+      method: "DELETE",
+    });
+
+  const saveChanges = async (entry: JournalEntryParam, text: string) => {
+    const nextKind = photo ? "photo" : "note";
+    if (nextKind !== entry.kind) {
+      // The API stores photos and notes separately, so adding or removing the photo
+      // creates the other kind of entry and then deletes the old one
+      const created = await (photo ? createPhotoEntry(text) : createNoteEntry(text));
+      if (!created.ok) return created;
+      return deleteEntry(entry);
+    }
     if (entry.kind === "photo") {
       const formData = new FormData();
       formData.append("title", text || " ");
@@ -187,17 +211,35 @@ const NewEntry = () => {
       } else {
         formData.append("imageUrl", initialPhoto ?? "");
       }
-      return fetch(`${CONFIG.API_BASE_URL}/user/activity/${user.user_id}/journal/${entry.id}`, {
+      return fetch(journalUrl(`/${entry.id}`), {
         method: "PUT",
         headers: { "Content-Type": "multipart/form-data" },
         body: formData,
       });
     }
-    return fetch(`${CONFIG.API_BASE_URL}/user/activity/${user.user_id}/note/${entry.id}`, {
+    return fetch(noteUrl(`/${entry.id}`), {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ title: noteTitle(text), description: text }),
     });
+  };
+
+  const removeEntry = async () => {
+    if (!editing) return;
+    setSaving(true);
+    try {
+      const response = await deleteEntry(editing);
+      if (!response.ok) throw new Error(`Delete failed with status ${response.status}`);
+      allowLeave.current = true;
+      setConfirmDelete(false);
+      setDeleted(true);
+    } catch (error) {
+      console.error("Error deleting journal entry:", error);
+      setConfirmDelete(false);
+      Alert.alert(t("profile.error"), t("newEntry.deleteError"));
+    } finally {
+      setSaving(false);
+    }
   };
 
   const today = new Date().toLocaleDateString(i18n.language, {
@@ -207,7 +249,7 @@ const NewEntry = () => {
   });
   const footerDate = [today, week ? t("newEntry.week", { week }) : null].filter(Boolean).join(" · ");
 
-  if (saved) {
+  if (saved || deleted) {
     // 4.6 — Saved
     return (
       <ScreenBackground>
@@ -218,10 +260,18 @@ const NewEntry = () => {
             </LineIcon>
           </View>
           <Text style={styles.doneTitle}>
-            {editing ? t("newEntry.changesSaved") : t("newEntry.savedTitle")}
+            {deleted
+              ? t("newEntry.deletedTitle")
+              : editing
+                ? t("newEntry.changesSaved")
+                : t("newEntry.savedTitle")}
           </Text>
           <Text style={styles.doneText}>
-            {editing ? t("newEntry.changesSavedText") : t("newEntry.savedText")}
+            {deleted
+              ? t("newEntry.deletedText")
+              : editing
+                ? t("newEntry.changesSavedText")
+                : t("newEntry.savedText")}
           </Text>
           <TouchableOpacity
             style={[styles.button, styles.doneButton]}
@@ -251,7 +301,6 @@ const NewEntry = () => {
             keyboardShouldPersistTaps="handled"
             contentContainerStyle={styles.scrollContent}
           >
-            {showPhoto && (
             <View style={styles.section}>
               <Text style={styles.label}>
                 {t("newEntry.photo")} <Text style={styles.optional}>{t("newEntry.optional")}</Text>
@@ -285,7 +334,6 @@ const NewEntry = () => {
                 )}
               </TouchableOpacity>
             </View>
-            )}
 
             <View style={styles.section}>
               <Text style={styles.label}>
@@ -352,6 +400,19 @@ const NewEntry = () => {
                 )}
               </View>
             </View>
+
+            {editing && (
+              <TouchableOpacity
+                style={styles.deleteButton}
+                onPress={() => setConfirmDelete(true)}
+                accessibilityRole="button"
+              >
+                <LineIcon size={16} color={Theme.colors.danger}>
+                  <Path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />
+                </LineIcon>
+                <Text style={styles.deleteText}>{t("newEntry.deleteEntry")}</Text>
+              </TouchableOpacity>
+            )}
           </ScrollView>
 
           {!keyboardOpen && (
@@ -415,8 +476,7 @@ const NewEntry = () => {
               <TouchableOpacity style={styles.sheetButton} onPress={fromMenu(() => pickPhoto("camera"))}>
                 <Text style={styles.sheetText}>{t("newEntry.takePhoto")}</Text>
               </TouchableOpacity>
-              {/* Editing can't turn a photo entry into a note, so removing is only for new entries */}
-              {photo && !editing && (
+              {photo && (
                 <TouchableOpacity
                   style={[styles.sheetButton, styles.sheetDanger]}
                   onPress={fromMenu(() => setPhoto(null))}
@@ -431,6 +491,43 @@ const NewEntry = () => {
               </TouchableOpacity>
             </View>
           </TouchableOpacity>
+        </Modal>
+
+        {/* Delete entry */}
+        <Modal
+          visible={confirmDelete}
+          transparent
+          statusBarTranslucent
+          animationType="fade"
+          onRequestClose={() => setConfirmDelete(false)}
+        >
+          <View style={styles.dialogScrim}>
+            <View style={styles.dialog} accessibilityRole="alert">
+              <View style={styles.dialogIcon}>
+                <Text style={styles.dialogIconText}>!</Text>
+              </View>
+              <Text style={styles.dialogTitle}>{t("newEntry.deleteTitle")}</Text>
+              <Text style={styles.dialogText}>{t("newEntry.deleteText")}</Text>
+              <View style={styles.dialogRow}>
+                <TouchableOpacity style={styles.dialogButton} onPress={() => setConfirmDelete(false)}>
+                  <Text style={[styles.buttonText, { color: Theme.colors.magenta }]}>
+                    {t("profile.cancel")}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.dialogButton, styles.dialogButtonGo]}
+                  onPress={removeEntry}
+                  disabled={saving}
+                >
+                  {saving ? (
+                    <ActivityIndicator color={Theme.colors.surface} />
+                  ) : (
+                    <Text style={styles.buttonText}>{t("newEntry.delete")}</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
         </Modal>
 
         {/* 4.5 — Discard changes */}
@@ -477,6 +574,24 @@ const NewEntry = () => {
 export default NewEntry;
 
 const styles = StyleSheet.create({
+  deleteButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: Theme.spacing.sm,
+    marginHorizontal: 22,
+    marginTop: Theme.spacing.md,
+    minHeight: 48,
+    borderRadius: Theme.borderRadius.full,
+    backgroundColor: Theme.colors.surface,
+    borderWidth: 1,
+    borderColor: Theme.colors.hairline,
+  },
+  deleteText: {
+    fontFamily: Theme.typography.heading,
+    fontSize: 14,
+    color: Theme.colors.danger,
+  },
   container: {
     flex: 1,
   },
