@@ -227,6 +227,7 @@
     "diastolic": "Dyastolik",
     "dateTime": "Dat ak lè",
     "todayAt": "Jodi a, {{time}}",
+    "changeDateTime": "Chanje dat ak lè",
     "saveReading": "Sere mezi a",
     "cancel": "Anile",
     "glucoseLevel": "Glikoz ({{unit}})",

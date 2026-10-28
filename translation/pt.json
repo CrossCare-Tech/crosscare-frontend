@@ -227,6 +227,7 @@
     "diastolic": "Diastólica",
     "dateTime": "Data e hora",
     "todayAt": "Hoje, {{time}}",
+    "changeDateTime": "Alterar data e hora",
     "saveReading": "Salvar leitura",
     "cancel": "Cancelar",
     "glucoseLevel": "Glicose ({{unit}})",
