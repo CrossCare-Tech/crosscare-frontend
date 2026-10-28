@@ -1,4 +1,9 @@
 {
+  "nav": {
+    "health": "Sante",
+    "concierge": "Konsyèj",
+    "main": "Navigasyon prensipal"
+  },
   "back": "Tounen",
   "next": "Pwochen",
   "cancel": "Anile",
