@@ -1,3 +1,4 @@
+import { withPremiumGate } from "@/components/premium/withPremiumGate";
 import React, { useEffect, useRef, useState } from "react";
 import { Animated, Easing, Image, Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
@@ -131,7 +132,7 @@ const saveSummary = async (content: string) => {
 // Full-screen call with the guide (prototype /concierge/ §4, client favourite, N-01).
 // There is no microphone yet: the patient taps a suggestion and it is "heard", and the guide answers
 // out loud with the same voices as the reply player. Live voice needs the backend (D-066).
-export default function ConciergeCall() {
+function ConciergeCall() {
   const { t, i18n } = useTranslation();
   const guide = useGuide();
   const insets = useSafeAreaInsets();
@@ -411,3 +412,5 @@ const styles = StyleSheet.create({
   },
   wideText: { fontFamily: Theme.typography.heading, fontSize: 14, color: Theme.colors.ink },
 });
+
+export default withPremiumGate(ConciergeCall);

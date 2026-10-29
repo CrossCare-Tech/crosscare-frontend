@@ -1,3 +1,4 @@
+import { withPremiumGate } from "@/components/premium/withPremiumGate";
 import React, { useRef, useState } from "react";
 import {
   Image,
@@ -23,7 +24,7 @@ export const CONCIERGE_MET_KEY = "concierge.met";
 
 // Name the guide (prototype /guide-setup/ step 4). After this the user has met her:
 // the history opens under the chat, so the chat's back arrow lands on the conversations.
-export default function ConciergeName() {
+function ConciergeName() {
   const { t } = useTranslation();
   const router = useRouter();
   const guide = useGuide();
@@ -121,3 +122,5 @@ const styles = StyleSheet.create({
   text: { height: 40, alignItems: "center", justifyContent: "center" },
   textLabel: { fontFamily: Theme.typography.heading, fontSize: 14, color: Theme.colors.magenta },
 });
+
+export default withPremiumGate(ConciergeName);
