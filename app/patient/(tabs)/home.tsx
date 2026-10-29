@@ -123,7 +123,7 @@ const Home = () => {
   const [showPregnancyModal, setShowPregnancyModal] = useState(false);
   const { progressPercentage, remainingDays, dueDate } = pregnancyProgress;
 
-  const { maxGlasses, glassCount, setGlassCount } = useWaterStore();
+  const { maxGlasses, glassCount } = useWaterStore();
   const { stepsWalked, stepGoal } = useStepsWithAutoRefresh(user?.user_id);
 
   // Add health service hooks
@@ -721,24 +721,6 @@ const Home = () => {
     if (!routines?.length) fetchRoutines?.();
   }, []);
 
-  // One-tap "+" on the water tile: same request as the Water screen
-  const addGlass = async () => {
-    if (!user?.user_id || glassCount >= maxGlasses) return;
-    const next = glassCount + 1;
-    setGlassCount(next);
-    try {
-      const response = await fetch(`${CONFIG.API_BASE_URL}/user/activity/${user.user_id}/water`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ water: next }),
-      });
-      if (!response.ok) throw new Error(`API returned status ${response.status}`);
-    } catch (error) {
-      console.error("Error adding a glass of water:", error);
-      setGlassCount(next - 1);
-    }
-  };
-
   const userName = user.user_name.split(" ")[0];
   const hour = new Date().getHours();
   const greeting =
@@ -965,17 +947,6 @@ const Home = () => {
                 bar={Theme.home.bars.water}
                 art={<WaterArt />}
                 onPress={() => router.push("/patient/water")}
-                action={
-                  <TouchableOpacity
-                    style={[styles.plus, glassCount >= maxGlasses && styles.plusDisabled]}
-                    onPress={addGlass}
-                    disabled={glassCount >= maxGlasses}
-                    accessibilityRole="button"
-                    accessibilityLabel={t("homeB.addGlass")}
-                  >
-                    <Text style={styles.plusText}>+</Text>
-                  </TouchableOpacity>
-                }
               />
               <StatTile
                 title={t("homeB.food")}
@@ -1475,29 +1446,6 @@ const styles = StyleSheet.create({
     position: "absolute",
     right: 6,
     bottom: Theme.spacing.sm,
-  },
-  plus: {
-    position: "absolute",
-    top: 36,
-    right: 12,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Theme.home.waterButton,
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 2,
-    elevation: 3,
-  },
-  plusDisabled: {
-    backgroundColor: Theme.home.waterButtonDisabled,
-    elevation: 0,
-  },
-  plusText: {
-    fontFamily: Theme.typography.heading,
-    fontSize: 24,
-    lineHeight: 28,
-    color: Theme.colors.surface,
   },
   sectionLabel: {
     fontFamily: Theme.typography.heading,
