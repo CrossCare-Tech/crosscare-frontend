@@ -68,6 +68,15 @@
     "chipWalk": "Caminhar é seguro?",
     "chipWalkQuery": "É seguro caminhar na gravidez?"
   },
+  "replyAudio": {
+    "listen": "Ouvir",
+    "preparing": "Preparando o áudio…",
+    "unavailable": "Áudio indisponível · Tentar de novo",
+    "pause": "Pausar",
+    "play": "Tocar",
+    "wave": "Posição do áudio. Toque para pular.",
+    "speed": "Velocidade {{rate}}x. Toque para mudar."
+  },
   "conciergeChat": {
     "send": "Enviar",
     "notMedical": "não é aconselhamento médico",

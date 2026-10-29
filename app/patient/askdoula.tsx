@@ -32,6 +32,8 @@ import {
 } from "@/constants/questionaireData";
 import { useSafeBack } from "@/hooks/useSafeBack";
 import { useDemoMode } from "@/utils/demo/demoMode";
+import ListenPlayer from "@/components/chat/ListenPlayer";
+import { replyAudio } from "@/utils/replyAudio";
 import ReplyMedia from "@/components/chat/ReplyMedia";
 import type { ReplyMedia as ReplyMediaItem } from "@/constants/replyMedia";
 import { cancelReminder, remindAtSixPm, saveToJournal } from "@/utils/replyMediaActions";
@@ -410,6 +412,11 @@ function AskDoulaChat() {
   const isNavigatingAwayRef = useRef(false);
 
   // 3. ADD this comprehensive go back handler function
+  // Stop reading a reply aloud when the patient leaves the chat
+  useEffect(() => () => {
+    replyAudio.stop();
+  }, []);
+
   const safeBack = useSafeBack();
   const handleGoBack = useCallback(async () => {
     try {
@@ -1183,6 +1190,7 @@ function AskDoulaChat() {
   };
 
   const speakResponse = (text: string) => {
+    replyAudio.stop(); // one voice at a time
     // Check if muted - if so, don't speak but still process
     if (effectiveMuted) {
       console.log("Voice is muted, not speaking response:", text);
@@ -2203,34 +2211,6 @@ function AskDoulaChat() {
                         message.isUser ? styles.userBubble : styles.doulaBubble,
                       ]}
                     >
-                      {!message.isUser && (
-                        <TouchableOpacity
-                          style={styles.bubbleMuteButton}
-                          onPress={() => {
-                            console.log("Pressed message ID:", message.id);
-                            console.log(
-                              "Current speaking ID:",
-                              speakingMessageId
-                            );
-                            console.log("Is speaking:", isSpeaking);
-                            speakMessage(message.id, message.content);
-                          }}
-                        >
-                          <Ionicons
-                            name={
-                              speakingMessageId === message.id && isSpeaking
-                                ? "volume-high"
-                                : "volume-medium"
-                            }
-                            size={16}
-                            color={
-                              speakingMessageId === message.id && isSpeaking
-                                ? "#E162BC"
-                                : "#CCCCCC"
-                            }
-                          />
-                        </TouchableOpacity>
-                      )}
                       {/* <Text
                         style={[
                           styles.messageText,
@@ -2256,6 +2236,13 @@ function AskDoulaChat() {
                         >
                           {message.content}
                         </Markdown>
+                      )}
+                      {!message.isUser && (
+                        <ListenPlayer
+                          messageId={message.id}
+                          text={message.content}
+                          language={currentLanguage}
+                        />
                       )}
                       {!message.isUser && !!message.media?.length && (
                         <ReplyMedia

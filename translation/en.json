@@ -82,6 +82,15 @@
     "chipWalk": "Is walking safe?",
     "chipWalkQuery": "Is it safe to walk during pregnancy?"
   },
+  "replyAudio": {
+    "listen": "Listen",
+    "preparing": "Preparing audio…",
+    "unavailable": "Audio unavailable · Retry",
+    "pause": "Pause",
+    "play": "Play",
+    "wave": "Audio position. Tap to jump.",
+    "speed": "Speed {{rate}}x. Tap to change."
+  },
   "conciergeChat": {
     "send": "Send",
     "notMedical": "not medical advice",
