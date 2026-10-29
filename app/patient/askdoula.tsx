@@ -30,6 +30,9 @@ import {
   type QuestionnaireDomain,
   type QuestionnaireResponse,
 } from "@/constants/questionaireData";
+import ReplyMedia from "@/components/chat/ReplyMedia";
+import type { ReplyMedia as ReplyMediaItem } from "@/constants/replyMedia";
+import { cancelReminder, remindAtSixPm, saveToJournal } from "@/utils/replyMediaActions";
 import QuestionnairePopup from "@/components/questionnaire/QuestionnairePopup";
 import { useQuestionnairePopup } from "@/hooks/useQuestionnairePopup";
 import { estimateTotal } from "@/utils/questionnairePopup";
@@ -76,6 +79,7 @@ interface Message {
   type: "text" | "audio";
   content: string; // text content or audio URI
   isEducational?: boolean;
+  media?: ReplyMediaItem[]; // image, video, link or follow-up buttons that came with the reply
 }
 
 // The AI Concierge is a Premium feature: without access, the patient sees why instead of the chat
@@ -177,6 +181,32 @@ function AskDoulaChat() {
     !intake.hasStarted &&
     !inviteDismissed &&
     !intakeSession;
+
+  // Reminders set from a reply, by title, so tapping the button again can cancel them
+  const replyReminders = useRef<Record<string, string>>({});
+  const handleSaveReply = async (title: string) => {
+    try {
+      await saveToJournal(user?.user_id, title);
+    } catch (error) {
+      console.warn("[chat] Could not save the reply to the journal:", error);
+      Alert.alert(t("replyMedia.saveFailed"));
+      throw error;
+    }
+  };
+  const handleRemindReply = async (title: string) => {
+    const id = await remindAtSixPm(title);
+    if (!id) {
+      Alert.alert(t("replyMedia.notificationsOff"));
+      return false;
+    }
+    replyReminders.current[title] = id;
+    return true;
+  };
+  const handleUndoRemindReply = (title: string) => {
+    const id = replyReminders.current[title];
+    if (id) cancelReminder(id);
+    delete replyReminders.current[title];
+  };
 
   const addChatMessage = (content: string, isUser: boolean) =>
     setMessages((prev) => [
@@ -2222,6 +2252,14 @@ function AskDoulaChat() {
                         >
                           {message.content}
                         </Markdown>
+                      )}
+                      {!message.isUser && !!message.media?.length && (
+                        <ReplyMedia
+                          items={message.media}
+                          onSave={handleSaveReply}
+                          onRemind={handleRemindReply}
+                          onUndoRemind={handleUndoRemindReply}
+                        />
                       )}
                     </View>
                   ) : (

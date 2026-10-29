@@ -47,6 +47,21 @@
     "finish": "Terminar",
     "skip": "Omitir esta pregunta"
   },
+  "replyMedia": {
+    "openTitle": "¿Abrir este enlace?",
+    "openMessage": "Vas a salir de CrossCare Concierge para visitar {{domain}}.",
+    "stay": "Quedarme aquí",
+    "open": "Abrir",
+    "enlarge": "Ampliar imagen",
+    "close": "Cerrar",
+    "video": "Video",
+    "saveToJournal": "Guardar en el diario",
+    "savedToJournal": "Guardado en el diario",
+    "remindMe": "Recordarme a las 6 PM",
+    "reminderSet": "Recordatorio · 6 PM",
+    "saveFailed": "No se pudo guardar en tu diario. Inténtalo de nuevo.",
+    "notificationsOff": "Activa las notificaciones para recibir recordatorios."
+  },
   "conciergeChat": {
     "send": "Enviar",
     "notMedical": "no es consejo médico",
