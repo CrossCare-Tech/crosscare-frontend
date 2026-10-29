@@ -1,6 +1,6 @@
 import React from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
-import { useRouter } from "expo-router";
+import { useSafeBack } from "@/hooks/useSafeBack";
 import { useTranslation } from "react-i18next";
 import ScreenBackground from "@/components/ui/ScreenBackground";
 import { Theme } from "@/constants/theme";
@@ -10,9 +10,8 @@ import { useGuide } from "@/constants/conciergeGuide";
 // Preview only: the real permission and live voice come later (Concierge call, N-01).
 export default function ConciergeVoice() {
   const { t } = useTranslation();
-  const router = useRouter();
   const guide = useGuide();
-  const close = () => router.back();
+  const close = useSafeBack("/patient/concierge-history");
 
   return (
     <ScreenBackground>

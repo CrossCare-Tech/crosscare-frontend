@@ -4,6 +4,19 @@
     "concierge": "Concierge",
     "main": "Main navigation"
   },
+  "avatarStudio": {
+    "title": "Avatar Selection",
+    "cancel": "Cancel",
+    "done": "Done",
+    "guide": "Guide",
+    "skinTone": "Skin tone",
+    "hairstyle": "Hairstyle",
+    "outfit": "Outfit",
+    "free": "Free",
+    "locked": "Locked",
+    "unlockHint": "Unlock: {{rule}}",
+    "unlockRule": "Unlock rule"
+  },
   "conciergeMeet": {
     "title": "CrossCare Concierge",
     "hi": "Hi, I'm",
