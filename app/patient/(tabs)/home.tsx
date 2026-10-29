@@ -704,7 +704,6 @@ const Home = () => {
 
   const [image, setImage] = React.useState<string | null>(null);
   const [appointments, setAppointments] = useState<{ title: string; date: string }[]>([]);
-  const [selectedDay, setSelectedDay] = useState(() => new Date().toDateString());
   const { routines, fetchRoutines } = useSelfCareStore();
 
   const fetchAppointments = useCallback(async () => {
@@ -742,19 +741,13 @@ const Home = () => {
   const progress = Math.min(Math.max(progressPercentage, 0), 100);
   const fruit = fruitForWeek(week);
 
-  // Sunday-to-Saturday strip for the current week, with a dot on days that have appointments
+  // Today's appointments, shown in one line under the check-in
   const today = new Date();
-  const weekDays = Array.from({ length: 7 }, (_, index) => {
-    const day = new Date(today);
-    day.setDate(today.getDate() - today.getDay() + index);
-    return day;
-  });
-  const appointmentsOn = (day: Date) =>
-    appointments.filter((item) => new Date(item.date).toDateString() === day.toDateString());
-  const selectedDate = weekDays.find((day) => day.toDateString() === selectedDay) ?? today;
-  const selectedAppointments = appointmentsOn(selectedDate);
-  const dayInfo = selectedAppointments.length
-    ? selectedAppointments
+  const todayAppointments = appointments.filter(
+    (item) => new Date(item.date).toDateString() === today.toDateString()
+  );
+  const dayInfo = todayAppointments.length
+    ? todayAppointments
         .map(
           (item) =>
             `${new Date(item.date).toLocaleTimeString(i18n.language, {
@@ -911,32 +904,10 @@ const Home = () => {
             {/* Mood check-in (prototype version B, Demo) */}
             <MoodCheckIn />
 
-            {/* This week: tap a day to see what is booked */}
-            <View style={styles.strip} accessibilityRole="radiogroup">
-              {weekDays.map((day) => {
-                const isToday = day.toDateString() === today.toDateString();
-                const isSelected = day.toDateString() === selectedDate.toDateString();
-                const booked = appointmentsOn(day).length > 0;
-                return (
-                  <TouchableOpacity
-                    key={day.toDateString()}
-                    style={[styles.day, isToday && styles.dayToday, isSelected && !isToday && styles.daySelected]}
-                    onPress={() => setSelectedDay(day.toDateString())}
-                    accessibilityRole="radio"
-                    accessibilityState={{ selected: isSelected }}
-                  >
-                    <Text style={[styles.dayName, isToday && styles.dayNameToday]}>
-                      {day.toLocaleDateString(i18n.language, { weekday: "short" })}
-                    </Text>
-                    <Text style={[styles.dayNumber, isToday && styles.dayNumberToday]}>{day.getDate()}</Text>
-                    <View style={[styles.dayDot, booked && (isToday ? styles.dayDotToday : styles.dayDotOn)]} />
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+            {/* Today: what is booked */}
             <Text style={styles.dayInfo} accessibilityLiveRegion="polite">
               <Text style={styles.dayInfoDate}>
-                {selectedDate.toLocaleDateString(i18n.language, {
+                {today.toLocaleDateString(i18n.language, {
                   weekday: "short",
                   month: "short",
                   day: "numeric",
@@ -1319,57 +1290,7 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     ...Theme.shadows.card,
   },
-  strip: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    gap: 4,
-  },
-  day: {
-    flex: 1,
-    alignItems: "center",
-    gap: 5,
-    minHeight: 56,
-    paddingTop: Theme.spacing.sm,
-    paddingBottom: 7,
-    borderRadius: 14,
-  },
-  dayToday: {
-    backgroundColor: Theme.colors.magenta,
-  },
-  daySelected: {
-    borderWidth: 1.5,
-    borderColor: Theme.colors.purple,
-  },
-  dayName: {
-    fontFamily: Theme.typography.heading,
-    fontSize: 10,
-    color: Theme.colors.inkFaint,
-  },
-  dayNameToday: {
-    color: Theme.colors.surface,
-    opacity: 0.8,
-  },
-  dayNumber: {
-    fontFamily: Theme.typography.heading,
-    fontSize: 13.5,
-    color: Theme.colors.ink,
-  },
-  dayNumberToday: {
-    color: Theme.colors.surface,
-  },
-  dayDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 3,
-  },
-  dayDotOn: {
-    backgroundColor: Theme.colors.purple,
-  },
-  dayDotToday: {
-    backgroundColor: Theme.colors.surface,
-  },
   dayInfo: {
-    marginTop: -6,
     backgroundColor: Theme.colors.tealTint,
     borderRadius: 14,
     overflow: "hidden",
