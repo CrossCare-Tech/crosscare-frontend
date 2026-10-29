@@ -86,13 +86,23 @@
     "online": "Conserje CrossCare"
   },
   "conciergeCall": {
-    "listening": "Escuchando…",
-    "sample": "“Me he sentido muy cansada últimamente.”",
+    "state_calling": "Llamando a {{name}}…",
+    "callingShort": "Llamando…",
+    "state_speaking": "Hablando…",
+    "state_listening": "Escuchando…",
+    "state_hearing": "Escuchándote…",
+    "state_thinking": "Pensando…",
+    "state_ended": "Llamada terminada",
+    "tapToSay": "Toca para decirlo en voz alta",
+    "you": "Tú",
+    "simulated": "Conversación simulada · sin necesidad de micrófono",
+    "ended": "Llamada terminada",
+    "summary": "Llamada terminada · {{time}}.",
+    "summaryTopics": "Hablamos de {{topics}}.",
     "back": "Volver al chat",
     "end": "Terminar llamada",
-    "mute": "Silenciar",
-    "unmute": "Activar micrófono",
-    "preview": "Vista previa de voz"
+    "mute": "Apagar la voz",
+    "unmute": "Encender la voz"
   },
   "conciergeName": {
     "title": "Su nombre",

@@ -86,13 +86,23 @@
     "online": "Concierge CrossCare"
   },
   "conciergeCall": {
-    "listening": "Ouvindo…",
-    "sample": "“Tenho me sentido muito cansada ultimamente.”",
+    "state_calling": "Ligando para {{name}}…",
+    "callingShort": "Ligando…",
+    "state_speaking": "Falando…",
+    "state_listening": "Ouvindo…",
+    "state_hearing": "Ouvindo você…",
+    "state_thinking": "Pensando…",
+    "state_ended": "Ligação encerrada",
+    "tapToSay": "Toque para dizer em voz alta",
+    "you": "Você",
+    "simulated": "Conversa simulada · sem precisar de microfone",
+    "ended": "Ligação encerrada",
+    "summary": "Ligação encerrada · {{time}}.",
+    "summaryTopics": "Conversamos sobre {{topics}}.",
     "back": "Voltar ao chat",
-    "end": "Encerrar chamada",
-    "mute": "Silenciar",
-    "unmute": "Ativar microfone",
-    "preview": "Prévia de voz"
+    "end": "Encerrar ligação",
+    "mute": "Desligar a voz",
+    "unmute": "Ligar a voz"
   },
   "conciergeName": {
     "title": "O nome dela",

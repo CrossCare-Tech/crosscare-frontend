@@ -100,13 +100,23 @@
     "online": "CrossCare Concierge"
   },
   "conciergeCall": {
-    "listening": "Listening…",
-    "sample": "“I have been feeling really tired lately.”",
+    "state_calling": "Calling {{name}}…",
+    "callingShort": "Calling…",
+    "state_speaking": "Speaking…",
+    "state_listening": "Listening…",
+    "state_hearing": "Hearing you…",
+    "state_thinking": "Thinking…",
+    "state_ended": "Call ended",
+    "tapToSay": "Tap to say it out loud",
+    "you": "You",
+    "simulated": "Simulated conversation · no microphone needed",
+    "ended": "Call ended",
+    "summary": "Call ended · {{time}}.",
+    "summaryTopics": "We talked about {{topics}}.",
     "back": "Back to chat",
     "end": "End call",
-    "mute": "Mute",
-    "unmute": "Unmute",
-    "preview": "Voice preview"
+    "mute": "Turn the voice off",
+    "unmute": "Turn the voice on"
   },
   "conciergeName": {
     "title": "Her name",

@@ -32,6 +32,7 @@ import {
 } from "@/constants/questionaireData";
 import { useSafeBack } from "@/hooks/useSafeBack";
 import { useDemoMode } from "@/utils/demo/demoMode";
+import { playSound } from "@/utils/callSounds";
 import ListenPlayer from "@/components/chat/ListenPlayer";
 import { replyAudio } from "@/utils/replyAudio";
 import ReplyMedia from "@/components/chat/ReplyMedia";
@@ -2415,7 +2416,10 @@ function AskDoulaChat() {
               ) : (
                 <TouchableOpacity
                   style={styles.liveButton}
-                  onPress={() => router.push("/patient/concierge-call")}
+                  onPress={() => {
+                    playSound("tap", 0.6);
+                    router.push("/patient/concierge-call");
+                  }}
                   accessibilityRole="button"
                   accessibilityLabel={t("conciergeChat.live")}
                 >
