@@ -1,15 +1,6 @@
 import React, { useState } from "react";
-import {
-  StyleSheet,
-  Text,
-  View,
-  TouchableOpacity,
-  TextInput,
-  ScrollView,
-  Pressable,
-  Platform,
-} from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Alert, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Feather } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -20,6 +11,11 @@ import {
   areMedicationRemindersEnabled,
 } from "@/utils/NotificationManager";
 import { CONFIG } from "@/constants/config";
+import { Theme } from "@/constants/theme";
+import ScreenBackground from "@/components/ui/ScreenBackground";
+import AuthTopBar from "@/components/ui/AuthTopBar";
+import CustomTextInput from "@/components/ui/CustomTextInput";
+import { AddReadingButton, fmtDate, metricStyles } from "@/components/vitals/MetricUI";
 
 interface MedicationState {
   setMedicationName: string;
@@ -32,7 +28,11 @@ interface MedicationState {
   selectedTimes: string[];
 }
 
-export default function addmedication() {
+// Day codes sent to the API, in the order of Date.getDay()
+const DAY_INDEX: Record<string, number> = { SU: 0, M: 1, T: 2, W: 3, TH: 4, F: 5, SA: 6 };
+
+// Add medication: name, dates, days of the week and dose times
+export default function AddMedicationScreen() {
   const [state, setState] = useState<MedicationState>({
     setMedicationName: "",
     selectedDays: ["T"],
@@ -45,6 +45,7 @@ export default function addmedication() {
   });
 
   const user = useSelector((state: any) => state.user);
+  const { t, i18n } = useTranslation();
 
   const days = ["SU", "M", "T", "W", "TH", "F", "SA"];
 
@@ -128,27 +129,27 @@ export default function addmedication() {
 
   const handleSubmit = async () => {
     if (!state.setMedicationName.trim()) {
-      alert("Please enter the medication name.");
+      Alert.alert(t("vitalsEntry.errorTitle"), t("medicationLog.errName"));
       return;
     }
 
     if (!state.startDate) {
-      alert("Please select a start date.");
+      Alert.alert(t("vitalsEntry.errorTitle"), t("medicationLog.errStart"));
       return;
     }
 
     if (!state.endDate) {
-      alert("Please select an end date.");
+      Alert.alert(t("vitalsEntry.errorTitle"), t("medicationLog.errEnd"));
       return;
     }
 
     if (state.selectedDays.length === 0) {
-      alert("Please select at least one day.");
+      Alert.alert(t("vitalsEntry.errorTitle"), t("medicationLog.errDays"));
       return;
     }
 
     if (state.selectedTimes.length === 0) {
-      alert("Please add at least one time.");
+      Alert.alert(t("vitalsEntry.errorTitle"), t("medicationLog.errTimes"));
       return;
     }
 
@@ -158,8 +159,8 @@ export default function addmedication() {
       const payload = {
         medicationName: state.setMedicationName,
         days: state.selectedDays,
-        startDate: state.startDate.toISOString().split("T")[0],
-        endDate: state.endDate.toISOString().split("T")[0],
+        startDate: fmtDate(state.startDate),
+        endDate: fmtDate(state.endDate),
         times: state.selectedTimes,
       };
 
@@ -227,7 +228,7 @@ export default function addmedication() {
                       const medicationId =
                         data.data?.id || data.id || "new-medication";
                       const uniqueId = `${medicationId}-${
-                        currentDate.toISOString().split("T")[0]
+                        fmtDate(currentDate)
                       }-${timeString}`;
 
                       console.log(
@@ -286,398 +287,227 @@ export default function addmedication() {
         router.back();
       } else {
         console.log("Error:", data);
-        alert("Failed to add medication!");
+        Alert.alert(t("vitalsEntry.errorTitle"), t("vitalsEntry.saveFailed"));
       }
     } catch (error: any) {
       console.log("Error occurred", error.message);
-      alert("Something went wrong!");
+      Alert.alert(t("vitalsEntry.errorTitle"), t("vitalsEntry.saveFailed"));
     }
   };
 
-  const { t } = useTranslation();
+
+  // Short weekday names in the app language (Sunday = Jan 4, 2026)
+  const dayName = (code: string) =>
+    new Date(2026, 0, 4 + DAY_INDEX[code]).toLocaleDateString(i18n.language, { weekday: "short" });
+  const dateText = (date: Date | null) =>
+    date ? date.toLocaleDateString(i18n.language, { month: "short", day: "numeric", year: "numeric" }) : null;
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <Ionicons name="chevron-back" size={20} color="black" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{t("addNewMedication")}</Text>
-        <View style={{ width: 25, height: 1 }} />
-      </View>
+    <ScreenBackground>
+      <SafeAreaView style={styles.container}>
+        <AuthTopBar title={t("medicationLog.add")} />
 
-      <ScrollView style={styles.content}>
-        <View style={{ flexDirection: "column", gap: 36 }}>
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{t("medicationName")}</Text>
-            <TextInput
-              placeholderTextColor={"#7B7B7B"}
-              placeholder={t("medicationName")}
-              style={styles.input}
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[metricStyles.content, styles.content]}>
+          <View style={styles.card}>
+            <CustomTextInput
+              label={t("medicationLog.name")}
               value={state.setMedicationName}
-              onChangeText={(text) =>
-                setState((prevState) => ({
-                  ...prevState,
-                  setMedicationName: text,
-                }))
-              }
+              onChangeText={(text) => setState((prev) => ({ ...prev, setMedicationName: text }))}
+              placeholder={t("medicationLog.namePlaceholder")}
             />
-          </View>
 
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{t("startAndEndDate")}</Text>
-            <View style={styles.dateContainer}>
-              <TouchableOpacity
-                style={styles.dateButton}
-                onPress={() => showDatePicker("start")}
-              >
-                <Text
-                  style={[
-                    styles.dateButtonText,
-                    !state.startDate && styles.dateButtonPlaceholder,
-                  ]}
-                >
-                  {state.startDate
-                    ? formatDate(state.startDate)
-                    : t("startDate")}
-                </Text>
-                <Ionicons name="calendar-outline" size={16} color="#00A884" />
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.dateButton}
-                onPress={() => showDatePicker("end")}
-              >
-                <Text
-                  style={[
-                    styles.dateButtonText,
-                    !state.endDate && styles.dateButtonPlaceholder,
-                  ]}
-                  numberOfLines={1}
-                >
-                  {state.endDate ? formatDate(state.endDate) : t("endDate")}
-                </Text>
-                <Ionicons name="calendar-outline" size={16} color="#00A884" />
-              </TouchableOpacity>
+            <Text style={styles.label}>{t("medicationLog.dates")}</Text>
+            <View style={styles.dates}>
+              {(["start", "end"] as const).map((type) => {
+                const value = type === "start" ? state.startDate : state.endDate;
+                return (
+                  <TouchableOpacity
+                    key={type}
+                    style={styles.dateField}
+                    onPress={() => showDatePicker(type)}
+                    accessibilityRole="button"
+                  >
+                    <Text style={[styles.dateText, !value && styles.placeholder]} numberOfLines={1}>
+                      {dateText(value) ?? (type === "start" ? t("medicationLog.start") : t("medicationLog.end"))}
+                    </Text>
+                    <Feather name="calendar" size={16} color={Theme.colors.inkFaint} />
+                  </TouchableOpacity>
+                );
+              })}
             </View>
-
-            {/* Date Pickers */}
-            {(state.isStartDatePickerVisible ||
-              state.isEndDatePickerVisible) && (
+            {(state.isStartDatePickerVisible || state.isEndDatePickerVisible) && (
               <DateTimePicker
-                value={
-                  state.isStartDatePickerVisible
-                    ? state.startDate || new Date()
-                    : state.endDate || new Date()
-                }
+                value={(state.isStartDatePickerVisible ? state.startDate : state.endDate) || new Date()}
                 mode="date"
                 display="default"
+                minimumDate={state.isEndDatePickerVisible && state.startDate ? state.startDate : undefined}
                 onChange={(event, selectedDate) =>
-                  handleDateConfirm(
-                    event,
-                    selectedDate,
-                    state.isStartDatePickerVisible ? "start" : "end"
-                  )
+                  handleDateConfirm(event, selectedDate, state.isStartDatePickerVisible ? "start" : "end")
                 }
               />
             )}
-          </View>
 
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{t("days")}</Text>
-            <View style={styles.daysContainer}>
-              {days.map((day) => (
-                <Pressable
-                  key={day}
-                  onPress={() => toggleDay(day)}
-                  style={styles.dayWrapper}
-                >
-                  <View
-                    style={[
-                      styles.dayButton,
-                      state.selectedDays.includes(day) &&
-                        styles.dayButtonSelected,
-                    ]}
+            <Text style={styles.label}>{t("medicationLog.days")}</Text>
+            <View style={styles.days}>
+              {days.map((day) => {
+                const selected = state.selectedDays.includes(day);
+                return (
+                  <TouchableOpacity
+                    key={day}
+                    style={[styles.day, selected && styles.dayOn]}
+                    onPress={() => toggleDay(day)}
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: selected }}
                   >
-                    {state.selectedDays.includes(day) && (
-                      <View style={styles.innerCircle} />
-                    )}
-                  </View>
-                  <Text style={styles.dayText}>{day}</Text>
-                </Pressable>
-              ))}
+                    <Text style={[styles.dayText, selected && styles.dayTextOn]}>{dayName(day)}</Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
-          </View>
 
-          {/* Time Selection */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{t("time")}</Text>
-
-            {state.selectedTimes.length === 0 ? (
-              // Show this when no times are added
+            <Text style={styles.label}>{t("medicationLog.times")}</Text>
+            <View style={styles.times}>
+              {state.selectedTimes.map((time) => (
+                <View key={time} style={styles.timeChip}>
+                  <Text style={styles.timeText}>{time}</Text>
+                  <TouchableOpacity
+                    onPress={() => removeTime(time)}
+                    accessibilityRole="button"
+                    accessibilityLabel={t("medicationLog.removeTime", { time })}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Feather name="x" size={14} color={Theme.colors.purple} />
+                  </TouchableOpacity>
+                </View>
+              ))}
               <TouchableOpacity
-                style={styles.addTimeButtonEmpty}
-                onPress={() =>
-                  setState((prev) => ({ ...prev, isTimePickerVisible: true }))
-                }
+                style={styles.addTime}
+                onPress={() => setState((prev) => ({ ...prev, isTimePickerVisible: true }))}
+                accessibilityRole="button"
               >
-                <Ionicons name="add" size={16} color="#00A991" />
-                <Text style={styles.addTimeText}>{t("addTime")}</Text>
+                <Feather name="plus" size={14} color={Theme.colors.magenta} />
+                <Text style={styles.addTimeText}>{t("medicationLog.addTime")}</Text>
               </TouchableOpacity>
-            ) : (
-              // Show this when times are added
-              <View style={styles.timeContainer}>
-                {state.selectedTimes.map((time, index) => (
-                  <View key={index} style={styles.timeChip}>
-                    <Text style={styles.timeChipText}>{time}</Text>
-                    <TouchableOpacity
-                      onPress={() => removeTime(time)}
-                      style={styles.removeTimeButton}
-                    >
-                      <Ionicons name="close" size={16} color="#00A991" />
-                    </TouchableOpacity>
-                  </View>
-                ))}
-
-                <TouchableOpacity
-                  style={styles.addTimeButton}
-                  onPress={() =>
-                    setState((prev) => ({ ...prev, isTimePickerVisible: true }))
-                  }
-                >
-                  <Ionicons name="add" size={16} color="#00A991" />
-                </TouchableOpacity>
-              </View>
-            )}
-
+            </View>
             {state.isTimePickerVisible && (
-              <DateTimePicker
-                value={new Date()}
-                mode="time"
-                display="default"
-                onChange={handleTimeConfirm}
-              />
+              <DateTimePicker value={new Date()} mode="time" display="default" onChange={handleTimeConfirm} />
             )}
           </View>
+        </ScrollView>
 
-          {/* Add Medication Button */}
-          <TouchableOpacity
-            style={styles.addMedicationButton}
-            onPress={handleSubmit}
-          >
-            <Text style={styles.addMedicationText}>{t("saveAndContinue")}</Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+        <AddReadingButton label={t("medicationLog.save")} onPress={handleSubmit} />
+      </SafeAreaView>
+    </ScreenBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-  },
-  backButton: {
-    padding: 5,
-    marginRight: 10,
-  },
-  headerTitle: {
-    fontSize: 16,
-    fontFamily: "DMSans600",
   },
   content: {
+    paddingBottom: 120,
+  },
+  card: {
+    backgroundColor: Theme.colors.surface,
+    borderWidth: 1,
+    borderColor: Theme.colors.hairline,
+    borderRadius: Theme.borderRadius.lg,
+    padding: Theme.spacing.md,
+    gap: 10,
+    ...Theme.shadows.card,
+  },
+  label: {
+    marginTop: 6,
+    fontFamily: Theme.typography.heading,
+    fontSize: 13,
+    color: Theme.colors.inkSoft,
+  },
+  dates: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  dateField: {
     flex: 1,
-    padding: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 6,
+    height: 48,
+    paddingHorizontal: 12,
+    borderRadius: Theme.borderRadius.sm,
+    borderWidth: 1,
+    borderColor: Theme.colors.inputBorder,
+    backgroundColor: Theme.colors.inputBg,
+  },
+  dateText: {
+    flex: 1,
+    fontFamily: Theme.typography.body,
+    fontSize: 14,
+    color: Theme.colors.ink,
+  },
+  placeholder: {
+    color: Theme.colors.placeholder,
+  },
+  days: {
+    flexDirection: "row",
+    gap: 6,
+  },
+  day: {
+    flex: 1,
+    height: 40,
+    borderRadius: Theme.borderRadius.sm,
+    borderWidth: 1,
+    borderColor: Theme.colors.hairline,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: Theme.colors.surface,
+  },
+  dayOn: {
+    borderColor: Theme.colors.magenta,
+    backgroundColor: Theme.colors.magentaTint,
   },
   dayText: {
-    fontSize: 14,
-    fontFamily: "Inter400",
-    color: "#7B7B7B",
+    fontFamily: Theme.typography.subheading,
+    fontSize: 11.5,
+    color: Theme.colors.inkSoft,
   },
-  input: {
-    borderWidth: 1,
-    height: 45,
-    paddingLeft: 12,
-    color: "#00A991",
-    fontSize: 14,
-    fontFamily: "Inter400",
-    borderRadius: 8,
-    borderColor: "#E5E5E5",
+  dayTextOn: {
+    color: Theme.colors.magenta,
   },
-  section: {
-    // marginBottom: 24,
-  },
-  daysContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingHorizontal: 4,
-  },
-  dayWrapper: {
-    alignItems: "center",
-    gap: 8,
-  },
-  dayButton: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: "#E0E0E0",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  dayButtonSelected: {
-    borderColor: "#00A991",
-    backgroundColor: "#00A991",
-  },
-  innerCircle: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: "white",
-  },
-  addTimeText: {
-    color: "#00A991",
-    fontSize: 14,
-    marginLeft: 4,
-    fontWeight: "500",
-  },
-  addTimeButtonEmpty: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#D9F2EF",
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-    alignSelf: "flex-start",
-  },
-  sectionTitle: {
-    fontSize: 14,
-    marginBottom: 12,
-    fontFamily: "Inter500",
-    color: "#373737",
-  },
-  dateContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    gap: 16,
-    height: 45,
-  },
-  dateButton: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderWidth: 1,
-    borderColor: "#D9F2EF",
-    borderRadius: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-  },
-  dateButtonText: {
-    fontSize: 14,
-    fontFamily: "Inter400",
-    color: "#00A991",
-  },
-  dateButtonPlaceholder: {
-    color: "#7B7B7B",
-  },
-  dayButtonText: {
-    fontSize: 16,
-    color: "#333",
-  },
-  dayButtonTextSelected: {
-    color: "white",
-  },
-  timeContainer: {
+  times: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
-    alignItems: "center",
   },
   timeChip: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#E6F6F4",
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: "#B0E4DD",
-    paddingLeft: 12,
-    paddingRight: 8,
-    borderRadius: 20,
-  },
-  timeChipText: {
-    color: "#00A991",
-    fontSize: 14,
-    fontFamily: "Inter500",
-    marginRight: 4,
-  },
-  removeTimeButton: {
-    padding: 2,
-  },
-  addTimeButton1: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#fff",
-    borderWidth: 1,
-    borderColor: "#D9F2EF",
-    padding: 8,
-    borderRadius: 20,
+    gap: 8,
     height: 36,
-    width: 36,
-    justifyContent: "center",
+    paddingHorizontal: 12,
+    borderRadius: Theme.borderRadius.sm,
+    backgroundColor: Theme.colors.purpleTint,
   },
-  timePickerIndicator: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#F5FFFD",
-    borderWidth: 1,
-    borderColor: "#D9F2EF",
-    justifyContent: "center",
-    alignItems: "center",
+  timeText: {
+    fontFamily: Theme.typography.heading,
+    fontSize: 13.5,
+    color: Theme.colors.purple,
   },
-  addTimeButton: {
-    borderWidth: 1,
-    borderColor: "#D9F2EF",
+  addTime: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#F5FFFD",
-    // paddingVertical: 12,
-    height: 40,
-    width: 40,
-    // paddingHorizontal: 14,
-    borderRadius: 20,
-  },
-  addMedicationButton: {
-    backgroundColor: "#00A991",
+    gap: 6,
+    height: 36,
+    paddingHorizontal: 12,
+    borderRadius: Theme.borderRadius.sm,
     borderWidth: 1,
-    borderColor: "#B0E4DD",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 16,
-    borderRadius: 30,
-    marginTop: 20,
-    marginBottom: 20,
+    borderStyle: "dashed",
+    borderColor: Theme.colors.magenta,
   },
-  addMedicationText: {
-    color: "white",
-    fontSize: 14,
-    fontFamily: "Inter500",
-    marginLeft: 8,
+  addTimeText: {
+    fontFamily: Theme.typography.heading,
+    fontSize: 13,
+    color: Theme.colors.magenta,
   },
 });
