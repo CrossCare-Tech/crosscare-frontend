@@ -375,7 +375,6 @@
     "reminders": "Recordatorios",
     "waterIntake": "Agua",
     "ofGlasses": "/ {{goal}} vasos",
-    "addGlass": "Añadir un vaso de agua",
     "food": "Comida",
     "ofKcal": "/ {{goal}} kcal",
     "steps": "Pasos",
@@ -823,6 +822,20 @@
     "okay": "Bien",
     "short": "Corto",
     "guide": "El sueño viene en ciclos de unos **90 minutos**; despertar al final de uno te ayuda a sentirte descansada. En el embarazo, busca dormir **de 7 a 9 horas** por noche."
+  },
+  "moodCheckIn": {
+    "title": "¿Cómo te sientes hoy?",
+    "demo": "Demostración",
+    "good": "Bien",
+    "tired": "Cansada",
+    "worried": "Preocupada",
+    "unwell": "Me siento mal",
+    "hint": "Toma dos segundos. Ayuda a tu guía a saber cómo apoyarte.",
+    "reply_good": "Qué bueno saberlo. Disfruta tu día.",
+    "reply_tired": "Es muy común en esta etapa. Descansa cuando puedas. No hace falta nada más hoy.",
+    "reply_worried": "Es normal preocuparse a veces. No estás sola, y tu guía está aquí si quieres hablarlo.",
+    "reply_unwell": "Lamento que no te sientas bien. Si tienes dolor fuerte, sangrado o dificultad para respirar, llama al 911. Para todo lo demás, tu guía puede ayudarte.",
+    "talk": "Hablar con Ask Your Doula"
   },
   "profile": {
     "readPrivacyPolicy": "Leer la Política de Privacidad completa",
