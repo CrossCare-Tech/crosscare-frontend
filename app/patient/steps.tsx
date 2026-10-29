@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Image,
   Platform,
   ScrollView,
   StyleSheet,
@@ -22,7 +21,9 @@ import { CONFIG } from "@/constants/config";
 import { Theme } from "@/constants/theme";
 import { useFitbit } from "@/zustandStore/useFitbitStore";
 import { useAppleHealth } from "@/zustandStore/useAppleHealthStore";
+import { demoWatchReaders, useDemoWatch, useDemoWatchActive } from "@/utils/demo/demoWatch";
 import ScreenBackground from "@/components/ui/ScreenBackground";
+import DeviceSourceRows from "@/components/devices/DeviceSourceRows";
 import AuthTopBar from "@/components/ui/AuthTopBar";
 import CustomTextInput from "@/components/ui/CustomTextInput";
 import { Pill, ReadingModal } from "@/components/vitals/VitalsUI";
@@ -46,7 +47,7 @@ import {
 
 WebBrowser.maybeCompleteAuthSession();
 
-type Source = "fitbit" | "apple" | "app";
+type Source = "fitbit" | "apple" | "demo" | "app";
 
 interface Day {
   date: string; // YYYY-MM-DD, the patient's day
@@ -78,20 +79,18 @@ export default function StepsScreen() {
   const [goalDraft, setGoalDraft] = useState("");
   const [goalSaving, setGoalSaving] = useState(false);
 
+  // The Demo Watch (Simulated data) feeds the screen while it is paired and steps are allowed
+  const watchActive = useDemoWatchActive();
+  const watchAllowed = useDemoWatch((state) => state.permissions.steps);
+
   const {
     isConnected: fitbitConnected,
-    isLoading: fitbitLoading,
-    connect: connectFitbit,
-    disconnect: disconnectFitbit,
     getDataForRange: getFitbitRange,
     syncStepsGoalWithBackend: syncFitbitGoal,
   } = useFitbit();
 
   const {
     isConnected: appleConnected,
-    isLoading: appleLoading,
-    connect: connectApple,
-    disconnect: disconnectApple,
     checkConnection: checkAppleConnection,
     getDataForRange: getAppleRange,
     syncStepsWithBackend: syncAppleSteps,
@@ -113,7 +112,20 @@ export default function StepsScreen() {
       const start = fmtDate(daysAgo(89));
       const end = fmtDate(new Date());
       try {
-        if (Platform.OS === "ios" && appleConnected) {
+        if (watchActive) {
+          const days = fromDevice(demoWatchReaders.steps(start, end), "demo");
+          setDeviceDays(days);
+          // Today's total goes to the (simulated) API like a real device would
+          const today = days.find((day) => day.date === end);
+          if (today) {
+            await fetch(`${CONFIG.API_BASE_URL}/user/activity/${userId}/steps`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ steps: today.steps }),
+            });
+          }
+          reload();
+        } else if (Platform.OS === "ios" && appleConnected) {
           setDeviceDays(fromDevice(await getAppleRange("activities/steps", start, end), "apple"));
           await syncAppleSteps(userId);
           await syncAppleGoal(userId);
@@ -139,7 +151,7 @@ export default function StepsScreen() {
       }
     };
     loadDevice();
-  }, [fitbitConnected, appleConnected, userId]);
+  }, [fitbitConnected, appleConnected, watchActive, watchAllowed, userId]);
 
   // Steps logged in the app (or by the Concierge) come from the activity list; the device wins on the same day
   const byDate = new Map<string, Day>();
@@ -165,25 +177,15 @@ export default function StepsScreen() {
     return new Date(`${date}T12:00:00`).toLocaleDateString(i18n.language, { month: "short", day: "numeric" });
   };
   const sourceLabel = (source: Source) =>
-    t(source === "fitbit" ? "heartLog.sourceFitbit" : source === "apple" ? "heartLog.sourceApple" : "stepsLog.sourceApp");
-
-  const toggleDevice = async (
-    name: string,
-    connected: boolean,
-    connect: () => Promise<boolean>,
-    disconnect: () => Promise<void>
-  ) => {
-    if (connected) {
-      await disconnect();
-      Alert.alert(t("stepsLog.title"), t("heartLog.disconnectedFrom", { name }));
-      return;
-    }
-    const success = await connect();
-    Alert.alert(
-      t("stepsLog.title"),
-      success ? t("heartLog.connectedTo", { name }) : t("heartLog.connectFailed", { name })
+    t(
+      source === "fitbit"
+        ? "heartLog.sourceFitbit"
+        : source === "apple"
+          ? "heartLog.sourceApple"
+          : source === "demo"
+            ? "heartLog.sourceDemo"
+            : "stepsLog.sourceApp"
     );
-  };
 
   const openGoal = () => {
     setGoalDraft(String(goal));
@@ -217,11 +219,6 @@ export default function StepsScreen() {
   const range = periodWindow(period);
   const inRange = days.filter((day) => range.contains(day.date));
   const chartMax = Math.max(goal, ...inRange.map((day) => day.steps)) * 1.1;
-
-  const devices =
-    Platform.OS === "ios"
-      ? [{ name: "Apple Health", image: require("../../assets/images/applehealth.png"), connected: appleConnected, loading: appleLoading, connect: connectApple, disconnect: disconnectApple }]
-      : [{ name: "Fitbit", image: require("../../assets/images/fitbit.png"), connected: fitbitConnected, loading: fitbitLoading, connect: connectFitbit, disconnect: disconnectFitbit }];
 
   return (
     <ScreenBackground>
@@ -303,33 +300,7 @@ export default function StepsScreen() {
 
           <SectionLabel>{t("heartLog.devices")}</SectionLabel>
           <View style={styles.card}>
-            {devices.map((device) => (
-              <View key={device.name} style={styles.row}>
-                <View style={styles.iconChip}>
-                  <Image source={device.image} style={styles.deviceImage} />
-                </View>
-                <View style={styles.rowText}>
-                  <Text style={styles.rowTitle}>{device.name}</Text>
-                  <Text style={styles.rowSub}>
-                    {device.connected ? t("heartLog.connected") : t("stepsLog.connectHint")}
-                  </Text>
-                </View>
-                <TouchableOpacity
-                  onPress={() => toggleDevice(device.name, device.connected, device.connect, device.disconnect)}
-                  disabled={device.loading}
-                  accessibilityRole="button"
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                >
-                  <Text style={styles.link}>
-                    {device.loading
-                      ? t("actions.Connecting")
-                      : device.connected
-                        ? t("actions.Disconnect")
-                        : t("actions.Connect")}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            ))}
+            <DeviceSourceRows alertTitle={t("stepsLog.title")} hint={t("stepsLog.connectHint")} />
             <TouchableOpacity
               style={[styles.row, styles.divider]}
               onPress={() => router.push({ pathname: "/patient/settings/reminder", params: { type: "steps" } })}
@@ -440,10 +411,6 @@ const styles = StyleSheet.create({
     backgroundColor: Theme.colors.surfaceSunken,
     alignItems: "center",
     justifyContent: "center",
-  },
-  deviceImage: {
-    width: 22,
-    height: 22,
   },
   link: {
     fontFamily: Theme.typography.heading,

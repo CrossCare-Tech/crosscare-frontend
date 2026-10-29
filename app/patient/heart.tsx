@@ -1,8 +1,6 @@
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
-  Image,
   Platform,
   ScrollView,
   StyleSheet,
@@ -19,8 +17,10 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as WebBrowser from "expo-web-browser";
 import { useFitbit } from "@/zustandStore/useFitbitStore";
 import { useAppleHealth } from "@/zustandStore/useAppleHealthStore";
+import { demoWatchReaders, useDemoWatch, useDemoWatchActive } from "@/utils/demo/demoWatch";
 import { Theme } from "@/constants/theme";
 import ScreenBackground from "@/components/ui/ScreenBackground";
+import DeviceSourceRows from "@/components/devices/DeviceSourceRows";
 import AuthTopBar from "@/components/ui/AuthTopBar";
 import { Tone } from "@/components/vitals/VitalsUI";
 import {
@@ -45,7 +45,7 @@ import HeartRateModal from "./modal/heartratemodal";
 
 WebBrowser.maybeCompleteAuthSession();
 
-type Source = "fitbit" | "apple" | "manual";
+type Source = "fitbit" | "apple" | "demo" | "manual";
 
 interface Reading {
   date: string; // YYYY-MM-DD
@@ -83,19 +83,14 @@ export default function HeartRateScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const { activities, loading, reload } = useActivityHistory();
 
-  const {
-    isConnected: fitbitConnected,
-    isLoading: fitbitLoading,
-    connect: connectFitbit,
-    disconnect: disconnectFitbit,
-    getHeartRateData: getFitbitHeartRateData,
-  } = useFitbit();
+  const { isConnected: fitbitConnected, getHeartRateData: getFitbitHeartRateData } = useFitbit();
+
+  // The Demo Watch (Simulated data) feeds the screen while it is paired and heart rate is allowed
+  const watchActive = useDemoWatchActive();
+  const watchAllowed = useDemoWatch((state) => state.permissions.heart);
 
   const {
     isConnected: appleConnected,
-    isLoading: appleLoading,
-    connect: connectApple,
-    disconnect: disconnectApple,
     checkConnection: checkAppleConnection,
     getHeartRateDataForRange: getAppleHeartRateData,
   } = useAppleHealth();
@@ -125,13 +120,16 @@ export default function HeartRateScreen() {
         if (appleConnected && Platform.OS === "ios") {
           readings.push(...fromDevice(await getAppleHeartRateData("month"), "apple"));
         }
+        if (watchActive) {
+          readings.push(...fromDevice(demoWatchReaders.heart(fmtDate(daysAgo(89)), fmtDate(new Date())), "demo"));
+        }
       } catch (error) {
         console.warn("Error fetching device heart rate:", error);
       }
       setDeviceReadings(readings);
     };
     loadDevices();
-  }, [fitbitConnected, appleConnected]);
+  }, [fitbitConnected, appleConnected, watchActive, watchAllowed]);
 
   // Manual readings come from the daily activity list; device readings win on the same day
   const byDate = new Map<string, Reading>();
@@ -144,24 +142,6 @@ export default function HeartRateScreen() {
   deviceReadings.forEach((reading) => byDate.set(reading.date, reading));
   const readings = [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
 
-  const toggleDevice = async (
-    name: string,
-    connected: boolean,
-    connect: () => Promise<boolean>,
-    disconnect: () => Promise<void>
-  ) => {
-    if (connected) {
-      await disconnect();
-      Alert.alert(t("heartLog.title"), t("heartLog.disconnectedFrom", { name }));
-      return;
-    }
-    const success = await connect();
-    Alert.alert(
-      t("heartLog.title"),
-      success ? t("heartLog.connectedTo", { name }) : t("heartLog.connectFailed", { name })
-    );
-  };
-
   const range = periodWindow(period);
   const inRange = readings.filter((reading) => range.contains(reading.date));
   const latest = readings.length > 0 ? readings[readings.length - 1] : null;
@@ -173,18 +153,21 @@ export default function HeartRateScreen() {
     return new Date(`${date}T12:00:00`).toLocaleDateString(i18n.language, { month: "short", day: "numeric" });
   };
   const sourceLabel = (source: Source) =>
-    t(source === "fitbit" ? "heartLog.sourceFitbit" : source === "apple" ? "heartLog.sourceApple" : "metric.enteredByYou");
+    t(
+      source === "fitbit"
+        ? "heartLog.sourceFitbit"
+        : source === "apple"
+          ? "heartLog.sourceApple"
+          : source === "demo"
+            ? "heartLog.sourceDemo"
+            : "metric.enteredByYou"
+    );
   const pill = (bpm: number) => {
     const category = getHeartCategory(bpm);
     return { label: t(`heartLog.${category.key}`), tone: category.tone };
   };
 
   const values = inRange.map((reading) => reading.bpm);
-
-  const devices =
-    Platform.OS === "ios"
-      ? [{ name: "Apple Health", image: require("../../assets/images/applehealth.png"), connected: appleConnected, loading: appleLoading, connect: connectApple, disconnect: disconnectApple }]
-      : [{ name: "Fitbit", image: require("../../assets/images/fitbit.png"), connected: fitbitConnected, loading: fitbitLoading, connect: connectFitbit, disconnect: disconnectFitbit }];
 
   return (
     <ScreenBackground>
@@ -253,33 +236,7 @@ export default function HeartRateScreen() {
 
           <SectionLabel>{t("heartLog.devices")}</SectionLabel>
           <View style={styles.card}>
-            {devices.map((device) => (
-              <View key={device.name} style={styles.row}>
-                <View style={styles.iconChip}>
-                  <Image source={device.image} style={styles.deviceImage} />
-                </View>
-                <View style={styles.rowText}>
-                  <Text style={styles.rowTitle}>{device.name}</Text>
-                  <Text style={styles.rowSub}>
-                    {device.connected ? t("heartLog.connected") : t("heartLog.connectHint")}
-                  </Text>
-                </View>
-                <TouchableOpacity
-                  onPress={() => toggleDevice(device.name, device.connected, device.connect, device.disconnect)}
-                  disabled={device.loading}
-                  accessibilityRole="button"
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                >
-                  <Text style={styles.link}>
-                    {device.loading
-                      ? t("actions.Connecting")
-                      : device.connected
-                        ? t("actions.Disconnect")
-                        : t("actions.Connect")}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            ))}
+            <DeviceSourceRows alertTitle={t("heartLog.title")} hint={t("heartLog.connectHint")} />
             <TouchableOpacity
               style={[styles.row, styles.divider]}
               onPress={() => router.push({ pathname: "/patient/settings/reminder", params: { type: "heart" } })}
@@ -357,14 +314,5 @@ const styles = StyleSheet.create({
     backgroundColor: Theme.colors.surfaceSunken,
     alignItems: "center",
     justifyContent: "center",
-  },
-  deviceImage: {
-    width: 22,
-    height: 22,
-  },
-  link: {
-    fontFamily: Theme.typography.heading,
-    fontSize: 13,
-    color: Theme.colors.magenta,
   },
 });
