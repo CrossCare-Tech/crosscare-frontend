@@ -50,7 +50,7 @@ export default function ConciergeMeet() {
           <Pressable onPress={start} accessibilityRole="button" style={styles.primary}>
             <Text style={styles.primaryText}>{t("conciergeMeet.start")}</Text>
           </Pressable>
-          <Pressable onPress={() => router.push("/avatar")} accessibilityRole="button" style={styles.text}>
+          <Pressable onPress={() => router.push("/avatar-studio")} accessibilityRole="button" style={styles.text}>
             <Text style={styles.textLabel}>{t("conciergeMeet.choose")}</Text>
           </Pressable>
         </View>

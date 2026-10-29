@@ -63,7 +63,7 @@ export default function ConciergeHistory() {
     if (id !== CURRENT_THREAD_ID) await restoreThread(id);
     openChat();
   };
-  const openSettings = () => router.push("/avatar");
+  const openSettings = () => router.push("/avatar-studio");
 
   return (
     <ScreenBackground>
