@@ -114,6 +114,7 @@ const IMAGE_ALIASES: Record<number, string[]> = {
   168443: ["Potato wedges, frozen"],
   168165: ["Raisins, dark"],
   173272: ["Egg, scrambled"],
+  170302: ["Biscuit, from fast food / restaurant"],
   170699: ["Potato, mashed"],
   173275: ["Sundae, caramel"],
   172036: ["Sundae, strawberry"],
@@ -122,11 +123,45 @@ const IMAGE_ALIASES: Record<number, string[]> = {
   2709814: ["Coleslaw, fast food / restaurant"],
 };
 
+// Pictures for foods that only come up in searches (the "fast food" results). USDA lists each of them under
+// several entries, so they are found by name
+const SEARCH_FOOD_IMAGES: { image: ImageSourcePropType; names: string[] }[] = [
+  { image: require("@/assets/images/foods/oatmeal.png"), names: ["Oatmeal", "Oatmeal, fast food"] },
+  { image: require("@/assets/images/foods/apple-pie.png"), names: ["Apple pie", "Pie, apple"] },
+  { image: require("@/assets/images/foods/milk-shake.png"), names: ["Milk shake", "Milkshake", "Shake, fast food", "Beverages, shake", "Milk shake, fast food"] },
+  { image: require("@/assets/images/foods/waffle-plain.png"), names: ["Waffle", "Waffle, plain"] },
+  { image: require("@/assets/images/foods/waffle-chocolate.png"), names: ["Chocolate waffle", "Waffle, chocolate"] },
+  { image: require("@/assets/images/foods/waffle-fruit.png"), names: ["Fruit waffle", "Waffle, fruit"] },
+  { image: require("@/assets/images/foods/pancakes-plain.png"), names: ["Pancakes", "Pancakes, plain"] },
+  { image: require("@/assets/images/foods/pancakes-chocolate.png"), names: ["Chocolate pancakes", "Pancakes, chocolate"] },
+  { image: require("@/assets/images/foods/pancakes-fruit.png"), names: ["Fruit pancakes", "Pancakes, fruit"] },
+  { image: require("@/assets/images/foods/biscuit-with-egg.png"), names: ["Biscuit with egg", "Biscuit, with egg"] },
+  { image: require("@/assets/images/foods/biscuit-with-egg-and-bacon.png"), names: ["Biscuit with egg and bacon", "Biscuit, with egg and bacon"] },
+  { image: require("@/assets/images/foods/biscuit-with-egg-and-ham.png"), names: ["Biscuit with egg and ham", "Biscuit, with egg and ham"] },
+  { image: require("@/assets/images/foods/biscuit-with-egg-and-sausage.png"), names: ["Biscuit with egg and sausage", "Biscuit, with egg and sausage"] },
+  { image: require("@/assets/images/foods/biscuit-with-crispy-chicken.png"), names: ["Biscuit with crispy chicken", "Biscuit, with crispy chicken fillet"] },
+  { image: require("@/assets/images/foods/burrito-with-beans-and-beef.png"), names: ["Burrito with beans and beef", "Burrito, with beans and beef"] },
+  { image: require("@/assets/images/foods/burrito-with-beans-and-cheese.png"), names: ["Burrito with beans and cheese", "Burrito, with beans and cheese"] },
+  { image: require("@/assets/images/foods/french-toast.png"), names: ["French toast", "French toast, fast food / restaurant"] },
+  { image: require("@/assets/images/foods/french-toast-sticks.png"), names: ["French toast sticks"] },
+  { image: require("@/assets/images/foods/cinnamon-rolls.png"), names: ["Cinnamon rolls", "Miniature cinnamon rolls"] },
+  { image: require("@/assets/images/foods/fried-shrimp.png"), names: ["Fried shrimp", "Shrimp, breaded and fried"] },
+  { image: require("@/assets/images/foods/sundae-hot-fudge.png"), names: ["Hot fudge sundae", "Sundae, hot fudge"] },
+  { image: require("@/assets/images/foods/breadsticks.png"), names: ["Breadsticks", "Breadsticks, soft"] },
+  { image: require("@/assets/images/foods/cheeseburger-slider.png"), names: ["Cheeseburger slider", "Cheeseburger slider, from fast food"] },
+  { image: require("@/assets/images/foods/hamburger-slider.png"), names: ["Hamburger slider", "Hamburger slider, from fast food"] },
+  { image: require("@/assets/images/foods/chicken-nuggets.png"), names: ["Chicken nuggets", "Chicken nuggets, from fast food"] },
+  { image: require("@/assets/images/foods/potato-tots.png"), names: ["Potato tots", "Potato tots, fast food / restaurant"] },
+  { image: require("@/assets/images/foods/french-fries.png"), names: ["French fries", "Potato, french fries"] },
+  { image: require("@/assets/images/foods/croissant-with-egg.png"), names: ["Croissant with egg", "Croissant, with egg"] },
+];
+
 const normalize = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 
 const IMAGE_BY_NAME = new Map<string, ImageSourcePropType>();
 COMMON_FOODS.forEach((food) => {
   [food.name, ...(IMAGE_ALIASES[food.fdcId] ?? [])].forEach((name) => IMAGE_BY_NAME.set(normalize(name), FOOD_IMAGES[food.fdcId]));
 });
+SEARCH_FOOD_IMAGES.forEach(({ image, names }) => names.forEach((name) => IMAGE_BY_NAME.set(normalize(name), image)));
 
 export const foodImageByName = (name?: string) => (name ? IMAGE_BY_NAME.get(normalize(name)) : undefined);
