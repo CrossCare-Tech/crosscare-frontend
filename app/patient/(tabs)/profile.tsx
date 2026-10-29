@@ -57,6 +57,13 @@ const ICONS: Record<string, React.ReactNode> = {
   premium: (
     <Path d="M12 2.5l2.2 6.8L21 11.5l-6.8 2.2L12 20.5l-2.2-6.8L3 11.5l6.8-2.2z" />
   ),
+  devices: (
+    <>
+      <Rect x="7" y="7" width="10" height="10" rx="3" />
+      <Path d="M9 7l.7-3.5h4.6L15 7M9 17l.7 3.5h4.6L15 17" />
+      <Path d="M12 10v2.2l1.5 1" />
+    </>
+  ),
   language: (
     <>
       <Circle cx="12" cy="12" r="8.5" />
@@ -286,6 +293,12 @@ const Profile = () => {
 
           <Text style={styles.sectionTitle}>{t("profile.preferences")}</Text>
           <View style={styles.card}>
+            <MenuRow
+              icon="devices"
+              title={t("devices.title")}
+              subtitle={t("devices.profileHint")}
+              onPress={() => router.push("/patient/devices")}
+            />
             <MenuRow
               icon="language"
               title={t("profile.language")}

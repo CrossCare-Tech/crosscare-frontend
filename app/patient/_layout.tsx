@@ -20,6 +20,7 @@ const PatientStack = () => {
         <Stack.Screen name='steps'/>
         <Stack.Screen name='water'/>
         <Stack.Screen name='heart'/>
+        <Stack.Screen name='devices'/>
         <Stack.Screen name='bloodpressure'/>
         <Stack.Screen name='glucose'/>
         <Stack.Screen name='mood'/>
