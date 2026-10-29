@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Image, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useSafeBack } from "@/hooks/useSafeBack";
@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 import ScreenBackground from "@/components/ui/ScreenBackground";
 import { Theme } from "@/constants/theme";
 import { AVATAR_GUIDES, AVATAR_OUTFITS, AVATAR_TONES, AvatarItem } from "@/constants/avatarCatalog";
+import { loadGuideName, saveGuideName } from "@/constants/conciergeGuide";
 import { AvatarChoice, avatarImage, useAvatarStudio } from "@/zustandStore/avatarStudioStore";
 
 type TabId = "guide" | "tone" | "hair" | "outfit";
@@ -37,6 +38,12 @@ export default function AvatarStudio() {
   }, [load]);
   useEffect(() => setDraft(saved), [saved]);
 
+  // The name the user gave the guide; empty means the picked guide's own name.
+  const [customName, setCustomName] = useState("");
+  useEffect(() => {
+    loadGuideName().then(setCustomName);
+  }, []);
+
   const guide = AVATAR_GUIDES.find((g) => g.id === draft.guide) ?? AVATAR_GUIDES[0];
   const hair = guide.hairstyles.find((h) => h.id === draft.hair) ?? guide.hairstyles[0];
   const outfit = AVATAR_OUTFITS.find((o) => o.id === draft.outfit) ?? AVATAR_OUTFITS[0];
@@ -54,6 +61,8 @@ export default function AvatarStudio() {
 
   const done = async () => {
     await save(draft);
+    // A name equal to the picked guide's own name is the default, so it is not stored as custom.
+    await saveGuideName(customName.trim() === guide.name ? "" : customName);
     leave();
   };
 
@@ -128,7 +137,17 @@ export default function AvatarStudio() {
               </View>
             )}
           </View>
-          <Text style={styles.name}>{guide.name}</Text>
+          <TextInput
+            style={styles.name}
+            value={customName}
+            onChangeText={setCustomName}
+            placeholder={guide.name}
+            placeholderTextColor={Theme.colors.placeholder}
+            maxLength={20}
+            autoCorrect={false}
+            returnKeyType="done"
+            accessibilityLabel={t("avatarStudio.nameLabel")}
+          />
           {locked ? (
             <Text style={styles.hint}>{t("avatarStudio.unlockHint", { rule: locked.text })}</Text>
           ) : (
@@ -218,7 +237,17 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: Theme.colors.magentaTint,
   },
-  name: { marginTop: Theme.spacing.sm + 4, fontFamily: Theme.typography.display, fontSize: 22, color: Theme.colors.ink },
+  name: {
+    marginTop: Theme.spacing.sm + 4,
+    minWidth: 160,
+    paddingVertical: 2,
+    textAlign: "center",
+    fontFamily: Theme.typography.display,
+    fontSize: 22,
+    color: Theme.colors.ink,
+    borderBottomWidth: 1,
+    borderBottomColor: Theme.colors.hairline,
+  },
   hint: { marginTop: 2, fontFamily: Theme.typography.body, fontSize: 13, color: Theme.colors.inkFaint, textAlign: "center", paddingHorizontal: Theme.spacing.lg },
   tabs: {
     flexDirection: "row",

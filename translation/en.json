@@ -6,6 +6,7 @@
   },
   "avatarStudio": {
     "title": "Avatar Selection",
+    "nameLabel": "Name",
     "cancel": "Cancel",
     "done": "Done",
     "guide": "Guide",
