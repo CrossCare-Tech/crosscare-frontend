@@ -98,6 +98,9 @@ export const ReadingModal = ({
   onClose,
   recordedAt = null,
   onRecordedAtChange,
+  title,
+  saveLabel,
+  showDateTime = true,
   children,
 }: {
   visible: boolean;
@@ -106,6 +109,9 @@ export const ReadingModal = ({
   onClose: () => void;
   recordedAt?: Date | null;
   onRecordedAtChange?: (value: Date | null) => void;
+  title?: string; // defaults to "Manual entry"
+  saveLabel?: string; // defaults to "Save reading"
+  showDateTime?: boolean; // goals and other settings have no date
   children: React.ReactNode;
 }) => {
   const { t, i18n } = useTranslation();
@@ -159,8 +165,9 @@ export const ReadingModal = ({
       >
         <Pressable style={styles.backdrop} onPress={onClose}>
           <Pressable style={styles.card}>
-            <Text style={styles.title}>{t("vitalsEntry.manualEntry")}</Text>
+            <Text style={styles.title}>{title ?? t("vitalsEntry.manualEntry")}</Text>
             {children}
+            {showDateTime && (
             <View style={styles.field}>
               <Text style={styles.label}>{t("vitalsEntry.dateTime")}</Text>
               <TouchableOpacity
@@ -187,6 +194,7 @@ export const ReadingModal = ({
                 />
               )}
             </View>
+            )}
             <TouchableOpacity
               style={styles.button}
               onPress={onSave}
@@ -196,7 +204,7 @@ export const ReadingModal = ({
               {loading ? (
                 <ActivityIndicator color={Theme.colors.surface} />
               ) : (
-                <Text style={styles.buttonText}>{t("vitalsEntry.saveReading")}</Text>
+                <Text style={styles.buttonText}>{saveLabel ?? t("vitalsEntry.saveReading")}</Text>
               )}
             </TouchableOpacity>
             <TouchableOpacity style={styles.cancel} onPress={onClose} accessibilityRole="button">

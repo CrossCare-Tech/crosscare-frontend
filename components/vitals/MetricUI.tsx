@@ -24,6 +24,16 @@ export const daysAgo = (n: number) => {
 };
 
 // Range of a period and the position (0 = first day, 1 = today) of a date inside it
+// The API files each day by its UTC date, so late in the evening (west of UTC) "today" there is
+// already tomorrow. Shifting its dates by that difference lines them up with the patient's day.
+export const toLocalDay = (date: string) => {
+  const shift = Math.round((Date.parse(new Date().toISOString().slice(0, 10)) - Date.parse(fmtDate(new Date()))) / 86400000);
+  if (!shift) return date;
+  const d = new Date(`${date}T12:00:00`);
+  d.setDate(d.getDate() - shift);
+  return fmtDate(d);
+};
+
 export const periodWindow = (period: Period) => {
   const days = Number(period);
   const start = fmtDate(daysAgo(days - 1));
@@ -678,3 +688,12 @@ const styles = StyleSheet.create({
     color: Theme.colors.surface,
   },
 });
+
+// Building blocks for screens that need their own hero card (e.g. Water's daily counter)
+export const metricParts = {
+  card: styles.card,
+  hero: styles.hero,
+  when: styles.when,
+  big: styles.big,
+  unit: styles.unit,
+};
