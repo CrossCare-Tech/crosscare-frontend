@@ -46,6 +46,7 @@ import { fruitForWeek } from "@/constants/babySize";
 import ScreenBackground from "@/components/ui/ScreenBackground";
 import LineIcon from "@/components/profile/LineIcon";
 import { DueArt, FoodArt, GlucoseArt, PressureArt, StepsArt, WaterArt } from "@/components/home/TileArt";
+import MoodCheckIn from "@/components/home/MoodCheckIn";
 
 
 interface Progress {
@@ -914,6 +915,9 @@ const Home = () => {
                 <Text style={styles.ringPct}>{Math.round(progress)}%</Text>
               </View>
             </LinearGradient>
+
+            {/* Mood check-in (prototype version B, Demo) */}
+            <MoodCheckIn />
 
             {/* This week: tap a day to see what is booked */}
             <View style={styles.strip} accessibilityRole="radiogroup">

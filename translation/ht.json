@@ -638,6 +638,20 @@
     "short": "Kout",
     "guide": "Dòmi vini an sik anviwon **90 minit**; leve nan fen youn ede w santi w repoze. Pandan gwosès, eseye dòmi **7 a 9 èdtan** pa nwit."
   },
+  "moodCheckIn": {
+    "title": "Kijan ou santi w jodi a?",
+    "demo": "Demonstrasyon",
+    "good": "Byen",
+    "tired": "Fatige",
+    "worried": "Enkyete",
+    "unwell": "Pa santi m byen",
+    "hint": "Sa pran de segonn. Li ede gid ou konnen kijan pou sipòte w.",
+    "reply_good": "Bèl bagay pou tande sa. Pwofite jounen w.",
+    "reply_tired": "Sa trè komen nan etap sa a. Repoze w lè w kapab. Pa bezwen anyen ankò jodi a.",
+    "reply_worried": "Li nòmal pou enkyete pafwa. Ou pa poukont ou, epi gid ou la si w vle pale sou sa.",
+    "reply_unwell": "Mwen regrèt ou pa santi w byen. Si w gen gwo doulè, senyen oswa difikilte pou respire, rele 911. Pou tout lòt bagay, gid ou ka ede w.",
+    "talk": "Pale ak Ask Your Doula"
+  },
   "profile": {
     "readPrivacyPolicy": "Li tout Politik Konfidansyalite a",
     "searchHelp": "Chèche atik èd",

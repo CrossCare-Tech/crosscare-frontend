@@ -652,6 +652,20 @@
     "short": "Short",
     "guide": "Sleep comes in cycles of about **90 minutes**; waking at the end of one helps you feel rested. In pregnancy, aim for **7 to 9 hours** a night."
   },
+  "moodCheckIn": {
+    "title": "How are you feeling today?",
+    "demo": "Demo",
+    "good": "Good",
+    "tired": "Tired",
+    "worried": "Worried",
+    "unwell": "Unwell",
+    "hint": "Takes two seconds. It helps your guide know how to support you.",
+    "reply_good": "Lovely to hear. Enjoy your day.",
+    "reply_tired": "That is very common at this stage. Rest when you can. Nothing else is needed today.",
+    "reply_worried": "It is normal to worry sometimes. You are not alone, and your guide is here if you want to talk it through.",
+    "reply_unwell": "I am sorry you do not feel well. If you have severe pain, bleeding or trouble breathing, call 911. For anything else, your guide can help.",
+    "talk": "Talk to Ask Your Doula"
+  },
   "profile": {
     "readPrivacyPolicy": "Read the full Privacy Policy",
     "searchHelp": "Search help articles",
