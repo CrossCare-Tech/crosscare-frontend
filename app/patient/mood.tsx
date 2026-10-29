@@ -1,633 +1,415 @@
-import { useState, useEffect, useMemo } from 'react';
+import React, { useEffect, useState } from "react";
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Feather } from "@expo/vector-icons";
+import Slider from "@react-native-community/slider";
+import { useSelector } from "react-redux";
+import { useTranslation } from "react-i18next";
+import { Theme } from "@/constants/theme";
+import { useMoodStore } from "@/zustandStore/useMoodStore";
+import ScreenBackground from "@/components/ui/ScreenBackground";
+import { useAuthDialog } from "@/components/ui/AuthDialog";
+import AuthTopBar from "@/components/ui/AuthTopBar";
+import { Pill, ReadingModal, Tone } from "@/components/vitals/VitalsUI";
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  StatusBar,
-  ScrollView,
-  Alert,
-  ActivityIndicator,
-  Modal,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
-import { useSelector } from 'react-redux';
-import { useMoodStore } from '@/zustandStore/useMoodStore';
-import Slider from '@react-native-community/slider';
-import { Calendar, DateData } from 'react-native-calendars';
+  AddReadingButton,
+  daysAgo,
+  fmtDate,
+  GuideNote,
+  metricParts,
+  metricStyles,
+  SectionLabel,
+  toLocalDay,
+} from "@/components/vitals/MetricUI";
 
-type MoodLevel = 'VERY_LOW' | 'LOW' | 'MODERATE' | 'HIGH' | 'VERY_HIGH';
+type MoodLevel = "VERY_LOW" | "LOW" | "MODERATE" | "HIGH" | "VERY_HIGH";
 
-const MOOD_OPTIONS: { level: MoodLevel; emoji: string; label: string; color: string }[] = [
-  { level: 'VERY_LOW', emoji: '😢', label: 'Very Low', color: '#E74C3C' },
-  { level: 'LOW', emoji: '😔', label: 'Low', color: '#E67E22' },
-  { level: 'MODERATE', emoji: '😐', label: 'Okay', color: '#F1C40F' },
-  { level: 'HIGH', emoji: '😊', label: 'Good', color: '#2ECC71' },
-  { level: 'VERY_HIGH', emoji: '😄', label: 'Great', color: '#27AE60' },
+const MOODS: { level: MoodLevel; emoji: string; tone: Tone }[] = [
+  { level: "VERY_LOW", emoji: "😢", tone: "warning" },
+  { level: "LOW", emoji: "😔", tone: "warning" },
+  { level: "MODERATE", emoji: "😐", tone: "teal" },
+  { level: "HIGH", emoji: "😊", tone: "success" },
+  { level: "VERY_HIGH", emoji: "😄", tone: "success" },
 ];
+const moodOf = (level: MoodLevel) => MOODS.find((mood) => mood.level === level) ?? MOODS[2];
 
+// Mood picker and the two 0–10 scales, shared by today's card and the edit sheet
+const MoodForm = ({
+  mood,
+  stress,
+  energy,
+  onMood,
+  onStress,
+  onEnergy,
+}: {
+  mood: MoodLevel | null;
+  stress: number;
+  energy: number;
+  onMood: (level: MoodLevel) => void;
+  onStress: (value: number) => void;
+  onEnergy: (value: number) => void;
+}) => {
+  const { t } = useTranslation();
+  const scale = (label: string, value: number, onChange: (value: number) => void) => (
+    <View style={styles.scale}>
+      <View style={styles.scaleTop}>
+        <Text style={styles.scaleLabel}>{label}</Text>
+        <Text style={styles.scaleValue}>{value}/10</Text>
+      </View>
+      <Slider
+        minimumValue={0}
+        maximumValue={10}
+        step={1}
+        value={value}
+        onValueChange={onChange}
+        minimumTrackTintColor={Theme.colors.magenta}
+        maximumTrackTintColor={Theme.colors.hairline}
+        thumbTintColor={Theme.colors.magenta}
+        accessibilityLabel={label}
+      />
+      <View style={styles.scaleEnds}>
+        <Text style={styles.scaleEnd}>{t("moodLog.low")}</Text>
+        <Text style={styles.scaleEnd}>{t("moodLog.high")}</Text>
+      </View>
+    </View>
+  );
+
+  return (
+    <>
+      <View style={styles.moods} accessibilityRole="radiogroup">
+        {MOODS.map((option) => {
+          const selected = option.level === mood;
+          return (
+            <TouchableOpacity
+              key={option.level}
+              style={[styles.mood, selected && styles.moodOn]}
+              onPress={() => onMood(option.level)}
+              accessibilityRole="radio"
+              accessibilityState={{ checked: selected }}
+            >
+              <Text style={styles.moodEmoji}>{option.emoji}</Text>
+              <Text style={[styles.moodLabel, selected && styles.moodLabelOn]}>{t(`moodLog.${option.level}`)}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+      {scale(t("moodLog.stress"), stress, onStress)}
+      {scale(t("moodLog.energy"), energy, onEnergy)}
+    </>
+  );
+};
+
+type Entry = { id: string; date: string; moodLevel: MoodLevel; stressLevel?: number; energyLevel?: number };
+
+// Mood: how she feels today, then the last 30 days
 export default function MoodScreen() {
   const user = useSelector((state: any) => state.user);
   const userId = user?.user_id;
   const token = user?.token;
+  const { t, i18n } = useTranslation();
+  const { dialog, show } = useAuthDialog();
+  const { currentMood, currentStress, currentEnergy, moodHistory, isLoading, fetchMoodHistory, logMood, updateMood, deleteMood } =
+    useMoodStore();
 
-  const {
-    currentMood,
-    currentStress,
-    currentEnergy,
-    moodHistory,
-    isLoading,
-    error,
-    setCurrentMood,
-    fetchMoodHistory,
-    logMood,
-    updateMood,
-    deleteMood,
-  } = useMoodStore();
-
-  const [localStress, setLocalStress] = useState(currentStress);
-  const [localEnergy, setLocalEnergy] = useState(currentEnergy);
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [editModalVisible, setEditModalVisible] = useState(false);
-  const [editMood, setEditMood] = useState<MoodLevel | null>(null);
+  const [mood, setMood] = useState<MoodLevel | null>(currentMood);
+  const [stress, setStress] = useState(currentStress);
+  const [energy, setEnergy] = useState(currentEnergy);
+  const [saving, setSaving] = useState(false);
+  const [editing, setEditing] = useState<Entry | null>(null);
+  const [editMood, setEditMood] = useState<MoodLevel>("MODERATE");
   const [editStress, setEditStress] = useState(5);
   const [editEnergy, setEditEnergy] = useState(5);
 
   useEffect(() => {
-    if (userId) {
-      fetchMoodHistory(userId, 30, token);
-    }
+    if (userId) fetchMoodHistory(userId, 30, token);
   }, [userId, token]);
 
-  const getMoodColor = (level: MoodLevel): string => {
-    const mood = MOOD_OPTIONS.find((m) => m.level === level);
-    return mood?.color || '#999';
-  };
+  const todayStr = fmtDate(daysAgo(0));
+  const entries: Entry[] = [...moodHistory]
+    .map((entry: any) => ({ ...entry, date: toLocalDay(entry.date) }))
+    .sort((a, b) => b.date.localeCompare(a.date));
+  const todayEntry = entries.find((entry) => entry.date === todayStr);
 
-  const calendarMarks = useMemo(() => {
-    const marks: Record<string, any> = {};
-    moodHistory.forEach((entry) => {
-      marks[entry.date] = {
-        marked: true,
-        dotColor: getMoodColor(entry.moodLevel),
-        selected: entry.date === selectedDate,
-        selectedColor: getMoodColor(entry.moodLevel) + '30',
-        selectedTextColor: '#333',
-      };
-    });
-    return marks;
-  }, [moodHistory, selectedDate]);
-
-  const selectedEntry = useMemo(() => {
-    if (!selectedDate) return null;
-    return moodHistory.find((entry) => entry.date === selectedDate) || null;
-  }, [moodHistory, selectedDate]);
-
+  // Start today's card from today's entry when there is one
   useEffect(() => {
-    setLocalStress(currentStress);
-    setLocalEnergy(currentEnergy);
-  }, [currentStress, currentEnergy]);
+    if (!todayEntry) return;
+    setMood(todayEntry.moodLevel);
+    setStress(todayEntry.stressLevel ?? 5);
+    setEnergy(todayEntry.energyLevel ?? 5);
+  }, [todayEntry?.id]);
 
-  const handleMoodSelect = (moodLevel: MoodLevel) => {
-    setCurrentMood(moodLevel);
+  const dayLabel = (date: string) => {
+    if (date === todayStr) return t("bloodPressureLog.today");
+    if (date === fmtDate(daysAgo(1))) return t("bloodPressureLog.yesterday");
+    return new Date(`${date}T12:00:00`).toLocaleDateString(i18n.language, { month: "short", day: "numeric" });
   };
 
-  const handleSaveMetrics = async () => {
+  const save = async () => {
     if (!userId) {
-      Alert.alert('Error', 'User not found. Please log in again.');
+      Alert.alert(t("vitalsEntry.errorTitle"), t("vitalsEntry.loginAgain"));
       return;
     }
-
-    if (!currentMood) {
-      Alert.alert('Error', 'Please select a mood first.');
+    if (!mood) {
+      Alert.alert(t("vitalsEntry.errorTitle"), t("moodLog.pickFirst"));
       return;
     }
-
-    const success = await logMood(userId, {
-      moodLevel: currentMood,
-      stressLevel: localStress,
-      energyLevel: localEnergy,
-    }, token);
-
-    if (success) {
-      Alert.alert('Success', 'Mood logged successfully!');
-    } else {
-      const latestError = useMoodStore.getState().error;
-      Alert.alert('Error', latestError || error || 'Failed to log mood. Please try again.');
-    }
+    setSaving(true);
+    const success = todayEntry
+      ? await updateMood(userId, todayEntry.id, { moodLevel: mood, stressLevel: stress, energyLevel: energy }, token)
+      : await logMood(userId, { moodLevel: mood, stressLevel: stress, energyLevel: energy }, token);
+    setSaving(false);
+    show({
+      variant: success ? "success" : "error",
+      title: success ? t("moodLog.title") : t("vitalsEntry.errorTitle"),
+      message: success ? t("moodLog.saved") : t("vitalsEntry.saveFailed"),
+    });
   };
 
-  const getMoodEmoji = (level: MoodLevel | null): string => {
-    const mood = MOOD_OPTIONS.find((m) => m.level === level);
-    return mood?.emoji || '😐';
+  const openEdit = (entry: Entry) => {
+    setEditMood(entry.moodLevel);
+    setEditStress(entry.stressLevel ?? 5);
+    setEditEnergy(entry.energyLevel ?? 5);
+    setEditing(entry);
   };
 
-  const handleEditPress = () => {
-    if (!selectedEntry) return;
-    setEditMood(selectedEntry.moodLevel);
-    setEditStress(selectedEntry.stressLevel || 5);
-    setEditEnergy(selectedEntry.energyLevel || 5);
-    setEditModalVisible(true);
+  const saveEdit = async () => {
+    if (!userId || !editing) return;
+    setSaving(true);
+    const success = await updateMood(
+      userId,
+      editing.id,
+      { moodLevel: editMood, stressLevel: editStress, energyLevel: editEnergy },
+      token
+    );
+    setSaving(false);
+    if (success) setEditing(null);
+    else Alert.alert(t("vitalsEntry.errorTitle"), t("vitalsEntry.saveFailed"));
   };
 
-  const handleEditSave = async () => {
-    if (!userId || !selectedEntry || !editMood) return;
-
-    const success = await updateMood(userId, selectedEntry.id, {
-      moodLevel: editMood,
-      stressLevel: editStress,
-      energyLevel: editEnergy,
-    }, token);
-
-    if (success) {
-      setEditModalVisible(false);
-      Alert.alert('Success', 'Mood updated successfully!');
-    } else {
-      const latestError = useMoodStore.getState().error;
-      Alert.alert('Error', latestError || error || 'Failed to update mood. Please try again.');
-    }
-  };
-
-  const handleDeletePress = () => {
-    if (!selectedEntry) return;
-    Alert.alert(
-      'Delete Mood',
-      `Are you sure you want to delete the mood entry for ${selectedEntry.date}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
+  // Close the edit sheet first so the confirmation is not stacked on top of it
+  const confirmDelete = () => {
+    if (!userId || !editing) return;
+    const entry = editing;
+    setEditing(null);
+    show({
+      variant: "delete",
+      title: t("moodLog.delete"),
+      message: t("moodLog.deleteConfirm", { date: dayLabel(entry.date) }),
+      buttons: [
+        { text: t("cancel"), style: "cancel" },
         {
-          text: 'Delete',
-          style: 'destructive',
+          text: t("moodLog.delete"),
           onPress: async () => {
-            if (!userId) return;
-            const success = await deleteMood(userId, selectedEntry.id, token);
-            if (success) {
-              setSelectedDate(null);
-              Alert.alert('Success', 'Mood deleted successfully!');
-            } else {
-              const latestError = useMoodStore.getState().error;
-              Alert.alert('Error', latestError || error || 'Failed to delete mood. Please try again.');
-            }
+            const success = await deleteMood(userId, entry.id, token);
+            if (!success) Alert.alert(t("vitalsEntry.errorTitle"), t("vitalsEntry.saveFailed"));
           },
         },
-      ]
-    );
+      ],
+    });
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+    <ScreenBackground>
+      <SafeAreaView style={styles.container}>
+        <AuthTopBar title={t("moodLog.title")} />
 
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="chevron-back" size={24} color="#000" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Mood Tracking</Text>
-        <View style={{ width: 24 }} />
-      </View>
-
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.currentMoodContainer}>
-          <Text style={styles.currentMoodEmoji}>{getMoodEmoji(currentMood)}</Text>
-          <Text style={styles.currentMoodLabel}>
-            {currentMood ? MOOD_OPTIONS.find((m) => m.level === currentMood)?.label : 'How are you feeling?'}
-          </Text>
-        </View>
-
-        <Text style={styles.sectionTitle}>Select Your Mood</Text>
-        <View style={styles.moodGrid}>
-          {MOOD_OPTIONS.map((mood) => (
-            <TouchableOpacity
-              key={mood.level}
-              style={[
-                styles.moodOption,
-                currentMood === mood.level && { borderColor: mood.color, borderWidth: 3 },
-              ]}
-              onPress={() => handleMoodSelect(mood.level)}
-              disabled={isLoading}
-            >
-              <Text style={styles.moodEmoji}>{mood.emoji}</Text>
-              <Text style={styles.moodLabel}>{mood.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <View style={styles.sliderSection}>
-          <Text style={styles.sliderLabel}>Stress Level: {localStress}/10</Text>
-          <Slider
-            style={styles.slider}
-            minimumValue={1}
-            maximumValue={10}
-            step={1}
-            value={localStress}
-            onValueChange={setLocalStress}
-            minimumTrackTintColor="#E74C3C"
-            maximumTrackTintColor="#DDDDDD"
-            thumbTintColor="#E74C3C"
-          />
-          <View style={styles.sliderLabels}>
-            <Text style={styles.sliderMinMax}>Low</Text>
-            <Text style={styles.sliderMinMax}>High</Text>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={metricStyles.content}>
+          <View style={[metricParts.card, metricParts.hero, styles.today]}>
+            <Text style={metricParts.when}>
+              {todayEntry ? `${t("bloodPressureLog.today")} · ${t("moodLog.logged")}` : t("bloodPressureLog.today")}
+            </Text>
+            <Text style={styles.question}>{t("moodLog.question")}</Text>
+            <MoodForm mood={mood} stress={stress} energy={energy} onMood={setMood} onStress={setStress} onEnergy={setEnergy} />
           </View>
-        </View>
 
-        <View style={styles.sliderSection}>
-          <Text style={styles.sliderLabel}>Energy Level: {localEnergy}/10</Text>
-          <Slider
-            style={styles.slider}
-            minimumValue={1}
-            maximumValue={10}
-            step={1}
-            value={localEnergy}
-            onValueChange={setLocalEnergy}
-            minimumTrackTintColor="#2ECC71"
-            maximumTrackTintColor="#DDDDDD"
-            thumbTintColor="#2ECC71"
-          />
-          <View style={styles.sliderLabels}>
-            <Text style={styles.sliderMinMax}>Low</Text>
-            <Text style={styles.sliderMinMax}>High</Text>
-          </View>
-        </View>
+          <GuideNote text={t("moodLog.guide")} />
 
-        <TouchableOpacity
-          style={styles.saveButton}
-          onPress={handleSaveMetrics}
-          disabled={isLoading}
-        >
-          {isLoading ? (
-            <ActivityIndicator color="#FFFFFF" />
+          <SectionLabel>{t("moodLog.history")}</SectionLabel>
+          {isLoading && entries.length === 0 ? (
+            <ActivityIndicator color={Theme.colors.magenta} />
+          ) : entries.length === 0 ? (
+            <Text style={styles.empty}>{t("moodLog.noHistory")}</Text>
           ) : (
-            <Text style={styles.saveButtonText}>Save Mood</Text>
+            <View style={[metricParts.card, styles.list]}>
+              {entries.map((entry, index) => {
+                const option = moodOf(entry.moodLevel);
+                return (
+                  <TouchableOpacity
+                    key={entry.id}
+                    style={[styles.row, index > 0 && styles.divider]}
+                    onPress={() => openEdit(entry)}
+                    accessibilityRole="button"
+                  >
+                    <Text style={styles.rowEmoji}>{option.emoji}</Text>
+                    <View style={styles.rowText}>
+                      <Text style={styles.rowTitle}>{dayLabel(entry.date)}</Text>
+                      <Text style={styles.rowSub}>
+                        {t("moodLog.stressValue", { value: entry.stressLevel ?? "–" })} ·{" "}
+                        {t("moodLog.energyValue", { value: entry.energyLevel ?? "–" })}
+                      </Text>
+                    </View>
+                    <Pill label={t(`moodLog.${entry.moodLevel}`)} tone={option.tone} />
+                    <Feather name="chevron-right" size={18} color={Theme.colors.inkFaint} />
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
           )}
-        </TouchableOpacity>
+        </ScrollView>
 
-        <Text style={styles.sectionTitle}>Mood History</Text>
-        <View style={styles.calendarContainer}>
-          <Calendar
-            markedDates={calendarMarks}
-            onDayPress={(day: DateData) => {
-              setSelectedDate(day.dateString === selectedDate ? null : day.dateString);
-            }}
-            theme={{
-              backgroundColor: '#FFFFFF',
-              calendarBackground: '#FFFFFF',
-              textSectionTitleColor: '#999',
-              selectedDayBackgroundColor: '#5E4FA2',
-              selectedDayTextColor: '#FFFFFF',
-              todayTextColor: '#5E4FA2',
-              dayTextColor: '#333',
-              textDisabledColor: '#D9E1E8',
-              dotColor: '#5E4FA2',
-              arrowColor: '#5E4FA2',
-              monthTextColor: '#333',
-              textDayFontSize: 14,
-              textMonthFontSize: 16,
-              textDayHeaderFontSize: 12,
-            }}
+        <AddReadingButton label={todayEntry ? t("moodLog.update") : t("moodLog.save")} onPress={save} />
+
+        <ReadingModal
+          visible={!!editing}
+          loading={saving}
+          onSave={saveEdit}
+          onClose={() => setEditing(null)}
+          title={t("moodLog.editTitle")}
+          saveLabel={t("moodLog.saveChanges")}
+          showDateTime={false}
+        >
+          {editing && <Text style={styles.editDate}>{dayLabel(editing.date)}</Text>}
+          <MoodForm
+            mood={editMood}
+            stress={editStress}
+            energy={editEnergy}
+            onMood={setEditMood}
+            onStress={setEditStress}
+            onEnergy={setEditEnergy}
           />
-        </View>
-
-        {selectedEntry && (
-          <View style={styles.dayDetailCard}>
-            <Text style={styles.dayDetailEmoji}>{getMoodEmoji(selectedEntry.moodLevel)}</Text>
-            <View style={styles.dayDetailInfo}>
-              <Text style={styles.dayDetailDate}>{selectedEntry.date}</Text>
-              <Text style={styles.dayDetailMood}>
-                {MOOD_OPTIONS.find((m) => m.level === selectedEntry.moodLevel)?.label}
-              </Text>
-              <View style={styles.dayDetailMetrics}>
-                {selectedEntry.stressLevel != null && (
-                  <Text style={styles.dayDetailMetric}>Stress: {selectedEntry.stressLevel}/10</Text>
-                )}
-                {selectedEntry.energyLevel != null && (
-                  <Text style={styles.dayDetailMetric}>Energy: {selectedEntry.energyLevel}/10</Text>
-                )}
-              </View>
-            </View>
-            <View style={styles.dayDetailActions}>
-              <TouchableOpacity style={styles.editButton} onPress={handleEditPress}>
-                <Ionicons name="pencil" size={18} color="#5E4FA2" />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.deleteButton} onPress={handleDeletePress}>
-                <Ionicons name="trash-outline" size={18} color="#E74C3C" />
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-
-        {selectedDate && !selectedEntry && (
-          <Text style={styles.noDataText}>No mood logged on this day</Text>
-        )}
-
-        {!selectedDate && moodHistory.length === 0 && (
-          <Text style={styles.noDataText}>No mood data yet. Start tracking!</Text>
-        )}
-
-        <View style={{ height: 40 }} />
-      </ScrollView>
-
-      <Modal
-        visible={editModalVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setEditModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Edit Mood</Text>
-
-            <View style={styles.moodGrid}>
-              {MOOD_OPTIONS.map((mood) => (
-                <TouchableOpacity
-                  key={mood.level}
-                  style={[
-                    styles.moodOption,
-                    editMood === mood.level && { borderColor: mood.color, borderWidth: 3 },
-                  ]}
-                  onPress={() => setEditMood(mood.level)}
-                >
-                  <Text style={styles.moodEmoji}>{mood.emoji}</Text>
-                  <Text style={styles.moodLabel}>{mood.label}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            <View style={styles.sliderSection}>
-              <Text style={styles.sliderLabel}>Stress Level: {editStress}/10</Text>
-              <Slider
-                style={styles.slider}
-                minimumValue={1}
-                maximumValue={10}
-                step={1}
-                value={editStress}
-                onValueChange={setEditStress}
-                minimumTrackTintColor="#E74C3C"
-                maximumTrackTintColor="#DDDDDD"
-                thumbTintColor="#E74C3C"
-              />
-            </View>
-
-            <View style={styles.sliderSection}>
-              <Text style={styles.sliderLabel}>Energy Level: {editEnergy}/10</Text>
-              <Slider
-                style={styles.slider}
-                minimumValue={1}
-                maximumValue={10}
-                step={1}
-                value={editEnergy}
-                onValueChange={setEditEnergy}
-                minimumTrackTintColor="#2ECC71"
-                maximumTrackTintColor="#DDDDDD"
-                thumbTintColor="#2ECC71"
-              />
-            </View>
-
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={styles.modalCancelButton}
-                onPress={() => setEditModalVisible(false)}
-              >
-                <Text style={styles.modalCancelText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.modalSaveButton}
-                onPress={handleEditSave}
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <ActivityIndicator color="#FFFFFF" />
-                ) : (
-                  <Text style={styles.modalSaveText}>Save</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-    </SafeAreaView>
+          <TouchableOpacity onPress={confirmDelete} style={styles.deleteButton} accessibilityRole="button">
+            <Feather name="trash-2" size={16} color={Theme.colors.danger} />
+            <Text style={styles.deleteText}>{t("moodLog.delete")}</Text>
+          </TouchableOpacity>
+        </ReadingModal>
+        {dialog}
+      </SafeAreaView>
+    </ScreenBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 15,
+  today: {
+    gap: 12,
   },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000',
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: 20,
-  },
-  currentMoodContainer: {
-    alignItems: 'center',
-    paddingVertical: 30,
-    backgroundColor: '#F8F9FA',
-    borderRadius: 20,
-    marginBottom: 20,
-  },
-  currentMoodEmoji: {
-    fontSize: 80,
-    marginBottom: 10,
-  },
-  currentMoodLabel: {
+  question: {
+    fontFamily: Theme.typography.display,
     fontSize: 20,
-    fontWeight: '600',
-    color: '#333',
+    lineHeight: 26,
+    color: Theme.colors.ink,
   },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 15,
-    marginTop: 10,
+  moods: {
+    flexDirection: "row",
+    gap: 6,
   },
-  moodGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    marginBottom: 20,
+  mood: {
+    flex: 1,
+    alignItems: "center",
+    gap: 4,
+    paddingVertical: 10,
+    borderRadius: Theme.borderRadius.md,
+    borderWidth: 1,
+    borderColor: Theme.colors.hairline,
+    backgroundColor: Theme.colors.surface,
   },
-  moodOption: {
-    width: '18%',
-    aspectRatio: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#F8F9FA',
-    borderRadius: 15,
-    borderWidth: 2,
-    borderColor: 'transparent',
+  moodOn: {
+    borderColor: Theme.colors.magenta,
+    backgroundColor: Theme.colors.magentaTint,
   },
   moodEmoji: {
-    fontSize: 28,
+    fontSize: 24,
   },
   moodLabel: {
-    fontSize: 10,
-    color: '#666',
-    marginTop: 4,
+    fontFamily: Theme.typography.subheading,
+    fontSize: 10.5,
+    color: Theme.colors.inkFaint,
+    textAlign: "center",
   },
-  sliderSection: {
-    marginBottom: 25,
+  moodLabelOn: {
+    color: Theme.colors.magenta,
   },
-  sliderLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#333',
-    marginBottom: 10,
+  scale: {
+    gap: 2,
   },
-  slider: {
-    width: '100%',
-    height: 40,
+  scaleTop: {
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
-  sliderLabels: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 5,
+  scaleLabel: {
+    fontFamily: Theme.typography.heading,
+    fontSize: 13.5,
+    color: Theme.colors.ink,
   },
-  sliderMinMax: {
-    fontSize: 12,
-    color: '#999',
+  scaleValue: {
+    fontFamily: Theme.typography.heading,
+    fontSize: 13.5,
+    color: Theme.colors.magenta,
   },
-  saveButton: {
-    backgroundColor: '#5E4FA2',
-    paddingVertical: 15,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginBottom: 30,
+  scaleEnds: {
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
-  saveButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
+  scaleEnd: {
+    fontFamily: Theme.typography.body,
+    fontSize: 11,
+    color: Theme.colors.inkFaint,
   },
-  calendarContainer: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 15,
-    overflow: 'hidden',
-    marginBottom: 15,
-    borderWidth: 1,
-    borderColor: '#F0F0F0',
-  },
-  dayDetailCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F8F9FA',
-    borderRadius: 15,
-    padding: 15,
-    marginBottom: 10,
-  },
-  dayDetailEmoji: {
-    fontSize: 40,
-    marginRight: 15,
-  },
-  dayDetailInfo: {
-    flex: 1,
-  },
-  dayDetailDate: {
-    fontSize: 12,
-    color: '#999',
-    marginBottom: 2,
-  },
-  dayDetailMood: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 5,
-  },
-  dayDetailMetrics: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  dayDetailMetric: {
+  empty: {
+    fontFamily: Theme.typography.body,
     fontSize: 13,
-    color: '#666',
+    color: Theme.colors.inkFaint,
   },
-  dayDetailActions: {
-    flexDirection: 'column',
-    gap: 10,
+  list: {
+    paddingHorizontal: Theme.spacing.md,
   },
-  editButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#F0EBF8',
-    alignItems: 'center',
-    justifyContent: 'center',
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    minHeight: 58,
+    paddingVertical: 10,
+  },
+  divider: {
+    borderTopWidth: 1,
+    borderTopColor: Theme.colors.hairlineLight,
+  },
+  rowEmoji: {
+    fontSize: 24,
+  },
+  rowText: {
+    flex: 1,
+    gap: 2,
+  },
+  rowTitle: {
+    fontFamily: Theme.typography.heading,
+    fontSize: 14.5,
+    color: Theme.colors.ink,
+  },
+  rowSub: {
+    fontFamily: Theme.typography.subheading,
+    fontSize: 11.5,
+    color: Theme.colors.inkFaint,
+  },
+  editDate: {
+    fontFamily: Theme.typography.heading,
+    fontSize: 15,
+    color: Theme.colors.ink,
+    marginBottom: Theme.spacing.sm,
   },
   deleteButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#FDE8E8',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    marginTop: Theme.spacing.md,
+    paddingVertical: 6,
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 20,
-    paddingBottom: 40,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 10,
-  },
-  modalCancelButton: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#DDD',
-    alignItems: 'center',
-  },
-  modalCancelText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#666',
-  },
-  modalSaveButton: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 10,
-    backgroundColor: '#5E4FA2',
-    alignItems: 'center',
-  },
-  modalSaveText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  noDataText: {
-    textAlign: 'center',
-    color: '#999',
-    fontSize: 14,
-    paddingVertical: 20,
+  deleteText: {
+    fontFamily: Theme.typography.heading,
+    fontSize: 13.5,
+    color: Theme.colors.danger,
   },
 });
