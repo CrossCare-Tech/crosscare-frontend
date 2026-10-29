@@ -30,6 +30,7 @@ import {
   type QuestionnaireDomain,
   type QuestionnaireResponse,
 } from "@/constants/questionaireData";
+import { useSafeBack } from "@/hooks/useSafeBack";
 import ReplyMedia from "@/components/chat/ReplyMedia";
 import type { ReplyMedia as ReplyMediaItem } from "@/constants/replyMedia";
 import { cancelReminder, remindAtSixPm, saveToJournal } from "@/utils/replyMediaActions";
@@ -407,6 +408,7 @@ function AskDoulaChat() {
   const isNavigatingAwayRef = useRef(false);
 
   // 3. ADD this comprehensive go back handler function
+  const safeBack = useSafeBack();
   const handleGoBack = useCallback(async () => {
     try {
       console.log(
@@ -418,7 +420,7 @@ function AskDoulaChat() {
         console.log(
           "Context save already in progress, proceeding with navigation"
         );
-        router.back();
+        safeBack();
         return true;
       }
 
@@ -595,11 +597,11 @@ function AskDoulaChat() {
       contextSavingRef.current = false;
 
       // Always proceed with navigation, even if save fails
-      router.back();
+      safeBack();
     }
 
     return true; // Indicate we handled the back press
-  }, [questionnaireManager, messages, user?.user_id, router]);
+  }, [questionnaireManager, messages, user?.user_id, router, safeBack]);
 
   useEffect(() => {
     const backAction = () => {
