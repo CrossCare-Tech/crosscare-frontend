@@ -266,7 +266,7 @@ const Profile = () => {
             <MenuRow
               icon="avatar"
               title={t("profile.avatar")}
-              onPress={() => router.push("/avatar")}
+              onPress={() => router.push("/avatar-studio")}
             />
             <MenuRow
               icon="fame"
