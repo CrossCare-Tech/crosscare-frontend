@@ -2112,7 +2112,7 @@ function AskDoulaChat() {
             accessibilityRole="button"
           >
             <View style={styles.intakeCardText}>
-              <Text style={styles.intakeCardTitle}>{intake.domain.title}</Text>
+              <Text style={styles.intakeCardTitle}>{intake.domain.description}</Text>
               <Text style={styles.intakeCardStatus}>
                 {t("questionnairePopup.cardStatus", { percent: intake.percent, min: intake.minutesLeft })}
               </Text>

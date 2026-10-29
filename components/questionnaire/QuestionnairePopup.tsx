@@ -113,7 +113,7 @@ export default function QuestionnairePopup({
               <Text style={styles.doneTitle}>{t("questionnairePopup.thanks", { name: userName })}</Text>
               <Text style={styles.doneText}>{t("questionnairePopup.thanksText")}</Text>
               <View style={styles.doneSummary}>
-                <Text style={styles.doneSummaryTitle}>{domain.title}</Text>
+                <Text style={styles.doneSummaryTitle}>{domain.description}</Text>
                 <View style={styles.doneSummaryDone}>
                   <View style={styles.dot} />
                   <Text style={styles.doneSummaryText}>{t("questionnairePopup.complete")}</Text>
@@ -145,7 +145,7 @@ export default function QuestionnairePopup({
                   <Feather name="chevron-left" size={20} color={Theme.colors.ink} />
                 </TouchableOpacity>
                 <Text style={styles.topTitle} numberOfLines={1}>
-                  {domain.title}
+                  {domain.description}
                 </Text>
                 <TouchableOpacity onPress={() => onSaveExit(snapshot())} accessibilityRole="button">
                   <Text style={styles.saveExit}>{t("questionnairePopup.saveExit")}</Text>
