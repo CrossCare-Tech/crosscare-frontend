@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   Image,
   KeyboardAvoidingView,
@@ -28,8 +28,14 @@ export default function ConciergeName() {
   const router = useRouter();
   const guide = useGuide();
   const [value, setValue] = useState("");
+  const [busy, setBusy] = useState(false);
+  const started = useRef(false);
 
   const finish = async (keepDefault: boolean) => {
+    // Opening the chat takes a moment: extra taps must not stack more chats on top.
+    if (started.current) return;
+    started.current = true;
+    setBusy(true);
     await saveGuideName(keepDefault ? "" : value);
     try {
       await AsyncStorage.setItem(CONCIERGE_MET_KEY, "true");
@@ -68,10 +74,10 @@ export default function ConciergeName() {
             <Text style={styles.hint}>{t("conciergeName.hint")}</Text>
           </ScrollView>
           <View style={styles.foot}>
-            <Pressable onPress={() => finish(false)} accessibilityRole="button" style={styles.primary}>
+            <Pressable onPress={() => finish(false)} disabled={busy} accessibilityRole="button" accessibilityState={{ busy }} style={[styles.primary, busy && styles.busy]}>
               <Text style={styles.primaryText}>{t("conciergeName.start")}</Text>
             </Pressable>
-            <Pressable onPress={() => finish(true)} accessibilityRole="button" style={styles.text}>
+            <Pressable onPress={() => finish(true)} disabled={busy} accessibilityRole="button" style={styles.text}>
               <Text style={styles.textLabel}>{t("conciergeName.keep", { name: guide.name })}</Text>
             </Pressable>
           </View>
@@ -83,6 +89,7 @@ export default function ConciergeName() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
+  busy: { opacity: 0.6 },
   flex: { flex: 1 },
   scroll: { alignItems: "center", paddingHorizontal: 24, paddingTop: Theme.spacing.lg, gap: 12 },
   hero: { width: 132, height: 132, borderRadius: 66, borderWidth: 3, borderColor: Theme.colors.surface },
