@@ -24,6 +24,7 @@ import ProfilePhoto, {
 } from "@/components/profile/ProfilePhoto";
 import { PremiumBadge } from "@/components/premium/PremiumUI";
 import { usePremiumStore } from "@/zustandStore/premiumStore";
+import { DEV_TOOLS_VISIBLE, useDemoMode } from "@/utils/demo/demoMode";
 
 const LANGUAGE_NAMES: Record<string, string> = {
   en: "English (US)",
@@ -88,6 +89,12 @@ const ICONS: Record<string, React.ReactNode> = {
       <Path d="M6 4v6a4 4 0 0 0 8 0V4M6 4H4.5M14 4h1.5" />
       <Circle cx="18.5" cy="16" r="2.2" />
       <Path d="M10 14v1a4.5 4.5 0 0 0 6.5 4" />
+    </>
+  ),
+  developer: (
+    <>
+      <Path d="M8.5 7.5 4 12l4.5 4.5M15.5 7.5 20 12l-4.5 4.5" />
+      <Path d="M13.2 5.5 10.8 18.5" />
     </>
   ),
   logout: (
@@ -168,6 +175,7 @@ const Profile = () => {
   const dispatch = useDispatch();
   const { t, i18n } = useTranslation();
   const premiumStatus = usePremiumStore((state) => state.status);
+  const demoMode = useDemoMode((state) => state.enabled);
 
   const getProfile = async () => {
     try {
@@ -320,6 +328,21 @@ const Profile = () => {
               onPress={() => router.push("/patient/profile-setting/citations")}
             />
           </View>
+
+          {DEV_TOOLS_VISIBLE && (
+            <>
+              <Text style={styles.sectionTitle}>{t("developer.title")}</Text>
+              <View style={styles.card}>
+                <MenuRow
+                  icon="developer"
+                  title={t("developer.simulatedData")}
+                  subtitle={demoMode ? t("developer.on") : t("developer.off")}
+                  isLast
+                  onPress={() => router.push("/developer")}
+                />
+              </View>
+            </>
+          )}
 
           <View style={styles.card}>
             <MenuRow

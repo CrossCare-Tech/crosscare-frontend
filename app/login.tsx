@@ -26,6 +26,7 @@ import ScreenBackground from "@/components/ui/ScreenBackground";
 import { useAuthDialog } from "@/components/ui/AuthDialog";
 import InlineNotice, { Notice } from "@/components/ui/InlineNotice";
 import { FontAwesome5, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { DEV_TOOLS_VISIBLE, useDemoMode } from "@/utils/demo/demoMode";
 
 // Logo oficial com o coração 3D e "CROSSCARE TECH" em ameixa
 const officialLogo = require("@/assets/logo/logo-full.png");
@@ -37,6 +38,7 @@ const LoginContent: FC = () => {
   const navigation = useNavigation();
   const router = useRouter();
   const dispatch = useDispatch();
+  const demoMode = useDemoMode((state) => state.enabled);
   const { dialog, show } = useAuthDialog();
   const [notice, setNotice] = useState<Notice>(null);
   const [emailError, setEmailError] = useState("");
@@ -210,11 +212,26 @@ const LoginContent: FC = () => {
         >
           {/* Header com Logo Oficial */}
           <View style={styles.header}>
-            <Image
-              source={officialLogo}
-              style={styles.logo}
-              resizeMode="contain"
-            />
+            {/* Long-press opens Developer, so demo mode can be turned on before signing in */}
+            <Pressable
+              onLongPress={DEV_TOOLS_VISIBLE ? () => router.push("/developer") : undefined}
+              delayLongPress={800}
+            >
+              <Image
+                source={officialLogo}
+                style={styles.logo}
+                resizeMode="contain"
+              />
+            </Pressable>
+            {demoMode && (
+              <TouchableOpacity
+                style={styles.demoPill}
+                onPress={() => router.push("/developer")}
+                accessibilityRole="button"
+              >
+                <Text style={styles.demoPillText}>Simulated data on · any email works</Text>
+              </TouchableOpacity>
+            )}
             <Text style={styles.title}>Welcome back</Text>
             <Text style={styles.subtitle}>
               Sign in to continue your care journey with your concierge.
@@ -385,6 +402,19 @@ const styles = StyleSheet.create({
     width: 210,
     height: 70,
     marginBottom: 16,
+  },
+  demoPill: {
+    marginTop: -6,
+    marginBottom: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 999,
+    backgroundColor: Theme.colors.purpleTint,
+  },
+  demoPillText: {
+    fontFamily: Theme.typography.heading,
+    fontSize: 11.5,
+    color: Theme.colors.purple,
   },
   title: {
     fontSize: 28,
