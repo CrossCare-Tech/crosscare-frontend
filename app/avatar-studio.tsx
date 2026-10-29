@@ -51,9 +51,12 @@ export default function AvatarStudio() {
     setDraft(next);
   };
 
+  // Opened by a link there is nothing to go back to: land on the Concierge history instead.
+  const leave = () => (router.canGoBack() ? router.back() : router.replace("/patient/concierge-history"));
+
   const done = async () => {
     await save(draft);
-    router.back();
+    leave();
   };
 
   const previewSize = Math.min(width - Theme.spacing.lg * 2, 300);
@@ -107,7 +110,7 @@ export default function AvatarStudio() {
     <ScreenBackground>
       <SafeAreaView style={styles.safe}>
         <View style={styles.header}>
-          <Pressable onPress={() => router.back()} accessibilityRole="button" hitSlop={12}>
+          <Pressable onPress={leave} accessibilityRole="button" hitSlop={12}>
             <Text style={styles.cancel}>{t("avatarStudio.cancel")}</Text>
           </Pressable>
           <Text style={styles.title} accessibilityRole="header">
