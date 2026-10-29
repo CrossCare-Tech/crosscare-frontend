@@ -8,7 +8,7 @@ import {
   parseDay,
   resetDemoDb,
 } from "./mockDb";
-import { BADGE_TEXT, ragReply } from "./mockContent";
+import { BADGE_TEXT, ragAnswer } from "./mockContent";
 
 // Answers CrossCare API requests from the demo database. Each handler returns the same shape as the
 // matching controller in crosscare-backend (file:line noted where it helps), so screens cannot tell
@@ -1051,7 +1051,7 @@ const ROUTES: [string, string, Handler][] = [
 // RAG service (CrossCare-rag): POST /chat/:userId
 const RAG_ROUTES: [string, string, Handler][] = [
   ["POST", "/chat/:userId", (db, _p, req) =>
-    ok({ success: true, response: ragReply(req.body?.query || "", req.body?.currentLanguage, db.questionResponses) })],
+    ok({ success: true, ...ragAnswer(req.body?.query || "", req.body?.currentLanguage, db.questionResponses, req.body?.conversationHistory) })],
 ];
 
 const compile = (routes: [string, string, Handler][]) =>

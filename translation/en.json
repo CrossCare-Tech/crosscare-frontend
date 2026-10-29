@@ -1706,6 +1706,8 @@
     "sourceDevice": "This phone (simulated)",
     "notSet": "Not set",
     "reset": "Reset simulated data",
+    "sampleChat": "Load sample conversation",
+    "sampleChatDone": "Sample conversation loaded. Open the Concierge to see it.",
     "resetTitle": "Reset simulated data?",
     "resetMessage": "Everything added during the demo is removed and the sample data comes back.",
     "resetConfirm": "Reset",

@@ -1663,6 +1663,8 @@
     "sourceDevice": "Este celular (simulado)",
     "notSet": "Não definido",
     "reset": "Redefinir dados simulados",
+    "sampleChat": "Carregar conversa de exemplo",
+    "sampleChatDone": "Conversa de exemplo carregada. Abra a Concierge para ver.",
     "resetTitle": "Redefinir dados simulados?",
     "resetMessage": "Tudo o que foi adicionado na demonstração será apagado e os dados de exemplo voltam.",
     "resetConfirm": "Redefinir",

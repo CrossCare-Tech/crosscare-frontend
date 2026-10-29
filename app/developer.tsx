@@ -14,11 +14,12 @@ import Toggle from "@/components/profile/Toggle";
 import { removeUser } from "@/store/userSlice";
 import { useDemoMode } from "@/utils/demo/demoMode";
 import { resetDemoDb } from "@/utils/demo/mockDb";
+import { loadSampleConversation } from "@/utils/demo/mockConversations";
 import { DemoLogEntry, getDemoLog } from "@/utils/demo/installDemoInterceptor";
 
 // Settings > Developer. Reachable from Profile and, before signing in, by long-pressing the logo on Login.
 const Developer = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const dispatch = useDispatch();
   const token = useSelector((state: any) => state.user.token);
   const enabled = useDemoMode((state) => state.enabled);
@@ -64,6 +65,12 @@ const Developer = () => {
     ]);
   };
 
+  // Puts a short earlier conversation in the Concierge chat, to show it without typing first
+  const loadSampleChat = async () => {
+    await loadSampleConversation(i18n.language);
+    Alert.alert(t("developer.sampleChatDone"));
+  };
+
   return (
     <ScreenBackground>
       <SafeAreaView style={styles.container}>
@@ -99,6 +106,12 @@ const Developer = () => {
             {enabled && (
               <TouchableOpacity style={styles.button} onPress={resetData} accessibilityRole="button">
                 <Text style={styles.buttonText}>{t("developer.reset")}</Text>
+              </TouchableOpacity>
+            )}
+
+            {enabled && (
+              <TouchableOpacity style={styles.button} onPress={loadSampleChat} accessibilityRole="button">
+                <Text style={styles.buttonText}>{t("developer.sampleChat")}</Text>
               </TouchableOpacity>
             )}
 
