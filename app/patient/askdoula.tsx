@@ -31,6 +31,7 @@ import {
   type QuestionnaireResponse,
 } from "@/constants/questionaireData";
 import { useSafeBack } from "@/hooks/useSafeBack";
+import { useDemoMode } from "@/utils/demo/demoMode";
 import ReplyMedia from "@/components/chat/ReplyMedia";
 import type { ReplyMedia as ReplyMediaItem } from "@/constants/replyMedia";
 import { cancelReminder, remindAtSixPm, saveToJournal } from "@/utils/replyMediaActions";
@@ -94,6 +95,7 @@ function AskDoulaChat() {
   const guide = useGuide();
   const [inputText, setInputText] = useState("");
   const [showOptions, setShowOptions] = useState(true);
+  const demoMode = useDemoMode((state) => state.enabled);
   const [isTyping, setIsTyping] = useState(false);
   const { t, i18n } = useTranslation();
   const currentLanguage = i18n.language;
@@ -2328,6 +2330,18 @@ function AskDoulaChat() {
             style={styles.optionsContainer}
             keyboardShouldPersistTaps="handled"
           >
+            {/* Demo mode: suggestions that answer with an image, a video or a link (see replyMedia) */}
+            {demoMode &&
+              (["Baby", "Stretch", "Walk"] as const).map((name) => (
+                <TouchableOpacity
+                  key={name}
+                  style={styles.optionButton}
+                  onPress={() => handleOptionPress(t(`replyMedia.chip${name}Query`))}
+                  disabled={isAssistantResponding}
+                >
+                  <Text style={styles.optionText}>{t(`replyMedia.chip${name}`)}</Text>
+                </TouchableOpacity>
+              ))}
             <TouchableOpacity
               style={styles.optionButton}
               onPress={() => handleOptionPress(t("options.healthStats1"))}

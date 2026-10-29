@@ -60,7 +60,13 @@
     "remindMe": "Recordarme a las 6 PM",
     "reminderSet": "Recordatorio · 6 PM",
     "saveFailed": "No se pudo guardar en tu diario. Inténtalo de nuevo.",
-    "notificationsOff": "Activa las notificaciones para recibir recordatorios."
+    "notificationsOff": "Activa las notificaciones para recibir recordatorios.",
+    "chipBaby": "¿Cómo está mi bebé?",
+    "chipBabyQuery": "¿Cómo está mi bebé?",
+    "chipStretch": "Estiramiento de espalda",
+    "chipStretchQuery": "Muéstrame un estiramiento suave de espalda",
+    "chipWalk": "¿Es seguro caminar?",
+    "chipWalkQuery": "¿Es seguro caminar durante el embarazo?"
   },
   "conciergeChat": {
     "send": "Enviar",

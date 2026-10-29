@@ -74,7 +74,13 @@
     "remindMe": "Remind me at 6 PM",
     "reminderSet": "Reminder set · 6 PM",
     "saveFailed": "Could not save to your journal. Try again.",
-    "notificationsOff": "Turn on notifications to get reminders."
+    "notificationsOff": "Turn on notifications to get reminders.",
+    "chipBaby": "How's my baby?",
+    "chipBabyQuery": "How's my baby?",
+    "chipStretch": "Gentle back stretch",
+    "chipStretchQuery": "Show me a gentle back stretch",
+    "chipWalk": "Is walking safe?",
+    "chipWalkQuery": "Is it safe to walk during pregnancy?"
   },
   "conciergeChat": {
     "send": "Send",

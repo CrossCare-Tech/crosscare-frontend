@@ -60,7 +60,13 @@
     "remindMe": "Lembrar às 18h",
     "reminderSet": "Lembrete · 18h",
     "saveFailed": "Não foi possível salvar no diário. Tente de novo.",
-    "notificationsOff": "Ative as notificações para receber lembretes."
+    "notificationsOff": "Ative as notificações para receber lembretes.",
+    "chipBaby": "Como está meu bebê?",
+    "chipBabyQuery": "Como está meu bebê?",
+    "chipStretch": "Alongamento para as costas",
+    "chipStretchQuery": "Mostre um alongamento suave para as costas",
+    "chipWalk": "Caminhar é seguro?",
+    "chipWalkQuery": "É seguro caminhar na gravidez?"
   },
   "conciergeChat": {
     "send": "Enviar",

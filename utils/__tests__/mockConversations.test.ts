@@ -43,3 +43,24 @@ describe("demo Concierge conversations", () => {
     expect(ragAnswer("heavy bleeding while walking").media).toBeUndefined();
   });
 });
+
+describe("suggestion chips in the Concierge", () => {
+  const chips: [string, string, string[]][] = [
+    ["en", "How's my baby?", ["image", "link"]],
+    ["en", "Show me a gentle back stretch", ["video", "actions"]],
+    ["en", "Is it safe to walk during pregnancy?", ["link"]],
+    ["pt", "Como está meu bebê?", ["image", "link"]],
+    ["pt", "Mostre um alongamento suave para as costas", ["video", "actions"]],
+    ["pt", "É seguro caminhar na gravidez?", ["link"]],
+    ["es", "¿Cómo está mi bebé?", ["image", "link"]],
+    ["es", "Muéstrame un estiramiento suave de espalda", ["video", "actions"]],
+    ["es", "¿Es seguro caminar durante el embarazo?", ["link"]],
+  ];
+  it.each(chips)("%s: \"%s\" answers with media", (lang, query, types) => {
+    expect(ragAnswer(query, lang).media?.map((m) => m.type)).toEqual(types);
+  });
+
+  it("does not trip the steps shortcut in the chat", () => {
+    expect(/steps|step count|walking/i.test("Is it safe to walk during pregnancy?")).toBe(false);
+  });
+});
