@@ -60,7 +60,7 @@ const FloatingMenu: React.FC<FloatingMenuProps> = ({
           
           <TouchableOpacity 
             style={styles.menuItem}
-            onPress={() => navigateTo('/avatar')}
+            onPress={() => navigateTo('/avatar-studio')}
           >
             <Text style={styles.menuText}>Avatar</Text>
           </TouchableOpacity>

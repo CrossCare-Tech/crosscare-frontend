@@ -1953,10 +1953,14 @@ function AskDoulaChat() {
           >
             <Ionicons name="chevron-back" size={18} color={Theme.colors.ink} />
           </TouchableOpacity>
-          <View>
+          <TouchableOpacity
+            onPress={() => router.push("/avatar-studio")}
+            accessibilityRole="button"
+            accessibilityLabel={t("conciergeHistory.settings")}
+          >
             <Image source={guide.portrait} style={styles.headerAvatar} />
             <View style={styles.presence} />
-          </View>
+          </TouchableOpacity>
           <View style={styles.headerText}>
             <Text style={styles.headerName}>{guide.name}</Text>
             <Text style={styles.headerSub}>{t("conciergeChat.online")}</Text>
@@ -2048,9 +2052,14 @@ function AskDoulaChat() {
         >
           {messages.length === 0 ? (
             <View style={styles.profileSection}>
-              <View style={styles.profileImageContainer}>
+              <TouchableOpacity
+                style={styles.profileImageContainer}
+                onPress={() => router.push("/avatar-studio")}
+                accessibilityRole="button"
+                accessibilityLabel={t("conciergeHistory.settings")}
+              >
                 <Image source={guide.portrait} style={styles.profileImage} />
-              </View>
+              </TouchableOpacity>
 
               <Text style={styles.greeting}>
                 <Text>👋 {t("askDoula.hi")}, </Text>
