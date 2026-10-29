@@ -594,7 +594,7 @@ const styles = StyleSheet.create({
     color: Theme.colors.inkSoft,
   },
   fruit: {
-    aspectRatio: 544 / 512,
+    aspectRatio: 1,
     resizeMode: "contain",
   },
   heroLine: {

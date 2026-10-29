@@ -1,199 +1,175 @@
 import React, { useEffect } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  StatusBar,
-} from "react-native";
-import {
-  Ionicons,
-  Feather,
-  MaterialCommunityIcons,
-  FontAwesome5,
-} from "@expo/vector-icons";
-import { router } from "expo-router";
-import { LinearGradient } from "expo-linear-gradient";
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import MoonIcon1 from "@/assets/images/Svg/MoonIcon1";
+import { Feather } from "@expo/vector-icons";
+import { router } from "expo-router";
 import { useSelector } from "react-redux";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTranslation } from "react-i18next";
+import { Theme } from "@/constants/theme";
+import ScreenBackground from "@/components/ui/ScreenBackground";
+import AuthTopBar from "@/components/ui/AuthTopBar";
+import { Pill } from "@/components/vitals/VitalsUI";
+import { GuideNote, metricParts, metricStyles, useActivityHistory } from "@/components/vitals/MetricUI";
 
+// Sleep: last night at a glance, then the log and the bedtime calculator
 const SleepScreen = () => {
   const user = useSelector((state: any) => state.user);
   const userId = user?.user_id;
+  const { t, i18n } = useTranslation();
+  const { activities } = useActivityHistory();
+
   useEffect(() => {
-    const setsleepVisited = async () => {
-      await AsyncStorage.setItem("sleep_7", "true");
-    };
-
-    setsleepVisited();
+    AsyncStorage.setItem("sleep_7", "true");
   }, [userId]);
-  const {t} = useTranslation();
+
+  // Most recent night with both a start and an end
+  const last = [...activities]
+    .reverse()
+    .map((activity) => activity.details?.sleep)
+    .find((sleep) => sleep?.start && sleep?.end);
+  const start = last ? new Date(last.start) : null;
+  const end = last ? new Date(last.end) : null;
+  const minutes = start && end ? Math.max(0, Math.round((end.getTime() - start.getTime()) / 60000)) : 0;
+  const hours = Math.floor(minutes / 60);
+  const format = (date: Date) => date.toLocaleTimeString(i18n.language, { hour: "numeric", minute: "2-digit" });
+  const enough = minutes >= 7 * 60;
+
+  const actions = [
+    {
+      key: "track",
+      icon: "moon" as const,
+      title: t("sleepLog.trackTitle"),
+      hint: t("sleepLog.trackHint"),
+      onPress: () => router.push("/patient/tracksleep"),
+    },
+    {
+      key: "bedtime",
+      icon: "clock" as const,
+      title: t("sleepLog.bedtimeTitle"),
+      hint: t("sleepLog.bedtimeHint"),
+      onPress: () => router.push("/patient/bedtime"),
+    },
+  ];
+
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#001F3E" />
+    <ScreenBackground>
+      <SafeAreaView style={styles.container}>
+        <AuthTopBar title={t("sleepScreen.sleep")} />
 
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <Ionicons name="chevron-back" size={20} color="white" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{t('sleepScreen.sleep')}</Text>
-        <TouchableOpacity style={styles.menuButton}>
-          <Feather name="more-vertical" size={20} color="#E5E5E5" />
-        </TouchableOpacity>
-      </View>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={metricStyles.content}>
+          <View style={[metricParts.card, metricParts.hero, styles.hero]}>
+            <Text style={metricParts.when}>{t("sleepLog.lastNight")}</Text>
+            {start && end ? (
+              <>
+                <View style={styles.countRow}>
+                  <Text style={metricParts.big}>{hours}</Text>
+                  <Text style={metricParts.unit}>h</Text>
+                  <Text style={metricParts.big}>{String(minutes % 60).padStart(2, "0")}</Text>
+                  <Text style={metricParts.unit}>min</Text>
+                </View>
+                <View style={styles.metaRow}>
+                  <Pill label={enough ? t("sleepLog.goodNight") : t("sleepLog.shortNight")} tone={enough ? "success" : "warning"} />
+                  <Text style={styles.range}>
+                    {format(start)} – {format(end)}
+                  </Text>
+                </View>
+              </>
+            ) : (
+              <Text style={styles.empty}>{t("sleepLog.noNights")}</Text>
+            )}
+          </View>
 
-      {/* Main Content */}
-      {/* Action Buttons */}
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity
-          style={styles.button}
-          onPress={() => router.push("/patient/tracksleep")}
-        >
-          <Text style={styles.buttonText}>{t('sleepScreen.trackSleep')}</Text>
-        </TouchableOpacity>
+          <View style={[metricParts.card, styles.list]}>
+            {actions.map((action, index) => (
+              <TouchableOpacity
+                key={action.key}
+                style={[styles.row, index > 0 && styles.divider]}
+                onPress={action.onPress}
+                accessibilityRole="button"
+              >
+                <View style={styles.iconChip}>
+                  <Feather name={action.icon} size={18} color={Theme.colors.purple} />
+                </View>
+                <View style={styles.flex}>
+                  <Text style={styles.rowTitle}>{action.title}</Text>
+                  <Text style={styles.rowSub}>{action.hint}</Text>
+                </View>
+                <Feather name="chevron-right" size={18} color={Theme.colors.inkFaint} />
+              </TouchableOpacity>
+            ))}
+          </View>
 
-        <TouchableOpacity
-          style={styles.button}
-          onPress={() => router.push("/patient/bedtime")}
-        >
-          <Text style={styles.buttonText} numberOfLines={1}>{t('sleepScreen.bedTimeCalculator')}</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View
-        style={{
-          position: "absolute",
-          zIndex: 99,
-          left: 0,
-          bottom: 0,
-        }}
-      >
-        <MoonIcon1 />
-      </View>
-    </SafeAreaView>
+          <GuideNote text={t("sleepLog.guide")} />
+        </ScrollView>
+      </SafeAreaView>
+    </ScreenBackground>
   );
 };
+
+export default SleepScreen;
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#001F3E",
   },
-  header: {
+  flex: {
+    flex: 1,
+  },
+  hero: {
+    gap: 10,
+  },
+  countRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    gap: 6,
+  },
+  metaRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
   },
-  backButton: {
-    padding: 8,
+  range: {
+    fontFamily: Theme.typography.subheading,
+    fontSize: 13,
+    color: Theme.colors.inkFaint,
   },
-  headerTitle: {
-    fontSize: 16,
-    color: "white",
-    fontFamily: "DMSans600",
+  empty: {
+    fontFamily: Theme.typography.body,
+    fontSize: 14,
+    lineHeight: 20,
+    color: Theme.colors.inkSoft,
   },
-  content: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 24,
+  list: {
+    paddingHorizontal: Theme.spacing.md,
   },
-  moonContainer: {
-    width: 200,
-    height: 200,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 40,
-    position: "relative",
-  },
-  moon: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: "#0A2647",
-    justifyContent: "center",
-    alignItems: "center",
-    transform: [{ rotate: "-30deg" }],
-  },
-  moonInner: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: "#001B3D",
-    transform: [{ translateX: 15 }],
-  },
-  star1: {
-    position: "absolute",
-    width: 4,
-    height: 4,
-    backgroundColor: "#FFB84C",
-    borderRadius: 2,
-    top: "30%",
-    right: "30%",
-  },
-  star2: {
-    position: "absolute",
-    width: 6,
-    height: 6,
-    backgroundColor: "#FFB84C",
-    borderRadius: 3,
-    bottom: "35%",
-    left: "35%",
-  },
-  menuButton: {
-    padding: 8,
-  },
-  buttonContainer: {
-    marginHorizontal: 70,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 32,
-    marginBottom: 30,
-    flex: 1,
-  },
-  button: {
-    width: "100%",
-    height: 46,
-    borderRadius: 28,
-    overflow: "hidden",
-    borderWidth: 2,
-
-    justifyContent: "center",
-    alignItems: "center",
-    borderColor: "#FFD764",
-  },
-
-  buttonText: {
-    color: "white",
-    fontSize: 16,
-  },
-  bottomNav: {
+  row: {
     flexDirection: "row",
-    justifyContent: "space-around",
     alignItems: "center",
-    paddingVertical: 12,
-    backgroundColor: "#002451",
-    borderTopWidth: 1,
-    borderTopColor: "#003471",
+    gap: 12,
+    minHeight: 64,
+    paddingVertical: 10,
   },
-  navItem: {
+  divider: {
+    borderTopWidth: 1,
+    borderTopColor: Theme.colors.hairlineLight,
+  },
+  iconChip: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: Theme.colors.surfaceSunken,
     alignItems: "center",
     justifyContent: "center",
   },
-  navText: {
-    color: "#6B7280",
-    fontSize: 12,
-    marginTop: 4,
+  rowTitle: {
+    fontFamily: Theme.typography.heading,
+    fontSize: 15,
+    color: Theme.colors.ink,
+  },
+  rowSub: {
+    fontFamily: Theme.typography.subheading,
+    fontSize: 11.5,
+    color: Theme.colors.inkFaint,
   },
 });
-
-export default SleepScreen;

@@ -3,7 +3,7 @@ import { Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from "reac
 import { Feather } from "@expo/vector-icons";
 import { Theme } from "@/constants/theme";
 
-type DialogVariant = "error" | "success" | "info";
+type DialogVariant = "error" | "success" | "info" | "delete";
 
 interface DialogButton {
   text: string;
@@ -20,12 +20,14 @@ interface DialogOptions {
 
 const VARIANTS: Record<
   DialogVariant,
-  { icon: "alert-triangle" | "check" | "info"; background: string; color: string }
+  { icon: "alert-triangle" | "check" | "info" | "trash-2"; background: string; color: string }
 > = {
   // Caution look from the design system: dark icon on yellow, no red.
   error: { icon: "alert-triangle", background: Theme.colors.caution, color: Theme.colors.ink },
   success: { icon: "check", background: Theme.colors.successTint, color: Theme.colors.success },
   info: { icon: "info", background: Theme.colors.purpleTint, color: Theme.colors.purple },
+  // Confirming a deletion, in the palette: magenta trash on the magenta tint
+  delete: { icon: "trash-2", background: Theme.colors.magentaTint, color: Theme.colors.magenta },
 };
 
 // Drop-in replacement for Alert.alert: render `dialog` once in the screen and call `show`.

@@ -1,19 +1,12 @@
-// SleepLogModal.tsx
 import React, { useState, useEffect } from "react";
-import {
-  Modal,
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  TouchableWithoutFeedback,
-  Platform,
-} from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Feather } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
 import { CONFIG } from "@/constants/config";
+import { Theme } from "@/constants/theme";
+import { ReadingModal } from "@/components/vitals/VitalsUI";
 
 interface SleepLogModalProps {
   isVisible: boolean;
@@ -22,6 +15,7 @@ interface SleepLogModalProps {
   reload: () => void;
 }
 
+// Add a night: the date, when she fell asleep and when she woke up
 const SleepLogModal: React.FC<SleepLogModalProps> = ({
   isVisible,
   onClose,
@@ -33,7 +27,7 @@ const SleepLogModal: React.FC<SleepLogModalProps> = ({
     new Date(new Date().setHours(23, 0, 0, 0))
   );
 
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [wakeTime, setWakeTime] = useState(
     new Date(new Date().setHours(9, 0, 0, 0))
   );
@@ -66,11 +60,13 @@ const SleepLogModal: React.FC<SleepLogModalProps> = ({
     return `${year}-${month}-${day}`;
   };
 
+  const [saving, setSaving] = useState(false);
   const handleSave = async () => {
+    setSaving(true);
+    try {
     const Date = formatDate(date);
     const Time = formatTime(sleepTime);
     const End = formatTime(wakeTime);
-    console.log(Date, Time, End);
     const response = await fetch(
       `${CONFIG.API_BASE_URL}/user/activity/${user.user_id}/sleep`,
       {
@@ -85,11 +81,14 @@ const SleepLogModal: React.FC<SleepLogModalProps> = ({
         }),
       }
     );
-    const data = await response.json();
-    console.log(data);
+    await response.json();
     reload();
-    // onSave(date, sleepTime, wakeTime);
     onClose();
+    } catch (error) {
+      console.warn("Error saving sleep log:", error);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const onChangeSleepTime = (event: any, selectedDate?: Date) => {
@@ -158,220 +157,78 @@ const SleepLogModal: React.FC<SleepLogModalProps> = ({
     if (pickerType === "wake") setShowWakePicker(true);
   };
 
+  const timeText = (value: Date) => value.toLocaleTimeString(i18n.language, { hour: "numeric", minute: "2-digit" });
+  const dateText = (value: Date) => value.toLocaleDateString(i18n.language, { weekday: "short", month: "short", day: "numeric" });
+  const fields: { key: "date" | "sleep" | "wake"; label: string; value: string; icon: "calendar" | "moon" | "sun" }[] = [
+    { key: "date", label: t("sleepLog.date"), value: dateText(date), icon: "calendar" },
+    { key: "sleep", label: t("sleepLog.fellAsleep"), value: timeText(sleepTime), icon: "moon" },
+    { key: "wake", label: t("sleepLog.wokeUp"), value: timeText(wakeTime), icon: "sun" },
+  ];
+
   return (
-    <Modal
-      animationType="fade"
-      transparent={true}
+    <ReadingModal
       visible={isVisible}
-      onRequestClose={onClose}
+      loading={saving}
+      onSave={handleSave}
+      onClose={onClose}
+      title={t("sleepLog.addLog")}
+      saveLabel={t("sleepLog.saveLog")}
+      showDateTime={false}
     >
-      <TouchableWithoutFeedback onPress={onClose}>
-        <View style={styles.modalOverlay}>
-          <TouchableWithoutFeedback onPress={(e) => e.stopPropagation()}>
-            <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>{t("sleepScreen.logAdded")}</Text>
-
-              {/* Date Selector */}
-              <TouchableOpacity
-                style={styles.dateSelector}
-                onPress={() => showPicker("date")}
-              >
-                <Text style={styles.dateSelectorText}>
-                  {date.toDateString() === new Date().toDateString()
-                    ? "Today"
-                    : formatDate(date)}
-                </Text>
-                <Ionicons name="chevron-down" size={16} color="#E5E5E5" />
-              </TouchableOpacity>
-
-              {/* Time Selectors */}
-              <View style={styles.timeSelectors}>
-                <View style={styles.timeColumn}>
-                  <Text style={styles.timeLabel}>{t("sleepScreen.sleep")}</Text>
-                  <TouchableOpacity
-                    style={styles.timeButton}
-                    onPress={() => showPicker("sleep")}
-                  >
-                    <Text style={styles.timeText}>{formatTime(sleepTime)}</Text>
-                  </TouchableOpacity>
-                </View>
-
-                <View style={styles.timeColumn}>
-                  <Text style={styles.timeLabel}>{t("sleepScreen.wake")}</Text>
-                  <TouchableOpacity
-                    style={styles.timeButton}
-                    onPress={() => showPicker("wake")}
-                  >
-                    <Text style={styles.timeText}>{formatTime(wakeTime)}</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              {/* Action Buttons */}
-              <View style={styles.actionButtons}>
-                <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
-                  <Text style={styles.cancelButtonText}>{t("cancel")}</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.saveButton}
-                  onPress={handleSave}
-                >
-                  <Text style={styles.saveButtonText} numberOfLines={1}>
-                    {t("stepScreen.saveGoal")}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
-              {/* Date Picker - Only render when visible */}
-              {showDatePicker && (
-                <DateTimePicker
-                  testID="datePicker"
-                  value={date}
-                  mode="date"
-                  display={Platform.OS === "ios" ? "spinner" : "default"}
-                  onChange={onChangeDate}
-                />
-              )}
-
-              {/* Sleep Time Picker - Only render when visible */}
-              {showSleepPicker && (
-                <DateTimePicker
-                  testID="sleepTimePicker"
-                  value={sleepTime}
-                  mode="time"
-                  is24Hour={false}
-                  display={Platform.OS === "ios" ? "spinner" : "default"}
-                  onChange={onChangeSleepTime}
-                />
-              )}
-
-              {/* Wake Time Picker - Only render when visible */}
-              {showWakePicker && (
-                <DateTimePicker
-                  testID="wakeTimePicker"
-                  value={wakeTime}
-                  mode="time"
-                  is24Hour={false}
-                  display={Platform.OS === "ios" ? "spinner" : "default"}
-                  onChange={onChangeWakeTime}
-                />
-              )}
-            </View>
-          </TouchableWithoutFeedback>
+      {fields.map((field) => (
+        <View key={field.key} style={styles.field}>
+          <Text style={styles.label}>{field.label}</Text>
+          <TouchableOpacity style={styles.input} onPress={() => showPicker(field.key)} accessibilityRole="button">
+            <Text style={styles.value}>{field.value}</Text>
+            <Feather name={field.icon} size={16} color={Theme.colors.inkFaint} />
+          </TouchableOpacity>
         </View>
-      </TouchableWithoutFeedback>
-    </Modal>
+      ))}
+      {showDatePicker && (
+        <DateTimePicker
+          value={date}
+          mode="date"
+          maximumDate={new Date()}
+          display={Platform.OS === "ios" ? "spinner" : "default"}
+          onChange={onChangeDate}
+        />
+      )}
+      {showSleepPicker && (
+        <DateTimePicker value={sleepTime} mode="time" display={Platform.OS === "ios" ? "spinner" : "default"} onChange={onChangeSleepTime} />
+      )}
+      {showWakePicker && (
+        <DateTimePicker value={wakeTime} mode="time" display={Platform.OS === "ios" ? "spinner" : "default"} onChange={onChangeWakeTime} />
+      )}
+    </ReadingModal>
   );
 };
 
+export default SleepLogModal;
+
 const styles = StyleSheet.create({
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
+  field: {
+    marginBottom: Theme.spacing.md,
   },
-  modalContent: {
-    width: "80%",
-    backgroundColor: "#001F3E",
-    borderRadius: 10,
-    padding: 20,
-    alignItems: "center",
-    borderWidth: 0.5,
-    boxShadow: "0px 0px 2px 0px rgba(0, 0, 0, 0.15)",
-    borderColor: "#335C85",
-    // Add shadow for iOS
-    ...Platform.select({
-      ios: {
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.25,
-        shadowRadius: 3.84,
-      },
-      android: {
-        elevation: 5,
-      },
-    }),
+  label: {
+    fontFamily: Theme.typography.heading,
+    fontSize: 13,
+    color: Theme.colors.inkSoft,
+    marginBottom: 6,
   },
-  modalTitle: {
-    fontSize: 18,
-    fontFamily: "Inter600",
-    color: "#FFFFFF",
-    marginBottom: 15,
-  },
-  dateSelector: {
+  input: {
+    height: 48,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#193450",
-    width: "100%",
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 20,
-  },
-  dateSelectorText: {
-    color: "#E5E5E5",
-    fontFamily: "Inter500",
-    fontSize: 14,
-    flex: 1,
-  },
-  timeSelectors: {
-    flexDirection: "row",
-    width: "100%",
     justifyContent: "space-between",
-    marginBottom: 20,
-  },
-  timeColumn: {
-    width: "48%",
-  },
-  timeLabel: {
-    color: "#E5E5E5",
-    fontFamily: "Inter400",
-    fontSize: 14,
-    marginBottom: 8,
-  },
-  timeButton: {
-    backgroundColor: "rgba(50, 74, 98, 0.50)",
-    padding: 12,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  timeText: {
-    color: "#FFFFFF",
-    fontFamily: "Inter500",
-    fontSize: 14,
-  },
-  actionButtons: {
-    flexDirection: "row",
-    width: "100%",
-    justifyContent: "space-between",
-  },
-  cancelButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    alignItems: "center",
-  },
-  cancelButtonText: {
-    color: "#E5E5E5",
-    fontFamily: "Inter500",
-    fontSize: 14,
-  },
-  saveButton: {
-    backgroundColor: "#335C85",
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: Theme.borderRadius.sm,
     borderWidth: 1,
-    borderColor: "#547698",
-    borderRadius: 32,
-    alignItems: "center",
+    borderColor: Theme.colors.inputBorder,
+    backgroundColor: Theme.colors.inputBg,
   },
-  saveButtonText: {
-    color: "#FFFFFF",
-    fontFamily: "Inter500",
-    fontSize: 14,
-    maxWidth: 130,
+  value: {
+    fontFamily: Theme.typography.body,
+    fontSize: 14.5,
+    color: Theme.colors.ink,
   },
 });
-
-export default SleepLogModal;

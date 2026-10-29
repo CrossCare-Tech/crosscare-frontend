@@ -90,6 +90,7 @@ export const Theme = {
     babyBg: '#F7F1E8',
     sosBorder: '#F2C6DA',
     dayInfoText: '#0A4A52',
+    remindersBanner: ['#D4C4FF', '#8A68E8'] as [string, string], // Reminders banner gradient
   },
   // Health Reminders: accent of each reminder type (icons only; text stays ink)
   reminderTypes: {

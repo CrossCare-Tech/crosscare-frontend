@@ -15,7 +15,6 @@ import { useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { Theme } from '@/constants/theme';
 import ScreenBackground from '@/components/ui/ScreenBackground';
-import AuthTopBar from '@/components/ui/AuthTopBar';
 
 interface TrackingOption {
   id: string;
@@ -127,7 +126,8 @@ const TrackingOptionsScreen = () => {
   return (
     <ScreenBackground>
       <SafeAreaView style={styles.container}>
-        <AuthTopBar title={t('cards.motherCare.title')} onBack={() => router.replace('/patient/(tabs)/home')} />
+        {/* A tab: plain title, no back button (same as Journal) */}
+        <Text style={styles.header}>{t('nav.health')}</Text>
 
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           {sections.map((section) => (
@@ -158,6 +158,14 @@ const TrackingOptionsScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  header: {
+    fontFamily: Theme.typography.heading,
+    fontSize: 16.5,
+    color: Theme.colors.ink,
+    paddingHorizontal: 22,
+    paddingTop: 16,
+    paddingBottom: 6,
   },
   content: {
     paddingHorizontal: 22,

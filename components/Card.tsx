@@ -55,7 +55,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: 20,
     // overflow: "hidden",
-    marginBottom: 10,
+    // No margin: the Home spaces its sections with a gap
     // Ensure the gradient fills the container completely
     flex: 1,
   },

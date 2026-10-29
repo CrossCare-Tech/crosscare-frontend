@@ -39,7 +39,7 @@ import { useFitbit } from "@/zustandStore/useFitbitStore";
 import { useAppleHealth } from "@/zustandStore/useAppleHealthStore";
 import { useSelfCareStore } from "@/zustandStore/contentfulStores/selfCareStore";
 import { LinearGradient } from "expo-linear-gradient";
-import Svg, { Circle, Defs, LinearGradient as SvgGradient, Path, Rect, Stop } from "react-native-svg";
+import Svg, { Circle, Defs, LinearGradient as SvgGradient, Path, Stop } from "react-native-svg";
 import { Theme } from "@/constants/theme";
 import { babyImageForWeek } from "@/constants/babyImages";
 import { fruitForWeek } from "@/constants/babySize";
@@ -322,13 +322,13 @@ const Home = () => {
       onPress: () => router.push("/patient/calendar"),
     },
     {
-      id: "3",
-      title: t("cards.motherCare.title"),
-      description: t("cards.motherCare.description"),
-      bg1: "#ACF3FF", // Light blue
-      bg2: "#64C4D4", // Turquoise
-      image1: require("../../../assets/images/mother.png"),
-      onPress: () => router.push("/patient/health"),
+      id: "4",
+      title: t("cards.reminders.title"),
+      description: t("cards.reminders.description"),
+      bg1: Theme.home.remindersBanner[0],
+      bg2: Theme.home.remindersBanner[1],
+      image1: require("../../../assets/images/reminders/bell.png"),
+      onPress: () => router.push("/patient/settings/reminder"),
     },
   ];
 
@@ -772,45 +772,8 @@ const Home = () => {
         .join(" · ")
     : t("homeB.nothingBooked");
 
-  const shortcuts = [
-    {
-      key: "vitals",
-      label: t("homeB.logVitals"),
-      onPress: () => router.push("/patient/health"),
-      icon: <Path d="M3 12h4l2 7 4-14 2 7h6" />,
-    },
-    {
-      key: "reminders",
-      label: t("homeB.reminders"),
-      onPress: () => router.push("/patient/settings/reminder"),
-      icon: (
-        <>
-          <Path d="M6 8a6 6 0 0 1 12 0c0 4 1.5 5.5 2 6.5H4c.5-1 2-2.5 2-6.5Z" />
-          <Path d="M10 19a2 2 0 0 0 4 0" />
-        </>
-      ),
-    },
-    {
-      key: "journal",
-      label: t("homeB.journal"),
-      onPress: () => router.push("/patient/(tabs)/journal"),
-      icon: <Path d="M6 4h10a2 2 0 0 1 2 2v13a1 1 0 0 1-1.5.87L12 17l-4.5 2.87A1 1 0 0 1 6 19V4Z" />,
-    },
-    {
-      key: "visits",
-      label: t("homeB.visits"),
-      onPress: () => router.push("/patient/calendar"),
-      icon: (
-        <>
-          <Rect x="4" y="5.5" width="16" height="15" rx="2.5" />
-          <Path d="M8 3.5v4M16 3.5v4M4 10h16" />
-        </>
-      ),
-    },
-  ];
-
-  // The Calendar and MotherCare banners stay on the Home below the new sections
-  const banners = cardData.filter((item) => item.id === "2" || item.id === "3");
+  // Calendar and Reminders banners close the Home; vitals live in the Health tab, Journal in the dock
+  const banners = cardData.filter((item) => item.id === "2" || item.id === "4");
   const routine = routines?.[0];
 
   return (
@@ -1069,25 +1032,6 @@ const Home = () => {
               />
             </View>
 
-            {/* Shortcuts */}
-            <View style={styles.shortcuts}>
-              {shortcuts.map((item) => (
-                <TouchableOpacity
-                  key={item.key}
-                  style={styles.shortcut}
-                  onPress={item.onPress}
-                  accessibilityRole="button"
-                >
-                  <View style={styles.shortcutIcon}>
-                    <LineIcon size={20} color={Theme.colors.purple}>
-                      {item.icon}
-                    </LineIcon>
-                  </View>
-                  <Text style={styles.shortcutLabel}>{item.label}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
             {/* Support */}
             <Text style={styles.sectionLabel}>{t("homeB.support")}</Text>
             <TouchableOpacity
@@ -1129,7 +1073,7 @@ const Home = () => {
               </TouchableOpacity>
             )}
 
-            {/* Calendar and MotherCare banners (kept at the client's request) */}
+            {/* Calendar (kept at the client's request) and Reminders banners */}
             {banners.map((item) => (
               <Card
                 key={item.id}
@@ -1550,31 +1494,6 @@ const styles = StyleSheet.create({
     fontSize: 24,
     lineHeight: 28,
     color: Theme.colors.surface,
-  },
-  shortcuts: {
-    flexDirection: "row",
-    gap: 10,
-  },
-  shortcut: {
-    flex: 1,
-    alignItems: "center",
-    gap: Theme.spacing.sm,
-  },
-  shortcutIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 13,
-    backgroundColor: Theme.colors.surface,
-    borderWidth: 1,
-    borderColor: Theme.colors.hairline,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  shortcutLabel: {
-    fontFamily: Theme.typography.heading,
-    fontSize: 10.5,
-    color: Theme.colors.inkSoft,
-    textAlign: "center",
   },
   sectionLabel: {
     fontFamily: Theme.typography.heading,

@@ -1,17 +1,9 @@
 import React, { useCallback, useEffect, useState } from "react";
-import {
-  StyleSheet,
-  Text,
-  View,
-  StatusBar,
-  TouchableOpacity,
-  ScrollView,
-  ActivityIndicator,
-} from "react-native";
-import { Feather, Ionicons } from "@expo/vector-icons";
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from "react-native";
+import { Feather } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useFocusEffect } from "expo-router";
-import MedicationIcon from "@/assets/images/Svg/MedicationIcon";
+import { Path } from "react-native-svg";
 import { useSelector } from "react-redux";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTranslation } from "react-i18next";
@@ -22,8 +14,13 @@ import {
   setMedicationRemindersEnabled,
 } from "@/utils/NotificationManager";
 import { CONFIG } from "@/constants/config";
+import { Theme } from "@/constants/theme";
+import ScreenBackground from "@/components/ui/ScreenBackground";
+import { useAuthDialog } from "@/components/ui/AuthDialog";
+import AuthTopBar from "@/components/ui/AuthTopBar";
+import LineIcon from "@/components/profile/LineIcon";
+import { AddReadingButton, daysAgo, fmtDate, metricParts, metricStyles, SectionLabel } from "@/components/vitals/MetricUI";
 
-// First, let's update the interfaces to include dates
 interface MedicationTime {
   time: string;
   isCompleted: boolean;
@@ -37,122 +34,21 @@ interface Medication {
   times: MedicationTime[];
 }
 
-function AlertDialog({
-  visible,
-  onClose,
-  onConfirm,
-  medicationName,
-}: {
-  visible: boolean;
-  onClose: () => void;
-  onConfirm: () => void;
-  medicationName: string;
-}) {
-  const user = useSelector((state: any) => state.user);
-  const [userName, setUserName] = useState(user?.user_name || "");
+const PILL_ICON = (
+  <>
+    <Path d="M10.5 20.5 3.5 13.5a4.95 4.95 0 0 1 7-7l7 7a4.95 4.95 0 0 1-7 7Z" />
+    <Path d="M8.5 8.5l7 7" />
+  </>
+);
 
-  useEffect(() => {
-    if (user && user.user_name) {
-      setUserName(user.user_name);
-    }
-  }, [user]);
-
-  if (!visible) return null;
-
-  return (
-    <View style={styles.alertOverlay}>
-      <View style={styles.alertContainer}>
-        <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-          <Ionicons name="close" size={14} color="#00A991" />
-        </TouchableOpacity>
-        <View style={styles.alertContent}>
-          <View
-            style={{
-              flexDirection: "column",
-              alignItems: "center",
-              gap: 16,
-            }}
-          >
-            <Text
-              style={{
-                fontSize: 14,
-                fontFamily: "Inter700",
-                color: "#7B7B7B",
-              }}
-            >
-              {`Hi ${userName}`}
-            </Text>
-            <Text
-              style={{
-                textAlign: "center",
-              }}
-            >
-              {medicationName} medication was missed, would you like to mark as
-              complete?
-            </Text>
-            <View
-              style={{
-                flexDirection: "row",
-                justifyContent: "center",
-                alignContent: "center",
-                gap: 36,
-                paddingHorizontal: 20,
-              }}
-            >
-              <TouchableOpacity
-                style={{
-                  paddingHorizontal: 40,
-                  paddingVertical: 8,
-                }}
-                onPress={onClose}
-              >
-                <Text
-                  style={{
-                    color: "#7B7B7B",
-                    fontSize: 14,
-                    fontFamily: "Inter400",
-                  }}
-                >
-                  No
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={{
-                  paddingHorizontal: 40,
-                  paddingVertical: 8,
-                  justifyContent: "center",
-                  alignItems: "center",
-                  borderWidth: 2,
-                  borderColor: "#00A991",
-                  borderRadius: 14,
-                  boxShadow:
-                    "0px 0px 4px 0px rgba(0, 0, 0, 0.25) inset, 0px 0px 2.6px 0px rgba(0, 0, 0, 0.32);",
-                  backgroundColor: "#009883",
-                }}
-                onPress={onConfirm}
-              >
-                <Text
-                  style={{
-                    color: "#FFFFFF",
-                  }}
-                >
-                  Yes
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </View>
-    </View>
-  );
-}
-
-export default function medications() {
-  const [activeTab, setActiveTab] = useState("All");
+// Medication: today's doses, the schedule by day, reminders, and a way to add one
+export default function MedicationsScreen() {
+  const [activeTab, setActiveTab] = useState<"All" | "Upcoming">("All");
   const user = useSelector((state: any) => state.user);
   const [isLoading, setIsLoading] = useState(true);
   const userId = user?.user_id;
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const { dialog, show } = useAuthDialog();
   const [remindersEnabled, setRemindersEnabled] = useState(true);
 
   useEffect(() => {
@@ -192,19 +88,21 @@ export default function medications() {
   // Update the medications data structure
   const [medications, setMedications] = useState<Medication[]>([]);
 
-  const [alertVisible, setAlertVisible] = useState(false);
-  const [pendingMedication, setPendingMedication] = useState({
-    id: "",
-    time: "",
-  });
 
   const handleToggleComplete = (medicationId: string, timeToToggle: string) => {
     const medication = medications?.find((m) => m.id === medicationId);
     const time = medication?.times.find((t) => t.time === timeToToggle);
 
     if (!time?.isCompleted) {
-      setPendingMedication({ id: medicationId, time: timeToToggle });
-      setAlertVisible(true);
+      show({
+        variant: "success",
+        title: t("medicationLog.confirmTitle"),
+        message: t("medicationLog.confirmBody", { name: medication?.name ?? "", time: timeToToggle }),
+        buttons: [
+          { text: t("cancel"), style: "cancel" },
+          { text: t("medicationLog.markTaken"), onPress: () => updateMedicationStatus(medicationId, timeToToggle) },
+        ],
+      });
     } else {
       updateMedicationStatus(medicationId, timeToToggle);
     }
@@ -227,7 +125,7 @@ export default function medications() {
       const match = medicationId.match(datePattern);
 
       let baseMedicationId = medicationId;
-      let medicationDate = new Date().toISOString().split("T")[0]; // Default to today
+      let medicationDate = fmtDate(new Date()); // Default to today
 
       if (match && match[1]) {
         // If we found a date pattern at the end
@@ -306,45 +204,6 @@ export default function medications() {
   };
 
   // Render medication time item
-  const renderMedicationTime = (time: MedicationTime, medicationId: string) => {
-    // Extract the date from the medicationId (format: id-date)
-    const parts = medicationId.split("-");
-    const day = parts.length > 1 ? parts[1] : "";
-
-    // Create a unique ID that includes both the day and medication ID
-    const uniqueId = `${medicationId}-${time.time}`;
-
-    return (
-      <View style={styles.timeContainer}>
-        <Text style={styles.timeText}>{time.time}</Text>
-        <TouchableOpacity
-          style={[
-            styles.completionButton,
-            time.isCompleted ? styles.completedButton : styles.incompleteButton,
-          ]}
-          onPress={() => handleToggleComplete(medicationId, time.time)}
-        >
-          <Ionicons
-            name="checkmark"
-            size={14}
-            color={time.isCompleted ? "#00A991" : "#666666"}
-            style={styles.checkIcon}
-          />
-          <Text
-            style={[
-              styles.completionText,
-              time.isCompleted ? styles.completedText : styles.incompleteText,
-            ]}
-            numberOfLines={1}
-          >
-            {time.isCompleted ? t("completed") : t("markAsCompleteButton")}
-          </Text>
-        </TouchableOpacity>
-      </View>
-    );
-  };
-
-  // Get upcoming medications (future dates/times that haven't been taken)
   const getUpcomingMedications = () => {
     if (!medications || !Array.isArray(medications)) {
       return [];
@@ -426,11 +285,13 @@ export default function medications() {
           TH: 4,
           F: 5,
           S: 6,
+          SA: 6, // the add screen saves Saturday as "SA"
         };
 
         responseData.data.forEach((item: any) => {
-          const startDate = new Date(item.startDate);
-          const endDate = new Date(item.endDate);
+          // The API sends calendar days as UTC midnight; read them as days in the patient's timezone
+          const startDate = new Date(`${String(item.startDate).slice(0, 10)}T00:00:00`);
+          const endDate = new Date(`${String(item.endDate).slice(0, 10)}T23:59:59`);
           const allowedDays = item.days.map((d: string) => dayMapping[d]); // Convert days to numbers
 
           // Get the completed days of week for checking
@@ -440,7 +301,7 @@ export default function medications() {
           while (currentDate <= endDate) {
             if (allowedDays.includes(currentDate.getDay())) {
               // Store original date in "YYYY-MM-DD" format for sorting
-              const originalDateStr = currentDate.toISOString().split("T")[0];
+              const originalDateStr = fmtDate(currentDate);
 
               // Format date as "18 Mar, 2025" with abbreviated month
               const day = currentDate.getDate();
@@ -454,7 +315,7 @@ export default function medications() {
               const dayOfWeekAbbr = getDayOfWeekAbbr(currentDate.getDay());
 
               // Check if this specific date is in completedDates
-              const dateStr = currentDate.toISOString().split("T")[0];
+              const dateStr = fmtDate(currentDate);
               const isDateCompleted =
                 item.completedDates &&
                 item.completedDates.some(
@@ -579,525 +440,284 @@ export default function medications() {
     return Object.entries(grouped);
   };
 
+  const todayStr = fmtDate(daysAgo(0));
+  const todayDoses = medications.filter((medication) => medication.originalDate === todayStr).flatMap((medication) => medication.times);
+  const takenToday = todayDoses.filter((time) => time.isCompleted).length;
+  const shown = activeTab === "All" ? medications : upcomingMedications;
+
+  const dayLabel = (date: string) => {
+    if (date === todayStr) return t("bloodPressureLog.today");
+    if (date === fmtDate(daysAgo(-1))) return t("medicationLog.tomorrow");
+    if (date === fmtDate(daysAgo(1))) return t("bloodPressureLog.yesterday");
+    return new Date(`${date}T12:00:00`).toLocaleDateString(i18n.language, { weekday: "short", month: "short", day: "numeric" });
+  };
+
+  const groups = groupMedicationsByDate(shown);
+
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" />
+    <ScreenBackground>
+      <SafeAreaView style={styles.container}>
+        <AuthTopBar title={t("medicationLog.title")} />
 
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <Ionicons name="chevron-back" size={20} color="black" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{t("medication")}</Text>
-        <TouchableOpacity style={styles.menuButton}>
-          <Feather name="more-vertical" size={20} color="#E5E5E5" />
-        </TouchableOpacity>
-      </View>
-
-      {/* Medication Icon */}
-      <ScrollView
-        style={styles.medicationList}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.iconContainer}>
-          <View style={styles.iconCircle}>
-            <View style={styles.medicationIconGroup}>
-              <MedicationIcon width={80} height={80} />
-            </View>
-          </View>
-        </View>
-
-        {/* Add New Medication Button */}
-        <View style={styles.addButtonContainer}>
-          <TouchableOpacity
-            onPress={() => router.push("/patient/medication/addmedication")}
-            style={styles.addButton}
-          >
-            <Ionicons name="add" size={20} color="white" />
-            <Text style={styles.addButtonText}>{t("addNewMedication")}</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Medication List */}
-        <View style={styles.tabContainer}>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === "All" && styles.activeTab]}
-            onPress={() => setActiveTab("All")}
-          >
-            <Text
-              style={[
-                styles.tabText,
-                activeTab === "All" && styles.activeTabText,
-              ]}
-            >
-              {t("all")}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === "Upcoming" && styles.activeTab]}
-            onPress={() => setActiveTab("Upcoming")}
-          >
-            <Text
-              style={[
-                styles.tabText,
-                activeTab === "Upcoming" && styles.activeTabText,
-              ]}
-            >
-              Upcoming
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {isLoading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#00A991" />
-            <Text style={styles.loadingText}>Loading medications...</Text>
-          </View>
-        ) : (
-          <>
-            {/* All medications tab */}
-            {activeTab === "All" && (
-              <View style={styles.medicationsContainer}>
-                {medications && medications.length > 0 ? (
-                  groupMedicationsByDate(medications).map(([date, meds]) => (
-                    <View key={date} style={styles.dateGroup}>
-                      <Text style={styles.dateHeader}>{date}</Text>
-                      {meds.map((medication, index) => (
-                        <View key={medication.id}>
-                          <View style={styles.medicationItemContainer}>
-                            <View
-                              style={[
-                                styles.medicationNameContainer,
-                                index === 0 &&
-                                  styles.firstMedicationNameContainer,
-                              ]}
-                            >
-                              <Text style={styles.medicationName}>
-                                {medication.name}
-                              </Text>
-                            </View>
-                            {medication.times.map((time, timeIndex) => (
-                              <React.Fragment
-                                key={`${medication.id}-${time.time}`}
-                              >
-                                {renderMedicationTime(time, medication.id)}
-                              </React.Fragment>
-                            ))}
-                          </View>
-                        </View>
-                      ))}
-                    </View>
-                  ))
-                ) : (
-                  <Text style={styles.emptyText}>{t("emptyText")}</Text>
-                )}
-              </View>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={metricStyles.content}>
+          <View style={[metricParts.card, metricParts.hero, styles.today]}>
+            <Text style={metricParts.when}>{t("bloodPressureLog.today")}</Text>
+            {todayDoses.length > 0 ? (
+              <>
+                <View style={styles.countRow}>
+                  <Text style={metricParts.big}>{takenToday}</Text>
+                  <Text style={metricParts.unit}>{t("medicationLog.ofDoses", { count: todayDoses.length })}</Text>
+                </View>
+                <View style={styles.track}>
+                  <View style={[styles.fill, { width: `${(takenToday / todayDoses.length) * 100}%` }]} />
+                </View>
+              </>
+            ) : (
+              <Text style={styles.noneToday}>{t("medicationLog.noneToday")}</Text>
             )}
+          </View>
 
-            {/* Upcoming medications tab */}
-            {activeTab === "Upcoming" && (
-              <View style={styles.medicationsContainer}>
-                {upcomingMedications.length > 0 ? (
-                  groupMedicationsByDate(upcomingMedications).map(
-                    ([date, meds]) => (
-                      <View key={date} style={styles.dateGroup}>
-                        <Text style={styles.dateHeader}>{date}</Text>
-                        {meds.map((medication, index) => (
-                          <View key={medication.id}>
-                            <View style={styles.medicationItemContainer}>
-                              <View
-                                style={[
-                                  styles.medicationNameContainer,
-                                  index === 0 &&
-                                    styles.firstMedicationNameContainer,
-                                ]}
-                              >
-                                <Text style={styles.medicationName}>
-                                  {medication.name}
-                                </Text>
-                              </View>
-                              {medication.times
-                                .filter((time) => !time.isCompleted)
-                                .map((time, timeIndex, filteredTimes) => (
-                                  <React.Fragment
-                                    key={`${medication.id}-${time.time}`}
-                                  >
-                                    {renderMedicationTime(time, medication.id)}
-                                  </React.Fragment>
-                                ))}
-                            </View>
+          <View style={styles.segmented}>
+            {(["All", "Upcoming"] as const).map((tab) => {
+              const selected = tab === activeTab;
+              return (
+                <TouchableOpacity
+                  key={tab}
+                  style={[styles.segment, selected && styles.segmentOn]}
+                  onPress={() => setActiveTab(tab)}
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected }}
+                >
+                  <Text style={[styles.segmentText, selected && styles.segmentTextOn]}>
+                    {tab === "All" ? t("medicationLog.all") : t("medicationLog.upcoming")}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          {isLoading ? (
+            <ActivityIndicator color={Theme.colors.magenta} style={styles.loader} />
+          ) : groups.length === 0 ? (
+            <Text style={styles.empty}>
+              {activeTab === "All" ? t("medicationLog.noMedications") : t("medicationLog.noUpcoming")}
+            </Text>
+          ) : (
+            groups.map(([, meds]) => (
+              <View key={meds[0].originalDate} style={styles.group}>
+                <SectionLabel>{dayLabel(meds[0].originalDate)}</SectionLabel>
+                <View style={[metricParts.card, styles.list]}>
+                  {meds.map((medication, index) => {
+                    const times = activeTab === "All" ? medication.times : medication.times.filter((time) => !time.isCompleted);
+                    return (
+                      <View key={medication.id} style={[styles.medication, index > 0 && styles.divider]}>
+                        <View style={styles.medHead}>
+                          <View style={styles.iconChip}>
+                            <LineIcon size={18} color={Theme.colors.purple}>
+                              {PILL_ICON}
+                            </LineIcon>
+                          </View>
+                          <Text style={styles.medName}>{medication.name}</Text>
+                        </View>
+                        {times.map((time) => (
+                          <View key={time.time} style={styles.dose}>
+                            <Text style={styles.doseTime}>{time.time}</Text>
+                            <TouchableOpacity
+                              style={[styles.doseButton, time.isCompleted && styles.doseButtonOn]}
+                              onPress={() => handleToggleComplete(medication.id, time.time)}
+                              accessibilityRole="button"
+                              accessibilityState={{ checked: time.isCompleted }}
+                            >
+                              <Feather
+                                name="check"
+                                size={14}
+                                color={time.isCompleted ? Theme.colors.success : Theme.colors.inkFaint}
+                              />
+                              <Text style={[styles.doseText, time.isCompleted && styles.doseTextOn]}>
+                                {time.isCompleted ? t("medicationLog.taken") : t("medicationLog.markTaken")}
+                              </Text>
+                            </TouchableOpacity>
                           </View>
                         ))}
                       </View>
-                    )
-                  )
-                ) : (
-                  <Text style={styles.emptyText}>No upcoming medications</Text>
-                )}
+                    );
+                  })}
+                </View>
               </View>
-            )}
-          </>
-        )}
-      </ScrollView>
+            ))
+          )}
 
-      {/* Footer */}
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>
-          Reminder {remindersEnabled ? "On" : "Off"} By Default,{" "}
-          <Text style={styles.footerLink} onPress={toggleReminders}>
-            {remindersEnabled ? "Turn Off Reminder" : "Turn On Reminder"}
-          </Text>
-        </Text>
-      </View>
+          <View style={[metricParts.card, styles.reminder]}>
+            <View style={styles.iconChip}>
+              <Feather name="bell" size={18} color={Theme.colors.purple} />
+            </View>
+            <View style={styles.flex}>
+              <Text style={styles.reminderTitle}>{t("medicationLog.reminders")}</Text>
+              <Text style={styles.reminderHint}>{t("medicationLog.remindersHint")}</Text>
+            </View>
+            <Switch
+              value={remindersEnabled}
+              onValueChange={toggleReminders}
+              trackColor={{ false: Theme.colors.hairline, true: Theme.colors.magenta }}
+              thumbColor={Theme.colors.surface}
+            />
+          </View>
+        </ScrollView>
 
-      <AlertDialog
-        visible={alertVisible}
-        onClose={() => setAlertVisible(false)}
-        onConfirm={async () => {
-          try {
-            const success = await updateMedicationStatus(
-              pendingMedication.id,
-              pendingMedication.time
-            );
-            // Only close the dialog if the update was successful
-            if (success) {
-              setAlertVisible(false);
-            }
-          } catch (error) {
-            console.error("Error in onConfirm handler:", error);
-            // Keep dialog open if there's an error
-          }
-        }}
-        medicationName={
-          medications?.find((m) => m.id === pendingMedication.id)?.name || ""
-        }
-      />
-    </SafeAreaView>
+        <AddReadingButton label={t("medicationLog.add")} onPress={() => router.push("/patient/medication/addmedication")} />
+        {dialog}
+      </SafeAreaView>
+    </ScreenBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
   },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    height: 56,
-  },
-  backButton: {
-    padding: 8,
-  },
-  tabContainer: {
-    flexDirection: "row",
-    borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
-  },
-  activeTab: {
-    borderBottomWidth: 2,
-    borderBottomColor: "#00A991",
-  },
-  tabText: {
-    fontSize: 16,
-    color: "#757575",
-  },
-  activeTabText: {
-    color: "#00A991",
-    fontWeight: "500",
-  },
-  tab: {
+  flex: {
     flex: 1,
-    paddingVertical: 12,
-    alignItems: "center",
   },
-  headerTitle: {
-    fontSize: 16,
-    fontFamily: "DMSans600",
+  loader: {
+    marginVertical: Theme.spacing.lg,
   },
-  menuButton: {
-    padding: 8,
+  today: {
+    gap: 10,
   },
-  iconContainer: {
-    alignItems: "center",
-    marginTop: 20,
-    marginBottom: 20,
-  },
-  iconCircle: {
-    width: 180,
-    height: 180,
-    borderRadius: 100,
-    backgroundColor: "#D9F2EF",
-    justifyContent: "center",
-    borderWidth: 5,
-    borderColor: "#FFFAFD",
-    boxShadow: "0px 0px 4px 0px rgba(0, 0, 0, 0.10);",
-    alignItems: "center",
-  },
-  medicationIconGroup: {
+  countRow: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "baseline",
+    gap: 8,
   },
-  secondPillIcon: {
-    transform: [{ rotate: "45deg" }],
-    marginLeft: -15,
+  track: {
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: Theme.colors.surfaceSunken,
+    overflow: "hidden",
   },
-  addButtonContainer: {
-    alignItems: "flex-start",
-    marginBottom: 20,
-    marginTop: 20,
+  fill: {
+    height: "100%",
+    borderRadius: 5,
+    backgroundColor: Theme.colors.purple,
   },
-  addButton: {
-    flexDirection: "row",
-    backgroundColor: "#009883",
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: "#B0E4DD",
-    boxShadow:
-      "0px 0px 4px 0px rgba(0, 0, 0, 0.25) inset, 0px 0px 2.6px 0px rgba(0, 0, 0, 0.32);",
-    paddingHorizontal: 16,
-    borderRadius: 25,
-    alignItems: "center",
-  },
-  addButtonText: {
-    color: "white",
-    fontFamily: "Inter400",
+  noneToday: {
+    fontFamily: Theme.typography.body,
     fontSize: 14,
-    marginLeft: 5,
+    lineHeight: 20,
+    color: Theme.colors.inkSoft,
   },
-  medicationList: {
+  segmented: {
+    flexDirection: "row",
+    gap: 4,
+    padding: 3,
+    borderRadius: Theme.borderRadius.md,
+    backgroundColor: Theme.colors.surfaceSunken,
+  },
+  segment: {
     flex: 1,
-    paddingHorizontal: 16,
-  },
-  sectionTitle: {
-    fontSize: 14,
-    color: "#373737",
-    fontFamily: "Inter500",
-    marginBottom: 15,
-  },
-  medicationItem: {
-    paddingVertical: 15,
-    paddingHorizontal: 16,
-  },
-  medicationNameContainer: {
-    // borderTopWidth: 1,
-
-    paddingTop: 16,
-  },
-  firstMedicationNameContainer: {
-    borderTopWidth: 0,
-  },
-  medicationName: {
-    fontSize: 14,
-    color: "#434343",
-    fontFamily: "Inter500",
-  },
-  medicationTime: {
-    fontSize: 12,
-    fontFamily: "Inter500",
-    color: "#7B7B7B",
-  },
-  footer: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
+    height: 38,
+    borderRadius: 9,
     alignItems: "center",
+    justifyContent: "center",
   },
-  footerText: {
-    fontSize: 12,
-    fontFamily: "Inter500",
-    color: "#8A8A8A",
-    textTransform: "capitalize",
+  segmentOn: {
+    backgroundColor: Theme.colors.surface,
+    ...Theme.shadows.card,
   },
-  footerLink: {
-    color: "#00A991",
+  segmentText: {
+    fontFamily: Theme.typography.subheading,
+    fontSize: 13,
+    color: Theme.colors.inkFaint,
   },
-  timeContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+  segmentTextOn: {
+    color: Theme.colors.purple,
+  },
+  empty: {
+    fontFamily: Theme.typography.body,
+    fontSize: 13,
+    color: Theme.colors.inkFaint,
+  },
+  group: {
+    gap: 8,
+  },
+  list: {
+    paddingHorizontal: Theme.spacing.md,
+  },
+  medication: {
     paddingVertical: 12,
+    gap: 8,
   },
-  timeText: {
-    fontSize: 12,
-    fontFamily: "Inter500",
-    color: "#7B7B7B",
+  divider: {
+    borderTopWidth: 1,
+    borderTopColor: Theme.colors.hairlineLight,
   },
-  completionButton: {
+  medHead: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    // gap: 4,
-    width: 140,
-    minWidth: 140,
+    gap: 12,
   },
-  completedButton: {
-    backgroundColor: "#E6F6F4",
-  },
-  incompleteButton: {
-    backgroundColor: "rgba(229, 229, 229, 0.50)",
-  },
-  completionText: {
-    fontSize: 12,
-    fontFamily: "Inter500",
-  },
-  checkIcon: {
-    marginRight: 4,
-  },
-  completedText: {
-    color: "#00A991",
-  },
-  incompleteText: {
-    color: "#7B7B7B",
-  },
-  emptyText: {
-    textAlign: "center",
-    color: "#7B7B7B",
-    fontSize: 14,
-    fontFamily: "Inter400",
-    marginTop: 24,
-  },
-  medicationsContainer: {
-    marginTop: 0,
-    marginHorizontal: 16,
-  },
-  medicationItemContainer: {
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "#EEEEEE",
-  },
-  alertOverlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-    zIndex: 1000,
-  },
-  alertContainer: {
-    backgroundColor: "white",
+  iconChip: {
+    width: 40,
+    height: 40,
     borderRadius: 12,
-    width: "90%",
-    // maxWidth: 400,
-    padding: 16,
-    position: "relative",
-  },
-  closeButton: {
-    position: "absolute",
-    top: 10,
-    right: 10,
-    zIndex: 10,
-    padding: 5,
-  },
-  alertContent: {
-    width: "100%",
-  },
-  alertRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "flex-start",
-    marginBottom: 16,
-  },
-  alertIcon: {
-    marginRight: 12,
-  },
-  alertText: {
-    flex: 1,
-    fontSize: 16,
-    color: "#666666",
-    fontFamily: "Inter400",
-    lineHeight: 24,
-  },
-  alertButtons: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    alignItems: "center",
-    gap: 16,
-  },
-  alertButtonNo: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-  },
-  alertButtonYes: {
-    backgroundColor: "#00A991",
-    paddingVertical: 8,
-    paddingHorizontal: 24,
-    borderRadius: 100,
-  },
-  alertButtonTextNo: {
-    color: "#666666",
-    fontSize: 16,
-    fontFamily: "Inter500",
-  },
-  alertButtonTextYes: {
-    color: "white",
-    fontSize: 16,
-    fontFamily: "Inter500",
-  },
-  dateGroup: {
-    marginBottom: 24,
-  },
-  dateHeader: {
-    fontSize: 14,
-    color: "#434343",
-    fontFamily: "Inter600",
-    // marginBottom: 16,
-    marginTop: 20,
-  },
-  medicationCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 8,
-    marginBottom: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  loadingContainer: {
-    padding: 20,
+    backgroundColor: Theme.colors.surfaceSunken,
     alignItems: "center",
     justifyContent: "center",
-    height: 200,
   },
-  loadingText: {
-    marginTop: 10,
-    color: "#7B7B7B",
-    fontSize: 14,
-    fontFamily: "Inter400",
+  medName: {
+    flex: 1,
+    fontFamily: Theme.typography.heading,
+    fontSize: 15,
+    color: Theme.colors.ink,
   },
-  filterIndicator: {
+  dose: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#EBF9F1",
-    padding: 10,
-    borderRadius: 8,
-    marginBottom: 15,
+    paddingLeft: 52,
   },
-  filterText: {
-    color: "#00A991",
-    fontSize: 12,
-    fontFamily: "Inter400",
-    flex: 1,
+  doseTime: {
+    fontFamily: Theme.typography.subheading,
+    fontSize: 13.5,
+    color: Theme.colors.inkSoft,
   },
-  clearFilterButton: {
+  doseButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
     paddingHorizontal: 10,
+    height: 30,
+    borderRadius: Theme.borderRadius.sm,
+    borderWidth: 1,
+    borderColor: Theme.colors.hairline,
+    backgroundColor: Theme.colors.surface,
   },
-  clearFilterText: {
-    color: "#00A991",
+  doseButtonOn: {
+    borderColor: Theme.colors.successTint,
+    backgroundColor: Theme.colors.successTint,
+  },
+  doseText: {
+    fontFamily: Theme.typography.heading,
     fontSize: 12,
-    fontFamily: "Inter500",
+    color: Theme.colors.inkSoft,
+  },
+  doseTextOn: {
+    color: Theme.colors.success,
+  },
+  reminder: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    padding: Theme.spacing.md,
+  },
+  reminderTitle: {
+    fontFamily: Theme.typography.heading,
+    fontSize: 15,
+    color: Theme.colors.ink,
+  },
+  reminderHint: {
+    fontFamily: Theme.typography.subheading,
+    fontSize: 11.5,
+    color: Theme.colors.inkFaint,
   },
 });
