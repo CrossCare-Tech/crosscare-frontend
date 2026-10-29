@@ -1609,5 +1609,28 @@
   "common": {
     "cancel": "Cancelar",
     "save": "Salvar"
+  },
+  "developer": {
+    "title": "Desenvolvedor",
+    "notice": "Só para demonstração. Com os dados simulados ligados, o app responde a todas as requisições neste celular e não precisa do servidor. Desligue para usar o backend real.",
+    "dataSection": "Origem dos dados",
+    "simulatedData": "Dados simulados",
+    "simulatedDataHint": "Dados de exemplo guardados neste celular. O que você adicionar fica salvo até redefinir.",
+    "on": "Ligado · sem servidor",
+    "off": "Desligado · usando o servidor",
+    "source": "Os dados vêm de",
+    "sourceDevice": "Este celular (simulado)",
+    "notSet": "Não definido",
+    "reset": "Redefinir dados simulados",
+    "resetTitle": "Redefinir dados simulados?",
+    "resetMessage": "Tudo o que foi adicionado na demonstração será apagado e os dados de exemplo voltam.",
+    "resetConfirm": "Redefinir",
+    "resetDone": "Os dados simulados foram redefinidos.",
+    "switchTitle": "Trocar a origem dos dados?",
+    "switchMessage": "Você vai sair da conta. Entre de novo para carregar os dados da nova origem.",
+    "switchConfirm": "Trocar e sair",
+    "requests": "Requisições simuladas recentes",
+    "noRequests": "Nenhuma requisição ainda.",
+    "unmatched": "sem rota"
   }
 }

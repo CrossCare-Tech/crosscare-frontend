@@ -9,6 +9,7 @@ import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import "react-native-reanimated";
+import "@/utils/demo/installDemoInterceptor";
 import { Provider, useDispatch, useSelector } from "react-redux";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
@@ -157,6 +158,7 @@ const RootLayoutNav = () => {
         />
         <Stack.Screen name="avatar" />
         <Stack.Screen name="avatar-studio" />
+        <Stack.Screen name="developer" />
         <Stack.Screen name="patient" />
       </Stack>
     </>

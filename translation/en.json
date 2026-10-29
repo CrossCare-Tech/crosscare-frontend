@@ -1652,5 +1652,28 @@
   "common": {
     "cancel": "Cancel",
     "save": "Save"
+  },
+  "developer": {
+    "title": "Developer",
+    "notice": "For demos only. With simulated data on, the app answers every request on this phone and does not need the server. Turn it off to use the real backend.",
+    "dataSection": "Data source",
+    "simulatedData": "Simulated data",
+    "simulatedDataHint": "Sample data saved on this phone. Anything you add stays until you reset it.",
+    "on": "On · no server needed",
+    "off": "Off · using the server",
+    "source": "Data comes from",
+    "sourceDevice": "This phone (simulated)",
+    "notSet": "Not set",
+    "reset": "Reset simulated data",
+    "resetTitle": "Reset simulated data?",
+    "resetMessage": "Everything added during the demo is removed and the sample data comes back.",
+    "resetConfirm": "Reset",
+    "resetDone": "Simulated data was reset.",
+    "switchTitle": "Switch data source?",
+    "switchMessage": "You will be signed out. Sign in again to load the data from the new source.",
+    "switchConfirm": "Switch and sign out",
+    "requests": "Recent simulated requests",
+    "noRequests": "No requests yet.",
+    "unmatched": "no route"
   }
 }
