@@ -1937,8 +1937,10 @@ function AskDoulaChat() {
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+      // Android already resizes the window (windowSoftInputMode=adjustResize).
+      // A second "height" resize here leaves the view stuck at a stale height.
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      enabled={Platform.OS === "ios"}
     >
       <ScreenBackground>
       <SafeAreaView style={styles.container}>

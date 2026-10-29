@@ -31,6 +31,15 @@ export const useGuide = () => {
   return { name: custom || guideName, portrait: picked || GUIDE.portrait };
 };
 
+// The name the user gave the guide, or "" when she keeps the default one.
+export const loadGuideName = async () => {
+  try {
+    return (await AsyncStorage.getItem(NAME_KEY))?.trim() || "";
+  } catch {
+    return "";
+  }
+};
+
 // An empty name, or the default one, means "no custom name".
 export const saveGuideName = async (name: string) => {
   const clean = name.trim();
