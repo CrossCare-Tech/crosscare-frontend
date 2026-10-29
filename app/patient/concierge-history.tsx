@@ -1,3 +1,4 @@
+import { withPremiumGate } from "@/components/premium/withPremiumGate";
 import React, { useCallback, useState } from "react";
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
@@ -33,7 +34,7 @@ const stamp = (iso: string, group: Group) =>
 
 // Conversations: where the chat's back arrow lands. Real threads: the running one plus the archived ones. The gear and the guide row open the guide settings,
 // which is the avatar screen of Profile.
-export default function ConciergeHistory() {
+function ConciergeHistory() {
   const { t } = useTranslation();
   const router = useRouter();
   const guide = useGuide();
@@ -158,3 +159,5 @@ const styles = StyleSheet.create({
   week: { backgroundColor: Theme.colors.purpleTint, borderRadius: Theme.borderRadius.full, paddingHorizontal: 9, paddingVertical: 4 },
   weekText: { fontFamily: Theme.typography.heading, fontSize: 10.5, color: Theme.colors.purple },
 });
+
+export default withPremiumGate(ConciergeHistory);

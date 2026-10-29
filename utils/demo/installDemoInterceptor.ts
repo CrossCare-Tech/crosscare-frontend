@@ -27,7 +27,7 @@ const splitUrl = (rest: string) => {
 };
 
 // Which service a URL belongs to, or null when it is a third-party call
-const classify = (url: string): { service: "api" | "rag"; path: string; query: Record<string, string> } | null => {
+export const classify = (url: string): { service: "api" | "rag"; path: string; query: Record<string, string> } | null => {
   const bases: { service: "api" | "rag"; base: string }[] = [
     { service: "api" as const, base: trimSlash(CONFIG.API_BASE_URL) },
     { service: "rag" as const, base: trimSlash(CONFIG.RAG_SERVICE_URL) },
@@ -37,6 +37,8 @@ const classify = (url: string): { service: "api" | "rag"; path: string; query: R
   for (const { service, base } of bases) {
     if (url.startsWith(base)) return { service, ...splitUrl(url.slice(base.length)) };
   }
+  // Without EXPO_PUBLIC_RAG_SERVICE_URL the chat calls a bare "/chat/<userId>"; it is the Concierge either way
+  if (!trimSlash(CONFIG.RAG_SERVICE_URL) && /^\/chat\/[^/?]+/.test(url)) return { service: "rag", ...splitUrl(url) };
   // A build without a .env produces "undefined/user/..." for API calls
   if (url.startsWith("undefined/")) return { service: "api", ...splitUrl(url.slice("undefined".length)) };
   return null;

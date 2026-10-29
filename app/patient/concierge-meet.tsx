@@ -1,3 +1,4 @@
+import { withPremiumGate } from "@/components/premium/withPremiumGate";
 import React from "react";
 import { Image, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { Feather } from "@expo/vector-icons";
@@ -11,7 +12,7 @@ import { useGuide } from "@/constants/conciergeGuide";
 import { useSafeBack } from "@/hooks/useSafeBack";
 
 // First meeting (prototype /concierge/ §3): who the guide is, what she does, and that she is not a doctor.
-export default function ConciergeMeet() {
+function ConciergeMeet() {
   const { t } = useTranslation();
   const router = useRouter();
   const guide = useGuide();
@@ -116,3 +117,5 @@ const styles = StyleSheet.create({
   textLabel: { fontFamily: Theme.typography.heading, fontSize: 14, color: Theme.colors.magenta },
   primaryText: { fontFamily: Theme.typography.heading, fontSize: 15, color: Theme.colors.surface },
 });
+
+export default withPremiumGate(ConciergeMeet);

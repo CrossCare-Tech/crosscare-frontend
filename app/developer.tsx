@@ -14,11 +14,35 @@ import Toggle from "@/components/profile/Toggle";
 import { removeUser } from "@/store/userSlice";
 import { useDemoMode } from "@/utils/demo/demoMode";
 import { resetDemoDb } from "@/utils/demo/mockDb";
+import { loadSampleConversation } from "@/utils/demo/mockConversations";
+import ListenPlayer from "@/components/chat/ListenPlayer";
+import { useReplyAudio } from "@/hooks/useReplyAudio";
 import { DemoLogEntry, getDemoLog } from "@/utils/demo/installDemoInterceptor";
+
+// Sentences to check the voice in each language, played by the same player the chat uses
+const VOICE_TESTS = [
+  { id: "voice-test-en", language: "en", text: "Hi Maya, I'm your CrossCare Concierge. You are twenty-four weeks along, and your baby is about the size of an ear of corn." },
+  { id: "voice-test-pt", language: "pt", text: "Oi, Maya! Eu sou a sua CrossCare Concierge. Você está com vinte e quatro semanas, e o seu bebê tem o tamanho de uma espiga de milho." },
+  { id: "voice-test-es", language: "es", text: "¡Hola, Maya! Soy tu CrossCare Concierge. Estás en la semana veinticuatro y tu bebé tiene el tamaño de una mazorca de maíz." },
+];
+
+const VoiceTestRow = ({ id, language, text }: (typeof VOICE_TESTS)[number]) => {
+  const { t } = useTranslation();
+  const audio = useReplyAudio(id);
+  return (
+    <View style={styles.voiceRow}>
+      <Text style={styles.rowSub}>{text}</Text>
+      <ListenPlayer messageId={id} text={text} language={language} />
+      {audio.engine && (
+        <Text style={styles.rowSub}>{audio.engine === "deepgram" ? t("developer.voiceDeepgram") : t("developer.voiceDevice")}</Text>
+      )}
+    </View>
+  );
+};
 
 // Settings > Developer. Reachable from Profile and, before signing in, by long-pressing the logo on Login.
 const Developer = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const dispatch = useDispatch();
   const token = useSelector((state: any) => state.user.token);
   const enabled = useDemoMode((state) => state.enabled);
@@ -64,6 +88,12 @@ const Developer = () => {
     ]);
   };
 
+  // Puts a short earlier conversation in the Concierge chat, to show it without typing first
+  const loadSampleChat = async () => {
+    await loadSampleConversation(i18n.language);
+    Alert.alert(t("developer.sampleChatDone"));
+  };
+
   return (
     <ScreenBackground>
       <SafeAreaView style={styles.container}>
@@ -102,6 +132,20 @@ const Developer = () => {
               </TouchableOpacity>
             )}
 
+            <Text style={styles.sectionTitle}>{t("developer.voiceTest")}</Text>
+            <View style={styles.card}>
+              <Text style={[styles.rowSub, styles.voiceHint]}>{t("developer.voiceTestHint")}</Text>
+              {VOICE_TESTS.map((test) => (
+                <VoiceTestRow key={test.id} {...test} />
+              ))}
+            </View>
+
+            {enabled && (
+              <TouchableOpacity style={styles.button} onPress={loadSampleChat} accessibilityRole="button">
+                <Text style={styles.buttonText}>{t("developer.sampleChat")}</Text>
+              </TouchableOpacity>
+            )}
+
             {enabled && (
               <>
                 <Text style={styles.sectionTitle}>{t("developer.requests")}</Text>
@@ -137,6 +181,8 @@ const Developer = () => {
 export default Developer;
 
 const styles = StyleSheet.create({
+  voiceHint: { padding: 14, paddingBottom: 4 },
+  voiceRow: { paddingHorizontal: 14, paddingVertical: 10, gap: 4 },
   container: {
     flex: 1,
   },

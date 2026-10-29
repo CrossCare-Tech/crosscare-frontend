@@ -1,3 +1,4 @@
+import { withPremiumGate } from "@/components/premium/withPremiumGate";
 import React from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeBack } from "@/hooks/useSafeBack";
@@ -8,7 +9,7 @@ import { useGuide } from "@/constants/conciergeGuide";
 
 // Voice pre-prompt (prototype /concierge/ §3): a gentle ask before the system microphone request.
 // Preview only: the real permission and live voice come later (Concierge call, N-01).
-export default function ConciergeVoice() {
+function ConciergeVoice() {
   const { t } = useTranslation();
   const guide = useGuide();
   const close = useSafeBack("/patient/concierge-history");
@@ -61,3 +62,5 @@ const styles = StyleSheet.create({
   textLabel: { fontFamily: Theme.typography.heading, fontSize: 14, color: Theme.colors.magenta },
   note: { fontFamily: Theme.typography.caption, fontSize: 12, color: Theme.colors.inkFaint, textAlign: "center", marginTop: 8 },
 });
+
+export default withPremiumGate(ConciergeVoice);

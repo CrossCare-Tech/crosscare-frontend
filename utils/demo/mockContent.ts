@@ -12,7 +12,8 @@ export const BADGE_TEXT: Record<string, { title: string; description: string }> 
   HEALTH_QUEEN_I: { title: "Health Queen I", description: "Logged every vital for a week" },
 };
 
-type Lang = "en" | "pt" | "es";
+import { ReplyMedia } from "@/constants/replyMedia";
+import { EXTRA_TOPICS, Lang, YES } from "./mockConversations";
 
 const TOPICS: { match: RegExp; reply: Record<Lang, string> }[] = [
   {
@@ -89,13 +90,35 @@ const ABOUT_ME_INTRO: Record<Lang, string> = {
 };
 
 export type SavedAnswer = { questionId?: string; response?: string };
+export type HistoryMessage = { role?: string; content?: string };
 
-export const ragReply = (query: string, language?: string, answers: SavedAnswer[] = []) => {
+// Health warning signs always win over any other topic (TOPICS[0]); then what the questionnaire
+// told us; then a "yes" to the offer in the previous reply; then the scripted topics.
+export const ragAnswer = (
+  query: string,
+  language?: string,
+  answers: SavedAnswer[] = [],
+  history: HistoryMessage[] = []
+): { response: string; media?: ReplyMedia[] } => {
   const lang: Lang = language === "pt" || language === "es" ? language : "en";
+  const redFlag = TOPICS[0];
+  if (redFlag.match.test(query)) return { response: redFlag.reply[lang] };
+
   const known = answers.filter((a) => a.response);
   if (known.length && ABOUT_ME.test(query)) {
-    return `${ABOUT_ME_INTRO[lang]}\n\n${known.slice(0, 6).map((a) => `- ${a.response}`).join("\n")}`;
+    return { response: `${ABOUT_ME_INTRO[lang]}\n\n${known.slice(0, 6).map((a) => `- ${a.response}`).join("\n")}` };
   }
+
+  if (YES.test(query)) {
+    const lastReply = [...history].reverse().find((m) => m.role !== "user")?.content;
+    const offered = EXTRA_TOPICS.find((t) => t.more && lastReply && Object.values(t.reply).includes(lastReply));
+    if (offered?.more) return { response: offered.more[lang] };
+  }
+
+  const extra = EXTRA_TOPICS.find((t) => t.match.test(query));
+  if (extra) return { response: extra.reply[lang], media: extra.media?.(lang) };
   const topic = TOPICS.find((t) => t.match.test(query));
-  return (topic ? topic.reply : FALLBACK)[lang];
+  return { response: (topic ? topic.reply : FALLBACK)[lang] };
 };
+
+export const ragReply = (...args: Parameters<typeof ragAnswer>) => ragAnswer(...args).response;

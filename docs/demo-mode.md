@@ -45,6 +45,10 @@ All of these work with no backend:
 
 Intake questionnaire (Concierge chat): answers go to `POST /user/:id/domain` and are kept in the demo database. In demo mode the simulated guide quotes them back when the patient asks about their home or "what do you know about me", to show that saved answers become AI context. The real AI does this through `getUserProfile` in CrossCare-rag; it is not run in demo mode.
 
+Scripted Concierge conversations (`utils/demo/mockConversations.ts`, in English, Portuguese and Spanish): greeting and thanks, next appointment, glucose test, hospital bag, contractions, caffeine, swelling, heartburn, anxiety (with a breathing exercise), baby size, vaccines and travel. Warning signs (bleeding, severe pain) always answer first with the "call your provider or 911" message. Replying "yes" to an offer ("Want a list of questions to bring?") gets the follow-up. Profile > Developer > **Load sample conversation** fills the chat with an earlier exchange about kicks, sleep and the next appointment, so the chat is not empty on stage.
+
+Intake questionnaire pop-up (Concierge chat): answers go to `POST /user/:id/domain` and are kept in the demo database. In demo mode the simulated guide quotes them back when the patient asks about their home or "what do you know about me", to show that saved answers become AI context. The real AI does this through `getUserProfile` in CrossCare-rag; it is not run in demo mode.
+
 Already local before this branch (no backend involved, in demo mode or not): Concierge meet / name / voice / call / history screens, Avatar Studio choices, guide name, Premium status, notification preferences.
 Note: these live in AsyncStorage, so logout and switching the data source reset them.
 

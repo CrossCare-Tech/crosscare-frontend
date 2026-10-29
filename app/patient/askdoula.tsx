@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   StyleSheet,
   Text,
@@ -26,8 +26,22 @@ import { systemPrompts } from "@/constants/systemPrompts";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   QUESTIONNAIRE_DOMAINS,
+  getQuestionnaireDomainsWithTranslation,
+  type QuestionnaireDomain,
   type QuestionnaireResponse,
 } from "@/constants/questionaireData";
+import { useSafeBack } from "@/hooks/useSafeBack";
+import { useDemoMode } from "@/utils/demo/demoMode";
+import { playSound } from "@/utils/callSounds";
+import ListenPlayer from "@/components/chat/ListenPlayer";
+import { replyAudio } from "@/utils/replyAudio";
+import ReplyMedia from "@/components/chat/ReplyMedia";
+import type { ReplyMedia as ReplyMediaItem } from "@/constants/replyMedia";
+import { cancelReminder, remindAtSixPm, saveToJournal } from "@/utils/replyMediaActions";
+import QuestionnairePopup from "@/components/questionnaire/QuestionnairePopup";
+import { useQuestionnairePopup } from "@/hooks/useQuestionnairePopup";
+import { estimateTotal } from "@/utils/questionnairePopup";
+import { PopupDomainState } from "@/utils/questionnairePopupStore";
 import { useLocalSearchParams } from "expo-router";
 import ScreenBackground from "@/components/ui/ScreenBackground";
 import { Theme } from "@/constants/theme";
@@ -70,6 +84,7 @@ interface Message {
   type: "text" | "audio";
   content: string; // text content or audio URI
   isEducational?: boolean;
+  media?: ReplyMediaItem[]; // image, video, link or follow-up buttons that came with the reply
 }
 
 // The AI Concierge is a Premium feature: without access, the patient sees why instead of the chat
@@ -83,6 +98,7 @@ function AskDoulaChat() {
   const guide = useGuide();
   const [inputText, setInputText] = useState("");
   const [showOptions, setShowOptions] = useState(true);
+  const demoMode = useDemoMode((state) => state.enabled);
   const [isTyping, setIsTyping] = useState(false);
   const { t, i18n } = useTranslation();
   const currentLanguage = i18n.language;
@@ -151,6 +167,107 @@ function AskDoulaChat() {
     t, // Pass the translation function
     currentLanguage,
   });
+
+  // Intake questionnaire as a pop-up over the chat (the client's preferred version)
+  const questionnaireDomains = useMemo(() => getQuestionnaireDomainsWithTranslation(t), [t]);
+  const intake = useQuestionnairePopup(user?.user_id, questionnaireDomains);
+  // The pop-up keeps the domain and answers it opened with, because saving a finished domain
+  // moves `intake.domain` on to the next one while the thank-you screen is still showing.
+  const [intakeSession, setIntakeSession] = useState<{
+    domain: QuestionnaireDomain;
+    initial: PopupDomainState;
+    restart: boolean;
+  } | null>(null);
+  const [inviteDismissed, setInviteDismissed] = useState(false);
+  const intakeSummary = useRef("");
+  const showInvite =
+    intake.loaded &&
+    !!intake.domain &&
+    intake.domain.id === questionnaireDomains[0].id &&
+    !intake.hasStarted &&
+    !inviteDismissed &&
+    !intakeSession;
+
+  // Reminders set from a reply, by title, so tapping the button again can cancel them
+  const replyReminders = useRef<Record<string, string>>({});
+  const handleSaveReply = async (title: string) => {
+    try {
+      await saveToJournal(user?.user_id, title);
+    } catch (error) {
+      console.warn("[chat] Could not save the reply to the journal:", error);
+      Alert.alert(t("replyMedia.saveFailed"));
+      throw error;
+    }
+  };
+  const handleRemindReply = async (title: string) => {
+    const id = await remindAtSixPm(title);
+    if (!id) {
+      Alert.alert(t("replyMedia.notificationsOff"));
+      return false;
+    }
+    replyReminders.current[title] = id;
+    return true;
+  };
+  const handleUndoRemindReply = (title: string) => {
+    const id = replyReminders.current[title];
+    if (id) cancelReminder(id);
+    delete replyReminders.current[title];
+  };
+
+  const addChatMessage = (content: string, isUser: boolean) =>
+    setMessages((prev) => [
+      ...prev,
+      { id: `${Date.now()}-${prev.length}`, type: "text", content, isUser, timestamp: new Date() },
+    ]);
+
+  const openIntake = (restart = false) => {
+    if (!intake.domain) return;
+    intakeSummary.current = "";
+    setIntakeSession({ domain: intake.domain, initial: intake.current, restart });
+  };
+
+  const handleIntakeStartNow = () => {
+    setInviteDismissed(true);
+    addChatMessage(t("questionnairePopup.startNow"), true);
+    openIntake();
+  };
+
+  const handleIntakeNotToday = () => {
+    setInviteDismissed(true);
+    addChatMessage(t("questionnairePopup.notToday"), true);
+    addChatMessage(t("questionnairePopup.notTodayReply"), false);
+  };
+
+  const handleIntakeSaveExit = async (next: PopupDomainState) => {
+    if (!intakeSession) return;
+    const { domain } = intakeSession;
+    setIntakeSession(null);
+    await intake.persist(domain, next);
+    if (Object.keys(next.answers).length) {
+      const percent = Math.round(((next.path.length - 1) / estimateTotal(domain, next.path)) * 100);
+      addChatMessage(t("questionnairePopup.saved", { percent }), false);
+    }
+  };
+
+  const handleIntakeFinish = async (next: PopupDomainState) => {
+    if (!intakeSession) return;
+    const { domain } = intakeSession;
+    intakeSummary.current = domain.questions
+      .filter((q) => next.answers[q.id]?.response)
+      .map((q) => `- ${q.text} **${next.answers[q.id].response}**`)
+      .join("\n");
+    await intake.persist(domain, next);
+  };
+
+  const handleIntakeBackToChat = () => {
+    setIntakeSession(null);
+    if (intakeSummary.current) {
+      addChatMessage(
+        `${t("questionnairePopup.thanksChat", { name: user?.user_name })}\n\n**${t("questionnairePopup.yourAnswers")}**\n${intakeSummary.current}`,
+        false
+      );
+    }
+  };
 
   const checkQuestionnaireCompletionStatus = async () => {
     try {
@@ -296,6 +413,12 @@ function AskDoulaChat() {
   const isNavigatingAwayRef = useRef(false);
 
   // 3. ADD this comprehensive go back handler function
+  // Stop reading a reply aloud when the patient leaves the chat
+  useEffect(() => () => {
+    replyAudio.stop();
+  }, []);
+
+  const safeBack = useSafeBack();
   const handleGoBack = useCallback(async () => {
     try {
       console.log(
@@ -307,7 +430,7 @@ function AskDoulaChat() {
         console.log(
           "Context save already in progress, proceeding with navigation"
         );
-        router.back();
+        safeBack();
         return true;
       }
 
@@ -484,11 +607,11 @@ function AskDoulaChat() {
       contextSavingRef.current = false;
 
       // Always proceed with navigation, even if save fails
-      router.back();
+      safeBack();
     }
 
     return true; // Indicate we handled the back press
-  }, [questionnaireManager, messages, user?.user_id, router]);
+  }, [questionnaireManager, messages, user?.user_id, router, safeBack]);
 
   useEffect(() => {
     const backAction = () => {
@@ -1068,6 +1191,7 @@ function AskDoulaChat() {
   };
 
   const speakResponse = (text: string) => {
+    replyAudio.stop(); // one voice at a time
     // Check if muted - if so, don't speak but still process
     if (effectiveMuted) {
       console.log("Voice is muted, not speaking response:", text);
@@ -1993,37 +2117,26 @@ function AskDoulaChat() {
           <Feather name="chevron-right" size={16} color={Theme.colors.magenta} />
         </TouchableOpacity>
 
-        {(questionnaireManager.isActive ||
-          questionnaireManager.isPaused ||
-          !questionnaireManager.isCompleted) && (
-          <View style={styles.questionnaireStatusContainer}>
-            <View style={styles.statusTextContainer}>
-              <Text style={styles.questionnaireStatusTitle}>
-                {t("questionStatus")} - {getCurrentDomainTitle()}
+        {/* Intake questionnaire card: opens the pop-up (Start now / Resume) */}
+        {intake.loaded && intake.domain && (
+          <TouchableOpacity
+            style={styles.intakeCard}
+            onPress={() => openIntake()}
+            accessibilityRole="button"
+          >
+            <View style={styles.intakeCardText}>
+              <Text style={styles.intakeCardTitle}>{intake.domain.description}</Text>
+              <Text style={styles.intakeCardStatus}>
+                {t("questionnairePopup.cardStatus", { percent: intake.percent, min: intake.minutesLeft })}
               </Text>
-              <TouchableOpacity
-                style={[styles.pauseButton, isPaused && styles.resumeButton]}
-                onPress={handlePauseResumeToggle}
-              >
-                <Text
-                  style={[
-                    styles.pauseButtonText,
-                    isPaused && styles.resumeButtonText,
-                  ]}
-                >
-                  {isPaused ? t("resume") : t("pause")}
-                </Text>
-              </TouchableOpacity>
+              <View style={styles.intakeCardTrack}>
+                <View style={[styles.intakeCardFill, { width: `${intake.percent}%` }]} />
+              </View>
             </View>
-
-            {/* Progress Bar */}
-            <View style={styles.progressBarContainer}>
-              <View style={[styles.progressBar, { width: `${progress}%` }]} />
-              <Text style={[styles.progressText, { left: `${progress}%` }]}>
-                {progress}%
-              </Text>
-            </View>
-          </View>
+            <Text style={styles.intakeCardAction}>
+              {intake.hasStarted ? t("questionnairePopup.resume") : t("questionnairePopup.start")}
+            </Text>
+          </TouchableOpacity>
         )}
 
         {/* Medical sources disclaimer banner — required by Apple guideline 1.4.1 */}
@@ -2099,34 +2212,6 @@ function AskDoulaChat() {
                         message.isUser ? styles.userBubble : styles.doulaBubble,
                       ]}
                     >
-                      {!message.isUser && (
-                        <TouchableOpacity
-                          style={styles.bubbleMuteButton}
-                          onPress={() => {
-                            console.log("Pressed message ID:", message.id);
-                            console.log(
-                              "Current speaking ID:",
-                              speakingMessageId
-                            );
-                            console.log("Is speaking:", isSpeaking);
-                            speakMessage(message.id, message.content);
-                          }}
-                        >
-                          <Ionicons
-                            name={
-                              speakingMessageId === message.id && isSpeaking
-                                ? "volume-high"
-                                : "volume-medium"
-                            }
-                            size={16}
-                            color={
-                              speakingMessageId === message.id && isSpeaking
-                                ? "#E162BC"
-                                : "#CCCCCC"
-                            }
-                          />
-                        </TouchableOpacity>
-                      )}
                       {/* <Text
                         style={[
                           styles.messageText,
@@ -2153,6 +2238,21 @@ function AskDoulaChat() {
                           {message.content}
                         </Markdown>
                       )}
+                      {!message.isUser && (
+                        <ListenPlayer
+                          messageId={message.id}
+                          text={message.content}
+                          language={currentLanguage}
+                        />
+                      )}
+                      {!message.isUser && !!message.media?.length && (
+                        <ReplyMedia
+                          items={message.media}
+                          onSave={handleSaveReply}
+                          onRemind={handleRemindReply}
+                          onUndoRemind={handleUndoRemindReply}
+                        />
+                      )}
                     </View>
                   ) : (
                     <AudioMessage
@@ -2167,7 +2267,42 @@ function AskDoulaChat() {
               {isTyping && renderTypingIndicator()}
             </View>
           )}
+
+          {showInvite && (
+            <View style={styles.inviteWrap}>
+              <View style={styles.messageRow}>
+                <Image source={guide.portrait} style={styles.doulaAvatar} />
+                <View style={[styles.messageBubble, styles.doulaBubble]}>
+                  <Text style={styles.doulaMessageText}>
+                    {t("questionnairePopup.invite", { name: user?.user_name })}
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.inviteChips}>
+                <TouchableOpacity style={styles.invitePrimary} onPress={handleIntakeStartNow} accessibilityRole="button">
+                  <Text style={styles.invitePrimaryText}>{t("questionnairePopup.startNow")}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.inviteSecondary} onPress={handleIntakeNotToday} accessibilityRole="button">
+                  <Text style={styles.inviteSecondaryText}>{t("questionnairePopup.notToday")}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
         </ScrollView>
+
+        {intakeSession && (
+          <QuestionnairePopup
+            visible
+            domain={intakeSession.domain}
+            userName={user?.user_name ?? ""}
+            portrait={guide.portrait}
+            initial={intakeSession.initial}
+            startOver={intakeSession.restart}
+            onSaveExit={handleIntakeSaveExit}
+            onFinish={handleIntakeFinish}
+            onBackToChat={handleIntakeBackToChat}
+          />
+        )}
 
         {/* Options and Input Section */}
         <View
@@ -2183,6 +2318,18 @@ function AskDoulaChat() {
             style={styles.optionsContainer}
             keyboardShouldPersistTaps="handled"
           >
+            {/* Demo mode: suggestions that answer with an image, a video or a link (see replyMedia) */}
+            {demoMode &&
+              (["Baby", "Stretch", "Walk"] as const).map((name) => (
+                <TouchableOpacity
+                  key={name}
+                  style={styles.optionButton}
+                  onPress={() => handleOptionPress(t(`replyMedia.chip${name}Query`))}
+                  disabled={isAssistantResponding}
+                >
+                  <Text style={styles.optionText}>{t(`replyMedia.chip${name}`)}</Text>
+                </TouchableOpacity>
+              ))}
             <TouchableOpacity
               style={styles.optionButton}
               onPress={() => handleOptionPress(t("options.healthStats1"))}
@@ -2269,7 +2416,10 @@ function AskDoulaChat() {
               ) : (
                 <TouchableOpacity
                   style={styles.liveButton}
-                  onPress={() => router.push("/patient/concierge-call")}
+                  onPress={() => {
+                    playSound("tap", 0.6);
+                    router.push("/patient/concierge-call");
+                  }}
                   accessibilityRole="button"
                   accessibilityLabel={t("conciergeChat.live")}
                 >
@@ -2317,6 +2467,48 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: Theme.typography.heading,
   },
+  intakeCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginHorizontal: 16,
+    marginBottom: 8,
+    padding: 12,
+    backgroundColor: Theme.colors.surface,
+    borderWidth: 1,
+    borderColor: Theme.colors.hairline,
+    borderRadius: Theme.borderRadius.md,
+  },
+  intakeCardText: { flex: 1, gap: 2 },
+  intakeCardTitle: { fontFamily: Theme.typography.heading, fontSize: 14, color: Theme.colors.ink },
+  intakeCardStatus: { fontFamily: Theme.typography.caption, fontSize: 11, color: Theme.colors.inkFaint },
+  intakeCardTrack: {
+    height: 4,
+    borderRadius: 2,
+    marginTop: 6,
+    backgroundColor: Theme.colors.hairline,
+    overflow: "hidden",
+  },
+  intakeCardFill: { height: 4, borderRadius: 2, backgroundColor: Theme.colors.magenta },
+  intakeCardAction: { fontFamily: Theme.typography.heading, fontSize: 13, color: Theme.colors.magenta },
+  inviteWrap: { paddingHorizontal: 16, marginTop: 12, gap: 12 },
+  inviteChips: { flexDirection: "row", gap: 10, paddingLeft: 40 },
+  invitePrimary: {
+    backgroundColor: Theme.colors.magenta,
+    borderRadius: Theme.borderRadius.full,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+  },
+  invitePrimaryText: { fontFamily: Theme.typography.heading, fontSize: 13, color: Theme.colors.surface },
+  inviteSecondary: {
+    backgroundColor: Theme.colors.surface,
+    borderWidth: 1,
+    borderColor: Theme.colors.hairline,
+    borderRadius: Theme.borderRadius.full,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+  },
+  inviteSecondaryText: { fontFamily: Theme.typography.heading, fontSize: 13, color: Theme.colors.purple },
   // Add these to your styles
   questionnaireStatusContainer: {
     padding: 12,
