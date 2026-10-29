@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   StyleSheet,
   Text,
@@ -26,8 +26,14 @@ import { systemPrompts } from "@/constants/systemPrompts";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   QUESTIONNAIRE_DOMAINS,
+  getQuestionnaireDomainsWithTranslation,
+  type QuestionnaireDomain,
   type QuestionnaireResponse,
 } from "@/constants/questionaireData";
+import QuestionnairePopup from "@/components/questionnaire/QuestionnairePopup";
+import { useQuestionnairePopup } from "@/hooks/useQuestionnairePopup";
+import { estimateTotal } from "@/utils/questionnairePopup";
+import { PopupDomainState } from "@/utils/questionnairePopupStore";
 import { useLocalSearchParams } from "expo-router";
 import ScreenBackground from "@/components/ui/ScreenBackground";
 import { Theme } from "@/constants/theme";
@@ -151,6 +157,81 @@ function AskDoulaChat() {
     t, // Pass the translation function
     currentLanguage,
   });
+
+  // Intake questionnaire as a pop-up over the chat (the client's preferred version)
+  const questionnaireDomains = useMemo(() => getQuestionnaireDomainsWithTranslation(t), [t]);
+  const intake = useQuestionnairePopup(user?.user_id, questionnaireDomains);
+  // The pop-up keeps the domain and answers it opened with, because saving a finished domain
+  // moves `intake.domain` on to the next one while the thank-you screen is still showing.
+  const [intakeSession, setIntakeSession] = useState<{
+    domain: QuestionnaireDomain;
+    initial: PopupDomainState;
+    restart: boolean;
+  } | null>(null);
+  const [inviteDismissed, setInviteDismissed] = useState(false);
+  const intakeSummary = useRef("");
+  const showInvite =
+    intake.loaded &&
+    !!intake.domain &&
+    intake.domain.id === questionnaireDomains[0].id &&
+    !intake.hasStarted &&
+    !inviteDismissed &&
+    !intakeSession;
+
+  const addChatMessage = (content: string, isUser: boolean) =>
+    setMessages((prev) => [
+      ...prev,
+      { id: `${Date.now()}-${prev.length}`, type: "text", content, isUser, timestamp: new Date() },
+    ]);
+
+  const openIntake = (restart = false) => {
+    if (!intake.domain) return;
+    intakeSummary.current = "";
+    setIntakeSession({ domain: intake.domain, initial: intake.current, restart });
+  };
+
+  const handleIntakeStartNow = () => {
+    setInviteDismissed(true);
+    addChatMessage(t("questionnairePopup.startNow"), true);
+    openIntake();
+  };
+
+  const handleIntakeNotToday = () => {
+    setInviteDismissed(true);
+    addChatMessage(t("questionnairePopup.notToday"), true);
+    addChatMessage(t("questionnairePopup.notTodayReply"), false);
+  };
+
+  const handleIntakeSaveExit = async (next: PopupDomainState) => {
+    if (!intakeSession) return;
+    const { domain } = intakeSession;
+    setIntakeSession(null);
+    await intake.persist(domain, next);
+    if (Object.keys(next.answers).length) {
+      const percent = Math.round(((next.path.length - 1) / estimateTotal(domain, next.path)) * 100);
+      addChatMessage(t("questionnairePopup.saved", { percent }), false);
+    }
+  };
+
+  const handleIntakeFinish = async (next: PopupDomainState) => {
+    if (!intakeSession) return;
+    const { domain } = intakeSession;
+    intakeSummary.current = domain.questions
+      .filter((q) => next.answers[q.id]?.response)
+      .map((q) => `- ${q.text} **${next.answers[q.id].response}**`)
+      .join("\n");
+    await intake.persist(domain, next);
+  };
+
+  const handleIntakeBackToChat = () => {
+    setIntakeSession(null);
+    if (intakeSummary.current) {
+      addChatMessage(
+        `${t("questionnairePopup.thanksChat", { name: user?.user_name })}\n\n**${t("questionnairePopup.yourAnswers")}**\n${intakeSummary.current}`,
+        false
+      );
+    }
+  };
 
   const checkQuestionnaireCompletionStatus = async () => {
     try {
@@ -1993,37 +2074,26 @@ function AskDoulaChat() {
           <Feather name="chevron-right" size={16} color={Theme.colors.magenta} />
         </TouchableOpacity>
 
-        {(questionnaireManager.isActive ||
-          questionnaireManager.isPaused ||
-          !questionnaireManager.isCompleted) && (
-          <View style={styles.questionnaireStatusContainer}>
-            <View style={styles.statusTextContainer}>
-              <Text style={styles.questionnaireStatusTitle}>
-                {t("questionStatus")} - {getCurrentDomainTitle()}
+        {/* Intake questionnaire card: opens the pop-up (Start now / Resume) */}
+        {intake.loaded && intake.domain && (
+          <TouchableOpacity
+            style={styles.intakeCard}
+            onPress={() => openIntake()}
+            accessibilityRole="button"
+          >
+            <View style={styles.intakeCardText}>
+              <Text style={styles.intakeCardTitle}>{intake.domain.title}</Text>
+              <Text style={styles.intakeCardStatus}>
+                {t("questionnairePopup.cardStatus", { percent: intake.percent, min: intake.minutesLeft })}
               </Text>
-              <TouchableOpacity
-                style={[styles.pauseButton, isPaused && styles.resumeButton]}
-                onPress={handlePauseResumeToggle}
-              >
-                <Text
-                  style={[
-                    styles.pauseButtonText,
-                    isPaused && styles.resumeButtonText,
-                  ]}
-                >
-                  {isPaused ? t("resume") : t("pause")}
-                </Text>
-              </TouchableOpacity>
+              <View style={styles.intakeCardTrack}>
+                <View style={[styles.intakeCardFill, { width: `${intake.percent}%` }]} />
+              </View>
             </View>
-
-            {/* Progress Bar */}
-            <View style={styles.progressBarContainer}>
-              <View style={[styles.progressBar, { width: `${progress}%` }]} />
-              <Text style={[styles.progressText, { left: `${progress}%` }]}>
-                {progress}%
-              </Text>
-            </View>
-          </View>
+            <Text style={styles.intakeCardAction}>
+              {intake.hasStarted ? t("questionnairePopup.resume") : t("questionnairePopup.start")}
+            </Text>
+          </TouchableOpacity>
         )}
 
         {/* Medical sources disclaimer banner — required by Apple guideline 1.4.1 */}
@@ -2167,7 +2237,42 @@ function AskDoulaChat() {
               {isTyping && renderTypingIndicator()}
             </View>
           )}
+
+          {showInvite && (
+            <View style={styles.inviteWrap}>
+              <View style={styles.messageRow}>
+                <Image source={guide.portrait} style={styles.doulaAvatar} />
+                <View style={[styles.messageBubble, styles.doulaBubble]}>
+                  <Text style={styles.doulaMessageText}>
+                    {t("questionnairePopup.invite", { name: user?.user_name })}
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.inviteChips}>
+                <TouchableOpacity style={styles.invitePrimary} onPress={handleIntakeStartNow} accessibilityRole="button">
+                  <Text style={styles.invitePrimaryText}>{t("questionnairePopup.startNow")}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.inviteSecondary} onPress={handleIntakeNotToday} accessibilityRole="button">
+                  <Text style={styles.inviteSecondaryText}>{t("questionnairePopup.notToday")}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
         </ScrollView>
+
+        {intakeSession && (
+          <QuestionnairePopup
+            visible
+            domain={intakeSession.domain}
+            userName={user?.user_name ?? ""}
+            portrait={guide.portrait}
+            initial={intakeSession.initial}
+            startOver={intakeSession.restart}
+            onSaveExit={handleIntakeSaveExit}
+            onFinish={handleIntakeFinish}
+            onBackToChat={handleIntakeBackToChat}
+          />
+        )}
 
         {/* Options and Input Section */}
         <View
@@ -2317,6 +2422,48 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: Theme.typography.heading,
   },
+  intakeCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginHorizontal: 16,
+    marginBottom: 8,
+    padding: 12,
+    backgroundColor: Theme.colors.surface,
+    borderWidth: 1,
+    borderColor: Theme.colors.hairline,
+    borderRadius: Theme.borderRadius.md,
+  },
+  intakeCardText: { flex: 1, gap: 2 },
+  intakeCardTitle: { fontFamily: Theme.typography.heading, fontSize: 14, color: Theme.colors.ink },
+  intakeCardStatus: { fontFamily: Theme.typography.caption, fontSize: 11, color: Theme.colors.inkFaint },
+  intakeCardTrack: {
+    height: 4,
+    borderRadius: 2,
+    marginTop: 6,
+    backgroundColor: Theme.colors.hairline,
+    overflow: "hidden",
+  },
+  intakeCardFill: { height: 4, borderRadius: 2, backgroundColor: Theme.colors.magenta },
+  intakeCardAction: { fontFamily: Theme.typography.heading, fontSize: 13, color: Theme.colors.magenta },
+  inviteWrap: { paddingHorizontal: 16, marginTop: 12, gap: 12 },
+  inviteChips: { flexDirection: "row", gap: 10, paddingLeft: 40 },
+  invitePrimary: {
+    backgroundColor: Theme.colors.magenta,
+    borderRadius: Theme.borderRadius.full,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+  },
+  invitePrimaryText: { fontFamily: Theme.typography.heading, fontSize: 13, color: Theme.colors.surface },
+  inviteSecondary: {
+    backgroundColor: Theme.colors.surface,
+    borderWidth: 1,
+    borderColor: Theme.colors.hairline,
+    borderRadius: Theme.borderRadius.full,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+  },
+  inviteSecondaryText: { fontFamily: Theme.typography.heading, fontSize: 13, color: Theme.colors.purple },
   // Add these to your styles
   questionnaireStatusContainer: {
     padding: 12,
