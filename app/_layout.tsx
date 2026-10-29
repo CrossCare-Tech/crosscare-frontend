@@ -156,6 +156,7 @@ const RootLayoutNav = () => {
           options={{ title: "Forgot Password" }}
         />
         <Stack.Screen name="avatar" />
+        <Stack.Screen name="avatar-studio" />
         <Stack.Screen name="patient" />
       </Stack>
     </>
