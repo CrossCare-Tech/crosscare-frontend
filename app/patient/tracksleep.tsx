@@ -9,6 +9,7 @@ import SleepLogModal from "./modal/sleepmodal";
 import SleepConflictModal from "./modal/sleepconflictmodal";
 import { useFitbit } from "@/zustandStore/useFitbitStore";
 import { useAppleHealth } from "@/zustandStore/useAppleHealthStore";
+import { demoWatchReaders, useDemoWatch, useDemoWatchActive } from "@/utils/demo/demoWatch";
 import { CONFIG } from "@/constants/config";
 import { Theme } from "@/constants/theme";
 import ScreenBackground from "@/components/ui/ScreenBackground";
@@ -118,7 +119,10 @@ export default function TrackSleepScreen() {
 
   // Determine which health service to use based on platform
   const isUsingAppleHealth = Platform.OS === 'ios';
-  const healthServiceConnected = isUsingAppleHealth ? appleHealthConnected : fitbitConnected;
+  // The Demo Watch (Simulated data) counts as a connected health service while sleep is allowed
+  const watchActive = useDemoWatchActive();
+  const watchAllowed = useDemoWatch((state) => state.permissions.sleep);
+  const healthServiceConnected = watchActive || (isUsingAppleHealth ? appleHealthConnected : fitbitConnected);
   const healthServiceLoading = isUsingAppleHealth ? appleHealthLoading : fitbitLoading;
 
   const [initialCheckDone, setInitialCheckDone] = useState(false);
@@ -159,7 +163,7 @@ export default function TrackSleepScreen() {
     };
 
     fetchSleepData();
-  }, [timeRange, healthServiceConnected]);
+  }, [timeRange, healthServiceConnected, watchAllowed]);
 
   const handleHealthConnection = async () => {
     if (isUsingAppleHealth) {
@@ -223,7 +227,9 @@ export default function TrackSleepScreen() {
 
       // Use the appropriate health service based on platform
       let data;
-      if (isUsingAppleHealth) {
+      if (watchActive) {
+        data = demoWatchReaders.sleep(timeRange);
+      } else if (isUsingAppleHealth) {
         // Get data from Apple Health
         data = await appleHealthGetSleepDataForRange(timeRange);
         

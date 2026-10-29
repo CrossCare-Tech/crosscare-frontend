@@ -37,6 +37,7 @@ import { useMealStore } from "@/zustandStore/mealStore";
 import { CONFIG } from "@/constants/config";
 import { useFitbit } from "@/zustandStore/useFitbitStore";
 import { useAppleHealth } from "@/zustandStore/useAppleHealthStore";
+import { demoWatchReaders, useDemoWatch, useDemoWatchActive } from "@/utils/demo/demoWatch";
 import { useSelfCareStore } from "@/zustandStore/contentfulStores/selfCareStore";
 import { LinearGradient } from "expo-linear-gradient";
 import Svg, { Circle, Defs, LinearGradient as SvgGradient, Path, Stop } from "react-native-svg";
@@ -142,7 +143,10 @@ const Home = () => {
 
   // Determine which health service to use
   const isUsingAppleHealth = Platform.OS === 'ios';
-  const healthServiceConnected = isUsingAppleHealth ? appleHealthConnected : fitbitConnected;
+  // The Demo Watch (Simulated data) counts as a connected health service while steps are allowed
+  const watchActive = useDemoWatchActive();
+  const watchAllowed = useDemoWatch((state) => state.permissions.steps);
+  const healthServiceConnected = watchActive || (isUsingAppleHealth ? appleHealthConnected : fitbitConnected);
 
   const [foodQualityScore, setFoodQualityScore] = useState("50%");
   const [bpSystolic, setBpSystolic] = useState<number | null>(null);
@@ -258,6 +262,12 @@ const Home = () => {
       if (!userId || !healthServiceConnected) return;
 
       try {
+        if (watchActive) {
+          const day = new Date().toISOString().split('T')[0];
+          const watchSteps = parseInt(demoWatchReaders.steps(day, day)["activities-steps"][0]?.value, 10);
+          if (watchSteps > 0) useStepsStore.getState().setStepsWalked(watchSteps);
+          return;
+        }
         let stepsData;
         if (isUsingAppleHealth) {
           stepsData = await appleHealthGetStepsData();
@@ -292,7 +302,7 @@ const Home = () => {
     const interval = setInterval(fetchHealthStepsData, 60000); // Every minute
     
     return () => clearInterval(interval);
-  }, [userId, healthServiceConnected, isUsingAppleHealth]);
+  }, [userId, healthServiceConnected, isUsingAppleHealth, watchAllowed]);
 
   const cardData1 = [
     
