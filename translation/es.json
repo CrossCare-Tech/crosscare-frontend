@@ -571,6 +571,7 @@
     "high": "Por encima de lo típico",
     "sourceFitbit": "Fitbit · automático",
     "sourceApple": "Apple Health · automático",
+    "sourceDemo": "Demo Watch · simulado",
     "devices": "Dispositivos",
     "connectHint": "Las lecturas llegan automáticamente",
     "connected": "Conectado",

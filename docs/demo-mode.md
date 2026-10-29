@@ -42,6 +42,18 @@ All of these work with no backend:
 | Calendar | Calendar, add / edit / delete appointment | `appointment`, `appointments/:appointmentId` |
 | Hall of Fame | Badges | `GET /user/:id` |
 | Ask Doula / Concierge chat | Typed and spoken questions, intake questionnaire answers, health logging from chat | RAG `POST /chat/:userId` (canned replies in English, Portuguese and Spanish), `/user/:id/domain` |
+| Devices | Devices (Profile > Devices, or "Manage devices" on Heart rate and Steps), Heart rate, Steps, Sleep and the Home steps tile fed by the Demo Watch | none: the Demo Watch is on the phone (`utils/demo/demoWatch.ts`); today's steps are still posted to `POST /user/activity/:id/steps` |
+
+### Demo Watch (simulated smartwatch)
+
+With Simulated data on, Devices lists a fourth source, **Demo Watch** (tagged Demo). Connect and Disconnect work with no HealthKit, Fitbit or account.
+
+- Connect plays a short flow: "Looking for Demo Watch…" (about 1.6 s), then Steps, Heart rate and Sleep sync one at a time (Syncing… then Synced, about 1 s each), ending on "Synced with Demo Watch". Sync now plays the sync part again. Timings are `PAIRING_MS` and `STEP_MS` in `utils/demo/demoWatch.ts`.
+- While it is connected, Heart rate, Steps, Sleep and the Home steps tile read from it instead of Apple Health or Fitbit. Resting heart rate, steps and sleep are made up for Maya Thompson and derived from the date, so the same day always shows the same numbers. Today's steps grow with the time of day.
+- Devices has a sync indicator (last synced, Sync now), per-data-type permissions (Steps, Heart rate, Sleep: a type switched off returns nothing to the screens), the last 7 days, and a sync history.
+- Turning Simulated data off stops the watch feeding the screens, even if it stays paired. Connection, permissions and sync history live in `demo-watch.json` in the document folder, like the demo flag, so logout keeps them.
+- Apple Health (iPhone), Fitbit (Android) and Health Connect are listed as named sources. Health Connect is shown as "Coming soon": its store (`useHealthConnectStore.ts`) is still commented out and the real integration is pending.
+- With Simulated data off nothing changes: Heart rate and Steps show the platform's real source, and the Demo Watch row is hidden.
 
 Intake questionnaire (Concierge chat): answers go to `POST /user/:id/domain` and are kept in the demo database. In demo mode the simulated guide quotes them back when the patient asks about their home or "what do you know about me", to show that saved answers become AI context. The real AI does this through `getUserProfile` in CrossCare-rag; it is not run in demo mode.
 
@@ -68,6 +80,7 @@ Work the backend needs so the real app matches what the demo shows. In demo mode
 | 8 | No preference storage | "Proactive suggestions" and "Weekly summary" toggles (`notification.tsx`) | Preference fields, plus the features themselves |
 | 9 | Email depends on SendGrid | Sign up verification and password reset | A valid `SENDGRID_API_KEY` and verified sender on the server |
 | 10 | Photos depend on Supabase Storage | Profile photo, journal photos | `SUPABASE_URL`, keys and the storage bucket on the server |
+| 11 | Health Connect (Android) is not integrated | Devices lists it as "Coming soon"; Android falls back to Fitbit | Restore `useHealthConnectStore.ts` (commented out) and wire it into `useDeviceSources.ts` |
 
 ## Still online in demo mode
 
@@ -87,6 +100,8 @@ These are third-party services called directly from the app. Demo mode does not 
 - `utils/demo/mockDb.ts`: the database, sample data, save and reset
 - `utils/demo/mockRoutes.ts`: one handler per backend route
 - `utils/demo/mockContent.ts`: badge names and the canned Doula replies
+- `utils/demo/demoWatch.ts`, `utils/demo/demoWatchData.ts`: the Demo Watch store and its readings
+- `hooks/useDeviceSources.ts`, `components/devices/DeviceSourceRows.tsx`, `app/patient/devices.tsx`: the source list shared by Heart rate, Steps and Devices
 - `utils/demo/installDemoInterceptor.ts`: the fetch and axios hooks, request log
 - `app/developer.tsx`: the Developer screen
-- Touched: `app/_layout.tsx`, `app/login.tsx`, `app/patient/(tabs)/profile.tsx`, `constants/config.ts`, `translation/en.json`, `translation/pt.json`
+- Touched: `app/patient/heart.tsx`, `steps.tsx`, `tracksleep.tsx`, `(tabs)/home.tsx`, `app/_layout.tsx`, `app/login.tsx`, `app/patient/(tabs)/profile.tsx`, `constants/config.ts`, `translation/en.json`, `translation/pt.json`
