@@ -17,7 +17,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import ScreenBackground from "@/components/ui/ScreenBackground";
 import ConciergeTopBar from "@/components/ui/ConciergeTopBar";
 import { Theme } from "@/constants/theme";
-import { GUIDE, saveGuideName, useGuide } from "@/constants/conciergeGuide";
+import { saveGuideName, useGuide } from "@/constants/conciergeGuide";
 
 export const CONCIERGE_MET_KEY = "concierge.met";
 
@@ -46,18 +46,18 @@ export default function ConciergeName() {
         <ConciergeTopBar title={t("conciergeName.title")} onBack={() => router.replace("/patient/concierge-meet")} />
         <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : undefined}>
           <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-            <Image source={GUIDE.portrait} style={styles.hero} accessibilityLabel={guide.name} />
+            <Image source={guide.portrait} style={styles.hero} accessibilityLabel={guide.name} />
             <Text style={styles.heading} accessibilityRole="header">
               {t("conciergeName.heading")}
             </Text>
-            <Text style={styles.lead}>{t("conciergeName.lead", { name: GUIDE.name })}</Text>
+            <Text style={styles.lead}>{t("conciergeName.lead", { name: guide.name })}</Text>
             <View style={styles.field}>
               <Text style={styles.label}>{t("conciergeName.label")}</Text>
               <TextInput
                 style={styles.input}
                 value={value}
                 onChangeText={setValue}
-                placeholder={GUIDE.name}
+                placeholder={guide.name}
                 placeholderTextColor={Theme.colors.placeholder}
                 maxLength={20}
                 autoCorrect={false}
@@ -72,7 +72,7 @@ export default function ConciergeName() {
               <Text style={styles.primaryText}>{t("conciergeName.start")}</Text>
             </Pressable>
             <Pressable onPress={() => finish(true)} accessibilityRole="button" style={styles.text}>
-              <Text style={styles.textLabel}>{t("conciergeName.keep", { name: GUIDE.name })}</Text>
+              <Text style={styles.textLabel}>{t("conciergeName.keep", { name: guide.name })}</Text>
             </Pressable>
           </View>
         </KeyboardAvoidingView>
