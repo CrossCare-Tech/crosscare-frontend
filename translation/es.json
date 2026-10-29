@@ -179,6 +179,10 @@
       "title": "Tu Calendario",
       "description": "Haz seguimiento de tus citas"
     },
+    "reminders": {
+      "title": "Tus recordatorios",
+      "description": "Agua, medicamentos y más"
+    },
     "motherCare": {
       "title": "Cuidado Materno",
       "description": "Monitorea salud, signos vitales y más"

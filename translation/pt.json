@@ -647,6 +647,10 @@
       "title": "Seu Calendário",
       "description": "Acompanhe seus compromissos"
     },
+    "reminders": {
+      "title": "Seus lembretes",
+      "description": "Água, medicação e mais"
+    },
     "motherCare": {
       "title": "Cuidados com a Mãe",
       "description": "Acompanhe saúde, sinais vitais e mais"

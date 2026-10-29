@@ -647,6 +647,10 @@
       "title": "Your Calendar",
       "description": "Track your appointments"
     },
+    "reminders": {
+      "title": "Your Reminders",
+      "description": "Water, medication and more"
+    },
     "motherCare": {
       "title": "MotherCare",
       "description": "Track health, vitals & more"
