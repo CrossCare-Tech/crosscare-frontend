@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Image, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useSafeBack } from "@/hooks/useSafeBack";
 import { useTranslation } from "react-i18next";
 import ScreenBackground from "@/components/ui/ScreenBackground";
 import { Theme } from "@/constants/theme";
@@ -24,7 +24,6 @@ const isOpen = (item: AvatarItem) => item.rule === "start";
 
 export default function AvatarStudio() {
   const { t } = useTranslation();
-  const router = useRouter();
   const { width } = useWindowDimensions();
   const saved = useAvatarStudio((s) => s.choice);
   const save = useAvatarStudio((s) => s.save);
@@ -51,8 +50,7 @@ export default function AvatarStudio() {
     setDraft(next);
   };
 
-  // Opened by a link there is nothing to go back to: land on the Concierge history instead.
-  const leave = () => (router.canGoBack() ? router.back() : router.replace("/patient/concierge-history"));
+  const leave = useSafeBack("/patient/concierge-history");
 
   const done = async () => {
     await save(draft);

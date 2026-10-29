@@ -1,25 +1,25 @@
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useSafeBack } from "@/hooks/useSafeBack";
 import { useTranslation } from "react-i18next";
 import { Theme } from "@/constants/theme";
 
 interface ConciergeTopBarProps {
   title: string;
-  onBack?: () => void; // defaults to router.back()
+  onBack?: () => void; // defaults to a safe back (home when there is nothing to go back to)
   action?: { icon: keyof typeof Feather.glyphMap; label: string; onPress: () => void }; // round icon button on the right
 }
 
 // Top bar of the Concierge screens: round back button, centred title, optional round icon button (prototype .gs-tb).
 const ConciergeTopBar: React.FC<ConciergeTopBarProps> = ({ title, onBack, action }) => {
-  const router = useRouter();
+  const back = useSafeBack();
   const { t } = useTranslation();
   return (
     <View style={styles.bar}>
       <TouchableOpacity
         style={[styles.round, styles.fill]}
-        onPress={onBack ?? (() => router.back())}
+        onPress={onBack ?? back}
         accessibilityRole="button"
         accessibilityLabel={t("back")}
       >

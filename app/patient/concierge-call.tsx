@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Image, Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { StatusBar } from "expo-status-bar";
-import { useRouter } from "expo-router";
+import { useSafeBack } from "@/hooks/useSafeBack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import { Feather, Ionicons } from "@expo/vector-icons";
@@ -17,7 +17,6 @@ const formatTime = (seconds: number) =>
 // Front-end preview only: the timer runs and the caption is a sample. Live voice needs the backend (D-066).
 export default function ConciergeCall() {
   const { t } = useTranslation();
-  const router = useRouter();
   const guide = useGuide();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions(); // the portrait is a square as wide as the screen
@@ -29,7 +28,7 @@ export default function ConciergeCall() {
     return () => clearInterval(id);
   }, []);
 
-  const close = () => router.back();
+  const close = useSafeBack("/patient/concierge-history");
 
   return (
     <View style={styles.root}>
