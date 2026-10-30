@@ -550,8 +550,7 @@
     "addForDay": "Agregar una cita en este día",
     "cancelThis": "¿Cancelar esta cita?",
     "cancelThisHint": "“{{title}}” el {{when}} se eliminará y se cancelarán sus recordatorios.",
-    "keep": "Mantener cita",
-    "deleting": "Eliminando..."
+    "keep": "Mantener cita"
   },
   "motherCare": {
     "vitals": "Signos vitales",

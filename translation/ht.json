@@ -364,8 +364,7 @@
     "addForDay": "Ajoute yon randevou jou sa a",
     "cancelThis": "Anile randevou sa a?",
     "cancelThisHint": "“{{title}}” {{when}} ap retire, epi rapèl li yo ap anile.",
-    "keep": "Kenbe randevou a",
-    "deleting": "N ap efase..."
+    "keep": "Kenbe randevou a"
   },
   "motherCare": {
     "vitals": "Siy vital",

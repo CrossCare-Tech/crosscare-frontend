@@ -444,8 +444,7 @@
     "addForDay": "Add an appointment on this day",
     "cancelThis": "Cancel this appointment?",
     "cancelThisHint": "“{{title}}” on {{when}} will be removed, and its reminders cancelled.",
-    "keep": "Keep appointment",
-    "deleting": "Deleting..."
+    "keep": "Keep appointment"
   },
   "motherCare": {
     "vitals": "Vitals",

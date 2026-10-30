@@ -430,8 +430,7 @@
     "addForDay": "Adicionar uma consulta neste dia",
     "cancelThis": "Cancelar esta consulta?",
     "cancelThisHint": "“{{title}}” em {{when}} será removida, e os lembretes dela serão cancelados.",
-    "keep": "Manter consulta",
-    "deleting": "Excluindo..."
+    "keep": "Manter consulta"
   },
   "motherCare": {
     "vitals": "Sinais vitais",
