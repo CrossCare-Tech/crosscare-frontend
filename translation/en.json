@@ -427,10 +427,7 @@
     "save": "Save appointment",
     "saving": "Saving...",
     "deleteButton": "Delete appointment",
-    "deleteTitle": "Delete appointment",
-    "deleteConfirm": "Are you sure you want to delete this appointment?",
     "cancel": "Cancel",
-    "delete": "Delete",
     "errorTitle": "Error",
     "descriptionMissing": "Please enter a description for the appointment.",
     "saveFailed": "Could not save the appointment. Please try again.",
@@ -444,7 +441,11 @@
     "emptyTitle": "No appointments this day",
     "emptyHint": "Add a check-up, scan or lab visit and we will remind you.",
     "add": "Add",
-    "addForDay": "Add an appointment on this day"
+    "addForDay": "Add an appointment on this day",
+    "cancelThis": "Cancel this appointment?",
+    "cancelThisHint": "“{{title}}” on {{when}} will be removed, and its reminders cancelled.",
+    "keep": "Keep appointment",
+    "deleting": "Deleting..."
   },
   "motherCare": {
     "vitals": "Vitals",

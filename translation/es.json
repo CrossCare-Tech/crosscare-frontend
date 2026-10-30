@@ -533,10 +533,7 @@
     "save": "Guardar cita",
     "saving": "Guardando...",
     "deleteButton": "Eliminar cita",
-    "deleteTitle": "Eliminar cita",
-    "deleteConfirm": "¿Seguro que quieres eliminar esta cita?",
     "cancel": "Cancelar",
-    "delete": "Eliminar",
     "errorTitle": "Error",
     "descriptionMissing": "Escribe una descripción para la cita.",
     "saveFailed": "No se pudo guardar la cita. Inténtalo de nuevo.",
@@ -550,7 +547,11 @@
     "emptyTitle": "No hay citas este día",
     "emptyHint": "Agrega un control, ultrasonido o laboratorio y te lo recordaremos.",
     "add": "Agregar",
-    "addForDay": "Agregar una cita en este día"
+    "addForDay": "Agregar una cita en este día",
+    "cancelThis": "¿Cancelar esta cita?",
+    "cancelThisHint": "“{{title}}” el {{when}} se eliminará y se cancelarán sus recordatorios.",
+    "keep": "Mantener cita",
+    "deleting": "Eliminando..."
   },
   "motherCare": {
     "vitals": "Signos vitales",

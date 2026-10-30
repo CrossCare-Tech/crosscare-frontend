@@ -347,10 +347,7 @@
     "save": "Anrejistre randevou",
     "saving": "N ap anrejistre...",
     "deleteButton": "Efase randevou",
-    "deleteTitle": "Efase randevou",
-    "deleteConfirm": "Èske ou sèten ou vle efase randevou sa a?",
     "cancel": "Anile",
-    "delete": "Efase",
     "errorTitle": "Erè",
     "descriptionMissing": "Ekri yon deskripsyon pou randevou a.",
     "saveFailed": "Nou pa t kapab anrejistre randevou a. Eseye ankò.",
@@ -364,7 +361,11 @@
     "emptyTitle": "Pa gen randevou jou sa a",
     "emptyHint": "Ajoute yon konsiltasyon, yon ekografi oswa yon tès laboratwa, n ap fè w sonje.",
     "add": "Ajoute",
-    "addForDay": "Ajoute yon randevou jou sa a"
+    "addForDay": "Ajoute yon randevou jou sa a",
+    "cancelThis": "Anile randevou sa a?",
+    "cancelThisHint": "“{{title}}” {{when}} ap retire, epi rapèl li yo ap anile.",
+    "keep": "Kenbe randevou a",
+    "deleting": "N ap efase..."
   },
   "motherCare": {
     "vitals": "Siy vital",

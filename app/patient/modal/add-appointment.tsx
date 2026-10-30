@@ -23,6 +23,7 @@ import {
 import { CONFIG } from "@/constants/config";
 import { Theme } from "@/constants/theme";
 import CustomTextInput from "@/components/ui/CustomTextInput";
+import InlineNotice, { Notice } from "@/components/ui/InlineNotice";
 import { ChipSelect, vitalsStyles } from "@/components/vitals/VitalsUI";
 
 // Quick picks that fill the description (prototype 10.2 "Type"); the API only stores a title
@@ -64,6 +65,8 @@ const AppointmentModal = ({ visible, appointment, initialDate, onClose, onSaved 
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleteNotice, setDeleteNotice] = useState<Notice>(null);
 
   // Fill the form every time the sheet opens (empty for a new appointment)
   useEffect(() => {
@@ -82,6 +85,8 @@ const AppointmentModal = ({ visible, appointment, initialDate, onClose, onSaved 
     });
     setShowDatePicker(false);
     setShowTimePicker(false);
+    setConfirmingDelete(false);
+    setDeleteNotice(null);
   }, [visible, appointment, initialDate]);
 
   const handleDateChange = (event: any, selectedDate?: Date) => {
@@ -104,56 +109,38 @@ const AppointmentModal = ({ visible, appointment, initialDate, onClose, onSaved 
   const formatTime = (date: Date) =>
     date.toLocaleTimeString(i18n.language, { hour: "numeric", minute: "2-digit" });
 
+  // 10.2: "Delete appointment" asks inside the sheet first, then this removes it and its reminders
   const handleDelete = async () => {
     if (!isEditing || !appointmentId) return;
+    try {
+      setIsSubmitting(true);
+      setDeleteNotice(null);
 
-    Alert.alert(
-      t("appointments.deleteTitle"),
-      t("appointments.deleteConfirm"),
-      [
-        { text: t("appointments.cancel"), style: "cancel" },
+      const response = await fetch(
+        `${CONFIG.API_BASE_URL}/user/activity/${user.user_id}/appointments/${appointmentId}`,
         {
-          text: t("appointments.delete"),
-          style: "destructive",
-          onPress: async () => {
-            try {
-              setIsSubmitting(true);
-
-              const patientId = user.user_id;
-
-              // Call API to delete appointment
-              const response = await fetch(
-                `${CONFIG.API_BASE_URL}/user/activity/${patientId}/appointments/${appointmentId}`,
-                {
-                  method: "DELETE",
-                  headers: {
-                    "Content-Type": "application/json",
-                  },
-                }
-              );
-
-              if (!response.ok) {
-                throw new Error("Failed to delete appointment");
-              }
-
-              // Cancel any scheduled reminders
-              await cancelAppointmentReminders(appointmentId);
-
-              onClose();
-              onSaved();
-            } catch (error) {
-              console.error(
-                "Error deleting appointment:",
-                JSON.stringify(error, null, 2)
-              );
-              Alert.alert(t("appointments.errorTitle"), t("appointments.deleteFailed"));
-            } finally {
-              setIsSubmitting(false);
-            }
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
           },
-        },
-      ]
-    );
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to delete appointment");
+      }
+
+      // Cancel any scheduled reminders
+      await cancelAppointmentReminders(appointmentId);
+
+      onClose();
+      onSaved();
+    } catch (error) {
+      console.error("Error deleting appointment:", JSON.stringify(error, null, 2));
+      setDeleteNotice({ message: t("appointments.deleteFailed"), variant: "error" });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleSaveAppointment = async () => {
@@ -384,27 +371,67 @@ const AppointmentModal = ({ visible, appointment, initialDate, onClose, onSaved 
               />
             )}
 
-            <TouchableOpacity
-              style={[styles.button, isSubmitting && styles.buttonDisabled]}
-              onPress={handleSaveAppointment}
-              disabled={isSubmitting}
-              accessibilityRole="button"
-            >
-              <Text style={styles.buttonText}>
-                {isSubmitting ? t("appointments.saving") : t("appointments.save")}
-              </Text>
-            </TouchableOpacity>
+            {confirmingDelete ? (
+              <View style={styles.confirm}>
+                <View style={styles.confirmHead}>
+                  <View style={styles.confirmChip}>
+                    <Ionicons name="trash-outline" size={20} color={Theme.colors.magenta} />
+                  </View>
+                  <View style={styles.flex}>
+                    <Text style={styles.confirmTitle}>{t("appointments.cancelThis")}</Text>
+                    <Text style={styles.confirmText}>
+                      {t("appointments.cancelThisHint", {
+                        title: appointment?.title,
+                        when: `${formatDate(form.date)}, ${formatTime(form.time)}`,
+                      })}
+                    </Text>
+                  </View>
+                </View>
+                <InlineNotice notice={deleteNotice} />
+                <TouchableOpacity
+                  style={[styles.button, isSubmitting && styles.buttonDisabled]}
+                  onPress={handleDelete}
+                  disabled={isSubmitting}
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.buttonText}>
+                    {isSubmitting ? t("appointments.deleting") : t("appointments.deleteButton")}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.keepButton}
+                  onPress={() => setConfirmingDelete(false)}
+                  disabled={isSubmitting}
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.keepText}>{t("appointments.keep")}</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <>
+                <TouchableOpacity
+                  style={[styles.button, isSubmitting && styles.buttonDisabled]}
+                  onPress={handleSaveAppointment}
+                  disabled={isSubmitting}
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.buttonText}>
+                    {isSubmitting ? t("appointments.saving") : t("appointments.save")}
+                  </Text>
+                </TouchableOpacity>
 
-            {isEditing && (
-              <TouchableOpacity
-                style={styles.deleteLink}
-                onPress={handleDelete}
-                disabled={isSubmitting}
-                accessibilityRole="button"
-              >
-                <Ionicons name="trash-outline" size={16} color={Theme.colors.danger} />
-                <Text style={styles.deleteText}>{t("appointments.deleteButton")}</Text>
-              </TouchableOpacity>
+                {isEditing && (
+                  <TouchableOpacity
+                    style={styles.deleteLink}
+                    onPress={() => setConfirmingDelete(true)}
+                    disabled={isSubmitting}
+                    accessibilityRole="button"
+                  >
+                    <Ionicons name="trash-outline" size={16} color={Theme.colors.magenta} />
+                    <Text style={styles.deleteText}>{t("appointments.deleteButton")}</Text>
+                  </TouchableOpacity>
+                )}
+              </>
             )}
           </Pressable>
         </Pressable>
@@ -491,7 +518,50 @@ const styles = StyleSheet.create({
   deleteText: {
     fontSize: 14,
     fontFamily: Theme.typography.heading,
-    color: Theme.colors.danger,
+    color: Theme.colors.magenta,
+  },
+  confirm: {
+    gap: 12,
+    padding: Theme.spacing.md,
+    borderRadius: Theme.borderRadius.lg,
+    borderWidth: 1,
+    borderColor: Theme.colors.magentaTint,
+    backgroundColor: Theme.colors.magentaWash,
+  },
+  confirmHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  confirmChip: {
+    width: 44,
+    height: 44,
+    borderRadius: 13,
+    backgroundColor: Theme.colors.magentaTint,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  confirmTitle: {
+    fontSize: 16,
+    fontFamily: Theme.typography.display,
+    color: Theme.colors.ink,
+  },
+  confirmText: {
+    marginTop: 2,
+    fontSize: 12.5,
+    lineHeight: 18,
+    fontFamily: Theme.typography.body,
+    color: Theme.colors.inkFaint,
+  },
+  keepButton: {
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  keepText: {
+    fontSize: 14,
+    fontFamily: Theme.typography.heading,
+    color: Theme.colors.ink,
   },
 });
 

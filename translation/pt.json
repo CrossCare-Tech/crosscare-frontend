@@ -413,10 +413,7 @@
     "save": "Salvar consulta",
     "saving": "Salvando...",
     "deleteButton": "Excluir consulta",
-    "deleteTitle": "Excluir consulta",
-    "deleteConfirm": "Tem certeza de que deseja excluir esta consulta?",
     "cancel": "Cancelar",
-    "delete": "Excluir",
     "errorTitle": "Erro",
     "descriptionMissing": "Escreva uma descrição para a consulta.",
     "saveFailed": "Não foi possível salvar a consulta. Tente novamente.",
@@ -430,7 +427,11 @@
     "emptyTitle": "Nenhuma consulta neste dia",
     "emptyHint": "Adicione um pré-natal, ultrassom ou exame e nós lembraremos você.",
     "add": "Adicionar",
-    "addForDay": "Adicionar uma consulta neste dia"
+    "addForDay": "Adicionar uma consulta neste dia",
+    "cancelThis": "Cancelar esta consulta?",
+    "cancelThisHint": "“{{title}}” em {{when}} será removida, e os lembretes dela serão cancelados.",
+    "keep": "Manter consulta",
+    "deleting": "Excluindo..."
   },
   "motherCare": {
     "vitals": "Sinais vitais",
