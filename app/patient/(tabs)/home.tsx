@@ -720,6 +720,8 @@ const Home = () => {
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scroll}
+          // Android stretches the content past the end and springs it back, natively
+          overScrollMode="always"
         >
           {/* Header: photo, greeting, 911 and reminders */}
           <View style={styles.header}>
@@ -1105,7 +1107,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scroll: {
-    paddingBottom: 120,
+    paddingBottom: Theme.spacing.lg,
   },
   header: {
     flexDirection: "row",

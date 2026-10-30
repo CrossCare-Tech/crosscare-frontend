@@ -264,6 +264,7 @@ export default function Journal() {
             ref={scrollRef}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.scrollContent}
+            overScrollMode="always"
             refreshControl={
               <RefreshControl
                 refreshing={refreshing}
@@ -391,7 +392,7 @@ const styles = StyleSheet.create({
     marginTop: Theme.spacing.xl,
   },
   scrollContent: {
-    paddingBottom: 120,
+    paddingBottom: Theme.spacing.lg,
   },
   timeline: {
     // Right padding leaves space for the month index
