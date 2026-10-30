@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, Alert, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Feather } from "@expo/vector-icons";
@@ -10,6 +10,7 @@ import { useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
 import { CONFIG } from "@/constants/config";
 import { Theme } from "@/constants/theme";
+import { foodImageByName } from "@/constants/foodCatalog";
 import { useMealStore } from "@/zustandStore/mealStore";
 import ScreenBackground from "@/components/ui/ScreenBackground";
 import { useAuthDialog } from "@/components/ui/AuthDialog";
@@ -273,6 +274,7 @@ export default function FoodScreen() {
                   </View>
                   {foods.map((food: any) => {
                     const quantity = food.quantity || 1;
+                    const image = foodImageByName(food.name);
                     return (
                       <View key={food.id ?? food.name} style={styles.food}>
                         <View
@@ -281,6 +283,7 @@ export default function FoodScreen() {
                             { backgroundColor: food.classification === "BAD" ? Theme.colors.warning : Theme.colors.success },
                           ]}
                         />
+                        {image && <Image source={image} style={styles.foodImage} resizeMode="contain" />}
                         <View style={styles.flex}>
                           <Text style={styles.foodName} numberOfLines={2}>
                             {food.name}
@@ -507,6 +510,10 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderTopWidth: 1,
     borderTopColor: Theme.colors.hairlineLight,
+  },
+  foodImage: {
+    width: 32,
+    height: 32,
   },
   foodName: {
     fontFamily: Theme.typography.subheading,
