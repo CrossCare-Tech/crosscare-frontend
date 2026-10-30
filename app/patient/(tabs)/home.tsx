@@ -16,11 +16,10 @@ import { removeToken, setUser } from "@/store/userSlice";
 import { useFocusEffect, useRouter } from "expo-router";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { StatusBar, Platform } from "react-native";
-import Card from "@/components/Card";
 import { useTranslation } from "react-i18next";
 import "../../../translation/i18next";
 import ProgressCircle from "@/components/ProgressCircle";
-import { Image } from "react-native";
+import { Image, ImageSourcePropType } from "react-native";
 import FoodIcon from "@/assets/images/Svg/FoodIcon";
 import WaterIcon from "@/assets/images/Svg/WaterIcon";
 import StepsIcon from "@/assets/images/Svg/StepsIcon";
@@ -304,51 +303,6 @@ const Home = () => {
     return () => clearInterval(interval);
   }, [userId, healthServiceConnected, isUsingAppleHealth, watchAllowed]);
 
-  const cardData1 = [
-    
-    {
-      id: "0",
-      title: t("cards.askDoula.title"),
-      description: t("cards.askDoula.description"),
-      bg1: "#FBBBE9", // Light pink
-      bg2: "#E162BC", // Deep pink
-      image1:
-        user?.avatar_url && user.avatar_url.trim() !== ""
-          ? { uri: user.avatar_url }
-          : require("../../../assets/images/doulaImg.png"),
-      onPress: () => {
-        router.push({
-          pathname: "/patient/askdoula",
-          params: { from_modal: "true" },
-        });
-      },
-    },
-    {
-      id: "2",
-      title: t("cards.calendar.title"),
-      description: t("cards.calendar.description"),
-      bg1: "#FFE5B0", // Light yellow
-      bg2: "#FFAA00", // Bright orange
-      image1: require("../../../assets/images/calendra.png"),
-      onPress: () => router.push("/patient/calendar"),
-    },
-    {
-      id: "4",
-      title: t("cards.reminders.title"),
-      description: t("cards.reminders.description"),
-      bg1: Theme.home.remindersBanner[0],
-      bg2: Theme.home.remindersBanner[1],
-      image1: require("../../../assets/images/reminders/bell.png"),
-      onPress: () => router.push("/patient/settings/reminder"),
-    },
-  ];
-
-  const cardData = cardData1.map((item) => ({
-    ...item,
-    id: String(item.id), // Ensure id is a number
-    onPress: item.onPress || (() => {}),
-  }));
-  
   useEffect(() => {
     const setAllVisited = async () => {
       if (userId) {
@@ -758,14 +712,15 @@ const Home = () => {
         .join(" · ")
     : t("homeB.nothingBooked");
 
-  // Calendar and Reminders banners close the Home; vitals live in the Health tab, Journal in the dock
-  const banners = cardData.filter((item) => item.id === "2" || item.id === "4");
   const routine = routines?.[0];
 
   return (
     <ScreenBackground>
       <SafeAreaView style={styles.container} edges={["top"]}>
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scroll}
+        >
           {/* Header: photo, greeting, 911 and reminders */}
           <View style={styles.header}>
             <TouchableOpacity
@@ -1029,19 +984,23 @@ const Home = () => {
               </TouchableOpacity>
             )}
 
-            {/* Calendar (kept at the client's request) and Reminders banners */}
-            {banners.map((item) => (
-              <Card
-                key={item.id}
-                title={item.title}
-                description={item.description}
-                bg1={item.bg1}
-                bg2={item.bg2}
-                image1={item.image1}
-                id={item.id}
-                onPress={item.onPress}
+            {/* Calendar (kept at the client's request) and Reminders shortcuts close the Home */}
+            <View style={styles.shortcuts}>
+              <ShortcutCard
+                title={t("cards.calendar.title")}
+                sub={t("cards.calendar.description")}
+                colors={Theme.home.tiles.calendar}
+                image={require("../../../assets/images/calendra.png")}
+                onPress={() => router.push("/patient/calendar")}
               />
-            ))}
+              <ShortcutCard
+                title={t("cards.reminders.title")}
+                sub={t("cards.reminders.description")}
+                colors={Theme.home.tiles.reminders}
+                image={require("../../../assets/images/reminders/bell.png")}
+                onPress={() => router.push("/patient/settings/reminder")}
+              />
+            </View>
           </View>
         </ScrollView>
       </SafeAreaView>
@@ -1055,6 +1014,36 @@ const RING = 104;
 const RING_LENGTH = 2 * Math.PI * 47;
 
 // Prototype `.stat` tile: title, chevron chip, value, progress bar and illustration
+// Shortcut to another screen: a full-width pastel card with the title on the left and a picture on the right
+const ShortcutCard = ({
+  title,
+  sub,
+  colors,
+  image,
+  onPress,
+}: {
+  title: string;
+  sub: string;
+  colors: [string, string];
+  image: ImageSourcePropType;
+  onPress: () => void;
+}) => (
+  <TouchableOpacity onPress={onPress} activeOpacity={0.85} accessibilityRole="button" accessibilityLabel={`${title}. ${sub}`}>
+    <LinearGradient colors={colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.shortcut}>
+      <View style={styles.flex}>
+        <Text style={styles.rowTitle}>{title}</Text>
+        <Text style={styles.rowSub}>{sub}</Text>
+      </View>
+      <Image source={image} style={styles.shortcutArt} resizeMode="contain" />
+      <View style={styles.shortcutGo}>
+        <LineIcon size={12} color={Theme.colors.purple} strokeWidth={2.6}>
+          <Path d="M9 6l6 6-6 6" />
+        </LineIcon>
+      </View>
+    </LinearGradient>
+  </TouchableOpacity>
+);
+
 const StatTile = ({
   title,
   value,
@@ -1372,6 +1361,35 @@ const styles = StyleSheet.create({
     fontSize: 10.5,
     color: Theme.colors.inkFaint,
     marginTop: 2,
+  },
+  shortcuts: {
+    gap: 10,
+  },
+  shortcut: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    minHeight: 88,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: Theme.home.tileBorder,
+    paddingVertical: 12,
+    paddingLeft: 18,
+    paddingRight: 14,
+    overflow: "hidden",
+    ...Theme.shadows.card,
+  },
+  shortcutArt: {
+    width: 64,
+    height: 64,
+  },
+  shortcutGo: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: Theme.home.tileChip,
+    alignItems: "center",
+    justifyContent: "center",
   },
   tileArt: {
     position: "absolute",

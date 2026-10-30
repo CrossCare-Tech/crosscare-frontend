@@ -920,10 +920,6 @@
     }
   },
   "cards": {
-    "askDoula": {
-      "title": "CrossCare Concierge",
-      "description": "Personalized to your pregnancy"
-    },
     "calendar": {
       "title": "Your Calendar",
       "description": "Track your appointments"

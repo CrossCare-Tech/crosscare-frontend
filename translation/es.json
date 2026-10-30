@@ -237,10 +237,6 @@
     }
   },
   "cards": {
-    "askDoula": {
-      "title": "CrossCare Concierge",
-      "description": "Personalizada para tu embarazo"
-    },
     "calendar": {
       "title": "Tu Calendario",
       "description": "Haz seguimiento de tus citas"
