@@ -33,6 +33,7 @@ import User from "@/assets/images/Svg/User";
 import * as ImagePicker from "expo-image-picker";
 import { Linking } from "react-native";
 import { useMealStore } from "@/zustandStore/mealStore";
+import { useShallow } from "zustand/react/shallow";
 import { CONFIG } from "@/constants/config";
 import { useFitbit } from "@/zustandStore/useFitbitStore";
 import { useAppleHealth } from "@/zustandStore/useAppleHealthStore";
@@ -109,12 +110,10 @@ const Home = () => {
   const token = useSelector((state: any) => state.user.token);
   const user = useSelector((state: any) => state.user);
   const { t, i18n } = useTranslation();
-  const {
-    calorieGoal,
-    caloriesConsumed,
-    goodFoodCount,
-    badFoodCount
-  } = useMealStore();
+  // Stores are read field by field so the Home only re-renders when what it shows changes
+  const { calorieGoal, caloriesConsumed } = useMealStore(
+    useShallow((state) => ({ calorieGoal: state.calorieGoal, caloriesConsumed: state.caloriesConsumed }))
+  );
   const [weeksComplete, setWeeksComplete] = useState(0);
   const [pregnancyData, setPregnancyData] = useState<any>(null);
   const pregnancyProgress = React.useMemo(() => {
@@ -123,7 +122,8 @@ const Home = () => {
   const [showPregnancyModal, setShowPregnancyModal] = useState(false);
   const { progressPercentage, remainingDays, dueDate } = pregnancyProgress;
 
-  const { maxGlasses, glassCount } = useWaterStore();
+  const maxGlasses = useWaterStore((state) => state.maxGlasses);
+  const glassCount = useWaterStore((state) => state.glassCount);
   const { stepsWalked, stepGoal } = useStepsWithAutoRefresh(user?.user_id);
 
   // Add health service hooks
