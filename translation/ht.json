@@ -332,7 +332,6 @@
     "upcoming": "K ap vini",
     "completed": "Fini",
     "past": "Pase",
-    "nothingBooked": "Pa gen anyen pwograme jou sa a.",
     "reminders": "Rapèl randevou",
     "remindersHint": "N ap avèti ou anvan chak randevou.",
     "loadFailed": "Nou pa t kapab chaje randevou ou yo. Eseye ankò.",
@@ -355,7 +354,17 @@
     "errorTitle": "Erè",
     "descriptionMissing": "Ekri yon deskripsyon pou randevou a.",
     "saveFailed": "Nou pa t kapab anrejistre randevou a. Eseye ankò.",
-    "deleteFailed": "Nou pa t kapab efase randevou a. Eseye ankò."
+    "deleteFailed": "Nou pa t kapab efase randevou a. Eseye ankò.",
+    "today": "Jodi a",
+    "openMonth": "Louvri kalandriye mwa a",
+    "chooseDate": "Chwazi yon dat",
+    "dayLabel_zero": "{{date}}, pa gen randevou",
+    "dayLabel_one": "{{date}}, 1 randevou",
+    "dayLabel_other": "{{date}}, {{count}} randevou",
+    "emptyTitle": "Pa gen randevou jou sa a",
+    "emptyHint": "Ajoute yon konsiltasyon, yon ekografi oswa yon tès laboratwa, n ap fè w sonje.",
+    "add": "Ajoute",
+    "addForDay": "Ajoute yon randevou jou sa a"
   },
   "motherCare": {
     "vitals": "Siy vital",

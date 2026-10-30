@@ -43,12 +43,13 @@ export interface EditableAppointment {
 interface AppointmentModalProps {
   visible: boolean;
   appointment?: EditableAppointment | null; // set when editing
+  initialDate?: Date | null; // day picked on the calendar, for a new appointment
   onClose: () => void;
   onSaved: () => void; // reloads the calendar after a save or delete
 }
 
 // 10.2 — Add & Delete Appointment, shown as a sheet like the reminder one
-const AppointmentModal = ({ visible, appointment, onClose, onSaved }: AppointmentModalProps) => {
+const AppointmentModal = ({ visible, appointment, initialDate, onClose, onSaved }: AppointmentModalProps) => {
   const isEditing = !!appointment;
   const appointmentId = appointment?.id || "";
 
@@ -69,7 +70,11 @@ const AppointmentModal = ({ visible, appointment, onClose, onSaved }: Appointmen
     if (!visible) {
       return;
     }
-    const appointmentDate = appointment ? new Date(appointment.date) : new Date();
+    // A new appointment starts on the day picked on the calendar (never in the past), at the current time
+    const now = new Date();
+    const pickedDay = initialDate && initialDate > now ? new Date(initialDate) : now;
+    pickedDay.setHours(now.getHours(), now.getMinutes(), 0, 0);
+    const appointmentDate = appointment ? new Date(appointment.date) : pickedDay;
     setForm({
       description: appointment?.title || "",
       date: appointmentDate,
@@ -77,7 +82,7 @@ const AppointmentModal = ({ visible, appointment, onClose, onSaved }: Appointmen
     });
     setShowDatePicker(false);
     setShowTimePicker(false);
-  }, [visible, appointment]);
+  }, [visible, appointment, initialDate]);
 
   const handleDateChange = (event: any, selectedDate?: Date) => {
     setShowDatePicker(Platform.OS === "ios");

@@ -398,7 +398,6 @@
     "upcoming": "Próxima",
     "completed": "Concluída",
     "past": "Anteriores",
-    "nothingBooked": "Nada agendado para este dia.",
     "reminders": "Lembretes de consultas",
     "remindersHint": "Avisaremos você antes de cada consulta.",
     "loadFailed": "Não foi possível carregar suas consultas. Tente novamente.",
@@ -421,7 +420,17 @@
     "errorTitle": "Erro",
     "descriptionMissing": "Escreva uma descrição para a consulta.",
     "saveFailed": "Não foi possível salvar a consulta. Tente novamente.",
-    "deleteFailed": "Não foi possível excluir a consulta. Tente novamente."
+    "deleteFailed": "Não foi possível excluir a consulta. Tente novamente.",
+    "today": "Hoje",
+    "openMonth": "Abrir visão do mês",
+    "chooseDate": "Escolha uma data",
+    "dayLabel_zero": "{{date}}, sem consultas",
+    "dayLabel_one": "{{date}}, 1 consulta",
+    "dayLabel_other": "{{date}}, {{count}} consultas",
+    "emptyTitle": "Nenhuma consulta neste dia",
+    "emptyHint": "Adicione um pré-natal, ultrassom ou exame e nós lembraremos você.",
+    "add": "Adicionar",
+    "addForDay": "Adicionar uma consulta neste dia"
   },
   "motherCare": {
     "vitals": "Sinais vitais",

@@ -412,7 +412,6 @@
     "upcoming": "Upcoming",
     "completed": "Completed",
     "past": "Past",
-    "nothingBooked": "Nothing booked for this day.",
     "reminders": "Appointment reminders",
     "remindersHint": "We'll notify you before each appointment.",
     "loadFailed": "Could not load your appointments. Please try again.",
@@ -435,7 +434,17 @@
     "errorTitle": "Error",
     "descriptionMissing": "Please enter a description for the appointment.",
     "saveFailed": "Could not save the appointment. Please try again.",
-    "deleteFailed": "Could not delete the appointment. Please try again."
+    "deleteFailed": "Could not delete the appointment. Please try again.",
+    "today": "Today",
+    "openMonth": "Open month view",
+    "chooseDate": "Choose a date",
+    "dayLabel_zero": "{{date}}, no appointments",
+    "dayLabel_one": "{{date}}, 1 appointment",
+    "dayLabel_other": "{{date}}, {{count}} appointments",
+    "emptyTitle": "No appointments this day",
+    "emptyHint": "Add a check-up, scan or lab visit and we will remind you.",
+    "add": "Add",
+    "addForDay": "Add an appointment on this day"
   },
   "motherCare": {
     "vitals": "Vitals",
