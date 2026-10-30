@@ -42,7 +42,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import Svg, { Circle, Defs, LinearGradient as SvgGradient, Path, Stop } from "react-native-svg";
 import { Theme } from "@/constants/theme";
 import { babyImageForWeek } from "@/constants/babyImages";
-import { fruitForWeek } from "@/constants/babySize";
+import { babyObjectKeyForWeek } from "@/constants/babyFruits";
 import ScreenBackground from "@/components/ui/ScreenBackground";
 import LineIcon from "@/components/profile/LineIcon";
 import { DueArt, FoodArt, GlucoseArt, PressureArt, StepsArt, WaterArt } from "@/components/home/TileArt";
@@ -693,7 +693,7 @@ const Home = () => {
   const trimesterIndex = week >= 28 ? 3 : week >= 14 ? 2 : 1;
   const weeksToGo = Math.max(0, Math.ceil(remainingDays / 7));
   const progress = Math.min(Math.max(progressPercentage, 0), 100);
-  const fruit = fruitForWeek(week);
+  const babyObject = babyObjectKeyForWeek(week);
 
   // Today's appointments, shown in one line under the check-in
   const today = new Date();
@@ -806,7 +806,7 @@ const Home = () => {
                       <Path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" fill={Theme.colors.magentaVivid} />
                     </Svg>
                     <Text style={styles.heroMsgText}>
-                      {t("homeB.babySize", { fruit: t(`fruits.${fruit}`).toLowerCase() })}
+                      {t("homeB.babySize", { fruit: t(`babyObjects.${babyObject}`).toLowerCase() })}
                     </Text>
                   </View>
                 )}

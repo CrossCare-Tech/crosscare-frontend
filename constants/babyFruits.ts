@@ -1,3 +1,5 @@
+import { BABY_WEEKS } from "@/constants/babyWeeks";
+
 // Size comparison pictures for the Compare tab, one per pregnancy week (4 to 40).
 const FRUIT_IMAGES: Record<number, any> = {
   4: require("@/assets/images/fruits/week04-poppy-seed.png"),
@@ -39,4 +41,13 @@ const FRUIT_IMAGES: Record<number, any> = {
   40: require("@/assets/images/fruits/week40-small-watermelon.png"),
 };
 
-export const fruitImageForWeek = (week: number) => FRUIT_IMAGES[Math.min(Math.max(week, 4), 40)];
+const clampWeek = (week: number) => Math.min(Math.max(week, 4), 40);
+
+export const fruitImageForWeek = (week: number) => FRUIT_IMAGES[clampWeek(week)];
+
+// Translation key (under `babyObjects`) of the object the Compare picture shows, so the Home and Profile
+// name the same thing: "Small watermelon" -> "smallWatermelon"
+export const babyObjectKeyForWeek = (week: number) =>
+  BABY_WEEKS[clampWeek(week)].object
+    .toLowerCase()
+    .replace(/ (\w)/g, (_, letter: string) => letter.toUpperCase());
