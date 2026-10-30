@@ -822,7 +822,6 @@
   },
   "moodCheckIn": {
     "title": "¿Cómo te sientes hoy?",
-    "demo": "Demostración",
     "good": "Bien",
     "tired": "Cansada",
     "worried": "Preocupada",

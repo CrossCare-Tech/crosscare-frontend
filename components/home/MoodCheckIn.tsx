@@ -1,5 +1,6 @@
-import React, { useState } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import React, { useEffect, useRef, useState } from "react";
+import { AccessibilityInfo, Animated, LayoutAnimation, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { Theme } from "@/constants/theme";
@@ -13,19 +14,55 @@ const MOODS: { id: Mood; emoji: string }[] = [
   { id: "unwell", emoji: "🤒" },
 ];
 
-// Home mood check-in (prototype home version B, Demo): one tap, a short reply, nothing is saved.
-// Worried and unwell also offer a way to talk to the guide.
+// Only the day of the last answer is kept (on this device), so the card stays away until tomorrow
+const ANSWERED_ON_KEY = "moodCheckIn.answeredOn";
+// How long the reply to Good or Tired stays before the card leaves
+const REPLY_MS = 2500;
+
+// Home mood check-in (prototype home version B): one tap, a short reply, then the card leaves for the day.
+// The mood itself is not saved. Worried and unwell keep the card, with a way to talk to the guide, until it is used.
 const MoodCheckIn = () => {
   const { t } = useTranslation();
   const [mood, setMood] = useState<Mood | null>(null);
+  const [hidden, setHidden] = useState(true);
+  const opacity = useRef(new Animated.Value(1)).current;
+  const timer = useRef<ReturnType<typeof setTimeout>>();
   const needsGuide = mood === "worried" || mood === "unwell";
 
+  useEffect(() => {
+    AsyncStorage.getItem(ANSWERED_ON_KEY)
+      .then((day) => setHidden(day === new Date().toDateString()))
+      .catch(() => setHidden(false));
+    return () => clearTimeout(timer.current);
+  }, []);
+
+  const leave = async () => {
+    const reduceMotion = await AccessibilityInfo.isReduceMotionEnabled().catch(() => false);
+    const collapse = () => {
+      if (!reduceMotion) LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setHidden(true);
+    };
+    if (reduceMotion) return collapse();
+    Animated.timing(opacity, { toValue: 0, duration: 250, useNativeDriver: true }).start(collapse);
+  };
+
+  const choose = (next: Mood) => {
+    setMood(next);
+    AsyncStorage.setItem(ANSWERED_ON_KEY, new Date().toDateString()).catch(() => {});
+    clearTimeout(timer.current);
+    if (next === "good" || next === "tired") timer.current = setTimeout(leave, REPLY_MS);
+  };
+
+  const talkToGuide = () => {
+    router.push({ pathname: "/patient/askdoula", params: { from_modal: "true" } });
+    leave();
+  };
+
+  if (hidden) return null;
+
   return (
-    <View style={styles.card}>
-      <View style={styles.titleRow}>
-        <Text style={styles.title}>{t("moodCheckIn.title")}</Text>
-        <Text style={styles.demo}>{t("moodCheckIn.demo")}</Text>
-      </View>
+    <Animated.View style={[styles.card, { opacity }]}>
+      <Text style={styles.title}>{t("moodCheckIn.title")}</Text>
 
       <View style={styles.grid} accessibilityRole="radiogroup">
         {MOODS.map((option) => {
@@ -34,7 +71,7 @@ const MoodCheckIn = () => {
             <TouchableOpacity
               key={option.id}
               style={[styles.chip, selected && styles.chipOn]}
-              onPress={() => setMood(option.id)}
+              onPress={() => choose(option.id)}
               activeOpacity={0.8}
               accessibilityRole="radio"
               accessibilityState={{ checked: selected }}
@@ -51,16 +88,11 @@ const MoodCheckIn = () => {
       </Text>
 
       {needsGuide && (
-        <TouchableOpacity
-          style={styles.cta}
-          onPress={() => router.push({ pathname: "/patient/askdoula", params: { from_modal: "true" } })}
-          activeOpacity={0.88}
-          accessibilityRole="button"
-        >
+        <TouchableOpacity style={styles.cta} onPress={talkToGuide} activeOpacity={0.88} accessibilityRole="button">
           <Text style={styles.ctaText}>{t("moodCheckIn.talk")}</Text>
         </TouchableOpacity>
       )}
-    </View>
+    </Animated.View>
   );
 };
 
@@ -75,27 +107,11 @@ const styles = StyleSheet.create({
     padding: Theme.spacing.md,
     ...Theme.shadows.card,
   },
-  titleRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    alignItems: "center",
-    gap: 6,
-  },
   title: {
     fontFamily: Theme.typography.display,
     fontSize: 18,
     lineHeight: 23,
     color: Theme.colors.ink,
-  },
-  demo: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: Theme.borderRadius.full,
-    overflow: "hidden",
-    backgroundColor: Theme.colors.purpleTint,
-    fontFamily: Theme.typography.heading,
-    fontSize: 10.5,
-    color: Theme.colors.purple,
   },
   grid: {
     flexDirection: "row",

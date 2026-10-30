@@ -720,7 +720,6 @@
   },
   "moodCheckIn": {
     "title": "How are you feeling today?",
-    "demo": "Demo",
     "good": "Good",
     "tired": "Tired",
     "worried": "Worried",

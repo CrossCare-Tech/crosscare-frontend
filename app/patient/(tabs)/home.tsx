@@ -858,7 +858,7 @@ const Home = () => {
               </View>
             </LinearGradient>
 
-            {/* Mood check-in (prototype version B, Demo) */}
+            {/* Mood check-in (prototype version B): leaves once answered, until tomorrow */}
             <MoodCheckIn />
 
             {/* Today: what is booked */}
