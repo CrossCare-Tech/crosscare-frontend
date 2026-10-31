@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Modal, View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import { Alert, Modal, View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 interface CalorieGoalModalProps {
@@ -13,8 +13,18 @@ const CalorieGoalModal = ({ visible, onClose, onSave }: CalorieGoalModalProps) =
   const { t } = useTranslation();
   
   const handleSave = () => {
-    if (calorieGoal.trim() === '') return;
-    onSave(calorieGoal);
+    // Previously this returned silently on an empty value and accepted
+    // anything else, so a non-numeric entry was saved as the goal.
+    const trimmed = calorieGoal.trim();
+    const goal = Number(trimmed);
+    if (!trimmed || !Number.isFinite(goal) || goal < 500 || goal > 10000) {
+      Alert.alert(
+        t('meals.setCalorieGoal'),
+        t('meals.invalidCalorieGoal')
+      );
+      return;
+    }
+    onSave(trimmed);
     setCalorieGoal(''); // Reset the input
   };
   

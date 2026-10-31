@@ -1,8 +1,6 @@
 import {
   ActivityIndicator,
-  Alert,
-  FlatList,
-  ScrollView,
+  Alert,  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -1298,13 +1296,15 @@ const Home = () => {
           </TouchableOpacity>
         </View>
 
-        <FlatList
-          data={cardData}
-          renderItem={renderCard}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.cardContainer}
-          showsVerticalScrollIndicator={false}
-        />
+        {/* Mapped rather than a FlatList: this sits inside the page
+            ScrollView, which disables virtualisation anyway and logs
+            "VirtualizedLists should never be nested inside plain
+            ScrollViews". cardData holds three static items. */}
+        <View style={styles.cardContainer}>
+          {cardData.map((item) => (
+            <React.Fragment key={item.id}>{renderCard({ item })}</React.Fragment>
+          ))}
+        </View>
         
         {/* Copyright Notice */}
 <View style={styles.copyrightContainer}>
