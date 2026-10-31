@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CONFIG } from '@/constants/config';
+import { todayDateString } from "@/utils/date";
 
 type MoodLevel = 'VERY_LOW' | 'LOW' | 'MODERATE' | 'HIGH' | 'VERY_HIGH';
 
@@ -112,7 +113,7 @@ export const useMoodStore = create<MoodState>()(
             lastUpdated: new Date().toISOString(),
           });
 
-          const today = new Date().toISOString().split('T')[0];
+          const today = todayDateString();
           const todayEntry = data.moodHistory?.find((m: MoodEntry) => m.date === today);
           if (todayEntry) {
             set({

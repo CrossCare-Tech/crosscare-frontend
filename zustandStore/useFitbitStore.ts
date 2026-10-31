@@ -4,6 +4,7 @@ import * as AuthSession from "expo-auth-session";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Buffer } from "buffer";
 import { CONFIG } from "@/constants/config";
+import { toLocalDateString, todayDateString } from "@/utils/date";
 
 // Ensure the browser can complete the auth session
 WebBrowser.maybeCompleteAuthSession();
@@ -247,7 +248,7 @@ export function useFitbit() {
   // Get heart rate data
   const getHeartRateData = async (dateStr: string, period: string = "1d") => {
     // Default to today if no date specified
-    const date = dateStr || new Date().toISOString().split("T")[0];
+    const date = dateStr || todayDateString();
     // Use the period parameter for different time ranges
     return getFitbitData(
       `1/user/-/activities/heart/date/${date}/${period}.json`
@@ -256,7 +257,7 @@ export function useFitbit() {
 
   // Add a new function specifically for heart rate with time ranges
   const getHeartRateDataForRange = async (timeRange: string) => {
-    const today = new Date().toISOString().split("T")[0];
+    const today = todayDateString();
 
     let period;
     switch (timeRange) {
@@ -276,8 +277,8 @@ export function useFitbit() {
         const lastMonthEnd = new Date();
         lastMonthEnd.setMonth(lastMonthEnd.getMonth(), 0);
 
-        const startDate = lastMonthStart.toISOString().split("T")[0];
-        const endDate = lastMonthEnd.toISOString().split("T")[0];
+        const startDate = toLocalDateString(lastMonthStart);
+        const endDate = toLocalDateString(lastMonthEnd);
 
         return getFitbitData(
           `1/user/-/activities/heart/date/${startDate}/${endDate}.json`
@@ -294,7 +295,7 @@ export function useFitbit() {
   // Get steps data
   const getStepsData = async (dateStr: string) => {
     // Default to today if no date specified
-    const date = dateStr || new Date().toISOString().split("T")[0];
+    const date = dateStr || todayDateString();
     return getFitbitData(`1/user/-/activities/steps/date/${date}/1d.json`);
   };
 
@@ -384,8 +385,8 @@ export function useFitbit() {
     }
 
     // Format dates for Fitbit API (yyyy-MM-dd)
-    const startDateStr = startDate.toISOString().split("T")[0];
-    const endDateStr = endDate.toISOString().split("T")[0];
+    const startDateStr = toLocalDateString(startDate);
+    const endDateStr = toLocalDateString(endDate);
 
     console.log(`Fetching sleep data from ${startDateStr} to ${endDateStr}`);
 

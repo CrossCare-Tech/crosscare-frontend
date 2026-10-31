@@ -4,6 +4,7 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { CONFIG } from "@/constants/config";
 import { Platform } from "react-native";
+import { dateKeyOf, toLocalDateString, todayDateString } from "@/utils/date";
 
 // Only initialize AppleHealthKit on iOS
 let AppleHealthKit: typeof BrokenHealthKit | null = null;
@@ -278,7 +279,7 @@ export const useAppleHealth = create<AppleHealthState>()(
               // Format in a way compatible with the app
               const formattedData = {
                 "activities-steps": [{
-                  dateTime: today.toISOString().split('T')[0],
+                  dateTime: toLocalDateString(today),
                   value: String(results.value)
                 }]
               };
@@ -330,7 +331,7 @@ export const useAppleHealth = create<AppleHealthState>()(
                 // Format in a way compatible with the app
                 const formattedData = {
                   "activities-steps": [{
-                    dateTime: new Date().toISOString().split('T')[0],
+                    dateTime: todayDateString(),
                     value: String(results.value)
                   }]
                 };
@@ -614,7 +615,7 @@ export const useAppleHealth = create<AppleHealthState>()(
               // Format in Fitbit-compatible format
               const formattedData = {
                 sleep: [{
-                  dateOfSleep: today.toISOString().split('T')[0],
+                  dateOfSleep: toLocalDateString(today),
                   duration: totalDuration,
                   efficiency: 90, // Apple Health doesn't provide this, use a reasonable default
                   logId: `apple-${Date.now()}`,
@@ -696,7 +697,7 @@ export const useAppleHealth = create<AppleHealthState>()(
 
               // Group sleep samples by date
               const sleepByDate = sleepSamples.reduce((acc: any, sample: any) => {
-                const dateStr = new Date(sample.startDate).toISOString().split('T')[0];
+                const dateStr = dateKeyOf(sample.startDate);
                 
                 if (!acc[dateStr]) {
                   acc[dateStr] = {
@@ -986,7 +987,7 @@ export const useAppleHealth = create<AppleHealthState>()(
                                 
                                 // Group resting heart rate by date
                                 const heartRateByDate = (restingResults as any).reduce((acc: any, sample: any) => {
-                                  const dateStr = new Date(sample.startDate).toISOString().split('T')[0];
+                                  const dateStr = dateKeyOf(sample.startDate);
                                   
                                   if (!acc[dateStr]) {
                                     acc[dateStr] = [];
@@ -1039,7 +1040,7 @@ export const useAppleHealth = create<AppleHealthState>()(
                 
                                 // Group heart rate samples by date
                                 const heartRateByDate = results.reduce((acc: any, sample: any) => {
-                                  const dateStr = new Date(sample.startDate).toISOString().split('T')[0];
+                                  const dateStr = dateKeyOf(sample.startDate);
                                   
                                   if (!acc[dateStr]) {
                                     acc[dateStr] = [];

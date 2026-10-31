@@ -1,6 +1,7 @@
 import axios from "axios";
 import { detectLogRequestWithPatterns } from "./logRequestWithPatterns";
 import { CONFIG } from "@/constants/config";
+import { todayDateString } from "@/utils/date";
 
 // Define the function parameters and return type
 export interface LogRequestResult {
@@ -107,7 +108,7 @@ export const detectAndHandleLogRequest = async (
         const sleepEnd = formatTime(patternMatch.sleepEnd || "");
 
         // Get today's date in ISO format (YYYY-MM-DD)
-        const today = new Date().toISOString().split("T")[0];
+        const today = todayDateString();
 
         requestData = {
           date: today,
@@ -261,7 +262,7 @@ export const detectAndHandleLogRequest = async (
         const sleepEnd = formatTime(extractedData.sleepEnd || "");
 
         // Get today's date in ISO format (YYYY-MM-DD)
-        const today = new Date().toISOString().split("T")[0];
+        const today = todayDateString();
 
         requestData = {
           date: today,

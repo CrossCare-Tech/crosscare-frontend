@@ -165,7 +165,7 @@ export const useStepsStore = create<StepsState>()(
                       ? fixedWeekdays[dayIndex]
                       : (entry.day && entry.day.charAt(0)) || "?";
 
-                  const dateString = entryDate.toISOString().split("T")[0];
+                  const dateString = toLocalDateString(entryDate);
 
                   const stepItem: StepDataItem = {
                     id: entry.id || `step-${dateString}`,
@@ -420,8 +420,8 @@ export const useStepsStore = create<StepsState>()(
             }
 
             // Format dates for Fitbit API (yyyy-MM-dd)
-            const startDateStr = startDate.toISOString().split("T")[0];
-            const endDateStr = today.toISOString().split("T")[0];
+            const startDateStr = toLocalDateString(startDate);
+            const endDateStr = toLocalDateString(today);
 
             // Get data for date range - this is a placeholder, replace with actual implementation
             // const data = await getDataForRange("activities/steps", startDateStr, endDateStr)
@@ -563,7 +563,7 @@ const getTodayStepsFromFitbit = (
     return null;
   }
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = todayDateString();
   const todayData = fitbitData["activities-steps"].find(
     (item) => item.dateTime === today
   );
@@ -573,6 +573,7 @@ const getTodayStepsFromFitbit = (
 
 // Custom hook to use the store with auto-refresh
 import { useEffect } from "react";
+import { toLocalDateString, todayDateString } from "@/utils/date";
 
 export const useStepsWithAutoRefresh = (userId: string) => {
   const { startAutoRefresh, isFitbitConnected, fetchFitbitStepData } =

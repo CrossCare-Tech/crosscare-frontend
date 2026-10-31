@@ -4,6 +4,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { devtools } from "zustand/middleware";
 import { Platform } from "react-native";
 import { CONFIG } from "@/constants/config";
+import { todayDateString } from "@/utils/date";
 
 // Type definitions
 export type FoodClassification = "GOOD" | "BAD";
@@ -40,7 +41,7 @@ export interface MealProgress {
 }
 
 // Helper function to get today's date in YYYY-MM-DD format
-const getTodayDate = () => new Date().toISOString().split("T")[0];
+const getTodayDate = () => todayDateString();
 
 // Helper function to normalize meal type
 const normalizeMealType = (

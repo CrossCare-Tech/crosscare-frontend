@@ -1,3 +1,4 @@
+import { dateKeyOf, toLocalDateString, todayDateString } from "@/utils/date";
 import React, { useState, useEffect, useMemo, useRef } from "react"
 import {
   View,
@@ -210,7 +211,7 @@ export default function HeartRateScreen() {
       // Try Fitbit if no Apple data or not connected
       if (currentRate === 0 && fitbitConnected) {
         try {
-          const today = new Date().toISOString().split('T')[0];
+          const today = todayDateString();
           const data = await getFitbitHeartRateDataRaw(today, '1d');
           
           if (data && data['activities-heart'] && data['activities-heart'].length > 0) {
@@ -444,7 +445,7 @@ export default function HeartRateScreen() {
     let endDate: Date
 
     if (timeRange === "today") {
-      const todayStr = today.toISOString().split("T")[0]
+      const todayStr = toLocalDateString(today)
 
       return [
         {
@@ -464,7 +465,7 @@ export default function HeartRateScreen() {
 
       const currentDate = new Date(startDate)
       while (currentDate <= endDate) {
-        const dateString = currentDate.toISOString().split("T")[0]
+        const dateString = toLocalDateString(currentDate)
         days.push({
           id: `empty-${dateString}`,
           date: dateString,
@@ -498,7 +499,7 @@ export default function HeartRateScreen() {
         if (range.start <= lastDay) {
           const labelDate = new Date(startDate)
           labelDate.setDate(range.start)
-          const labelDateString = labelDate.toISOString().split("T")[0]
+          const labelDateString = toLocalDateString(labelDate)
 
           days.push({
             id: `label-${labelDateString}`,
@@ -511,7 +512,7 @@ export default function HeartRateScreen() {
           for (let day = range.start; day <= Math.min(range.end, lastDay); day++) {
             const currentDate = new Date(startDate)
             currentDate.setDate(day)
-            const dateString = currentDate.toISOString().split("T")[0]
+            const dateString = toLocalDateString(currentDate)
 
             days.push({
               id: `day-${dateString}`,
@@ -541,7 +542,7 @@ export default function HeartRateScreen() {
         try {
           const date = safeParseDate(item.date);
           if (date) {
-            const dateKey = date.toISOString().split('T')[0];
+            const dateKey = toLocalDateString(date);
             dataMap.set(dateKey, item);
           }
         } catch (error) {
@@ -552,7 +553,7 @@ export default function HeartRateScreen() {
   
     if (timeRange === "today") {
       try {
-        const todayStr = new Date().toISOString().split('T')[0];
+        const todayStr = todayDateString();
         const todayData = dataMap.get(todayStr);
   
         if (todayData) {
@@ -654,12 +655,12 @@ export default function HeartRateScreen() {
           setCurrentHeartRate(latestHeartRate);
           
           const today = new Date();
-          const todayStr = today.toISOString().split("T")[0];
+          const todayStr = toLocalDateString(today);
           
           setHeartRateData((prevData) => {
             const updatedData = [...prevData];
             const todayIndex = updatedData.findIndex(
-              (item) => new Date(item.date).toISOString().split("T")[0] === todayStr,
+              (item) => dateKeyOf(item.date) === todayStr,
             );
             
             if (todayIndex >= 0) {

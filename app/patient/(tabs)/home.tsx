@@ -39,6 +39,7 @@ import { useMealStore } from "@/zustandStore/mealStore";
 import { CONFIG } from "@/constants/config";
 import { useFitbit } from "@/zustandStore/useFitbitStore";
 import { useAppleHealth } from "@/zustandStore/useAppleHealthStore";
+import { todayDateString } from "@/utils/date";
 
 
 interface Progress {
@@ -259,7 +260,7 @@ const Home = () => {
           }
         } else {
           // For Fitbit
-          const today = new Date().toISOString().split('T')[0];
+          const today = todayDateString();
           stepsData = await fitbitGetStepsData(today);
         }
 

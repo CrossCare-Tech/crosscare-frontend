@@ -22,6 +22,7 @@ import {
   setMedicationRemindersEnabled,
 } from "@/utils/NotificationManager";
 import { CONFIG } from "@/constants/config";
+import { toLocalDateString, todayDateString } from "@/utils/date";
 
 // First, let's update the interfaces to include dates
 interface MedicationTime {
@@ -227,7 +228,7 @@ export default function medications() {
       const match = medicationId.match(datePattern);
 
       let baseMedicationId = medicationId;
-      let medicationDate = new Date().toISOString().split("T")[0]; // Default to today
+      let medicationDate = todayDateString(); // Default to today
 
       if (match && match[1]) {
         // If we found a date pattern at the end
@@ -440,7 +441,7 @@ export default function medications() {
           while (currentDate <= endDate) {
             if (allowedDays.includes(currentDate.getDay())) {
               // Store original date in "YYYY-MM-DD" format for sorting
-              const originalDateStr = currentDate.toISOString().split("T")[0];
+              const originalDateStr = toLocalDateString(currentDate);
 
               // Format date as "18 Mar, 2025" with abbreviated month
               const day = currentDate.getDate();
@@ -454,7 +455,7 @@ export default function medications() {
               const dayOfWeekAbbr = getDayOfWeekAbbr(currentDate.getDay());
 
               // Check if this specific date is in completedDates
-              const dateStr = currentDate.toISOString().split("T")[0];
+              const dateStr = toLocalDateString(currentDate);
               const isDateCompleted =
                 item.completedDates &&
                 item.completedDates.some(
