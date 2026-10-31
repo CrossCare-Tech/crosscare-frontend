@@ -715,7 +715,6 @@
   },
   "moodCheckIn": {
     "title": "Como você está se sentindo hoje?",
-    "demo": "Demonstração",
     "good": "Bom",
     "tired": "Cansado",
     "worried": "Preocupado",
@@ -726,6 +725,45 @@
     "reply_worried": "É normal se preocupar às vezes. Você não está sozinha, e seu guia está aqui se quiser conversar.",
     "reply_unwell": "Sinto muito que você não esteja bem. Se tiver dor forte, sangramento ou dificuldade para respirar, ligue para o 911. Para todo o resto, seu guia pode ajudar.",
     "talk": "Conversar com o Ask Your Doula"
+  },
+  "babyObjects": {
+    "poppySeed": "Semente de papoula",
+    "sesameSeed": "Semente de gergelim",
+    "lentil": "Lentilha",
+    "blueberry": "Mirtilo",
+    "raspberry": "Framboesa",
+    "cherry": "Cereja",
+    "kumquat": "Kumquat",
+    "fig": "Figo",
+    "lime": "Limão",
+    "peach": "Pêssego",
+    "lemon": "Limão-siciliano",
+    "apple": "Maçã",
+    "avocado": "Abacate",
+    "pear": "Pera",
+    "bellPepper": "Pimentão",
+    "heirloomTomato": "Tomate caqui",
+    "banana": "Banana",
+    "carrot": "Cenoura",
+    "mango": "Manga",
+    "grapefruit": "Toranja",
+    "earOfCorn": "Espiga de milho",
+    "cauliflower": "Couve-flor",
+    "lettuceHead": "Pé de alface",
+    "cabbage": "Repolho",
+    "eggplant": "Berinjela",
+    "butternutSquash": "Abóbora-manteiga",
+    "cucumber": "Pepino",
+    "pineapple": "Abacaxi",
+    "coconut": "Coco",
+    "largePineapple": "Abacaxi grande",
+    "cantaloupe": "Melão cantalupo",
+    "honeydewMelon": "Melão",
+    "romaineHeart": "Alface-romana",
+    "swissChard": "Maço de acelga",
+    "leek": "Alho-poró",
+    "miniWatermelon": "Minimelancia",
+    "smallWatermelon": "Melancia pequena"
   },
   "profile": {
     "readPrivacyPolicy": "Ler a Política de Privacidade completa",
@@ -915,10 +953,6 @@
     }
   },
   "cards": {
-    "askDoula": {
-      "title": "CrossCare Concierge",
-      "description": "Personalizado para sua gravidez"
-    },
     "calendar": {
       "title": "Seu Calendário",
       "description": "Acompanhe seus compromissos"

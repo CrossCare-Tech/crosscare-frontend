@@ -176,8 +176,6 @@ export const useStepsStore = create<StepsState>()(
                     source: entry.source || "app", // Default to app if not specified
                   };
 
-                  console.log("Processed step item:", stepItem);
-
                   // Store data with ISO date string as key
                   stepMap.set(dateString, stepItem);
 
@@ -574,9 +572,11 @@ const getTodayStepsFromFitbit = (
 // Custom hook to use the store with auto-refresh
 import { useEffect } from "react";
 
+// Starts the step refresh and returns only today's steps and goal, so callers do not re-render on every store change
 export const useStepsWithAutoRefresh = (userId: string) => {
-  const { startAutoRefresh, isFitbitConnected, fetchFitbitStepData } =
-    useStepsStore();
+  const startAutoRefresh = useStepsStore((state) => state.startAutoRefresh);
+  const isFitbitConnected = useStepsStore((state) => state.isFitbitConnected);
+  const fetchFitbitStepData = useStepsStore((state) => state.fetchFitbitStepData);
 
   useEffect(() => {
     if (userId) {
@@ -591,7 +591,9 @@ export const useStepsWithAutoRefresh = (userId: string) => {
       // Clean up on unmount
       return stopAutoRefresh;
     }
-  }, [userId, isFitbitConnected, fetchFitbitStepData]);
+  }, [userId, isFitbitConnected, fetchFitbitStepData, startAutoRefresh]);
 
-  return useStepsStore();
+  const stepsWalked = useStepsStore((state) => state.stepsWalked);
+  const stepGoal = useStepsStore((state) => state.stepGoal);
+  return { stepsWalked, stepGoal };
 };

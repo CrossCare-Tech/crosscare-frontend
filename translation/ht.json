@@ -648,7 +648,6 @@
   },
   "moodCheckIn": {
     "title": "Kijan ou santi w jodi a?",
-    "demo": "Demonstrasyon",
     "good": "Byen",
     "tired": "Fatige",
     "worried": "Enkyete",
@@ -659,6 +658,45 @@
     "reply_worried": "Li nòmal pou enkyete pafwa. Ou pa poukont ou, epi gid ou la si w vle pale sou sa.",
     "reply_unwell": "Mwen regrèt ou pa santi w byen. Si w gen gwo doulè, senyen oswa difikilte pou respire, rele 911. Pou tout lòt bagay, gid ou ka ede w.",
     "talk": "Pale ak Ask Your Doula"
+  },
+  "babyObjects": {
+    "poppySeed": "Grenn pavo",
+    "sesameSeed": "Grenn wowoli",
+    "lentil": "Lantiy",
+    "blueberry": "Bluberi",
+    "raspberry": "Franbwaz",
+    "cherry": "Seriz",
+    "kumquat": "Kumkwat",
+    "fig": "Fig frans",
+    "lime": "Sitwon vèt",
+    "peach": "Pèch",
+    "lemon": "Sitwon jòn",
+    "apple": "Pòm",
+    "avocado": "Zaboka",
+    "pear": "Pwa",
+    "bellPepper": "Piman dous",
+    "heirloomTomato": "Gwo tomat",
+    "banana": "Fig mi",
+    "carrot": "Kawòt",
+    "mango": "Mango",
+    "grapefruit": "Chadèk",
+    "earOfCorn": "Zepi mayi",
+    "cauliflower": "Chouflè",
+    "lettuceHead": "Tèt leti",
+    "cabbage": "Chou",
+    "eggplant": "Berejèn",
+    "butternutSquash": "Joumou",
+    "cucumber": "Konkonm",
+    "pineapple": "Anana",
+    "coconut": "Kokoye",
+    "largePineapple": "Gwo anana",
+    "cantaloupe": "Melon frans",
+    "honeydewMelon": "Melon vèt",
+    "romaineHeart": "Leti romèn",
+    "swissChard": "Pake bèt",
+    "leek": "Powo",
+    "miniWatermelon": "Ti melon dlo",
+    "smallWatermelon": "Melon dlo piti"
   },
   "profile": {
     "readPrivacyPolicy": "Li tout Politik Konfidansyalite a",
@@ -848,10 +886,6 @@
     }
   },
   "cards": {
-    "askDoula": {
-      "title": "CrossCare Concierge",
-      "description": "Pèsonalize pou gravidity ou"
-    },
     "calendar": {
       "title": "Kalanda Ou",
       "description": "Suiv randevou ou yo"

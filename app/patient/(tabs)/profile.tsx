@@ -252,7 +252,7 @@ const Profile = () => {
   return (
     <ScreenBackground>
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView showsVerticalScrollIndicator={false} overScrollMode="always">
         <View style={styles.content}>
           <View style={styles.header}>
             <ProfilePhoto uri={photo} onPress={pickImage} />

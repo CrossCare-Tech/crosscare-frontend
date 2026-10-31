@@ -16,11 +16,10 @@ import { removeToken, setUser } from "@/store/userSlice";
 import { useFocusEffect, useRouter } from "expo-router";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { StatusBar, Platform } from "react-native";
-import Card from "@/components/Card";
 import { useTranslation } from "react-i18next";
 import "../../../translation/i18next";
 import ProgressCircle from "@/components/ProgressCircle";
-import { Image } from "react-native";
+import { Image, ImageSourcePropType } from "react-native";
 import FoodIcon from "@/assets/images/Svg/FoodIcon";
 import WaterIcon from "@/assets/images/Svg/WaterIcon";
 import StepsIcon from "@/assets/images/Svg/StepsIcon";
@@ -34,6 +33,7 @@ import User from "@/assets/images/Svg/User";
 import * as ImagePicker from "expo-image-picker";
 import { Linking } from "react-native";
 import { useMealStore } from "@/zustandStore/mealStore";
+import { useShallow } from "zustand/react/shallow";
 import { CONFIG } from "@/constants/config";
 import { useFitbit } from "@/zustandStore/useFitbitStore";
 import { useAppleHealth } from "@/zustandStore/useAppleHealthStore";
@@ -43,7 +43,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import Svg, { Circle, Defs, LinearGradient as SvgGradient, Path, Stop } from "react-native-svg";
 import { Theme } from "@/constants/theme";
 import { babyImageForWeek } from "@/constants/babyImages";
-import { fruitForWeek } from "@/constants/babySize";
+import { babyObjectKeyForWeek } from "@/constants/babyFruits";
 import ScreenBackground from "@/components/ui/ScreenBackground";
 import LineIcon from "@/components/profile/LineIcon";
 import { DueArt, FoodArt, GlucoseArt, PressureArt, StepsArt, WaterArt } from "@/components/home/TileArt";
@@ -110,12 +110,10 @@ const Home = () => {
   const token = useSelector((state: any) => state.user.token);
   const user = useSelector((state: any) => state.user);
   const { t, i18n } = useTranslation();
-  const {
-    calorieGoal,
-    caloriesConsumed,
-    goodFoodCount,
-    badFoodCount
-  } = useMealStore();
+  // Stores are read field by field so the Home only re-renders when what it shows changes
+  const { calorieGoal, caloriesConsumed } = useMealStore(
+    useShallow((state) => ({ calorieGoal: state.calorieGoal, caloriesConsumed: state.caloriesConsumed }))
+  );
   const [weeksComplete, setWeeksComplete] = useState(0);
   const [pregnancyData, setPregnancyData] = useState<any>(null);
   const pregnancyProgress = React.useMemo(() => {
@@ -124,7 +122,8 @@ const Home = () => {
   const [showPregnancyModal, setShowPregnancyModal] = useState(false);
   const { progressPercentage, remainingDays, dueDate } = pregnancyProgress;
 
-  const { maxGlasses, glassCount } = useWaterStore();
+  const maxGlasses = useWaterStore((state) => state.maxGlasses);
+  const glassCount = useWaterStore((state) => state.glassCount);
   const { stepsWalked, stepGoal } = useStepsWithAutoRefresh(user?.user_id);
 
   // Add health service hooks
@@ -304,51 +303,6 @@ const Home = () => {
     return () => clearInterval(interval);
   }, [userId, healthServiceConnected, isUsingAppleHealth, watchAllowed]);
 
-  const cardData1 = [
-    
-    {
-      id: "0",
-      title: t("cards.askDoula.title"),
-      description: t("cards.askDoula.description"),
-      bg1: "#FBBBE9", // Light pink
-      bg2: "#E162BC", // Deep pink
-      image1:
-        user?.avatar_url && user.avatar_url.trim() !== ""
-          ? { uri: user.avatar_url }
-          : require("../../../assets/images/doulaImg.png"),
-      onPress: () => {
-        router.push({
-          pathname: "/patient/askdoula",
-          params: { from_modal: "true" },
-        });
-      },
-    },
-    {
-      id: "2",
-      title: t("cards.calendar.title"),
-      description: t("cards.calendar.description"),
-      bg1: "#FFE5B0", // Light yellow
-      bg2: "#FFAA00", // Bright orange
-      image1: require("../../../assets/images/calendra.png"),
-      onPress: () => router.push("/patient/calendar"),
-    },
-    {
-      id: "4",
-      title: t("cards.reminders.title"),
-      description: t("cards.reminders.description"),
-      bg1: Theme.home.remindersBanner[0],
-      bg2: Theme.home.remindersBanner[1],
-      image1: require("../../../assets/images/reminders/bell.png"),
-      onPress: () => router.push("/patient/settings/reminder"),
-    },
-  ];
-
-  const cardData = cardData1.map((item) => ({
-    ...item,
-    id: String(item.id), // Ensure id is a number
-    onPress: item.onPress || (() => {}),
-  }));
-  
   useEffect(() => {
     const setAllVisited = async () => {
       if (userId) {
@@ -704,7 +658,6 @@ const Home = () => {
 
   const [image, setImage] = React.useState<string | null>(null);
   const [appointments, setAppointments] = useState<{ title: string; date: string }[]>([]);
-  const [selectedDay, setSelectedDay] = useState(() => new Date().toDateString());
   const { routines, fetchRoutines } = useSelfCareStore();
 
   const fetchAppointments = useCallback(async () => {
@@ -740,21 +693,15 @@ const Home = () => {
   const trimesterIndex = week >= 28 ? 3 : week >= 14 ? 2 : 1;
   const weeksToGo = Math.max(0, Math.ceil(remainingDays / 7));
   const progress = Math.min(Math.max(progressPercentage, 0), 100);
-  const fruit = fruitForWeek(week);
+  const babyObject = babyObjectKeyForWeek(week);
 
-  // Sunday-to-Saturday strip for the current week, with a dot on days that have appointments
+  // Today's appointments, shown in one line under the check-in
   const today = new Date();
-  const weekDays = Array.from({ length: 7 }, (_, index) => {
-    const day = new Date(today);
-    day.setDate(today.getDate() - today.getDay() + index);
-    return day;
-  });
-  const appointmentsOn = (day: Date) =>
-    appointments.filter((item) => new Date(item.date).toDateString() === day.toDateString());
-  const selectedDate = weekDays.find((day) => day.toDateString() === selectedDay) ?? today;
-  const selectedAppointments = appointmentsOn(selectedDate);
-  const dayInfo = selectedAppointments.length
-    ? selectedAppointments
+  const todayAppointments = appointments.filter(
+    (item) => new Date(item.date).toDateString() === today.toDateString()
+  );
+  const dayInfo = todayAppointments.length
+    ? todayAppointments
         .map(
           (item) =>
             `${new Date(item.date).toLocaleTimeString(i18n.language, {
@@ -765,14 +712,17 @@ const Home = () => {
         .join(" · ")
     : t("homeB.nothingBooked");
 
-  // Calendar and Reminders banners close the Home; vitals live in the Health tab, Journal in the dock
-  const banners = cardData.filter((item) => item.id === "2" || item.id === "4");
   const routine = routines?.[0];
 
   return (
     <ScreenBackground>
       <SafeAreaView style={styles.container} edges={["top"]}>
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scroll}
+          // Android stretches the content past the end and springs it back, natively
+          overScrollMode="always"
+        >
           {/* Header: photo, greeting, 911 and reminders */}
           <View style={styles.header}>
             <TouchableOpacity
@@ -856,7 +806,7 @@ const Home = () => {
                       <Path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" fill={Theme.colors.magentaVivid} />
                     </Svg>
                     <Text style={styles.heroMsgText}>
-                      {t("homeB.babySize", { fruit: t(`fruits.${fruit}`).toLowerCase() })}
+                      {t("homeB.babySize", { fruit: t(`babyObjects.${babyObject}`).toLowerCase() })}
                     </Text>
                   </View>
                 )}
@@ -908,35 +858,13 @@ const Home = () => {
               </View>
             </LinearGradient>
 
-            {/* Mood check-in (prototype version B, Demo) */}
+            {/* Mood check-in (prototype version B): leaves once answered, until tomorrow */}
             <MoodCheckIn />
 
-            {/* This week: tap a day to see what is booked */}
-            <View style={styles.strip} accessibilityRole="radiogroup">
-              {weekDays.map((day) => {
-                const isToday = day.toDateString() === today.toDateString();
-                const isSelected = day.toDateString() === selectedDate.toDateString();
-                const booked = appointmentsOn(day).length > 0;
-                return (
-                  <TouchableOpacity
-                    key={day.toDateString()}
-                    style={[styles.day, isToday && styles.dayToday, isSelected && !isToday && styles.daySelected]}
-                    onPress={() => setSelectedDay(day.toDateString())}
-                    accessibilityRole="radio"
-                    accessibilityState={{ selected: isSelected }}
-                  >
-                    <Text style={[styles.dayName, isToday && styles.dayNameToday]}>
-                      {day.toLocaleDateString(i18n.language, { weekday: "short" })}
-                    </Text>
-                    <Text style={[styles.dayNumber, isToday && styles.dayNumberToday]}>{day.getDate()}</Text>
-                    <View style={[styles.dayDot, booked && (isToday ? styles.dayDotToday : styles.dayDotOn)]} />
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+            {/* Today: what is booked */}
             <Text style={styles.dayInfo} accessibilityLiveRegion="polite">
               <Text style={styles.dayInfoDate}>
-                {selectedDate.toLocaleDateString(i18n.language, {
+                {today.toLocaleDateString(i18n.language, {
                   weekday: "short",
                   month: "short",
                   day: "numeric",
@@ -1058,19 +986,23 @@ const Home = () => {
               </TouchableOpacity>
             )}
 
-            {/* Calendar (kept at the client's request) and Reminders banners */}
-            {banners.map((item) => (
-              <Card
-                key={item.id}
-                title={item.title}
-                description={item.description}
-                bg1={item.bg1}
-                bg2={item.bg2}
-                image1={item.image1}
-                id={item.id}
-                onPress={item.onPress}
+            {/* Calendar (kept at the client's request) and Reminders shortcuts close the Home */}
+            <View style={styles.shortcuts}>
+              <ShortcutCard
+                title={t("cards.calendar.title")}
+                sub={t("cards.calendar.description")}
+                colors={Theme.home.tiles.calendar}
+                image={require("../../../assets/images/calendra.png")}
+                onPress={() => router.push("/patient/calendar")}
               />
-            ))}
+              <ShortcutCard
+                title={t("cards.reminders.title")}
+                sub={t("cards.reminders.description")}
+                colors={Theme.home.tiles.reminders}
+                image={require("../../../assets/images/reminders/bell.png")}
+                onPress={() => router.push("/patient/settings/reminder")}
+              />
+            </View>
           </View>
         </ScrollView>
       </SafeAreaView>
@@ -1084,6 +1016,36 @@ const RING = 104;
 const RING_LENGTH = 2 * Math.PI * 47;
 
 // Prototype `.stat` tile: title, chevron chip, value, progress bar and illustration
+// Shortcut to another screen: a full-width pastel card with the title on the left and a picture on the right
+const ShortcutCard = ({
+  title,
+  sub,
+  colors,
+  image,
+  onPress,
+}: {
+  title: string;
+  sub: string;
+  colors: [string, string];
+  image: ImageSourcePropType;
+  onPress: () => void;
+}) => (
+  <TouchableOpacity onPress={onPress} activeOpacity={0.85} accessibilityRole="button" accessibilityLabel={`${title}. ${sub}`}>
+    <LinearGradient colors={colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.shortcut}>
+      <View style={styles.flex}>
+        <Text style={styles.rowTitle}>{title}</Text>
+        <Text style={styles.rowSub}>{sub}</Text>
+      </View>
+      <Image source={image} style={styles.shortcutArt} resizeMode="contain" />
+      <View style={styles.shortcutGo}>
+        <LineIcon size={12} color={Theme.colors.purple} strokeWidth={2.6}>
+          <Path d="M9 6l6 6-6 6" />
+        </LineIcon>
+      </View>
+    </LinearGradient>
+  </TouchableOpacity>
+);
+
 const StatTile = ({
   title,
   value,
@@ -1145,7 +1107,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scroll: {
-    paddingBottom: 120,
+    paddingBottom: Theme.spacing.lg,
   },
   header: {
     flexDirection: "row",
@@ -1319,57 +1281,7 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     ...Theme.shadows.card,
   },
-  strip: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    gap: 4,
-  },
-  day: {
-    flex: 1,
-    alignItems: "center",
-    gap: 5,
-    minHeight: 56,
-    paddingTop: Theme.spacing.sm,
-    paddingBottom: 7,
-    borderRadius: 14,
-  },
-  dayToday: {
-    backgroundColor: Theme.colors.magenta,
-  },
-  daySelected: {
-    borderWidth: 1.5,
-    borderColor: Theme.colors.purple,
-  },
-  dayName: {
-    fontFamily: Theme.typography.heading,
-    fontSize: 10,
-    color: Theme.colors.inkFaint,
-  },
-  dayNameToday: {
-    color: Theme.colors.surface,
-    opacity: 0.8,
-  },
-  dayNumber: {
-    fontFamily: Theme.typography.heading,
-    fontSize: 13.5,
-    color: Theme.colors.ink,
-  },
-  dayNumberToday: {
-    color: Theme.colors.surface,
-  },
-  dayDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 3,
-  },
-  dayDotOn: {
-    backgroundColor: Theme.colors.purple,
-  },
-  dayDotToday: {
-    backgroundColor: Theme.colors.surface,
-  },
   dayInfo: {
-    marginTop: -6,
     backgroundColor: Theme.colors.tealTint,
     borderRadius: 14,
     overflow: "hidden",
@@ -1451,6 +1363,35 @@ const styles = StyleSheet.create({
     fontSize: 10.5,
     color: Theme.colors.inkFaint,
     marginTop: 2,
+  },
+  shortcuts: {
+    gap: 10,
+  },
+  shortcut: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    minHeight: 88,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: Theme.home.tileBorder,
+    paddingVertical: 12,
+    paddingLeft: 18,
+    paddingRight: 14,
+    overflow: "hidden",
+    ...Theme.shadows.card,
+  },
+  shortcutArt: {
+    width: 64,
+    height: 64,
+  },
+  shortcutGo: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: Theme.home.tileChip,
+    alignItems: "center",
+    justifyContent: "center",
   },
   tileArt: {
     position: "absolute",

@@ -237,10 +237,6 @@
     }
   },
   "cards": {
-    "askDoula": {
-      "title": "CrossCare Concierge",
-      "description": "Personalizada para tu embarazo"
-    },
     "calendar": {
       "title": "Tu Calendario",
       "description": "Haz seguimiento de tus citas"
@@ -835,7 +831,6 @@
   },
   "moodCheckIn": {
     "title": "¿Cómo te sientes hoy?",
-    "demo": "Demostración",
     "good": "Bien",
     "tired": "Cansada",
     "worried": "Preocupada",
@@ -846,6 +841,45 @@
     "reply_worried": "Es normal preocuparse a veces. No estás sola, y tu guía está aquí si quieres hablarlo.",
     "reply_unwell": "Lamento que no te sientas bien. Si tienes dolor fuerte, sangrado o dificultad para respirar, llama al 911. Para todo lo demás, tu guía puede ayudarte.",
     "talk": "Hablar con Ask Your Doula"
+  },
+  "babyObjects": {
+    "poppySeed": "Semilla de amapola",
+    "sesameSeed": "Semilla de sésamo",
+    "lentil": "Lenteja",
+    "blueberry": "Arándano",
+    "raspberry": "Frambuesa",
+    "cherry": "Cereza",
+    "kumquat": "Kumquat",
+    "fig": "Higo",
+    "lime": "Lima",
+    "peach": "Durazno",
+    "lemon": "Limón amarillo",
+    "apple": "Manzana",
+    "avocado": "Aguacate",
+    "pear": "Pera",
+    "bellPepper": "Pimiento morrón",
+    "heirloomTomato": "Tomate grande",
+    "banana": "Plátano",
+    "carrot": "Zanahoria",
+    "mango": "Mango",
+    "grapefruit": "Toronja",
+    "earOfCorn": "Elote",
+    "cauliflower": "Coliflor",
+    "lettuceHead": "Lechuga",
+    "cabbage": "Repollo",
+    "eggplant": "Berenjena",
+    "butternutSquash": "Calabaza de castilla",
+    "cucumber": "Pepino",
+    "pineapple": "Piña",
+    "coconut": "Coco",
+    "largePineapple": "Piña grande",
+    "cantaloupe": "Melón chino",
+    "honeydewMelon": "Melón verde",
+    "romaineHeart": "Lechuga romana",
+    "swissChard": "Manojo de acelgas",
+    "leek": "Poro",
+    "miniWatermelon": "Sandía mini",
+    "smallWatermelon": "Sandía pequeña"
   },
   "profile": {
     "readPrivacyPolicy": "Leer la Política de Privacidad completa",

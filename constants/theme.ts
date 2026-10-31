@@ -72,6 +72,8 @@ export const Theme = {
       due: ['#EFE9FF', '#F8F5FF'] as [string, string],
       pressure: ['#FFECEA', '#FFF7F6'] as [string, string],
       glucose: ['#FFF3DE', '#FFFAF0'] as [string, string],
+      calendar: ['#FFE6C2', '#FFF6EA'] as [string, string], // Calendar shortcut
+      reminders: ['#E4D9FF', '#F4F0FF'] as [string, string], // Reminders shortcut
     },
     bars: {
       water: ['#4DA3FF', '#3B6FE8'] as [string, string],
@@ -90,7 +92,6 @@ export const Theme = {
     babyBg: '#F7F1E8',
     sosBorder: '#F2C6DA',
     dayInfoText: '#0A4A52',
-    remindersBanner: ['#D4C4FF', '#8A68E8'] as [string, string], // Reminders banner gradient
   },
   // Health Reminders: accent of each reminder type (icons only; text stays ink)
   reminderTypes: {
