@@ -41,17 +41,6 @@ const TrackingOptionsScreen = () => {
   // Same trackers as before, grouped so the list reads like the other redesigned screens
   const sections: { title: string; options: TrackingOption[] }[] = [
     {
-      title: t('pregnancySummary.sectionLabel'),
-      options: [
-        {
-          id: 'pregnancy-summary',
-          title: t('pregnancySummary.title'),
-          icon: <Feather name="file-text" size={22} color={Theme.colors.purple} />,
-          onPress: () => router.push('/patient/pregnancy-summary'),
-        },
-      ],
-    },
-    {
       title: t('motherCare.vitals'),
       options: [
         {
@@ -129,6 +118,17 @@ const TrackingOptionsScreen = () => {
           title: t('motherCare.medication'),
           icon: <MedicationIcon width={22} height={22} />,
           onPress: () => router.push('/patient/medication/medications'),
+        },
+      ],
+    },
+    {
+      title: t('pregnancySummary.sectionLabel'),
+      options: [
+        {
+          id: 'pregnancy-summary',
+          title: t('pregnancySummary.title'),
+          icon: <Feather name="file-text" size={22} color={Theme.colors.purple} />,
+          onPress: () => router.push('/patient/pregnancy-summary'),
         },
       ],
     },

@@ -1,6 +1,6 @@
 # Pregnancy Summary (6.1)
 
-Entry: Health > Summary > Pregnancy summary. Route: `app/patient/pregnancy-summary.tsx`.
+Entry: Health > Summary > Pregnancy summary (last section), and Profile > Account > Pregnancy summary. Route: `app/patient/pregnancy-summary.tsx`.
 
 The screen follows prototype 6.1: top bar, header with three chips, milestones, share row, Export summary. It adds what the prototype lacks: a Health details row that opens a screen with vitals, medications and "How she's been feeling" (also in the PDF preview), a notice when readings are out of range, and the Demo tags. This trial layout places the content task's sections on a separate screen instead of directly on 6.1.
 
