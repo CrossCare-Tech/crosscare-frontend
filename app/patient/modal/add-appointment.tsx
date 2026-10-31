@@ -23,6 +23,7 @@ import {
 import { CONFIG } from "@/constants/config";
 import { Theme } from "@/constants/theme";
 import CustomTextInput from "@/components/ui/CustomTextInput";
+import { useAuthDialog } from "@/components/ui/AuthDialog";
 import { ChipSelect, vitalsStyles } from "@/components/vitals/VitalsUI";
 
 // Quick picks that fill the description (prototype 10.2 "Type"); the API only stores a title
@@ -43,12 +44,13 @@ export interface EditableAppointment {
 interface AppointmentModalProps {
   visible: boolean;
   appointment?: EditableAppointment | null; // set when editing
+  initialDate?: Date | null; // day picked on the calendar, for a new appointment
   onClose: () => void;
   onSaved: () => void; // reloads the calendar after a save or delete
 }
 
 // 10.2 — Add & Delete Appointment, shown as a sheet like the reminder one
-const AppointmentModal = ({ visible, appointment, onClose, onSaved }: AppointmentModalProps) => {
+const AppointmentModal = ({ visible, appointment, initialDate, onClose, onSaved }: AppointmentModalProps) => {
   const isEditing = !!appointment;
   const appointmentId = appointment?.id || "";
 
@@ -63,13 +65,18 @@ const AppointmentModal = ({ visible, appointment, onClose, onSaved }: Appointmen
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { dialog, show } = useAuthDialog();
 
   // Fill the form every time the sheet opens (empty for a new appointment)
   useEffect(() => {
     if (!visible) {
       return;
     }
-    const appointmentDate = appointment ? new Date(appointment.date) : new Date();
+    // A new appointment starts on the day picked on the calendar (never in the past), at the current time
+    const now = new Date();
+    const pickedDay = initialDate && initialDate > now ? new Date(initialDate) : now;
+    pickedDay.setHours(now.getHours(), now.getMinutes(), 0, 0);
+    const appointmentDate = appointment ? new Date(appointment.date) : pickedDay;
     setForm({
       description: appointment?.title || "",
       date: appointmentDate,
@@ -77,7 +84,7 @@ const AppointmentModal = ({ visible, appointment, onClose, onSaved }: Appointmen
     });
     setShowDatePicker(false);
     setShowTimePicker(false);
-  }, [visible, appointment]);
+  }, [visible, appointment, initialDate]);
 
   const handleDateChange = (event: any, selectedDate?: Date) => {
     setShowDatePicker(Platform.OS === "ios");
@@ -99,56 +106,52 @@ const AppointmentModal = ({ visible, appointment, onClose, onSaved }: Appointmen
   const formatTime = (date: Date) =>
     date.toLocaleTimeString(i18n.language, { hour: "numeric", minute: "2-digit" });
 
+  // 10.2: "Delete appointment" asks in the app's delete dialog first
+  const confirmDelete = () =>
+    show({
+      variant: "delete",
+      title: t("appointments.cancelThis"),
+      message: t("appointments.cancelThisHint", {
+        title: appointment?.title,
+        when: `${formatDate(form.date)}, ${formatTime(form.time)}`,
+      }),
+      buttons: [
+        { text: t("appointments.keep"), style: "cancel" },
+        { text: t("appointments.deleteButton"), onPress: handleDelete },
+      ],
+    });
+
+  // Removes the appointment and its reminders
   const handleDelete = async () => {
     if (!isEditing || !appointmentId) return;
+    try {
+      setIsSubmitting(true);
 
-    Alert.alert(
-      t("appointments.deleteTitle"),
-      t("appointments.deleteConfirm"),
-      [
-        { text: t("appointments.cancel"), style: "cancel" },
+      const response = await fetch(
+        `${CONFIG.API_BASE_URL}/user/activity/${user.user_id}/appointments/${appointmentId}`,
         {
-          text: t("appointments.delete"),
-          style: "destructive",
-          onPress: async () => {
-            try {
-              setIsSubmitting(true);
-
-              const patientId = user.user_id;
-
-              // Call API to delete appointment
-              const response = await fetch(
-                `${CONFIG.API_BASE_URL}/user/activity/${patientId}/appointments/${appointmentId}`,
-                {
-                  method: "DELETE",
-                  headers: {
-                    "Content-Type": "application/json",
-                  },
-                }
-              );
-
-              if (!response.ok) {
-                throw new Error("Failed to delete appointment");
-              }
-
-              // Cancel any scheduled reminders
-              await cancelAppointmentReminders(appointmentId);
-
-              onClose();
-              onSaved();
-            } catch (error) {
-              console.error(
-                "Error deleting appointment:",
-                JSON.stringify(error, null, 2)
-              );
-              Alert.alert(t("appointments.errorTitle"), t("appointments.deleteFailed"));
-            } finally {
-              setIsSubmitting(false);
-            }
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
           },
-        },
-      ]
-    );
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to delete appointment");
+      }
+
+      // Cancel any scheduled reminders
+      await cancelAppointmentReminders(appointmentId);
+
+      onClose();
+      onSaved();
+    } catch (error) {
+      console.error("Error deleting appointment:", JSON.stringify(error, null, 2));
+      show({ variant: "error", title: t("appointments.errorTitle"), message: t("appointments.deleteFailed") });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleSaveAppointment = async () => {
@@ -393,17 +396,18 @@ const AppointmentModal = ({ visible, appointment, onClose, onSaved }: Appointmen
             {isEditing && (
               <TouchableOpacity
                 style={styles.deleteLink}
-                onPress={handleDelete}
+                onPress={confirmDelete}
                 disabled={isSubmitting}
                 accessibilityRole="button"
               >
-                <Ionicons name="trash-outline" size={16} color={Theme.colors.danger} />
+                <Ionicons name="trash-outline" size={16} color={Theme.colors.magenta} />
                 <Text style={styles.deleteText}>{t("appointments.deleteButton")}</Text>
               </TouchableOpacity>
             )}
           </Pressable>
         </Pressable>
       </KeyboardAvoidingView>
+      {dialog}
     </Modal>
   );
 };
@@ -486,7 +490,7 @@ const styles = StyleSheet.create({
   deleteText: {
     fontSize: 14,
     fontFamily: Theme.typography.heading,
-    color: Theme.colors.danger,
+    color: Theme.colors.magenta,
   },
 });
 

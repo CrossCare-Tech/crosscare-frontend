@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -25,6 +25,8 @@ import AuthTopBar from "@/components/ui/AuthTopBar";
 import LineIcon from "@/components/profile/LineIcon";
 import { Pill } from "@/components/vitals/VitalsUI";
 import AppointmentModal, { EditableAppointment } from "./modal/add-appointment";
+import DayStrip, { DayMarks, dayKey } from "@/components/appointments/DayStrip";
+import MonthSheet from "@/components/appointments/MonthSheet";
 
 // Define appointment type
 interface Appointment {
@@ -37,24 +39,14 @@ interface Appointment {
 const sameDay = (a: Date, b: Date) =>
   a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 
-// Sunday to Saturday of the current week, like the Home strip
-const currentWeek = () => {
-  const start = new Date();
-  start.setHours(0, 0, 0, 0);
-  start.setDate(start.getDate() - start.getDay());
-  return Array.from({ length: 7 }, (_, index) => {
-    const day = new Date(start);
-    day.setDate(start.getDate() + index);
-    return day;
-  });
-};
-
 // 10.1 — Appointment Calendar
 const Calendar = () => {
   const user = useSelector((state: any) => state.user);
   const { t, i18n } = useTranslation();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [selectedDay, setSelectedDay] = useState(() => new Date());
+  const [visibleDay, setVisibleDay] = useState(() => new Date()); // centre of the strip, for the month label
+  const [monthVisible, setMonthVisible] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [remindersEnabled, setRemindersEnabled] = useState(true); // Default to enabled
@@ -133,6 +125,11 @@ const Calendar = () => {
     setSheetVisible(true);
   };
 
+  const selectDay = (day: Date) => {
+    setSelectedDay(day);
+    setVisibleDay(day);
+  };
+
   // Only upcoming appointments can be edited
   const handleAppointmentClick = (appointment: Appointment) => {
     if (appointment.status === "Upcoming") {
@@ -146,7 +143,18 @@ const Calendar = () => {
   const formatShortDate = (date: Date) =>
     date.toLocaleDateString(i18n.language, { month: "short", day: "numeric" });
 
-  const week = currentWeek();
+  // Dots on the strip and the month view: how many upcoming and completed appointments each day has
+  const marks = useMemo(() => {
+    const result: Record<string, DayMarks> = {};
+    appointments.forEach((appointment) => {
+      const key = dayKey(new Date(appointment.date));
+      const mark = (result[key] ??= { upcoming: 0, completed: 0 });
+      if (appointment.status === "Upcoming") mark.upcoming += 1;
+      else mark.completed += 1;
+    });
+    return result;
+  }, [appointments]);
+  const isToday = sameDay(selectedDay, new Date());
   const byDate = (a: Appointment, b: Appointment) =>
     new Date(a.date).getTime() - new Date(b.date).getTime();
   const onSelectedDay = appointments
@@ -198,29 +206,37 @@ const Calendar = () => {
         <AuthTopBar title={t("appointments.title")} />
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
-          {/* Week selector */}
-          <View style={styles.strip}>
-            {week.map((day) => {
-              const active = sameDay(day, selectedDay);
-              const hasAppointment = appointments.some((appointment) =>
-                sameDay(new Date(appointment.date), day)
-              );
-              return (
-                <TouchableOpacity
-                  key={day.toISOString()}
-                  style={[styles.day, active && styles.dayActive]}
-                  onPress={() => setSelectedDay(day)}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: active }}
-                >
-                  <Text style={[styles.dow, active && styles.dayTextActive]}>
-                    {day.toLocaleDateString(i18n.language, { weekday: "short" }).replace(".", "").toUpperCase()}
-                  </Text>
-                  <Text style={[styles.dnum, active && styles.dayTextActive]}>{day.getDate()}</Text>
-                  <View style={[styles.dot, hasAppointment && (active ? styles.dotOnActive : styles.dotOn)]} />
-                </TouchableOpacity>
-              );
-            })}
+          {/* Month, Today and the month view */}
+          <View style={styles.calendarHeader}>
+            <Text style={styles.monthLabel}>
+              {visibleDay.toLocaleDateString(i18n.language, { month: "long", year: "numeric" })}
+            </Text>
+            {!isToday && (
+              <TouchableOpacity
+                style={styles.todayButton}
+                onPress={() => selectDay(new Date())}
+                accessibilityRole="button"
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Text style={styles.todayText}>{t("appointments.today")}</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              style={styles.monthButton}
+              onPress={() => setMonthVisible(true)}
+              accessibilityRole="button"
+              accessibilityLabel={t("appointments.openMonth")}
+            >
+              <LineIcon size={20} color={Theme.colors.purple}>
+                <Path d="M4 6.5A1.5 1.5 0 0 1 5.5 5h13A1.5 1.5 0 0 1 20 6.5v12a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5Z" />
+                <Path d="M4 10h16M8 3v4M16 3v4" />
+              </LineIcon>
+            </TouchableOpacity>
+          </View>
+
+          {/* Swipeable days */}
+          <View style={styles.stripBleed}>
+            <DayStrip selected={selectedDay} marks={marks} onSelect={selectDay} onVisibleDayChange={setVisibleDay} />
           </View>
 
           {loading && appointments.length === 0 ? (
@@ -235,16 +251,36 @@ const Calendar = () => {
           ) : (
             <>
               <Text style={styles.sectionLabel}>
-                {selectedDay.toLocaleDateString(i18n.language, {
-                  weekday: "long",
-                  month: "long",
-                  day: "numeric",
-                })}
+                {[
+                  isToday ? t("appointments.today") : null,
+                  selectedDay.toLocaleDateString(i18n.language, { weekday: "long", month: "long", day: "numeric" }),
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
               </Text>
               {onSelectedDay.length > 0 ? (
                 onSelectedDay.map((appointment) => renderAppointment(appointment, false))
               ) : (
-                <Text style={styles.emptyDay}>{t("appointments.nothingBooked")}</Text>
+                <View style={styles.emptyCard}>
+                  <View style={styles.iconChip}>
+                    <LineIcon size={20} color={Theme.colors.purple}>
+                      <Path d="M4 6.5A1.5 1.5 0 0 1 5.5 5h13A1.5 1.5 0 0 1 20 6.5v12a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5Z" />
+                      <Path d="M4 10h16M8 3v4M16 3v4M12 13v4M10 15h4" />
+                    </LineIcon>
+                  </View>
+                  <View style={styles.rowText}>
+                    <Text style={styles.rowTitle}>{t("appointments.emptyTitle")}</Text>
+                    <Text style={styles.rowSub}>{t("appointments.emptyHint")}</Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.emptyAction}
+                    onPress={handleAddAppointment}
+                    accessibilityRole="button"
+                    accessibilityLabel={t("appointments.addForDay")}
+                  >
+                    <Text style={styles.emptyActionText}>{t("appointments.add")}</Text>
+                  </TouchableOpacity>
+                </View>
               )}
 
               {upcoming.length > 0 && (
@@ -290,8 +326,17 @@ const Calendar = () => {
         <AppointmentModal
           visible={sheetVisible}
           appointment={editing}
+          initialDate={selectedDay}
           onClose={() => setSheetVisible(false)}
           onSaved={fetchAppointments}
+        />
+
+        <MonthSheet
+          visible={monthVisible}
+          selected={selectedDay}
+          marks={marks}
+          onSelect={selectDay}
+          onClose={() => setMonthVisible(false)}
         />
       </SafeAreaView>
     </ScreenBackground>
@@ -308,49 +353,41 @@ const styles = StyleSheet.create({
     paddingBottom: 180, // clears the floating avatar and the add button
     gap: 12,
   },
-  strip: {
+  calendarHeader: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    gap: 6,
-    marginBottom: 6,
-  },
-  day: {
-    flex: 1,
     alignItems: "center",
-    gap: 6,
-    paddingVertical: 10,
-    borderRadius: 14,
+    gap: 10,
+  },
+  monthLabel: {
+    flex: 1,
+    fontSize: 20,
+    fontFamily: Theme.typography.display,
+    color: Theme.colors.ink,
+  },
+  todayButton: {
+    paddingVertical: 7,
+    paddingHorizontal: 14,
+    borderRadius: Theme.borderRadius.full,
+    backgroundColor: Theme.colors.magentaTint,
+  },
+  todayText: {
+    fontSize: 13,
+    fontFamily: Theme.typography.heading,
+    color: Theme.colors.magenta,
+  },
+  monthButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: Theme.colors.surface,
     borderWidth: 1,
     borderColor: Theme.colors.hairline,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  dayActive: {
-    backgroundColor: Theme.colors.magenta,
-    borderColor: Theme.colors.magenta,
-  },
-  dow: {
-    fontSize: 9.5,
-    fontFamily: Theme.typography.heading,
-    color: Theme.colors.inkFaint,
-  },
-  dnum: {
-    fontSize: 15,
-    fontFamily: Theme.typography.heading,
-    color: Theme.colors.ink,
-  },
-  dayTextActive: {
-    color: Theme.colors.surface,
-  },
-  dot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-  },
-  dotOn: {
-    backgroundColor: Theme.colors.magenta,
-  },
-  dotOnActive: {
-    backgroundColor: Theme.colors.surface,
+  stripBleed: {
+    marginHorizontal: -22,
+    marginBottom: 4,
   },
   sectionLabel: {
     marginTop: 6,
@@ -391,10 +428,28 @@ const styles = StyleSheet.create({
     fontFamily: Theme.typography.body,
     color: Theme.colors.inkFaint,
   },
-  emptyDay: {
+  emptyCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: Theme.colors.surface,
+    borderWidth: 1,
+    borderColor: Theme.colors.hairline,
+    borderRadius: Theme.borderRadius.md,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+  },
+  emptyAction: {
+    minHeight: 36,
+    justifyContent: "center",
+    paddingHorizontal: 14,
+    borderRadius: Theme.borderRadius.full,
+    backgroundColor: Theme.colors.magenta,
+  },
+  emptyActionText: {
     fontSize: 13,
-    fontFamily: Theme.typography.body,
-    color: Theme.colors.inkFaint,
+    fontFamily: Theme.typography.heading,
+    color: Theme.colors.surface,
   },
   loader: {
     marginTop: Theme.spacing.lg,
