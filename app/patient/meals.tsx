@@ -1,3 +1,4 @@
+import { dateKeyOf, toLocalDateString, todayDateString } from "@/utils/date";
 import { StyleSheet, Text, View, StatusBar, ScrollView, Animated, Dimensions, Modal } from "react-native"
 import React, { useEffect, useMemo, useRef, useState } from "react"
 import { SafeAreaView } from "react-native-safe-area-context"
@@ -271,7 +272,7 @@ const meals = () => {
   // Date picker states
   const [showDatePicker, setShowDatePicker] = useState(false)
   // Use store date directly instead of local state
-  const selectedDate = new Date(storeSelectedDate || new Date().toISOString().split('T')[0]);
+  const selectedDate = new Date(storeSelectedDate || todayDateString());
 
   const [timeRange, setTimeRange] = useState("week")
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
@@ -373,7 +374,7 @@ const meals = () => {
 
     if (timeRange === "today") {
       // Today view - just show today
-      const todayStr = today.toISOString().split("T")[0]
+      const todayStr = toLocalDateString(today)
 
       return [
         {
@@ -394,7 +395,7 @@ const meals = () => {
 
       const currentDate = new Date(startDate)
       while (currentDate <= endDate) {
-        const dateString = currentDate.toISOString().split("T")[0]
+        const dateString = toLocalDateString(currentDate)
         days.push({
           id: `empty-${dateString}`,
           date: dateString,
@@ -431,7 +432,7 @@ const meals = () => {
           // Add the main label date
           const labelDate = new Date(startDate)
           labelDate.setDate(range.start)
-          const labelDateString = labelDate.toISOString().split("T")[0]
+          const labelDateString = toLocalDateString(labelDate)
 
           days.push({
             id: `label-${labelDateString}`,
@@ -445,7 +446,7 @@ const meals = () => {
           for (let day = range.start; day <= Math.min(range.end, lastDay); day++) {
             const currentDate = new Date(startDate)
             currentDate.setDate(day)
-            const dateString = currentDate.toISOString().split("T")[0]
+            const dateString = toLocalDateString(currentDate)
 
             days.push({
               id: `day-${dateString}`,
@@ -475,14 +476,14 @@ const meals = () => {
       if (item.date) {
         // Ensure we're working with a string date
         const dateKey =
-          typeof item.date === "string" ? item.date.split("T")[0] : new Date(item.date).toISOString().split("T")[0]
+          typeof item.date === "string" ? item.date.split("T")[0] : dateKeyOf(item.date)
         dataMap.set(dateKey, item)
       }
     })
 
     // For "today" view, we need to specifically check if today's data exists
     if (timeRange === "today") {
-      const todayStr = new Date().toISOString().split("T")[0]
+      const todayStr = todayDateString()
       const todayData = dataMap.get(todayStr)
 
       if (todayData) {
@@ -536,7 +537,7 @@ const meals = () => {
   // Initial data loading
   useEffect(() => {
     if (userId) {
-      const today = new Date().toISOString().split('T')[0];
+      const today = todayDateString();
       
       // Set initial selected date if not set
       if (!storeSelectedDate) {
@@ -589,7 +590,7 @@ const meals = () => {
       };
       
       // Add the food item for the selected date
-      const targetDate = selectedDate.toISOString().split('T')[0];
+      const targetDate = toLocalDateString(selectedDate);
       addFoodItem(userId, mealType, newFoodItem, targetDate);
       
       // Clear URL parameters
@@ -614,7 +615,7 @@ const meals = () => {
   const handleSaveGoal = (newGoal: string) => {
     setCustomCalorieGoal(newGoal)
     if (userId) {
-      const targetDate = selectedDate.toISOString().split('T')[0];
+      const targetDate = toLocalDateString(selectedDate);
       updateCalorieGoal(userId, Number(newGoal), targetDate);
     }
     setIsGoalModalVisible(false)
@@ -622,7 +623,7 @@ const meals = () => {
 
   const handleAddFood = (mealType: string) => {
     // Navigate to food search screen with meal type
-    const formattedDate = selectedDate.toISOString().split('T')[0];
+    const formattedDate = toLocalDateString(selectedDate);
     router.push({
       pathname: "/patient/addmeals",
       params: { mealType, selectedDate: formattedDate },
@@ -920,7 +921,7 @@ const meals = () => {
     setShowDatePicker(false)
     if (date && userId) {
       // Format the date to YYYY-MM-DD format for the API
-      const formattedDate = date.toISOString().split('T')[0];
+      const formattedDate = toLocalDateString(date);
       
       // Update store's selected date
       setSelectedDate(formattedDate);

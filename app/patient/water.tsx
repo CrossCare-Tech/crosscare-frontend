@@ -39,6 +39,7 @@ import {
 } from "@/zustandStore/unitStore";
 import { CONFIG } from "@/constants/config";
 import { useCallback } from "react";
+import { toLocalDateString, todayDateString } from "@/utils/date";
 
 const MAX_HEIGHT = 200;
 const BAR_WIDTH = 20;
@@ -221,7 +222,7 @@ export default function water() {
     // Ensure date is in YYYY-MM-DD format
     try {
       const date = new Date(dateString);
-      return date.toISOString().split("T")[0];
+      return toLocalDateString(date);
     } catch (e) {
       console.error("Invalid date format:", dateString);
       return dateString;
@@ -232,7 +233,7 @@ export default function water() {
   const isNewDay = () => {
     // Get the last accessed date from the store or local storage
     const lastAccessedDate = useWaterStore.getState().lastAccessedDate;
-    const today = new Date().toISOString().split("T")[0]; // Format: YYYY-MM-DD
+    const today = todayDateString(); // Format: YYYY-MM-DD
 
     // If there's no last accessed date or it's different from today, it's a new day
     return !lastAccessedDate || lastAccessedDate !== today;
@@ -249,7 +250,7 @@ export default function water() {
         // Update the last accessed date in the store
         useWaterStore
           .getState()
-          .setLastAccessedDate(new Date().toISOString().split("T")[0]);
+          .setLastAccessedDate(todayDateString());
 
         console.log("New day detected - resetting glass count to 0");
       }
@@ -293,7 +294,7 @@ export default function water() {
       setWaterData(processedData);
 
       // Find today's data
-      const today = new Date().toISOString().split("T")[0];
+      const today = todayDateString();
       const todayData = processedData.find((item: any) => item.date === today);
 
       if (todayData) {
@@ -352,7 +353,7 @@ export default function water() {
       console.log(data);
 
       // Find today's data
-      const today = new Date().toISOString().split("T")[0];
+      const today = todayDateString();
       const todayData = data.waterData.find(
         (item: any) => formatDate(item.date) === today
       );
@@ -406,7 +407,7 @@ export default function water() {
     try {
       // Update local water data for today first for immediate UI feedback
       setWaterData((prevData) => {
-        const today = new Date().toISOString().split("T")[0];
+        const today = todayDateString();
         return prevData.map((item) => {
           if (item.date === today) {
             return {

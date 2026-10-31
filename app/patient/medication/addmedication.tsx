@@ -20,6 +20,7 @@ import {
   areMedicationRemindersEnabled,
 } from "@/utils/NotificationManager";
 import { CONFIG } from "@/constants/config";
+import { toLocalDateString } from "@/utils/date";
 
 interface MedicationState {
   setMedicationName: string;
@@ -158,8 +159,8 @@ export default function addmedication() {
       const payload = {
         medicationName: state.setMedicationName,
         days: state.selectedDays,
-        startDate: state.startDate.toISOString().split("T")[0],
-        endDate: state.endDate.toISOString().split("T")[0],
+        startDate: toLocalDateString(state.startDate),
+        endDate: toLocalDateString(state.endDate),
         times: state.selectedTimes,
       };
 
@@ -227,7 +228,7 @@ export default function addmedication() {
                       const medicationId =
                         data.data?.id || data.id || "new-medication";
                       const uniqueId = `${medicationId}-${
-                        currentDate.toISOString().split("T")[0]
+                        toLocalDateString(currentDate)
                       }-${timeString}`;
 
                       console.log(
