@@ -1,6 +1,6 @@
-import React, { useCallback, useState } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import Svg, { Circle, Defs, LinearGradient as SvgGradient, Path, Rect, Stop } from "react-native-svg";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { Animated, Easing, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import Svg, { Circle, Line, Path, Polyline, Rect } from "react-native-svg";
 import { Feather } from "@expo/vector-icons";
 import { useFocusEffect } from "expo-router";
 import { useSelector } from "react-redux";
@@ -195,89 +195,169 @@ const px = (x: number) => 8 + (W - 16) * x;
 const Band = ({ band, y }: { band?: [number, number]; y: (value: number) => number }) =>
   band ? <Rect x={0} y={y(band[1])} width={W} height={y(band[0]) - y(band[1])} rx={8} fill={Theme.colors.successTint} /> : null;
 
-// Health prototype `lineChart`: smooth line over a "normal" band, last point ringed
+const AnimatedPolyline = Animated.createAnimatedComponent(Polyline);
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+const AnimatedRect = Animated.createAnimatedComponent(Rect);
+
+const lineLength = (coords: number[][]) =>
+  coords.reduce((sum, [x, y], index) => (index === 0 ? 0 : sum + Math.hypot(x - coords[index - 1][0], y - coords[index - 1][1])), 0);
+
+// 0 -> 1 every time the data (or the period) changes: the lines draw in from the left, then the latest point pops in
+const useDrawIn = (signature: string) => {
+  const progress = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    progress.setValue(0);
+    const animation = Animated.timing(progress, {
+      toValue: 1,
+      duration: 900,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false, // SVG props are not supported by the native driver
+    });
+    animation.start();
+    return () => animation.stop();
+  }, [signature, progress]);
+  return progress;
+};
+
+const TrendLine = ({ coords, color, progress }: { coords: number[][]; color: string; progress: Animated.Value }) => {
+  if (coords.length < 2) return null;
+  const length = lineLength(coords) + 1;
+  const animated: any = {
+    strokeDasharray: [length, length],
+    strokeDashoffset: progress.interpolate({ inputRange: [0, 1], outputRange: [length, 0] }),
+    strokeOpacity: progress.interpolate({ inputRange: [0, 0.02, 1], outputRange: [0, 1, 1] }), // hides the round cap at rest
+  };
+  return (
+    <AnimatedPolyline
+      points={coords.map(([x, y]) => `${x},${y}`).join(" ")}
+      fill="none"
+      stroke={color}
+      strokeWidth={2.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...animated}
+    />
+  );
+};
+
+// Health prototype `lineChart`: a thin magenta line with straight segments, no fill, over the "normal" band.
+// `secondary` draws a second series in the same style (blood pressure: systolic and diastolic).
 export const TrendChart = ({
   points,
+  secondary,
   min,
   max,
   band,
 }: {
   points: { x: number; value: number }[];
+  secondary?: { x: number; value: number }[];
   min: number;
   max: number;
   band?: [number, number];
 }) => {
   const y = scale(min, max);
   const coords = points.map((point) => [px(point.x), y(point.value)]);
-
-  let line = "";
-  coords.forEach(([x, cy], index) => {
-    if (index === 0) {
-      line = `M${x} ${cy}`;
-      return;
-    }
-    const [prevX, prevY] = coords[index - 1];
-    const midX = (prevX + x) / 2;
-    line += ` C${midX} ${prevY} ${midX} ${cy} ${x} ${cy}`;
-  });
+  const secondCoords = (secondary ?? []).map((point) => [px(point.x), y(point.value)]);
   const last = coords[coords.length - 1];
+  const progress = useDrawIn(JSON.stringify([points, secondary, min, max]));
+  const dot: any = {
+    r: progress.interpolate({ inputRange: [0, 0.75, 1], outputRange: [0, 0, 5.5] }),
+  };
 
   return (
     <Svg style={styles.chart} viewBox={`0 0 ${W} ${H}`}>
-      <Defs>
-        <SvgGradient id="trend" x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0" stopColor={Theme.colors.purple} stopOpacity={0.18} />
-          <Stop offset="1" stopColor={Theme.colors.purple} stopOpacity={0} />
-        </SvgGradient>
-      </Defs>
       <Band band={band} y={y} />
-      {coords.length > 1 && (
-        <>
-          <Path d={`${line} L${last[0]} ${H - PAD} L${coords[0][0]} ${H - PAD}Z`} fill="url(#trend)" />
-          <Path d={line} fill="none" stroke={Theme.colors.purple} strokeWidth={3} strokeLinecap="round" />
-        </>
-      )}
+      <TrendLine coords={secondCoords} color={Theme.colors.purple} progress={progress} />
+      <TrendLine coords={coords} color={Theme.colors.magenta} progress={progress} />
       {last && (
-        <Circle cx={last[0]} cy={last[1]} r={6} fill={Theme.colors.surface} stroke={Theme.colors.purple} strokeWidth={3} />
+        <AnimatedCircle cx={last[0]} cy={last[1]} fill={Theme.colors.surface} stroke={Theme.colors.magenta} strokeWidth={2.5} {...dot} />
       )}
     </Svg>
   );
 };
 
-// Health prototype `barsChart`: one floating bar per day (top and bottom number), latest in purple
+// A bar that grows from its base to its height, one after another from the left
+const GrowingBar = ({
+  x,
+  top,
+  bottom,
+  width,
+  fill,
+  progress,
+  delay,
+}: {
+  x: number;
+  top: number;
+  bottom: number;
+  width: number;
+  fill: string;
+  progress: Animated.Value;
+  delay: number; // 0..0.5 of the animation, so the last bar still finishes on time
+}) => {
+  const height = Math.max(bottom - top, width);
+  const grow = progress.interpolate({ inputRange: [delay, delay + 0.5, 1], outputRange: [0, 1, 1], extrapolate: "clamp" });
+  const animated: any = {
+    height: grow.interpolate({ inputRange: [0, 1], outputRange: [0, height] }),
+    y: grow.interpolate({ inputRange: [0, 1], outputRange: [bottom, bottom - height] }),
+  };
+  return <AnimatedRect x={x} width={width} rx={width / 2} fill={fill} {...animated} />;
+};
+
+// Health prototype `barsChart`: one floating bar per day (top and bottom number), latest in purple.
+// The bars grow in whenever the data or the period changes.
 export const RangeBarsChart = ({
   bars,
   min,
   max,
   band,
+  goal,
   barWidth,
 }: {
   bars: { x: number; high: number; low: number }[];
   min: number;
   max: number;
   band?: [number, number];
+  goal?: number; // dashed line at the daily goal, so each bar reads against it
   barWidth: number;
 }) => {
   const y = scale(min, max);
+  const progress = useDrawIn(JSON.stringify([bars, min, max, goal]));
+  // Today has no bar yet (nothing logged): mark its place on the baseline, so the highlighted bar is not mistaken for today
+  const todayEmpty = bars.length === 0 || bars[bars.length - 1].x < 0.97;
+  const todayDot: any = { r: progress.interpolate({ inputRange: [0, 0.75, 1], outputRange: [0, 0, 4] }) };
   return (
     <Svg style={styles.chart} viewBox={`0 0 ${W} ${H}`}>
       <Band band={band} y={y} />
+      {goal !== undefined && (
+        <Line
+          x1={0}
+          x2={W}
+          y1={y(goal)}
+          y2={y(goal)}
+          stroke={Theme.colors.teal}
+          strokeWidth={1.5}
+          strokeDasharray="5 5"
+          strokeLinecap="round"
+        />
+      )}
       {bars.map((bar, index) => (
-        <Rect
+        <GrowingBar
           key={index}
           x={px(bar.x) - barWidth / 2}
-          y={y(bar.high)}
+          top={y(bar.high)}
+          bottom={Math.max(y(bar.low), y(bar.high) + barWidth)}
           width={barWidth}
-          height={Math.max(y(bar.low) - y(bar.high), barWidth)}
-          rx={barWidth / 2}
           fill={index === bars.length - 1 ? Theme.colors.purple : Theme.colors.purpleSoft}
+          progress={progress}
+          delay={bars.length > 1 ? (index / (bars.length - 1)) * 0.5 : 0}
         />
       ))}
+      {todayEmpty && <AnimatedCircle cx={px(1)} cy={y(min)} fill={Theme.colors.purple} {...todayDot} />}
     </Svg>
   );
 };
 
-export type LegendMark = "line" | "earlier" | "band";
+export type LegendMark = "line" | "earlier" | "band" | "trend" | "trendSecond" | "goal";
 
 export const ChartCard = ({
   axis,
@@ -302,7 +382,11 @@ export const ChartCard = ({
         <View key={item.label} style={styles.legendItem}>
           <View
             style={
-              item.mark === "band" ? styles.legendBand : [styles.legendDot, item.mark === "earlier" && styles.legendEarlier]
+              item.mark === "band"
+                ? styles.legendBand
+                : item.mark === "goal"
+                  ? styles.legendGoal
+                  : [styles.legendDot, item.mark === "earlier" && styles.legendEarlier, item.mark === "trend" && styles.legendTrend]
             }
           />
           <Text style={styles.legendText}>{item.label}</Text>
@@ -339,16 +423,20 @@ export const ReadingList = ({
   </View>
 );
 
-// Health prototype 5.5 `.hl-urgent`, in the app palette: plum card, white triangle on a magenta disc, one primary action
+// Health prototype 5.5 "Clinical ACOG Alert": soft yellow card, reading first, one clear action
 export const UrgentAlert = ({
+  eyebrow,
   title,
+  reading,
   body,
   primary,
   secondary,
   onDismiss,
   dismissLabel,
 }: {
+  eyebrow: string;
   title: string;
+  reading: { label: string; value: string; unit: string; when: string; pill: string };
   body: string;
   primary: { label: string; onPress: () => void };
   secondary: { label: string; onPress: () => void };
@@ -358,23 +446,35 @@ export const UrgentAlert = ({
   <View style={styles.urgent} accessibilityRole="alert">
     <View style={styles.urgentTop}>
       <View style={styles.disc}>
-        <Feather name="alert-triangle" size={20} color={Theme.colors.surface} />
+        <Feather name="alert-triangle" size={22} color={Theme.colors.ink} />
       </View>
-      <Text style={styles.urgentTitle}>{title}</Text>
+      <Text style={styles.urgentEyebrow}>{eyebrow}</Text>
       <TouchableOpacity
         onPress={onDismiss}
         accessibilityRole="button"
         accessibilityLabel={dismissLabel}
         hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
       >
-        <Feather name="x" size={20} color={Theme.colors.onInkSoft} />
+        <Feather name="x" size={20} color={Theme.colors.inkFaint} />
       </TouchableOpacity>
+    </View>
+    <Text style={styles.urgentTitle}>{title}</Text>
+    <View style={styles.urgentReading}>
+      <Text style={styles.urgentReadingLabel}>{reading.label}</Text>
+      <Text style={styles.urgentReadingValue}>
+        {reading.value}
+        <Text style={styles.urgentReadingUnit}> {reading.unit}</Text>
+      </Text>
+      <Text style={styles.urgentReadingWhen}>{reading.when}</Text>
+      <Text style={styles.urgentReadingPill}>{reading.pill}</Text>
     </View>
     <Text style={styles.urgentBody}>{body}</Text>
     <TouchableOpacity style={[styles.urgentButton, styles.urgentPrimary]} onPress={primary.onPress} accessibilityRole="button">
+      <Feather name="smartphone" size={17} color={Theme.colors.surface} />
       <Text style={styles.urgentPrimaryText}>{primary.label}</Text>
     </TouchableOpacity>
     <TouchableOpacity style={[styles.urgentButton, styles.urgentLine]} onPress={secondary.onPress} accessibilityRole="button">
+      <Feather name="plus" size={18} color={Theme.colors.ink} />
       <Text style={styles.urgentLineText}>{secondary.label}</Text>
     </TouchableOpacity>
   </View>
@@ -534,6 +634,15 @@ const styles = StyleSheet.create({
   legendEarlier: {
     backgroundColor: Theme.colors.purpleSoft,
   },
+  legendTrend: {
+    backgroundColor: Theme.colors.magenta,
+  },
+  legendGoal: {
+    width: 12,
+    height: 2,
+    borderRadius: 1,
+    backgroundColor: Theme.colors.teal,
+  },
   legendBand: {
     width: 8,
     height: 8,
@@ -613,10 +722,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   urgent: {
-    backgroundColor: Theme.colors.plum,
+    backgroundColor: Theme.colors.warningTint,
     borderRadius: Theme.borderRadius.lg,
+    borderWidth: 1,
+    borderColor: Theme.colors.warningLine,
     padding: Theme.spacing.md,
-    gap: 12,
+    gap: 14,
     ...Theme.shadows.card,
   },
   urgentTop: {
@@ -625,48 +736,98 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   disc: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: Theme.colors.magentaVivid,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: Theme.colors.caution,
     alignItems: "center",
     justifyContent: "center",
   },
-  urgentTitle: {
+  urgentEyebrow: {
     flex: 1,
+    fontFamily: Theme.typography.heading,
+    fontSize: 12.5,
+    lineHeight: 16,
+    color: Theme.colors.ink,
+  },
+  urgentTitle: {
     fontFamily: Theme.typography.display,
-    fontSize: 16,
-    lineHeight: 20,
-    color: Theme.colors.surface,
+    fontSize: 26,
+    lineHeight: 31,
+    color: Theme.colors.ink,
+  },
+  urgentReading: {
+    backgroundColor: Theme.colors.surface,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: Theme.colors.warningLine,
+    padding: 16,
+    gap: 4,
+  },
+  urgentReadingLabel: {
+    fontFamily: Theme.typography.heading,
+    fontSize: 13,
+    color: Theme.colors.ink,
+  },
+  urgentReadingValue: {
+    fontFamily: Theme.typography.display,
+    fontSize: 40,
+    lineHeight: 48,
+    color: Theme.colors.ink,
+  },
+  urgentReadingUnit: {
+    fontFamily: Theme.typography.subheading,
+    fontSize: 14,
+    color: Theme.colors.inkSoft,
+  },
+  urgentReadingWhen: {
+    fontFamily: Theme.typography.subheading,
+    fontSize: 13,
+    color: Theme.colors.ink,
+  },
+  urgentReadingPill: {
+    alignSelf: "flex-start",
+    marginTop: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: Theme.borderRadius.full,
+    overflow: "hidden",
+    backgroundColor: Theme.colors.warningTint,
+    fontFamily: Theme.typography.heading,
+    fontSize: 13,
+    color: Theme.colors.ink,
   },
   urgentBody: {
     fontFamily: Theme.typography.body,
-    fontSize: 13,
-    lineHeight: 19.5,
-    color: Theme.colors.onInkSoft,
+    fontSize: 14.5,
+    lineHeight: 22,
+    color: Theme.colors.inkSoft,
   },
   urgentButton: {
-    minHeight: 46,
-    borderRadius: Theme.borderRadius.full,
+    minHeight: 52,
+    borderRadius: Theme.borderRadius.sm,
+    flexDirection: "row",
+    gap: 10,
     alignItems: "center",
     justifyContent: "center",
   },
   urgentPrimary: {
-    backgroundColor: Theme.colors.magentaVivid,
+    backgroundColor: Theme.colors.ink,
   },
   urgentPrimaryText: {
     fontFamily: Theme.typography.heading,
-    fontSize: 13.5,
+    fontSize: 14.5,
     color: Theme.colors.surface,
   },
   urgentLine: {
     borderWidth: 1.5,
-    borderColor: Theme.colors.onInkLine,
+    borderColor: Theme.colors.inputBorder,
+    backgroundColor: "transparent",
   },
   urgentLineText: {
     fontFamily: Theme.typography.heading,
-    fontSize: 13.5,
-    color: Theme.colors.surface,
+    fontSize: 14.5,
+    color: Theme.colors.ink,
   },
   foot: {
     paddingHorizontal: 22,

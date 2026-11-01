@@ -203,7 +203,7 @@ export default function HeartRateScreen() {
           <ChartCard
             axis={periodAxis(period, i18n.language)}
             legend={[
-              { mark: "line", label: t("heartLog.legendResting") },
+              { mark: "trend", label: t("heartLog.legendResting") },
               { mark: "band", label: t("heartLog.legendTypical") },
             ]}
           >

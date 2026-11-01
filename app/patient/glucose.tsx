@@ -131,7 +131,7 @@ const GlucoseScreen = () => {
           <ChartCard
             axis={periodAxis(period, i18n.language)}
             legend={[
-              { mark: "line", label: t("glucoseLog.legendReadings") },
+              { mark: "trend", label: t("glucoseLog.legendReadings") },
               { mark: "band", label: t("glucoseLog.legendTarget", { range: `${band[0]}–${band[1]}` }) },
             ]}
           >

@@ -50,6 +50,7 @@ export const Theme = {
     caution: '#FFC400', // fill for warning icons; pair with ink, never as text on white
     warning: '#8A5A00',
     warningTint: '#FFF2D9',
+    warningLine: '#F3E2AE', // border of the soft yellow clinical alert card
     success: '#1E6E42',
     successTint: '#E4F5E9',
 

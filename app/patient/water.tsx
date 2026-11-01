@@ -205,11 +205,15 @@ const WaterScreen = () => {
             onChange={setPeriod}
           />
 
-          <ChartCard axis={periodAxis(period, i18n.language)} legend={[{ mark: "line", label: t("waterLog.legend") }]}>
+          <ChartCard axis={periodAxis(period, i18n.language)} legend={[
+              { mark: "line", label: t("waterLog.legend") },
+              { mark: "goal", label: t("metric.dailyGoal") },
+            ]}>
             <RangeBarsChart
               bars={inRange.map((day) => ({ x: range.x(day.date), high: day.glasses, low: 0 }))}
               min={0}
               max={chartMax}
+              goal={goal}
               barWidth={BAR_WIDTH[period]}
             />
           </ChartCard>

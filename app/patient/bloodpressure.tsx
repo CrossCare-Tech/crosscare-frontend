@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Alert, ScrollView, StyleSheet } from "react-native";
+import { useSelector } from "react-redux";
+import { ActivityIndicator, ScrollView, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useFocusEffect } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTranslation } from "react-i18next";
 import BloodPressureModal from "./modal/bloodpressuremodal";
-import { scheduleBloodPressureRecheck } from "../../utils/NotificationManager";
+import { CONFIG } from "@/constants/config";
+import { BP_READING_TIME_KEY } from "@/components/vitals/backdate";
 import { Theme } from "@/constants/theme";
 import ScreenBackground from "@/components/ui/ScreenBackground";
 import AuthTopBar from "@/components/ui/AuthTopBar";
@@ -22,10 +24,10 @@ import {
   Period,
   periodAxis,
   periodWindow,
-  RangeBarsChart,
   ReadingList,
   SectionLabel,
   Segmented,
+  TrendChart,
   UrgentAlert,
   useActivityHistory,
 } from "@/components/vitals/MetricUI";
@@ -39,11 +41,9 @@ const getBPCategory = (sys: number, dia: number): { key: string; tone: Tone } =>
   return { key: "high2", tone: "warning" };
 };
 
-const BAR_WIDTH: Record<Period, number> = { "7": 14, "30": 6, "90": 3 };
 
-// The alert can be hidden for one reading: until the recheck reminder, or for the rest of the day
+// The alert can be hidden for the rest of the day, for one reading
 const ALERT_STATE_KEY = "bp-alert-state";
-const RECHECK_MINUTES = 15;
 type AlertState = { reading: string; until: number };
 
 // 5.1 — Blood pressure, with the 5.5 high reading alert
@@ -67,6 +67,20 @@ const BloodPressureScreen = () => {
   const readingKey = latest ? `${latest.date} ${latest.systolic}/${latest.diastolic}` : "";
   const [alertState, setAlertState] = useState<AlertState | null>(null);
   const [now, setNow] = useState(Date.now());
+  const [readingTime, setReadingTime] = useState<{ key: string; at: string } | null>(null);
+
+  // Week of pregnancy for the alert text (same profile endpoint as the Home)
+  const user = useSelector((state: any) => state.user);
+  const [week, setWeek] = useState(0);
+  useEffect(() => {
+    if (!user?.user_id) return;
+    fetch(`${CONFIG.API_BASE_URL}/user/${user.user_id}/profile`, {
+      headers: { Authorization: `Bearer ${user.token}`, "Content-Type": "application/json" },
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => setWeek(data?.week || 0))
+      .catch(() => setWeek(0));
+  }, [user?.user_id, user?.token]);
 
   useFocusEffect(
     useCallback(() => {
@@ -76,6 +90,13 @@ const BloodPressureScreen = () => {
         .catch(() => setAlertState(null));
     }, [])
   );
+
+  // Read again whenever the readings reload, so a reading saved from this screen shows its time
+  useEffect(() => {
+    AsyncStorage.getItem(BP_READING_TIME_KEY)
+      .then((value) => setReadingTime(value ? JSON.parse(value) : null))
+      .catch(() => setReadingTime(null));
+  }, [activities]);
 
   const hidden = !!alertState && alertState.reading === readingKey && alertState.until > now;
 
@@ -101,21 +122,6 @@ const BloodPressureScreen = () => {
     return new Date(`${date}T12:00:00`).toLocaleDateString(i18n.language, { month: "short", day: "numeric" });
   };
 
-  const handleRecheck = async () => {
-    const scheduled = await scheduleBloodPressureRecheck(
-      t("bloodPressureLog.recheckTitle"),
-      t("bloodPressureLog.recheckBody"),
-      RECHECK_MINUTES
-    );
-    if (scheduled) {
-      await hideAlert(Date.now() + RECHECK_MINUTES * 60000);
-    }
-    Alert.alert(
-      t("bloodPressureLog.title"),
-      scheduled ? t("bloodPressureLog.recheckScheduled") : t("bloodPressureLog.recheckFailed")
-    );
-  };
-
   const handleDismiss = () => {
     const endOfDay = new Date();
     endOfDay.setHours(23, 59, 59, 999);
@@ -133,13 +139,25 @@ const BloodPressureScreen = () => {
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={metricStyles.content}>
           {showAlert && latest && (
             <UrgentAlert
-              title={t("bloodPressureLog.alertTitle")}
-              body={t("bloodPressureLog.alertBody", { value: `${latest.systolic}/${latest.diastolic}` })}
+              eyebrow={t("bloodPressureLog.alertEyebrow")}
+              title={t("bloodPressureLog.alertHeadline")}
+              reading={{
+                label: t("bloodPressureLog.alertReadingLabel"),
+                value: `${latest.systolic}/${latest.diastolic}`,
+                unit: "mmHg",
+                // ponytail: the time comes from the entry made on this phone; readings from elsewhere show the day only
+                when:
+                  readingTime?.key === readingKey
+                    ? `${dayLabel(latest.date)}, ${new Date(readingTime.at).toLocaleTimeString(i18n.language, { hour: "numeric", minute: "2-digit" })}`
+                    : dayLabel(latest.date),
+                pill: week > 0 ? t("bloodPressureLog.alertPillWeek", { week }) : t("bloodPressureLog.aboveSafe"),
+              }}
+              body={week > 0 ? t("bloodPressureLog.alertBodyWeek", { week }) : t("bloodPressureLog.alertBodyNoWeek")}
               primary={{
                 label: t("bloodPressureLog.alertContact"),
                 onPress: () => router.push({ pathname: "/patient/askdoula", params: { from_modal: "true" } }),
               }}
-              secondary={{ label: t("bloodPressureLog.alertRecheck"), onPress: handleRecheck }}
+              secondary={{ label: t("bloodPressureLog.alertLogAnother"), onPress: () => setModalVisible(true) }}
               onDismiss={handleDismiss}
               dismissLabel={t("bloodPressureLog.alertDismiss")}
             />
@@ -179,21 +197,17 @@ const BloodPressureScreen = () => {
           <ChartCard
             axis={periodAxis(period, i18n.language)}
             legend={[
-              { mark: "line", label: t("bloodPressureLog.legendLatest") },
-              { mark: "earlier", label: t("bloodPressureLog.legendEarlier") },
+              { mark: "trend", label: t("vitalsEntry.systolic") },
+              { mark: "trendSecond", label: t("vitalsEntry.diastolic") },
               { mark: "band", label: t("bloodPressureLog.legendNormal") },
             ]}
           >
-            <RangeBarsChart
-              bars={inRange.map((reading) => ({
-                x: range.x(reading.date),
-                high: reading.systolic,
-                low: reading.diastolic,
-              }))}
+            <TrendChart
+              points={inRange.map((reading) => ({ x: range.x(reading.date), value: reading.systolic }))}
+              secondary={inRange.map((reading) => ({ x: range.x(reading.date), value: reading.diastolic }))}
               min={Math.min(60, ...inRange.map((reading) => reading.diastolic)) - 5}
               max={Math.max(150, ...inRange.map((reading) => reading.systolic)) + 5}
               band={[60, 120]}
-              barWidth={BAR_WIDTH[period]}
             />
           </ChartCard>
 

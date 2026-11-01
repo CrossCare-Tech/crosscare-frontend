@@ -123,7 +123,7 @@ const WeightScreen = () => {
             onChange={setPeriod}
           />
 
-          <ChartCard axis={periodAxis(period, i18n.language)} legend={[{ mark: "line", label: t("weightLog.legend") }]}>
+          <ChartCard axis={periodAxis(period, i18n.language)} legend={[{ mark: "trend", label: t("weightLog.legend") }]}>
             <TrendChart
               points={inRange.map((reading) => ({ x: range.x(reading.date), value: reading.weight }))}
               min={values.length ? Math.min(...values) - padding : 0}
