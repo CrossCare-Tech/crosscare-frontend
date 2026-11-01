@@ -3,6 +3,7 @@ import { useFocusEffect } from "expo-router";
 import { useSelector } from "react-redux";
 import { CONFIG } from "@/constants/config";
 import { useDemoMode } from "@/utils/demo/demoMode";
+import { useUnitStore } from "@/zustandStore/unitStore";
 import { getDemoDb } from "@/utils/demo/mockDb";
 import {
   buildFeeling,
@@ -23,6 +24,7 @@ export const usePregnancySummary = () => {
   const userId = useSelector((state: any) => state.user.user_id);
   const token = useSelector((state: any) => state.user.token);
   const demo = useDemoMode((state) => state.enabled);
+  const weightUnit = useUnitStore((state) => state.weightUnit);
   const [patient, setPatient] = useState<{ name: string; week: number } | null>(null);
   const [vitals, setVitals] = useState<Section<VitalRow[]>>(loading);
   const [medications, setMedications] = useState<Section<MedicationRow[]>>(loading);
@@ -53,7 +55,7 @@ export const usePregnancySummary = () => {
       get(`/user/${userId}/profile`)
         .then((profile) => active && setPatient({ name: profile.name || "", week: profile.week || 0 }))
         .catch((error) => console.warn("Error loading the profile:", error));
-      load(setVitals, async () => buildVitals((await get(`/user/activity/${userId}`)).activities || []));
+      load(setVitals, async () => buildVitals((await get(`/user/activity/${userId}`)).activities || [], new Date(), weightUnit));
       load(setMedications, async () => buildMedications((await get(`/user/activity/${userId}/getMedication`)).data || []));
       if (demo) {
         load(setFeeling, async () => {
@@ -71,7 +73,7 @@ export const usePregnancySummary = () => {
       return () => {
         active = false;
       };
-    }, [userId, token, demo, attempt])
+    }, [userId, token, demo, attempt, weightUnit])
   );
 
   return { patient, vitals, medications, feeling, demo, retry: () => setAttempt((value) => value + 1) };

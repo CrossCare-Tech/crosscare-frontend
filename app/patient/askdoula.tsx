@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useUnitStore } from "@/zustandStore/unitStore";
 import {
   StyleSheet,
   Text,
@@ -1327,7 +1328,7 @@ function AskDoulaChat() {
           ? text.match(/\b(kg|kgs|kilograms)\b/i)
             ? "kg"
             : "lbs"
-          : "kg"; // Default to kg
+          : useUnitStore.getState().weightUnit; // Default to the unit chosen in Units & Measurements
 
         return {
           value: Number.parseFloat(numbers[0]),
