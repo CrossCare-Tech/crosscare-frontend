@@ -22,7 +22,7 @@ import { Theme } from "@/constants/theme";
 import ScreenBackground from "@/components/ui/ScreenBackground";
 import DeviceSourceRows from "@/components/devices/DeviceSourceRows";
 import AuthTopBar from "@/components/ui/AuthTopBar";
-import { Tone } from "@/components/vitals/VitalsUI";
+import { getHeartCategory, TYPICAL_HEART_RATE as TYPICAL } from "@/utils/vitalCategories";
 import {
   AddReadingButton,
   ChartCard,
@@ -52,15 +52,6 @@ interface Reading {
   bpm: number;
   source: Source;
 }
-
-// Typical resting heart rate (60–100 bpm), the band drawn on the chart
-const TYPICAL: [number, number] = [60, 100];
-
-const getHeartCategory = (bpm: number): { key: string; tone: Tone } => {
-  if (bpm < TYPICAL[0]) return { key: "low", tone: "warning" };
-  if (bpm > TYPICAL[1]) return { key: "high", tone: "warning" };
-  return { key: "normal", tone: "success" };
-};
 
 // Fitbit and Apple Health both answer with `activities-heart` entries
 const fromDevice = (data: any, source: Source): Reading[] =>

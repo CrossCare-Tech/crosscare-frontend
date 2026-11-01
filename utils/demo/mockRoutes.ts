@@ -244,6 +244,7 @@ const medicationView = (db: DemoDb, med: DemoDb["medications"][number]) => {
     activityDate: db.activities.find((a) => a.id === med.activityId)?.date || med.startDate,
     completed: med.days.every((d) => completedDaysOfWeek.includes(d)),
     completedDates: med.completedDates,
+    completedAt: med.completedAt || {},
     completedDaysOfWeek,
   };
 };
@@ -326,11 +327,14 @@ const deleteMood: Handler = (db, p) => {
 
 // ---------- vitals ----------
 
+const readingTime = (body: any): string => body?.recorded_at || new Date().toISOString();
+
 const logHeart: Handler = (db, _p, req) => {
   const heartRate = Number(req.body?.heartRate ?? req.body?.heart_rate);
   if (!heartRate) return fail(400, "Heart rate is required");
   const a = activityFor(db, targetDay(req.body));
   a.heart_rate = heartRate;
+  a.readingTimes = { ...a.readingTimes, heart: readingTime(req.body) };
   return ok({
     success: true,
     message: "Heart rate logged successfully",
@@ -346,6 +350,7 @@ const logBloodPressure: Handler = (db, _p, req) => {
   if (!systolic || !diastolic) return fail(400, "Systolic and diastolic values are required");
   const a = activityFor(db, targetDay(req.body));
   a.bloodPressureSystolic = systolic;
+  a.readingTimes = { ...a.readingTimes, bloodPressure: readingTime(req.body) };
   a.bloodPressureDiastolic = diastolic;
   return ok({ success: true, systolic, diastolic, unit: "mmHg", date: a.date });
 };
@@ -379,6 +384,7 @@ const logGlucose: Handler = (db, _p, req) => {
   if (!level) return fail(400, "Glucose level is required");
   const a = activityFor(db, targetDay(req.body));
   a.glucoseLevel = level;
+  a.readingTimes = { ...a.readingTimes, glucose: readingTime(req.body) };
   a.glucoseUnit = req.body?.glucoseUnit || "mg/dL";
   a.glucoseMealContext = req.body?.glucoseMealContext || null;
   return ok({
@@ -577,12 +583,13 @@ const ROUTES: [string, string, Handler][] = [
         water: a.water,
         waterGoal: a.waterGoal || 0,
         heart: a.heart_rate || 0,
-        bloodPressure: { systolic: a.bloodPressureSystolic, diastolic: a.bloodPressureDiastolic, unit: "mmHg" },
-        glucose: { value: a.glucoseLevel || 0, unit: a.glucoseUnit || "mg/dL", mealContext: a.glucoseMealContext },
+        heartRecordedAt: a.readingTimes?.heart,
+        bloodPressure: { systolic: a.bloodPressureSystolic, diastolic: a.bloodPressureDiastolic, unit: "mmHg", recorded_at: a.readingTimes?.bloodPressure },
+        glucose: { value: a.glucoseLevel || 0, unit: a.glucoseUnit || "mg/dL", mealContext: a.glucoseMealContext, recorded_at: a.readingTimes?.glucose },
         sleep: { start: a.sleepStart, end: a.sleepEnd },
         steps: a.steps,
         stepsGoal: a.stepsGoal || 0,
-        weight: { value: a.weight || 0, unit: a.weight_unit || "kg" },
+        weight: { value: a.weight || 0, unit: a.weight_unit || "kg", recorded_at: a.readingTimes?.weight },
       },
     })),
     badges: badgeList(db),
@@ -634,6 +641,7 @@ const ROUTES: [string, string, Handler][] = [
     if (!weight) return fail(400, "Invalid weight value");
     const a = activityFor(db, targetDay(req.body));
     a.weight = weight;
+    a.readingTimes = { ...a.readingTimes, weight: readingTime(req.body) };
     a.weight_unit = req.body?.weight_unit || "kg";
     return ok({ success: true, weight: a.weight, weight_unit: a.weight_unit, date: a.date });
   }],
@@ -866,7 +874,12 @@ const ROUTES: [string, string, Handler][] = [
     if (!req.body?.date) return fail(400, "Completion date is required.");
     const key = targetDay({ date: req.body.date });
     med.completedDates = med.completedDates.filter((d) => d !== key);
-    if (req.body.completed) med.completedDates.push(key);
+    const { [key]: _unmarked, ...completedAt } = med.completedAt || {};
+    med.completedAt = completedAt;
+    if (req.body.completed) {
+      med.completedDates.push(key);
+      med.completedAt[key] = new Date().toISOString();
+    }
     return ok({
       success: true,
       message: `Medication ${req.body.completed ? "marked as completed" : "marked as incomplete"} for ${DAY_CODES[parseDay(key).getDay()]} on ${key}.`,

@@ -22,6 +22,8 @@ export type Activity = {
   sleepStart: string | null; // ISO
   sleepEnd: string | null; // ISO
   heart_rate: number | null;
+  // When each reading was taken. The real API does not store this yet (docs/demo-mode.md, gap 1).
+  readingTimes?: Partial<Record<"bloodPressure" | "glucose" | "heart" | "weight", string>>;
   calorieGoal: number | null;
   caloriesConsumed: number;
   goodFoodCount: number;
@@ -65,8 +67,11 @@ export type Medication = {
   days: string[];
   times: string[]; // HH:MM, 24 h
   completedDates: string[];
+  completedAt?: Record<string, string>; // day -> when it was marked taken; the real API only stores the day
   activityId: string;
 };
+// Topics from sample guide conversations. Never text from a real chat.
+export type GuideNote = { at: string; topic: "sleep" | "support" };
 export type Appointment = { id: string; title: string; appointmentDate: string };
 export type Symptom = {
   id: string;
@@ -102,6 +107,7 @@ export type DemoDb = {
   badges: AwardedBadge[];
   questionResponses: any[];
   engagements: any[];
+  guideNotes?: GuideNote[];
 };
 
 let counter = 0;
@@ -122,6 +128,9 @@ export const daysAgo = (days: number, hours = 9, minutes = 0) => {
   date.setHours(hours, minutes, 0, 0);
   return date;
 };
+
+// A sample reading from today cannot carry a time that has not happened yet
+const earlierThanNow = (date: Date) => new Date(Math.min(date.getTime(), Date.now())).toISOString();
 
 export const emptyActivity = (date: string, patient: Patient): Activity => ({
   id: newId("act"),
@@ -205,6 +214,12 @@ const seed = (): DemoDb => {
       activity.anxietyLevel = 2 + (i % 3);
       activity.energyLevel = 5 + (i % 4);
     }
+    activity.readingTimes = {
+      heart: earlierThanNow(daysAgo(i, 7, 30)),
+      weight: earlierThanNow(daysAgo(i, 7, 15)),
+      ...(activity.bloodPressureSystolic ? { bloodPressure: earlierThanNow(daysAgo(i, 8, 10)) } : {}),
+      ...(activity.glucoseLevel ? { glucose: earlierThanNow(daysAgo(i, 8, 40)) } : {}),
+    };
     activities.push(activity);
   }
   const byDaysAgo = (days: number) => activities[13 - days];
@@ -278,6 +293,7 @@ const seed = (): DemoDb => {
       days: ["SU", "M", "T", "W", "TH", "F", "SA"],
       times: ["08:00"],
       completedDates: [1, 2, 3, 4].map((i) => dayKey(daysAgo(i))),
+      completedAt: Object.fromEntries([1, 2, 3, 4].map((i) => [dayKey(daysAgo(i)), daysAgo(i, 8, 5).toISOString()])),
       activityId: byDaysAgo(13).id,
     },
     {
@@ -335,6 +351,10 @@ const seed = (): DemoDb => {
     badges,
     questionResponses: [],
     engagements: [],
+    guideNotes: [
+      { at: daysAgo(1, 14, 0).toISOString(), topic: "sleep" },
+      { at: daysAgo(2, 10, 0).toISOString(), topic: "support" },
+    ],
   };
 };
 

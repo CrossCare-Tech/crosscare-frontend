@@ -43,6 +43,12 @@ const ICONS: Record<string, React.ReactNode> = {
   pregnancy: (
     <Path d="M12 20.5s-7.5-4.6-9.7-9.4C.9 7.6 3 4 6.5 4c2 0 3.5 1.1 4.5 2.6C12 5.1 13.5 4 15.5 4 19 4 21.1 7.6 19.7 11.1 17.5 15.9 12 20.5 12 20.5Z" />
   ),
+  summary: (
+    <>
+      <Path d="M7 3.5h7l4 4V20a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1Z" />
+      <Path d="M14 3.5V8h4" />
+    </>
+  ),
   avatar: (
     <>
       <Rect x="4" y="4" width="7" height="7" rx="1.5" />
@@ -277,6 +283,11 @@ const Profile = () => {
               icon="pregnancy"
               title={t("profile.yourpregnancy")}
               onPress={() => router.push("/patient/profile-setting/pregrancy")}
+            />
+            <MenuRow
+              icon="summary"
+              title={t("pregnancySummary.title")}
+              onPress={() => router.push("/patient/pregnancy-summary")}
             />
             <MenuRow
               icon="avatar"
