@@ -19,7 +19,7 @@ import { useSelector } from "react-redux";
 import { router } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { CONFIG } from "@/constants/config";
-import { fruitForWeek } from "@/constants/babySize";
+import { babyObjectKeyForWeek } from "@/constants/babyFruits";
 import { Theme } from "@/constants/theme";
 import LineIcon from "@/components/profile/LineIcon";
 import AuthTopBar from "@/components/ui/AuthTopBar";
@@ -200,7 +200,7 @@ const YourPregnancy = () => {
     date.toLocaleDateString(i18n.language, options);
 
   const current = trimesterIndex(week);
-  const fruit = fruitForWeek(week);
+  const babyObject = babyObjectKeyForWeek(week);
 
   return (
     <ScreenBackground>
@@ -297,7 +297,7 @@ const YourPregnancy = () => {
               <Text style={styles.rowSub}>
                 {week > 0
                   ? t("profile.babySizeDesc", {
-                      fruit: t(`fruits.${fruit}`).toLowerCase(),
+                      fruit: t(`babyObjects.${babyObject}`).toLowerCase(),
                     })
                   : t("profile.babySizeComingSoon")}
               </Text>

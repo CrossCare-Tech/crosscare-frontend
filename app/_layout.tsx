@@ -30,7 +30,9 @@ const RootLayoutNav = () => {
   const dispatch = useDispatch();
   const user = useSelector((state: any) => state.user);
   const currentLanguage = useSelector((state: any) => state.language.current)
-  const { fetchMeals, fetchCalorieHistory } = useMealStore();
+  // Select only the actions: the root layout must not re-render on every meal store change
+  const fetchMeals = useMealStore((state) => state.fetchMeals);
+  const fetchCalorieHistory = useMealStore((state) => state.fetchCalorieHistory);
   const router = useRouter();
   const colorScheme = useColorScheme();
   const token = useSelector((state: any) => state.user.token);

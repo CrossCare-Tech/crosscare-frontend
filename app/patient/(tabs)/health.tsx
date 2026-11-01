@@ -140,7 +140,7 @@ const TrackingOptionsScreen = () => {
         {/* A tab: plain title, no back button (same as Journal) */}
         <Text style={styles.header}>{t('nav.health')}</Text>
 
-        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} overScrollMode="always">
           {sections.map((section) => (
             <View key={section.title} style={styles.section}>
               <Text style={styles.sectionLabel}>{section.title}</Text>
@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: 22,
     paddingTop: 4,
-    paddingBottom: 120,
+    paddingBottom: Theme.spacing.lg,
     gap: 18,
   },
   section: {

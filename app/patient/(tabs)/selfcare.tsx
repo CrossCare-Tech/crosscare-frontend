@@ -314,7 +314,7 @@ const SelfCare = () => {
           </>
         )}
       </ScrollView> */}
-      <ScrollView showsVerticalScrollIndicator={false} style={styles.scrollContent}>
+      <ScrollView showsVerticalScrollIndicator={false} style={styles.scrollContent} overScrollMode="always">
         <View
           style={{
             gap: 15,
