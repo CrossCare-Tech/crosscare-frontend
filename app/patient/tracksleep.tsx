@@ -30,6 +30,7 @@ import { useFitbit } from "@/zustandStore/useFitbitStore";
 import { useAppleHealth } from "@/zustandStore/useAppleHealthStore";
 import { useTranslation } from "react-i18next";
 import { CONFIG } from "@/constants/config";
+import { dateKeyOf, toLocalDateString, todayDateString } from "@/utils/date";
 
 const { width } = Dimensions.get("window");
 const BAR_WIDTH = 20;
@@ -102,7 +103,7 @@ const emptyChartData = [
 
 // Default empty today data
 const emptyTodayData = [
-  { day: "Today", hours: 0, date: new Date().toISOString().split("T")[0] },
+  { day: "Today", hours: 0, date: todayDateString() },
 ];
 
 export default function tracksleep() {
@@ -480,7 +481,7 @@ export default function tracksleep() {
 
     if (timeRange === "today") {
       // Today view - just show today
-      const todayStr = today.toISOString().split("T")[0];
+      const todayStr = toLocalDateString(today);
       const dayName = today.toLocaleDateString("en-US", { weekday: "long" });
 
       return [
@@ -502,7 +503,7 @@ export default function tracksleep() {
 
       const currentDate = new Date(startDate);
       while (currentDate <= endDate) {
-        const dateString = currentDate.toISOString().split("T")[0];
+        const dateString = toLocalDateString(currentDate);
         days.push({
           id: `empty-${dateString}`,
           date: dateString,
@@ -541,7 +542,7 @@ export default function tracksleep() {
           // Add the main label date
           const labelDate = new Date(startDate);
           labelDate.setDate(range.start);
-          const labelDateString = labelDate.toISOString().split("T")[0];
+          const labelDateString = toLocalDateString(labelDate);
 
           days.push({
             id: `label-${labelDateString}`,
@@ -559,7 +560,7 @@ export default function tracksleep() {
           ) {
             const currentDate = new Date(startDate);
             currentDate.setDate(day);
-            const dateString = currentDate.toISOString().split("T")[0];
+            const dateString = toLocalDateString(currentDate);
 
             days.push({
               id: `day-${dateString}`,
@@ -732,14 +733,14 @@ export default function tracksleep() {
     const dataMap = new Map();
     data.forEach((item) => {
       if (item.date) {
-        const dateKey = new Date(item.date).toISOString().split("T")[0];
+        const dateKey = dateKeyOf(item.date);
         dataMap.set(dateKey, item);
       }
     });
 
     // For "today" view, we need to specifically check if today's data exists
     if (timeRange === "today") {
-      const todayStr = new Date().toISOString().split("T")[0];
+      const todayStr = todayDateString();
       const todayData = dataMap.get(todayStr);
 
       if (todayData) {
@@ -932,7 +933,7 @@ export default function tracksleep() {
                   }
 
                   const totalHours = hours + minutes / 60;
-                  const dateString = entryDate.toISOString().split("T")[0];
+                  const dateString = toLocalDateString(entryDate);
 
                   sleepMap.set(dateString, {
                     day: dayLetter,
