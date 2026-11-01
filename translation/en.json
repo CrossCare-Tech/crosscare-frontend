@@ -242,6 +242,13 @@
     "deleteError": "Couldn't delete your entry. Please try again."
   },
   "journalTimeline": {
+    "select": "Select",
+    "deleteCount": "Delete ({{count}})",
+    "deleteTitle": "Delete the selected entries?",
+    "deleteBody": "{{count}} selected. This can't be undone.",
+    "delete": "Delete",
+    "deleteFailedTitle": "Couldn't delete",
+    "deleteFailed": "Some entries could not be deleted. Pull to refresh and try again.",
     "title": "Journal",
     "today": "Today",
     "yesterday": "Yesterday",
