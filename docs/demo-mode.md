@@ -44,6 +44,20 @@ All of these work with no backend:
 | Ask Doula / Concierge chat | Typed and spoken questions, intake questionnaire answers, health logging from chat | RAG `POST /chat/:userId` (canned replies in English, Portuguese and Spanish), `/user/:id/domain` |
 | Devices | Devices (Profile > Devices, or "Manage devices" on Heart rate and Steps), Heart rate, Steps, Sleep and the Home steps tile fed by the Demo Watch | none: the Demo Watch is on the phone (`utils/demo/demoWatch.ts`); today's steps are still posted to `POST /user/activity/:id/steps` |
 
+### Cycle and mental health (prototype 9.1–9.6)
+
+Health > **Cycle & mental health** only shows with Simulated data on, and `app/patient/wellbeing/_layout.tsx` sends anyone else back to Health, because the backend has no routes for this data. Logs and the last check-in live in `demo-wellbeing.json` in the document folder (`utils/demo/demoWellbeing.ts`), and **Reset simulated data** restores the sample of six finished cycles.
+
+Prototype 9.7 (journal keyword alert) is not built. Its word list and the use of journal text need clinical and privacy validation first.
+
+Decisions that differ from the prototype, all to be validated by the client:
+
+- PHQ-9 questions use the validated wording and order, so sleep is question 3. The prototype's sample screen shows it as question 4.
+- Any answer above "Not at all" on question 9 moves support and the 988 call to the top of the results, whatever the score.
+- The results do not say "Sent automatically to your care team" or name a doctor, because nothing is sent. They offer the answers to show at a visit.
+
+The Portuguese and Haitian Creole PHQ texts are working translations, and the Spanish one must also be checked against the validated version before a real release. 988 is a US line.
+
 ### Demo Watch (simulated smartwatch)
 
 With Simulated data on, Devices lists a fourth source, **Demo Watch** (tagged Demo). Connect and Disconnect work with no HealthKit, Fitbit or account.
