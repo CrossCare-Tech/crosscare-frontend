@@ -46,7 +46,7 @@ export default function SessionExpiryModal({ visible, onStay, onSignOut }: { vis
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: Theme.colors.scrim, justifyContent: "center", padding: 22 },
+  backdrop: { flex: 1, backgroundColor: Theme.colors.scrim, justifyContent: "flex-start", paddingHorizontal: 18, paddingTop: 64 },
   card: { backgroundColor: Theme.colors.surface, borderRadius: 20, padding: 20, gap: 12 },
   icon: { width: 48, height: 48, borderRadius: 14, backgroundColor: Theme.colors.warningTint, alignItems: "center", justifyContent: "center" },
   title: { fontFamily: Theme.typography.display, fontSize: 21, lineHeight: 26, color: Theme.colors.ink },

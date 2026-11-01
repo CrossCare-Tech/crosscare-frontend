@@ -57,9 +57,10 @@ export default function ClinicScanScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  viewfinder: { backgroundColor: Theme.colors.ink, borderRadius: 20, paddingVertical: 20, alignItems: "center", gap: 18 },
+  // full width like the prototype, so it cancels the horizontal padding of the content
+  viewfinder: { backgroundColor: Theme.colors.ink, marginHorizontal: -22, paddingVertical: 18, alignItems: "center", gap: 16 },
   hint: { fontFamily: Theme.typography.heading, fontSize: 13, color: Theme.colors.surface },
-  frame: { width: 210, height: 210, alignItems: "center", justifyContent: "center" },
+  frame: { width: 160, height: 160, alignItems: "center", justifyContent: "center" },
   line: { width: "92%", height: 2, backgroundColor: Theme.colors.magenta },
   card: {
     backgroundColor: Theme.colors.surface,

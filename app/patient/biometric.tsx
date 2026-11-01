@@ -6,7 +6,6 @@ import { router } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { Theme } from "@/constants/theme";
 import ScreenBackground from "@/components/ui/ScreenBackground";
-import AuthTopBar from "@/components/ui/AuthTopBar";
 
 // Prototype 4.5 "Biometric Authentication": confirm it is you before unlocking.
 // ponytail: visual only. Tapping the icon stands in for a successful Face ID; wire expo-local-authentication when
@@ -17,7 +16,6 @@ export default function BiometricScreen() {
   return (
     <ScreenBackground>
       <SafeAreaView style={styles.container}>
-        <AuthTopBar title={t("security.biometricRow")} />
         <View style={styles.body}>
           <TouchableOpacity style={styles.icon} onPress={() => router.back()} accessibilityRole="button" accessibilityLabel={t("security.confirmItsYou")}>
             <Ionicons name="finger-print" size={48} color={Theme.colors.magenta} />
@@ -35,7 +33,7 @@ export default function BiometricScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  body: { flex: 1, paddingHorizontal: 22, paddingTop: 40, alignItems: "center", gap: 10 },
+  body: { flex: 1, paddingHorizontal: 22, paddingTop: 96, alignItems: "center", gap: 10 },
   icon: { width: 104, height: 104, borderRadius: 30, backgroundColor: Theme.colors.magentaTint, alignItems: "center", justifyContent: "center", marginBottom: 14 },
   title: { fontFamily: Theme.typography.display, fontSize: 24, color: Theme.colors.ink },
   sub: { fontFamily: Theme.typography.body, fontSize: 13.5, color: Theme.colors.inkSoft, textAlign: "center" },
