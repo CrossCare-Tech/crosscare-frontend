@@ -27,6 +27,10 @@ const PatientStack = () => {
         <Stack.Screen name='documents'/>
         <Stack.Screen name='document-viewer'/>
         <Stack.Screen name='intake-form'/>
+        <Stack.Screen name='pregnancy-summary'/>
+        <Stack.Screen name='pregnancy-summary/details'/>
+        <Stack.Screen name='pregnancy-summary/pdf'/>
+        <Stack.Screen name='pregnancy-summary/qr'/>
         <Stack.Screen name='bloodpressure'/>
         <Stack.Screen name='glucose'/>
         <Stack.Screen name='mood'/>

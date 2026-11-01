@@ -11,7 +11,7 @@ import { BP_READING_TIME_KEY } from "@/components/vitals/backdate";
 import { Theme } from "@/constants/theme";
 import ScreenBackground from "@/components/ui/ScreenBackground";
 import AuthTopBar from "@/components/ui/AuthTopBar";
-import { Tone } from "@/components/vitals/VitalsUI";
+import { getBPCategory } from "@/utils/vitalCategories";
 import {
   AddReadingButton,
   ChartCard,
@@ -32,15 +32,6 @@ import {
   useActivityHistory,
 } from "@/components/vitals/MetricUI";
 
-// Same ranges the app already used. Stage 2 (140/90 or higher) is the pregnancy safe limit,
-// shown in yellow with words rather than red (prototype 5.5)
-const getBPCategory = (sys: number, dia: number): { key: string; tone: Tone } => {
-  if (sys < 120 && dia < 80) return { key: "normal", tone: "success" };
-  if (sys < 130 && dia < 80) return { key: "elevated", tone: "warning" };
-  if (sys < 140 && dia < 90) return { key: "high1", tone: "warning" };
-  return { key: "high2", tone: "warning" };
-};
-
 
 // The alert can be hidden for the rest of the day, for one reading
 const ALERT_STATE_KEY = "bp-alert-state";
@@ -60,6 +51,7 @@ const BloodPressureScreen = () => {
       date: activity.date,
       systolic: activity.details.bloodPressure.systolic as number,
       diastolic: (activity.details.bloodPressure.diastolic as number) || 0,
+      recordedAt: (activity.details.bloodPressure.recorded_at as string | undefined) ?? null,
     }));
   const latest = readings.length > 0 ? readings[readings.length - 1] : null;
   const latestCategory = latest ? getBPCategory(latest.systolic, latest.diastolic) : null;
@@ -145,11 +137,14 @@ const BloodPressureScreen = () => {
                 label: t("bloodPressureLog.alertReadingLabel"),
                 value: `${latest.systolic}/${latest.diastolic}`,
                 unit: "mmHg",
-                // ponytail: the time comes from the entry made on this phone; readings from elsewhere show the day only
-                when:
-                  readingTime?.key === readingKey
-                    ? `${dayLabel(latest.date)}, ${new Date(readingTime.at).toLocaleTimeString(i18n.language, { hour: "numeric", minute: "2-digit" })}`
-                    : dayLabel(latest.date),
+                // The time comes from the reading itself; when the API does not send it, from the entry made on this phone
+                // ponytail: readings from elsewhere without a time show the day only
+                when: (() => {
+                  const at = latest.recordedAt ?? (readingTime?.key === readingKey ? readingTime.at : null);
+                  return at
+                    ? `${dayLabel(latest.date)}, ${new Date(at).toLocaleTimeString(i18n.language, { hour: "numeric", minute: "2-digit" })}`
+                    : dayLabel(latest.date);
+                })(),
                 pill: week > 0 ? t("bloodPressureLog.alertPillWeek", { week }) : t("bloodPressureLog.aboveSafe"),
               }}
               body={week > 0 ? t("bloodPressureLog.alertBodyWeek", { week }) : t("bloodPressureLog.alertBodyNoWeek")}
