@@ -31,6 +31,7 @@ import { Alert } from "react-native";
 import { useTranslation } from "react-i18next";
 import { CONFIG } from "@/constants/config";
 import StepsModal from "./modal/stepsmodal";
+import MetricLogModal from "./modal/metriclogmodal";
 import { dateKeyOf, toLocalDateString, todayDateString } from "@/utils/date";
 
 const { width } = Dimensions.get("window");
@@ -116,6 +117,7 @@ const step = () => {
   const [filteredData, setFilteredData] = useState<StepDataItem[]>([]);
   const [lastResetDate, setLastResetDate] = useState<Date | null>(null);
   const [stepModalVisible, setStepModalVisible] = useState(false);
+  const [logModalVisible, setLogModalVisible] = useState(false);
 
   // Calculate progress based on goal (if set)
   const progress = stepGoal ? stepsWalked / stepGoal : 0;
@@ -1367,6 +1369,17 @@ const step = () => {
             </View>
           </View>
         </View>
+
+        {/* Manual entry. Not gated on a connected source: with the Fitbit Web
+            API switched off, an Android user has no source feeding steps and
+            this is their only way to record them. */}
+        <TouchableOpacity
+          style={styles.addLogButton}
+          onPress={() => setLogModalVisible(true)}
+        >
+          <Ionicons name="add" size={14} color="#fff" />
+          <Text style={styles.addLogText}>{t("addLog")}</Text>
+        </TouchableOpacity>
       </ScrollView>
 
       {/* Time Range Dropdown Modal */}
@@ -1429,11 +1442,47 @@ const step = () => {
           reload={getStepStatus}
         />
       )}
+
+      <MetricLogModal
+        visible={logModalVisible}
+        onClose={() => setLogModalVisible(false)}
+        reload={getStepStatus}
+        title={t("stepScreen.addStepLog")}
+        placeholder={t("stepScreen.stepsPlaceholder")}
+        path="steps"
+        buildBody={(steps) => ({ steps })}
+        min={0}
+        max={200000}
+        invalidMessage={t("stepScreen.invalidSteps")}
+        accent="#5E4FA2"
+        accentBorder="#CDC8E2"
+        inputBorder="#CDC8E2"
+      />
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  addLogButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#5E4FA2",
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    marginHorizontal: 16,
+    marginTop: 24,
+    marginBottom: 8,
+    borderRadius: 25,
+    borderWidth: 1,
+    borderColor: "#CDC8E2",
+    alignSelf: "flex-start",
+  },
+  addLogText: {
+    color: "#fff",
+    marginLeft: 5,
+    fontFamily: "Inter400",
+    fontSize: 14,
+  },
   container: {
     flex: 1,
     backgroundColor: "#FFFFFF",

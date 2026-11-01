@@ -26,6 +26,7 @@ import * as WebBrowser from "expo-web-browser"
 import { useFitbit } from "@/zustandStore/useFitbitStore"
 import { useAppleHealth } from "@/zustandStore/useAppleHealthStore"
 import { useTranslation } from "react-i18next"
+import MetricLogModal from "./modal/metriclogmodal"
 
 const { width } = Dimensions.get("window")
 const BAR_WIDTH = 20
@@ -87,6 +88,7 @@ export default function HeartRateScreen() {
   const [tooltipAnim] = useState(new Animated.Value(0))
   const tooltipTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const [dropdownVisible, setDropdownVisible] = useState(false)
+  const [logModalVisible, setLogModalVisible] = useState(false)
   const user = useSelector((state: any) => state.user)
   const [heartRateData, setHeartRateData] = useState<DataItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -1072,6 +1074,17 @@ export default function HeartRateScreen() {
             </TouchableOpacity>
           )}
         </View>
+
+        {/* Manual entry. Deliberately outside the isAnyConnected gate: with
+            the Fitbit Web API switched off, an Android user has no connected
+            source and this is their only way to record a reading. */}
+        <TouchableOpacity
+          style={styles.addLogButton}
+          onPress={() => setLogModalVisible(true)}
+        >
+          <Ionicons name="add" size={14} color="#fff" />
+          <Text style={styles.addLogText}>{t('addLog')}</Text>
+        </TouchableOpacity>
       </ScrollView>
 
       {isAnyConnected && (
@@ -1102,6 +1115,22 @@ export default function HeartRateScreen() {
           </TouchableOpacity>
         </Modal>
       )}
+
+      <MetricLogModal
+        visible={logModalVisible}
+        onClose={() => setLogModalVisible(false)}
+        reload={getHeartRateStatus}
+        title={t('heartScreen.addHeartRateLog')}
+        placeholder={t('heartScreen.heartRatePlaceholder')}
+        path="heart"
+        buildBody={(heartRate) => ({ heartRate })}
+        min={20}
+        max={250}
+        invalidMessage={t('heartScreen.invalidHeartRate')}
+        accent="#D53E4F"
+        accentBorder="#F2C3C8"
+        inputBorder="#F2C3C8"
+      />
     </SafeAreaView>
   )
 }
@@ -1322,6 +1351,26 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#7B7B7B",
     fontFamily: "Inter400",
+  },
+  addLogButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#D53E4F",
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    marginHorizontal: 16,
+    marginTop: 24,
+    marginBottom: 8,
+    borderRadius: 25,
+    borderWidth: 1,
+    borderColor: "#F2C3C8",
+    alignSelf: "flex-start",
+  },
+  addLogText: {
+    color: "#fff",
+    marginLeft: 5,
+    fontFamily: "Inter400",
+    fontSize: 14,
   },
   reminderButton: {
     flexDirection: "row",
