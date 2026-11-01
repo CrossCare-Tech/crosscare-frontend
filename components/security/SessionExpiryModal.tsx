@@ -53,6 +53,6 @@ const styles = StyleSheet.create({
   body: { fontFamily: Theme.typography.body, fontSize: 13.5, lineHeight: 20, color: Theme.colors.inkSoft },
   primary: { height: 50, borderRadius: Theme.borderRadius.sm, backgroundColor: Theme.colors.magenta, alignItems: "center", justifyContent: "center", marginTop: 4 },
   primaryText: { fontFamily: Theme.typography.heading, fontSize: 14.5, color: Theme.colors.surface },
-  line: { height: 50, borderRadius: Theme.borderRadius.sm, borderWidth: 1.5, borderColor: Theme.colors.inputBorder, alignItems: "center", justifyContent: "center" },
+  line: { height: 50, borderRadius: Theme.borderRadius.sm, borderWidth: 1.5, borderColor: Theme.colors.purple, backgroundColor: Theme.colors.surface, alignItems: "center", justifyContent: "center" },
   lineText: { fontFamily: Theme.typography.heading, fontSize: 14.5, color: Theme.colors.purple },
 });

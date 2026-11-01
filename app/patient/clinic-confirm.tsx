@@ -1,7 +1,7 @@
 import React from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Feather } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { Theme } from "@/constants/theme";
@@ -33,7 +33,7 @@ export default function ClinicConfirmScreen() {
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={metricStyles.content}>
           <View style={styles.hero}>
             <View style={styles.heroIcon}>
-              <Feather name="briefcase" size={22} color={Theme.colors.purple} />
+              <Ionicons name="business-outline" size={24} color={Theme.colors.purple} />
             </View>
             <Text style={styles.name}>{clinic.name}</Text>
             <Text style={styles.address}>{clinic.address}</Text>
@@ -50,7 +50,7 @@ export default function ClinicConfirmScreen() {
             </View>
             <View style={[styles.row, styles.divider]}>
               <Text style={styles.label}>{t("clinic.verified")}</Text>
-              <Feather name="shield" size={16} color={Theme.colors.success} />
+              <Ionicons name="shield-checkmark-outline" size={18} color={Theme.colors.success} />
             </View>
           </View>
 
@@ -70,8 +70,8 @@ export default function ClinicConfirmScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  hero: { backgroundColor: Theme.colors.magentaTint, borderRadius: 20, paddingVertical: 20, alignItems: "center", gap: 4 },
-  heroIcon: { width: 48, height: 48, borderRadius: 14, backgroundColor: Theme.colors.surface, alignItems: "center", justifyContent: "center", marginBottom: 6 },
+  hero: { backgroundColor: Theme.colors.magentaTint, borderRadius: 20, paddingVertical: 26, alignItems: "center", gap: 4 },
+  heroIcon: { width: 56, height: 56, borderRadius: 16, backgroundColor: Theme.colors.surface, alignItems: "center", justifyContent: "center", marginBottom: 6 },
   name: { fontFamily: Theme.typography.display, fontSize: 21, color: Theme.colors.ink },
   address: { fontFamily: Theme.typography.body, fontSize: 12.5, color: Theme.colors.inkFaint },
   card: { backgroundColor: Theme.colors.surface, borderWidth: 1, borderColor: Theme.colors.hairline, borderRadius: Theme.borderRadius.lg, paddingHorizontal: Theme.spacing.md },
@@ -82,6 +82,6 @@ const styles = StyleSheet.create({
   note: { fontFamily: Theme.typography.body, fontSize: 12.5, lineHeight: 18, color: Theme.colors.inkFaint, textAlign: "center" },
   primary: { height: 52, borderRadius: Theme.borderRadius.sm, backgroundColor: Theme.colors.magenta, alignItems: "center", justifyContent: "center" },
   primaryText: { fontFamily: Theme.typography.heading, fontSize: 15, color: Theme.colors.surface },
-  outline: { height: 50, borderRadius: Theme.borderRadius.sm, borderWidth: 1.5, borderColor: Theme.colors.inputBorder, alignItems: "center", justifyContent: "center" },
+  outline: { height: 50, borderRadius: Theme.borderRadius.sm, borderWidth: 1.5, borderColor: Theme.colors.purple, backgroundColor: Theme.colors.surface, alignItems: "center", justifyContent: "center" },
   outlineText: { fontFamily: Theme.typography.heading, fontSize: 14.5, color: Theme.colors.purple },
 });

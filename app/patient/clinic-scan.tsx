@@ -1,7 +1,7 @@
 import React from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Feather } from "@expo/vector-icons";
+import { Ionicons, Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { Theme } from "@/constants/theme";
@@ -10,7 +10,7 @@ import AuthTopBar from "@/components/ui/AuthTopBar";
 import { metricStyles } from "@/components/vitals/MetricUI";
 import { styles as rowStyles } from "@/components/devices/DeviceSourceRows";
 
-const CORNER = { position: "absolute" as const, width: 30, height: 30, borderColor: Theme.colors.magenta };
+const CORNER = { position: "absolute" as const, width: 40, height: 40, borderColor: Theme.colors.magenta };
 
 // Prototype 4.1 "QR Scanner · Join Clinic".
 // ponytail: static viewfinder, no camera yet (expo-camera needs the permission flow). Tapping the frame, or the
@@ -37,7 +37,7 @@ export default function ClinicScanScreen() {
 
           <TouchableOpacity style={[styles.card, rowStyles.row]} onPress={next} accessibilityRole="button">
             <View style={rowStyles.iconChip}>
-              <Feather name="grid" size={18} color={Theme.colors.purple} />
+              <Ionicons name="qr-code-outline" size={19} color={Theme.colors.purple} />
             </View>
             <View style={rowStyles.rowText}>
               <Text style={rowStyles.rowTitle}>{t("clinic.noQr")}</Text>
@@ -58,9 +58,9 @@ export default function ClinicScanScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   // full width like the prototype, so it cancels the horizontal padding of the content
-  viewfinder: { backgroundColor: Theme.colors.ink, marginHorizontal: -22, paddingVertical: 18, alignItems: "center", gap: 16 },
+  viewfinder: { backgroundColor: Theme.colors.viewfinder, marginHorizontal: -22, height: 360, paddingTop: 30, alignItems: "center", gap: 24 },
   hint: { fontFamily: Theme.typography.heading, fontSize: 13, color: Theme.colors.surface },
-  frame: { width: 160, height: 160, alignItems: "center", justifyContent: "center" },
+  frame: { width: 230, height: 230, alignItems: "center", justifyContent: "center" },
   line: { width: "92%", height: 2, backgroundColor: Theme.colors.magenta },
   card: {
     backgroundColor: Theme.colors.surface,
@@ -70,6 +70,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Theme.spacing.md,
     ...Theme.shadows.card,
   },
-  outline: { height: 50, borderRadius: Theme.borderRadius.sm, borderWidth: 1.5, borderColor: Theme.colors.inputBorder, alignItems: "center", justifyContent: "center" },
+  outline: { height: 50, borderRadius: Theme.borderRadius.sm, borderWidth: 1.5, borderColor: Theme.colors.purple, backgroundColor: Theme.colors.surface, alignItems: "center", justifyContent: "center" },
   outlineText: { fontFamily: Theme.typography.heading, fontSize: 14.5, color: Theme.colors.purple },
 });

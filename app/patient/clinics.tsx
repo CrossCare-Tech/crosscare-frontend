@@ -1,7 +1,7 @@
 import React from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Feather } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { Theme } from "@/constants/theme";
@@ -40,7 +40,7 @@ export default function ClinicsScreen() {
                 accessibilityState={{ selected }}
               >
                 <View style={rowStyles.iconChip}>
-                  <Feather name="briefcase" size={18} color={Theme.colors.purple} />
+                  <Ionicons name="business-outline" size={20} color={Theme.colors.purple} />
                 </View>
                 <View style={rowStyles.rowText}>
                   <Text style={rowStyles.rowTitle}>{clinic.name}</Text>
@@ -54,7 +54,7 @@ export default function ClinicsScreen() {
           })}
 
           <TouchableOpacity style={styles.outline} onPress={() => router.push("/patient/clinic-scan")} accessibilityRole="button">
-            <Feather name="maximize" size={17} color={Theme.colors.purple} />
+            <Ionicons name="qr-code-outline" size={18} color={Theme.colors.purple} />
             <Text style={styles.outlineText}>{t("clinic.joinAnother")}</Text>
           </TouchableOpacity>
         </ScrollView>
@@ -81,7 +81,7 @@ const styles = StyleSheet.create({
     height: 50,
     borderRadius: Theme.borderRadius.sm,
     borderWidth: 1.5,
-    borderColor: Theme.colors.inputBorder,
+    borderColor: Theme.colors.purple, backgroundColor: Theme.colors.surface,
     flexDirection: "row",
     gap: 8,
     alignItems: "center",
