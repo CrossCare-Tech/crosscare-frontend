@@ -71,6 +71,18 @@ const ICONS: Record<string, React.ReactNode> = {
       <Path d="M14 3v4h4M9 12.5h6M9 16h6" />
     </>
   ),
+  clinic: (
+    <>
+      <Rect x="5" y="3.5" width="14" height="17" rx="2" />
+      <Path d="M9 8h2M13 8h2M9 12h2M13 12h2M10 20.5v-3h4v3" />
+    </>
+  ),
+  security: (
+    <>
+      <Path d="M12 3.5l7 2.5v5.5c0 4.2-2.9 7.6-7 9-4.1-1.4-7-4.8-7-9V6z" />
+      <Path d="M9 12l2.2 2.2L15.5 10" />
+    </>
+  ),
   devices: (
     <>
       <Rect x="7" y="7" width="10" height="10" rx="3" />
@@ -311,6 +323,12 @@ const Profile = () => {
               onPress={() => router.push("/avatar-studio")}
             />
             <MenuRow
+              icon="clinic"
+              title={t("clinic.yourClinics")}
+              subtitle={t("clinic.profileHint")}
+              onPress={() => router.push("/patient/clinics")}
+            />
+            <MenuRow
               icon="fame"
               title={t("profile.halloffame")}
               isLast
@@ -331,6 +349,12 @@ const Profile = () => {
               title={t("documents.title")}
               subtitle={t("documents.profileHint")}
               onPress={() => router.push("/patient/documents")}
+            />
+            <MenuRow
+              icon="security"
+              title={t("security.title")}
+              subtitle={t("security.profileHint")}
+              onPress={() => router.push("/patient/security")}
             />
             <MenuRow
               icon="language"
