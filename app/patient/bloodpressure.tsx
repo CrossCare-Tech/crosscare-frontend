@@ -4,7 +4,10 @@ import { ActivityIndicator, ScrollView, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useFocusEffect } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Linking } from "react-native";
 import { useTranslation } from "react-i18next";
+import { SAMPLE_CLINICS, useClinicStore } from "@/zustandStore/clinicStore";
+import { useDemoMode } from "@/utils/demo/demoMode";
 import BloodPressureModal from "./modal/bloodpressuremodal";
 import { CONFIG } from "@/constants/config";
 import { BP_READING_TIME_KEY } from "@/components/vitals/backdate";
@@ -59,6 +62,12 @@ const BloodPressureScreen = () => {
   const readingKey = latest ? `${latest.date} ${latest.systolic}/${latest.diastolic}` : "";
   const [alertState, setAlertState] = useState<AlertState | null>(null);
   const [now, setNow] = useState(Date.now());
+
+  // The clinic that receives the active data: the reason text and the call row name it
+  const demoMode = useDemoMode((state) => state.enabled);
+  const { joined, activeId } = useClinicStore();
+  const clinics = [...(demoMode ? SAMPLE_CLINICS : []), ...joined];
+  const clinic = clinics.find((c) => c.id === activeId) ?? clinics[0];
   const [readingTime, setReadingTime] = useState<{ key: string; at: string } | null>(null);
 
   // Week of pregnancy for the alert text (same profile endpoint as the Home)
@@ -155,6 +164,21 @@ const BloodPressureScreen = () => {
               secondary={{ label: t("bloodPressureLog.alertLogAnother"), onPress: () => setModalVisible(true) }}
               onDismiss={handleDismiss}
               dismissLabel={t("bloodPressureLog.alertDismiss")}
+              explain={{
+                title: t("bloodPressureLog.alertWhatTitle"),
+                body: clinic
+                  ? t("bloodPressureLog.alertWhatBody", { clinic: clinic.name })
+                  : t("bloodPressureLog.alertWhatBodyNoClinic"),
+              }}
+              clinic={
+                clinic
+                  ? {
+                      name: clinic.name,
+                      sub: t("bloodPressureLog.alertClinicSub", { phone: clinic.phone }),
+                      onPress: () => Linking.openURL(`tel:${clinic.phone.replace(/[^\d+]/g, "")}`),
+                    }
+                  : undefined
+              }
             />
           )}
 
