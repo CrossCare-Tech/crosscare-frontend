@@ -22,6 +22,16 @@ describe("buildVitals", () => {
     expect(rows.find((row) => row.kind === "weight")?.status).toBe("noRange");
   });
 
+  it("shows the weight in the unit the patient chose, pounds by default", () => {
+    const activity = [{ date: "2026-10-31", details: { weight: { value: 68, unit: "kg" } } }];
+    const weight = (unit?: "kg" | "lbs") => buildVitals(activity, now, unit).find((row) => row.kind === "weight");
+    expect(weight()).toMatchObject({ value: "149.9", unit: "lbs" });
+    expect(weight("kg")).toMatchObject({ value: "68", unit: "kg" });
+    // A reading saved in pounds is not converted twice
+    const inLbs = [{ date: "2026-10-31", details: { weight: { value: 150, unit: "lbs" } } }];
+    expect(buildVitals(inLbs, now, "lbs").find((row) => row.kind === "weight")).toMatchObject({ value: "150", unit: "lbs" });
+  });
+
   it("lists a vital with no reading last", () => {
     const rows = buildVitals([{ date: "2026-10-31", details: { heart: 80 } }], now);
     expect(rows[0].kind).toBe("heartRate");

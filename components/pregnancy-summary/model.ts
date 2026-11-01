@@ -69,7 +69,16 @@ const daysBefore = (now: Date, days: number) => {
 };
 
 // One activity day as a reading of each vital it holds
-const readingsOf = ({ date, details: d }: ApiActivity): VitalRow[] => {
+export type SummaryWeightUnit = "kg" | "lbs";
+
+// The API stores kilograms; the summary shows the unit the patient chose in Units & Measurements
+const weightIn = (value: number, from: string | undefined, to: SummaryWeightUnit) => {
+  const source = from === "lbs" ? "lbs" : "kg";
+  const converted = source === to ? value : to === "lbs" ? value * 2.20462 : value / 2.20462;
+  return Math.round(converted * 10) / 10;
+};
+
+const readingsOf = ({ date, details: d }: ApiActivity, weightUnit: SummaryWeightUnit): VitalRow[] => {
   const rows: VitalRow[] = [];
   const row = (kind: VitalKind, value: string, unit: string, status: VitalStatus, recordedAt?: string, fasting: boolean | null = null) =>
     rows.push({ id: `${kind}-${date}`, kind, value, unit, status, day: date, recordedAt: recordedAt || null, fasting });
@@ -88,15 +97,15 @@ const readingsOf = ({ date, details: d }: ApiActivity): VitalRow[] => {
     row("heartRate", String(d.heart), "bpm", getHeartCategory(d.heart).key === "normal" ? "normal" : "outOfRange", d.heartRecordedAt);
   }
   // The app has no target range for weight
-  if (d?.weight?.value) row("weight", String(d.weight.value), d.weight.unit || "kg", "noRange", d.weight.recorded_at);
+  if (d?.weight?.value) row("weight", String(weightIn(d.weight.value, d.weight.unit, weightUnit)), weightUnit, "noRange", d.weight.recorded_at);
   return rows;
 };
 
 // The latest reading of each vital, plus any other out-of-range reading from the last 7 days.
 // Out-of-range rows come first, then the newest.
-export const buildVitals = (activities: ApiActivity[], now = new Date()): VitalRow[] => {
+export const buildVitals = (activities: ApiActivity[], now = new Date(), weightUnit: SummaryWeightUnit = "lbs"): VitalRow[] => {
   const since = daysBefore(now, SUMMARY_DAYS - 1);
-  const readings = [...activities].sort((a, b) => b.date.localeCompare(a.date)).flatMap(readingsOf);
+  const readings = [...activities].sort((a, b) => b.date.localeCompare(a.date)).flatMap((activity) => readingsOf(activity, weightUnit));
   const kinds: VitalKind[] = ["bloodPressure", "glucose", "heartRate", "weight"];
   const rows = kinds.flatMap((kind): VitalRow[] => {
     const [latest, ...older] = readings.filter((reading) => reading.kind === kind);

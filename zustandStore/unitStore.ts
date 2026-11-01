@@ -15,7 +15,7 @@ interface UnitStore {
 export const useUnitStore = create<UnitStore>()(
   persist(
     (set) => ({
-      waterUnit: 'ml',
+      waterUnit: 'fl.oz', // US standard by default, like weight; the user can switch to ml in Units & Measurements
       weightUnit: 'lbs', // US standard by default, as in the prototype; the user can switch to kg in Profile
       setWaterUnit: (unit) => set({ waterUnit: unit }),
       setWeightUnit: (unit) => set({ weightUnit: unit }),
