@@ -360,6 +360,10 @@
     "alertBodyWeek": "This is above the safe range for week {{week}}. ACOG guidelines recommend contacting your care team promptly, so let's get this checked today.",
     "alertBodyNoWeek": "This is above the safe range. ACOG guidelines recommend contacting your care team promptly, so let's get this checked today.",
     "alertLogAnother": "Log another reading",
+    "alertWhatTitle": "What this means",
+    "alertWhatBody": "A single elevated reading isn't necessarily an emergency, but combined with your history it's worth a same-day call to {{clinic}}. Rest, avoid salt, and re-check in 30 minutes.",
+    "alertWhatBodyNoClinic": "A single elevated reading isn't necessarily an emergency, but combined with your history it's worth a same-day call to your care team. Rest, avoid salt, and re-check in 30 minutes.",
+    "alertClinicSub": "{{phone}} · after-hours line",
     "alertRecheck": "Recheck in 15 minutes",
     "alertDismiss": "Dismiss alert",
     "recheckScheduled": "We will remind you in 15 minutes.",
@@ -2114,6 +2118,21 @@
     "unmatched": "no route"
   },
   "wellbeingCare": {
+    "keyword": {
+      "title": "Check-in",
+      "noticeTitle": "We noticed something in your journal",
+      "noticeBody": "A recent entry mentioned feeling overwhelmed. You don't have to go through this alone — your care team and support resources are here.",
+      "notAloneTitle": "You're not alone",
+      "notAloneBody": "Many people feel this way during pregnancy. Reaching out is a sign of strength, not a burden on anyone.",
+      "office": "{{provider}}'s office",
+      "messageTitle": "Message your care team",
+      "messageSub": "{{office}} · usually replies same day",
+      "messageAction": "Send message",
+      "messageSent": "We let {{office}} know. They usually reply the same day.",
+      "talkTitle": "Speak with someone now",
+      "talkSub": "Free, confidential, available 24/7",
+      "talkAction": "Call or text 988"
+    },
     "sectionLabel": "Cycle & mental health",
     "cycleLog": "Cycle log",
     "cycleCalendar": "Cycle calendar",

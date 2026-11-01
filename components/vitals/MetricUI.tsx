@@ -433,6 +433,8 @@ export const UrgentAlert = ({
   secondary,
   onDismiss,
   dismissLabel,
+  explain,
+  clinic,
 }: {
   eyebrow: string;
   title: string;
@@ -442,7 +444,10 @@ export const UrgentAlert = ({
   secondary: { label: string; onPress: () => void };
   onDismiss: () => void;
   dismissLabel: string;
+  explain?: { title: string; body: string }; // prototype 5.5: "then the reason why"
+  clinic?: { name: string; sub: string; onPress: () => void };
 }) => (
+  <>
   <View style={styles.urgent} accessibilityRole="alert">
     <View style={styles.urgentTop}>
       <View style={styles.disc}>
@@ -478,6 +483,25 @@ export const UrgentAlert = ({
       <Text style={styles.urgentLineText}>{secondary.label}</Text>
     </TouchableOpacity>
   </View>
+  {explain && (
+    <View style={styles.explain}>
+      <Text style={styles.explainTitle}>{explain.title}</Text>
+      <Text style={styles.explainBody}>{explain.body}</Text>
+    </View>
+  )}
+  {clinic && (
+    <TouchableOpacity style={styles.clinicRow} onPress={clinic.onPress} accessibilityRole="button">
+      <View style={styles.clinicIcon}>
+        <Feather name="smartphone" size={17} color={Theme.colors.purple} />
+      </View>
+      <View style={styles.clinicText}>
+        <Text style={styles.clinicName}>{clinic.name}</Text>
+        <Text style={styles.clinicSub}>{clinic.sub}</Text>
+      </View>
+      <Feather name="chevron-right" size={18} color={Theme.colors.inkFaint} />
+    </TouchableOpacity>
+  )}
+  </>
 );
 
 // Shortcut to the reminders screen, preset to one reminder type
@@ -803,6 +827,29 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     color: Theme.colors.inkSoft,
   },
+  explain: {
+    backgroundColor: Theme.colors.surface,
+    borderRadius: 18,
+    padding: 16,
+    gap: 6,
+    ...Theme.shadows.card,
+  },
+  explainTitle: { fontFamily: Theme.typography.heading, fontSize: 13.5, color: Theme.colors.ink },
+  explainBody: { fontFamily: Theme.typography.body, fontSize: 13, lineHeight: 19.5, color: Theme.colors.inkSoft },
+  clinicRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: Theme.colors.surface,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: Theme.colors.hairline,
+    padding: 14,
+  },
+  clinicIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: Theme.colors.surfaceSunken, alignItems: "center", justifyContent: "center" },
+  clinicText: { flex: 1, gap: 2 },
+  clinicName: { fontFamily: Theme.typography.heading, fontSize: 13.5, color: Theme.colors.ink },
+  clinicSub: { fontFamily: Theme.typography.body, fontSize: 12, color: Theme.colors.inkFaint },
   urgentButton: {
     minHeight: 52,
     borderRadius: Theme.borderRadius.sm,
