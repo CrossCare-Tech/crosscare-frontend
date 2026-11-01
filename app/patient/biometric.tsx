@@ -37,6 +37,6 @@ const styles = StyleSheet.create({
   icon: { width: 104, height: 104, borderRadius: 30, backgroundColor: Theme.colors.magentaTint, alignItems: "center", justifyContent: "center", marginBottom: 14 },
   title: { fontFamily: Theme.typography.display, fontSize: 24, color: Theme.colors.ink },
   sub: { fontFamily: Theme.typography.body, fontSize: 13.5, color: Theme.colors.inkSoft, textAlign: "center" },
-  outline: { alignSelf: "stretch", height: 50, borderRadius: Theme.borderRadius.sm, borderWidth: 1.5, borderColor: Theme.colors.inputBorder, alignItems: "center", justifyContent: "center", marginTop: 26 },
+  outline: { alignSelf: "stretch", height: 50, borderRadius: Theme.borderRadius.sm, borderWidth: 1.5, borderColor: Theme.colors.purple, backgroundColor: Theme.colors.surface, alignItems: "center", justifyContent: "center", marginTop: 26 },
   outlineText: { fontFamily: Theme.typography.heading, fontSize: 14.5, color: Theme.colors.purple },
 });

@@ -443,6 +443,8 @@
     "cta": "Create your first reminder"
   },
   "appointments": {
+    "confirmed": "Confirmed",
+    "pendingSync": "Pending sync",
     "title": "Appointments",
     "newTitle": "New appointment",
     "editTitle": "Edit appointment",

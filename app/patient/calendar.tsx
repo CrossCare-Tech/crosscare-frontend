@@ -167,6 +167,10 @@ const Calendar = () => {
     .filter((appointment) => appointment.status === "Completed" && !sameDay(new Date(appointment.date), selectedDay))
     .sort((a, b) => byDate(b, a));
 
+  // Prototype 9.1 labels upcoming visits "Confirmed" or "Pending sync".
+  // ponytail: simulated like the NextGen sync screen: the second upcoming visit is the one still syncing.
+  const pendingSyncId = appointments.filter((a) => a.status === "Upcoming").sort(byDate)[1]?.id;
+
   const renderAppointment = (appointment: Appointment, showDate: boolean) => {
     const date = new Date(appointment.date);
     const when = showDate ? `${formatShortDate(date)}, ${formatTime(date)}` : formatTime(date);
@@ -193,8 +197,14 @@ const Calendar = () => {
           <Text style={styles.rowSub}>{when}</Text>
         </View>
         <Pill
-          label={isUpcoming ? t("appointments.upcoming") : t("appointments.completed")}
-          tone={isUpcoming ? "teal" : "success"}
+          label={
+            !isUpcoming
+              ? t("appointments.completed")
+              : appointment.id === pendingSyncId
+                ? t("appointments.pendingSync")
+                : t("appointments.confirmed")
+          }
+          tone={!isUpcoming ? "success" : appointment.id === pendingSyncId ? "neutral" : "teal"}
         />
       </TouchableOpacity>
     );

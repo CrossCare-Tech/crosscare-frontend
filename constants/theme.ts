@@ -43,6 +43,7 @@ export const Theme = {
     dropzoneBorder: '#CDBFE9', // dashed border of the "Add a photo" area
     disabledBg: '#E4DDE6', // primary button while disabled
     disabledText: '#9A8FA0',
+    viewfinder: '#0F0F12', // camera area of the clinic QR scanner
 
     // Feedback
     danger: '#B3261E',
