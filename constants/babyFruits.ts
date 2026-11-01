@@ -41,9 +41,53 @@ const FRUIT_IMAGES: Record<number, any> = {
   40: require("@/assets/images/fruits/week40-small-watermelon.png"),
 };
 
+// Emoji of the same object the Compare picture shows, for the one-line "Baby is the size of ..." text.
+// Some objects have no emoji of their own, so the closest one stands in (e.g. fig -> grapes, cauliflower -> broccoli).
+const FRUIT_EMOJIS: Record<number, string> = {
+  4: "⚫", // poppy seed
+  5: "⚪", // sesame seed
+  6: "🫘", // lentil
+  7: "🫐", // blueberry
+  8: "🍓", // raspberry
+  9: "🍒", // cherry
+  10: "🍊", // kumquat
+  11: "🍇", // fig
+  12: "🍋", // lime
+  13: "🍑", // peach
+  14: "🍋", // lemon
+  15: "🍎", // apple
+  16: "🥑", // avocado
+  17: "🍐", // pear
+  18: "🫑", // bell pepper
+  19: "🍅", // heirloom tomato
+  20: "🍌", // banana
+  21: "🥕", // carrot
+  22: "🥭", // mango
+  23: "🍊", // grapefruit
+  24: "🌽", // ear of corn
+  25: "🥦", // cauliflower
+  26: "🥬", // lettuce head
+  27: "🥬", // cabbage
+  28: "🍆", // eggplant
+  29: "🎃", // butternut squash
+  30: "🥒", // cucumber
+  31: "🍍", // pineapple
+  32: "🥥", // coconut
+  33: "🍍", // large pineapple
+  34: "🍈", // cantaloupe
+  35: "🍈", // honeydew melon
+  36: "🥬", // romaine heart
+  37: "🥬", // swiss chard
+  38: "🥬", // leek
+  39: "🍉", // mini watermelon
+  40: "🍉", // small watermelon
+};
+
 const clampWeek = (week: number) => Math.min(Math.max(week, 4), 40);
 
 export const fruitImageForWeek = (week: number) => FRUIT_IMAGES[clampWeek(week)];
+
+export const fruitEmojiForWeek = (week: number) => FRUIT_EMOJIS[clampWeek(week)];
 
 // Translation key (under `babyObjects`) of the object the Compare picture shows, so the Home and Profile
 // name the same thing: "Small watermelon" -> "smallWatermelon"

@@ -16,7 +16,7 @@ export const useUnitStore = create<UnitStore>()(
   persist(
     (set) => ({
       waterUnit: 'ml',
-      weightUnit: 'kg',
+      weightUnit: 'lbs', // US standard by default, as in the prototype; the user can switch to kg in Profile
       setWaterUnit: (unit) => set({ waterUnit: unit }),
       setWeightUnit: (unit) => set({ weightUnit: unit }),
     }),

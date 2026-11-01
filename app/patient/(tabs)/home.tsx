@@ -43,7 +43,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import Svg, { Circle, Defs, LinearGradient as SvgGradient, Path, Stop } from "react-native-svg";
 import { Theme } from "@/constants/theme";
 import { babyImageForWeek } from "@/constants/babyImages";
-import { babyObjectKeyForWeek } from "@/constants/babyFruits";
+import { babyObjectKeyForWeek, fruitEmojiForWeek } from "@/constants/babyFruits";
 import ScreenBackground from "@/components/ui/ScreenBackground";
 import LineIcon from "@/components/profile/LineIcon";
 import { DueArt, FoodArt, GlucoseArt, PressureArt, StepsArt, WaterArt } from "@/components/home/TileArt";
@@ -806,7 +806,7 @@ const Home = () => {
                       <Path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" fill={Theme.colors.magentaVivid} />
                     </Svg>
                     <Text style={styles.heroMsgText}>
-                      {t("homeB.babySize", { fruit: t(`babyObjects.${babyObject}`).toLowerCase() })}
+                      {t("homeB.babySize", { fruit: t(`babyObjects.${babyObject}`).toLowerCase() })} {fruitEmojiForWeek(week)}
                     </Text>
                   </View>
                 )}
