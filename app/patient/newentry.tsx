@@ -1,4 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
+import { useDemoMode } from "@/utils/demo/demoMode";
+import { mentionsDistress } from "@/components/wellbeing/keywords";
 import {
   ActivityIndicator,
   Alert,
@@ -52,6 +54,7 @@ const NewEntry = () => {
   const [customTag, setCustomTag] = useState("");
   const [week, setWeek] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
+  const demoMode = useDemoMode((state) => state.enabled);
   const [saved, setSaved] = useState(false);
   const [discardAction, setDiscardAction] = useState<any>(null);
   const [keyboardOpen, setKeyboardOpen] = useState(false);
@@ -159,6 +162,8 @@ const NewEntry = () => {
       if (!response.ok) throw new Error(`Save failed with status ${response.status}`);
       allowLeave.current = true;
       setSaved(true);
+      // 8.7: an entry that mentions feeling overwhelmed gets a gentle check-in (the wellbeing screens are demo only)
+      if (demoMode && mentionsDistress(text)) router.push("/patient/wellbeing/keyword-alert");
     } catch (error) {
       console.error("Error saving journal entry:", error);
       Alert.alert(t("profile.error"), t("newEntry.saveError"));

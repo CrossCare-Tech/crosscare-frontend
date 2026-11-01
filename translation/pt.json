@@ -2075,6 +2075,21 @@
     "unmatched": "sem rota"
   },
   "wellbeingCare": {
+    "keyword": {
+      "title": "Check-in",
+      "noticeTitle": "Percebemos algo no seu diário",
+      "noticeBody": "Uma entrada recente mencionou sentir-se sobrecarregada. Você não precisa passar por isso sozinha — sua equipe de cuidados e os recursos de apoio estão aqui.",
+      "notAloneTitle": "Você não está sozinha",
+      "notAloneBody": "Muitas pessoas se sentem assim durante a gravidez. Pedir ajuda é sinal de força, e não um peso para ninguém.",
+      "office": "Consultório de {{provider}}",
+      "messageTitle": "Mensagem para a sua equipe",
+      "messageSub": "{{office}} · costuma responder no mesmo dia",
+      "messageAction": "Enviar mensagem",
+      "messageSent": "Avisamos {{office}}. Costumam responder no mesmo dia.",
+      "talkTitle": "Fale com alguém agora",
+      "talkSub": "Gratuito, confidencial, disponível 24h",
+      "talkAction": "Ligar ou enviar SMS para 988"
+    },
     "sectionLabel": "Ciclo e saúde mental",
     "cycleLog": "Registro do ciclo",
     "cycleCalendar": "Calendário do ciclo",
