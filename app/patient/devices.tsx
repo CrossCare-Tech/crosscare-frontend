@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
+import { router } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { Theme } from "@/constants/theme";
 import ScreenBackground from "@/components/ui/ScreenBackground";
@@ -78,8 +79,14 @@ export default function DevicesScreen() {
         <AuthTopBar title={t("devices.title")} />
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={metricStyles.content}>
-          {/* 5.4 Sync indicator */}
-          <View style={styles.card}>
+          {/* 5.4 Sync indicator: once the watch is connected the card opens its Device sync screen */}
+          <TouchableOpacity
+            style={styles.card}
+            activeOpacity={0.85}
+            onPress={() => router.push("/patient/device-sync")}
+            disabled={!watchOn || !!watch.flow}
+            accessibilityRole={watchOn && !watch.flow ? "button" : undefined}
+          >
             <View style={[rowStyles.row, styles.statusRow]}>
               <View style={[styles.dot, connected.length > 0 ? styles.dotOn : styles.dotOff]} />
               <View style={rowStyles.rowText}>
@@ -97,7 +104,7 @@ export default function DevicesScreen() {
                 {t("devices.lastSync", { when: ago(watch.lastSyncAt) })}
               </Text>
             )}
-          </View>
+          </TouchableOpacity>
 
           {(watchOn || watch.flow) && (
             <>
@@ -147,6 +154,13 @@ export default function DevicesScreen() {
           <View style={styles.card}>
             {sources.map((source, index) => (
               <View key={source.id} style={[rowStyles.row, index > 0 && rowStyles.divider]}>
+                {/* The connected Demo Watch opens its 5.4 Device sync screen */}
+                <TouchableOpacity
+                  style={styles.sourceMain}
+                  onPress={() => router.push("/patient/device-sync")}
+                  disabled={!(source.isDemo && source.connected)}
+                  accessibilityRole="button"
+                >
                 <SourceChip id={source.id} />
                 <View style={rowStyles.rowText}>
                   <View style={styles.nameRow}>
@@ -160,6 +174,7 @@ export default function DevicesScreen() {
                         : t("devices.notConnected"))}
                   </Text>
                 </View>
+                </TouchableOpacity>
                 {source.available && (
                   <TouchableOpacity
                     onPress={() => toggleSource(source)}
@@ -173,6 +188,22 @@ export default function DevicesScreen() {
               </View>
             ))}
           </View>
+
+          {/* 5.3 Manual entry, for when the device does not sync */}
+          <TouchableOpacity
+            style={[styles.card, rowStyles.row]}
+            onPress={() => router.push("/patient/manual-entry")}
+            accessibilityRole="button"
+          >
+            <View style={rowStyles.iconChip}>
+              <Feather name="edit-3" size={18} color={Theme.colors.purple} />
+            </View>
+            <View style={rowStyles.rowText}>
+              <Text style={rowStyles.rowTitle}>{t("devices.enterManually")}</Text>
+              <Text style={rowStyles.rowSub}>{t("devices.enterManuallyHint")}</Text>
+            </View>
+            <Feather name="chevron-right" size={18} color={Theme.colors.inkFaint} />
+          </TouchableOpacity>
 
           {/* 10.8 Permissions */}
           {watchOn ? (
@@ -295,6 +326,12 @@ const styles = StyleSheet.create({
   },
   syncItem: {
     flex: 1,
+  },
+  sourceMain: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
   },
   nameRow: {
     flexDirection: "row",
