@@ -8,7 +8,7 @@ import GlucoseModal, { GLUCOSE_CONTEXTS } from "./modal/glucosemodal";
 import { Theme } from "@/constants/theme";
 import ScreenBackground from "@/components/ui/ScreenBackground";
 import AuthTopBar from "@/components/ui/AuthTopBar";
-import { Tone } from "@/components/vitals/VitalsUI";
+import { getGlucoseCategory, isMmol } from "@/utils/vitalCategories";
 import {
   AddReadingButton,
   ChartCard,
@@ -27,21 +27,6 @@ import {
   TrendChart,
   useActivityHistory,
 } from "@/components/vitals/MetricUI";
-
-const isMmol = (unit: string) => unit?.toLowerCase().includes("mmol");
-
-// Pregnancy glucose targets (ACOG): fasting below 95 mg/dL, after meals below 140 mg/dL.
-// Readings that are not marked as fasting use the after-meal target.
-const getGlucoseCategory = (
-  level: number,
-  unit: string,
-  context: string | null
-): { key: string; tone: Tone } => {
-  const mgdl = isMmol(unit) ? level * 18 : level;
-  if (mgdl < 70) return { key: "low", tone: "warning" };
-  const limit = context === "Fasting" ? 95 : 140;
-  return mgdl < limit ? { key: "normal", tone: "success" } : { key: "elevated", tone: "warning" };
-};
 
 // 5.2 — Glucose
 const GlucoseScreen = () => {

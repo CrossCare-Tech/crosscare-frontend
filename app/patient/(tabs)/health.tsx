@@ -153,6 +153,17 @@ const TrackingOptionsScreen = () => {
       ],
     },
     ...cycleAndMentalHealth,
+    {
+      title: t('pregnancySummary.sectionLabel'),
+      options: [
+        {
+          id: 'pregnancy-summary',
+          title: t('pregnancySummary.title'),
+          icon: <Feather name="file-text" size={22} color={Theme.colors.purple} />,
+          onPress: () => router.push('/patient/pregnancy-summary'),
+        },
+      ],
+    },
   ];
 
   return (

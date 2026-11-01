@@ -9,7 +9,7 @@ import { scheduleBloodPressureRecheck } from "../../utils/NotificationManager";
 import { Theme } from "@/constants/theme";
 import ScreenBackground from "@/components/ui/ScreenBackground";
 import AuthTopBar from "@/components/ui/AuthTopBar";
-import { Tone } from "@/components/vitals/VitalsUI";
+import { getBPCategory } from "@/utils/vitalCategories";
 import {
   AddReadingButton,
   ChartCard,
@@ -29,15 +29,6 @@ import {
   UrgentAlert,
   useActivityHistory,
 } from "@/components/vitals/MetricUI";
-
-// Same ranges the app already used. Stage 2 (140/90 or higher) is the pregnancy safe limit,
-// shown in yellow with words rather than red (prototype 5.5)
-const getBPCategory = (sys: number, dia: number): { key: string; tone: Tone } => {
-  if (sys < 120 && dia < 80) return { key: "normal", tone: "success" };
-  if (sys < 130 && dia < 80) return { key: "elevated", tone: "warning" };
-  if (sys < 140 && dia < 90) return { key: "high1", tone: "warning" };
-  return { key: "high2", tone: "warning" };
-};
 
 const BAR_WIDTH: Record<Period, number> = { "7": 14, "30": 6, "90": 3 };
 
