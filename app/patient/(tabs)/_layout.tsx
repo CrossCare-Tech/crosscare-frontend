@@ -5,10 +5,14 @@ import ProfileIcon from "@/assets/images/Svg/ProfileIcon";
 import SelfCareIcon from "@/assets/images/Svg/SelfCareIcon";
 import { Tabs } from "expo-router";
 import { useTranslation } from "react-i18next";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+const TAB_BAR_CONTENT_HEIGHT = 59;
 
 export default function TabLayout() {
-  
+
   const {t} = useTranslation();
+  const insets = useSafeAreaInsets();
 
   return (
     <Tabs
@@ -16,8 +20,13 @@ export default function TabLayout() {
         headerShown: false,
         tabBarHideOnKeyboard: true,
         tabBarStyle: {
-          height: 59, // Tab bar height
+          // Hardcoding height alone replaces the height React Navigation would
+          // have computed from the safe-area inset, which put the tabs under
+          // the Android gesture navigation bar and the iPhone home indicator.
+          // Keep the intended content height and add the inset to it.
+          height: TAB_BAR_CONTENT_HEIGHT + insets.bottom,
           paddingTop: 5, // Padding for the tab bar
+          paddingBottom: insets.bottom,
           alignItems: "center",
           borderTopWidth:0,
           justifyContent: "center",
