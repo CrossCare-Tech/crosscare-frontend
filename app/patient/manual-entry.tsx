@@ -97,7 +97,7 @@ export default function ManualEntryScreen() {
       const value = Number(weight.replace(",", "."));
       if (!Number.isFinite(value) || value <= 0) return fail(t("weightLog.invalid"));
       path = "weight";
-      body = { weight: weightUnit === "lbs" ? convertWeight(value, "lbs", "kg") : value, weight_unit: "kg" };
+      body = { weight: weightUnit === "lbs" ? Math.round(convertWeight(value, "lbs", "kg") * 100) / 100 : value, weight_unit: "kg" };
       hasReading = (details) => details?.weight?.value > 0;
     }
     if (!user?.user_id) return fail(t("vitalsEntry.loginAgain"));
