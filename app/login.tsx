@@ -242,7 +242,6 @@ const LoginContent: FC = () => {
           <View style={styles.form}>
             <CustomTextInput
               label="Email"
-              icon="mail"
               type="email"
               value={email}
               onChangeText={handleChangeEmail}
@@ -255,7 +254,6 @@ const LoginContent: FC = () => {
             <View style={styles.passwordContainer}>
               <CustomTextInput
                 label="Password"
-                icon="lock"
                 type="password"
                 value={password}
                 onChangeText={handleChangePassword}
@@ -399,9 +397,10 @@ const styles = StyleSheet.create({
     marginBottom: 28,
   },
   logo: {
-    width: 210,
-    height: 70,
-    marginBottom: 16,
+    // Prototype 1.1 `.logo-hero`: 104 wide, the image keeps its 720x783 proportion
+    width: 104,
+    height: 113,
+    marginBottom: 12,
   },
   demoPill: {
     marginTop: -6,
