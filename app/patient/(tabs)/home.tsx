@@ -1,8 +1,6 @@
 import {
   ActivityIndicator,
-  Alert,
-  FlatList,
-  ScrollView,
+  Alert,  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -39,6 +37,7 @@ import { useMealStore } from "@/zustandStore/mealStore";
 import { CONFIG } from "@/constants/config";
 import { useFitbit } from "@/zustandStore/useFitbitStore";
 import { useAppleHealth } from "@/zustandStore/useAppleHealthStore";
+import { todayDateString } from "@/utils/date";
 
 
 interface Progress {
@@ -259,7 +258,7 @@ const Home = () => {
           }
         } else {
           // For Fitbit
-          const today = new Date().toISOString().split('T')[0];
+          const today = todayDateString();
           stepsData = await fitbitGetStepsData(today);
         }
 
@@ -1298,13 +1297,15 @@ const Home = () => {
           </TouchableOpacity>
         </View>
 
-        <FlatList
-          data={cardData}
-          renderItem={renderCard}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.cardContainer}
-          showsVerticalScrollIndicator={false}
-        />
+        {/* Mapped rather than a FlatList: this sits inside the page
+            ScrollView, which disables virtualisation anyway and logs
+            "VirtualizedLists should never be nested inside plain
+            ScrollViews". cardData holds three static items. */}
+        <View style={styles.cardContainer}>
+          {cardData.map((item) => (
+            <React.Fragment key={item.id}>{renderCard({ item })}</React.Fragment>
+          ))}
+        </View>
         
         {/* Copyright Notice */}
 <View style={styles.copyrightContainer}>

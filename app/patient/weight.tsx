@@ -33,6 +33,7 @@ import {
   formatWeightAmount,
 } from "@/zustandStore/unitStore";
 import { CONFIG } from "@/constants/config";
+import { dateKeyOf, toLocalDateString, todayDateString } from "@/utils/date";
 
 const { width } = Dimensions.get("window");
 const BAR_WIDTH = 20;
@@ -77,7 +78,7 @@ const emptyChartData = [
 
 // Default empty today data
 const emptyTodayData = [
-  { day: "Today", weight: 0, date: new Date().toISOString().split("T")[0] },
+  { day: "Today", weight: 0, date: todayDateString() },
 ];
 
 const WeightScreen = () => {
@@ -146,7 +147,7 @@ const WeightScreen = () => {
 
     if (timeRange === "today") {
       // Today view - just show today
-      const todayStr = today.toISOString().split("T")[0];
+      const todayStr = toLocalDateString(today);
 
       return [
         {
@@ -167,7 +168,7 @@ const WeightScreen = () => {
 
       const currentDate = new Date(startDate);
       while (currentDate <= endDate) {
-        const dateString = currentDate.toISOString().split("T")[0];
+        const dateString = toLocalDateString(currentDate);
         days.push({
           id: `empty-${dateString}`,
           date: dateString,
@@ -206,7 +207,7 @@ const WeightScreen = () => {
           // Add the main label date
           const labelDate = new Date(startDate);
           labelDate.setDate(range.start);
-          const labelDateString = labelDate.toISOString().split("T")[0];
+          const labelDateString = toLocalDateString(labelDate);
 
           days.push({
             id: `label-${labelDateString}`,
@@ -224,7 +225,7 @@ const WeightScreen = () => {
           ) {
             const currentDate = new Date(startDate);
             currentDate.setDate(day);
-            const dateString = currentDate.toISOString().split("T")[0];
+            const dateString = toLocalDateString(currentDate);
 
             days.push({
               id: `day-${dateString}`,
@@ -374,14 +375,14 @@ const WeightScreen = () => {
         const dateKey =
           typeof item.date === "string"
             ? item.date.split("T")[0]
-            : new Date(item.date).toISOString().split("T")[0];
+            : dateKeyOf(item.date);
         dataMap.set(dateKey, item);
       }
     });
 
     // For "today" view, we need to specifically check if today's data exists
     if (timeRange === "today") {
-      const todayStr = new Date().toISOString().split("T")[0];
+      const todayStr = todayDateString();
       const todayData = dataMap.get(todayStr);
 
       if (todayData) {
@@ -492,7 +493,7 @@ const WeightScreen = () => {
             if (dayIndex === -1) return; // Skip invalid dates
 
             const dayLetter = fixedWeekdays[dayIndex]; // Get S, M, T, W...
-            const dateString = entryDate.toISOString().split("T")[0];
+            const dateString = toLocalDateString(entryDate);
             const formattedDate = entryDate
               .toLocaleDateString("en-US", {
                 month: "short",
@@ -607,7 +608,7 @@ const WeightScreen = () => {
 
       // Update today's weight in the chart
       const today = new Date();
-      const todayStr = today.toISOString().split("T")[0];
+      const todayStr = toLocalDateString(today);
       const formattedDate = today
         .toLocaleDateString("en-US", {
           month: "short",
@@ -626,7 +627,7 @@ const WeightScreen = () => {
       // Update the weight data with today's entry
       const updatedData = [...weightData];
       const existingIndex = updatedData.findIndex(
-        (item) => new Date(item.date).toISOString().split("T")[0] === todayStr
+        (item) => dateKeyOf(item.date) === todayStr
       );
 
       if (existingIndex >= 0) {
