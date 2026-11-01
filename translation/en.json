@@ -1847,5 +1847,153 @@
     "requests": "Recent simulated requests",
     "noRequests": "No requests yet.",
     "unmatched": "no route"
+  },
+  "wellbeingCare": {
+    "sectionLabel": "Cycle & mental health",
+    "cycleLog": "Cycle log",
+    "cycleCalendar": "Cycle calendar",
+    "privateLog": "Symptoms log",
+    "moodCheckIn": "Mood check-in",
+    "fullCheckIn": "Mental health check-in",
+    "cycleDay": "Cycle day",
+    "dayNumber": "Day {{day}}",
+    "noCycleDay": "No period logged",
+    "flow": "Flow",
+    "flows": {
+      "light": "Light",
+      "medium": "Medium",
+      "heavy": "Heavy",
+      "spotting": "Spotting"
+    },
+    "symptoms": "Symptoms",
+    "cycleSymptoms": {
+      "cramps": "Cramps",
+      "headache": "Headache",
+      "bloating": "Bloating",
+      "fatigue": "Fatigue"
+    },
+    "saveToday": "Save today's log",
+    "saveDay": "Save this day's log",
+    "save": "Save",
+    "saved": "Saved.",
+    "privateNote": "Private — visible only to you unless you choose to share it.",
+    "activity": "Activity",
+    "activities": {
+      "protected": "Protected",
+      "unprotected": "Unprotected",
+      "none": "None today"
+    },
+    "privateSymptoms": {
+      "discomfort": "Discomfort",
+      "spotting": "Spotting",
+      "none": "None"
+    },
+    "notes": "Notes (optional)",
+    "notesPlaceholder": "Add a private note…",
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month",
+    "legend": {
+      "period": "Period",
+      "fertile": "Fertile window",
+      "predicted": "Predicted"
+    },
+    "nextPeriod": "Next period predicted",
+    "nextPeriodRange_one": "{{from}} – {{to}} · based on your last cycle",
+    "nextPeriodRange_other": "{{from}} – {{to}} · based on your last {{count}} cycles",
+    "nextPeriodEmpty": "Log two periods to see a prediction.",
+    "questionOf": "Question {{current}} of {{total}}",
+    "questionLead": "Over the last 2 weeks, how often have you been bothered by:",
+    "checkInPrivate": "Your answers are private and stay on this phone in this demo.",
+    "next": "Next",
+    "options": {
+      "notAtAll": "Not at all",
+      "severalDays": "Several days",
+      "moreThanHalf": "More than half the days",
+      "nearlyEvery": "Nearly every day"
+    },
+    "phq": {
+      "interest": {
+        "question": "Little interest or pleasure in doing things",
+        "short": "Little interest or pleasure"
+      },
+      "down": {
+        "question": "Feeling down, depressed, or hopeless",
+        "short": "Feeling down or hopeless"
+      },
+      "sleep": {
+        "question": "Trouble falling or staying asleep, or sleeping too much",
+        "short": "Sleep changes"
+      },
+      "energy": {
+        "question": "Feeling tired or having little energy",
+        "short": "Tired or low energy"
+      },
+      "appetite": {
+        "question": "Poor appetite or overeating",
+        "short": "Appetite changes"
+      },
+      "failure": {
+        "question": "Feeling bad about yourself — or that you are a failure or have let yourself or your family down",
+        "short": "Feeling bad about yourself"
+      },
+      "concentration": {
+        "question": "Trouble concentrating on things, such as reading the newspaper or watching television",
+        "short": "Trouble concentrating"
+      },
+      "movement": {
+        "question": "Moving or speaking so slowly that other people could have noticed? Or the opposite — being so fidgety or restless that you have been moving around a lot more than usual",
+        "short": "Moving or speaking differently"
+      },
+      "selfHarm": {
+        "question": "Thoughts that you would be better off dead or of hurting yourself in some way",
+        "short": "Difficult thoughts"
+      }
+    },
+    "results": {
+      "title": "Your results",
+      "phq9Score": "Your PHQ-9 score",
+      "phq2Score": "Your PHQ-2 score",
+      "meaning": "What this means",
+      "nextSteps": "Recommended next steps",
+      "supportTitle": "You don't have to go through this alone",
+      "supportText": "You shared that you've had some difficult thoughts. Thank you for answering honestly. Someone can talk with you right now, and if you are in immediate danger, call 911.",
+      "share": "Share results with your care team",
+      "shareText": "Nothing is sent automatically. Show your answers at your next visit.",
+      "viewAnswers": "View answers",
+      "hideAnswers": "Hide answers",
+      "concierge": "Talk to your concierge",
+      "conciergeText": "Get gentle coping strategies and resources.",
+      "startChat": "Start chat",
+      "talkNow": "Talk to someone now",
+      "talkNowText": "Free, confidential support is available 24/7.",
+      "call988": "Call 988",
+      "done": "Done",
+      "bands": {
+        "phq2": {
+          "label": "Short check-in",
+          "text": "Your answers don't point to needing the longer check-in right now. This isn't a diagnosis. If something changes, you can check in again or talk with your care team."
+        },
+        "minimal": {
+          "label": "Minimal symptoms",
+          "text": "You reported few symptoms right now. This isn't a diagnosis. You can check in again any time, and your care team is there if something changes."
+        },
+        "mild": {
+          "label": "Mild symptoms",
+          "text": "Mild symptoms are common during pregnancy and often ease with support. This isn't a diagnosis — your care team can help you decide on next steps together."
+        },
+        "moderate": {
+          "label": "Moderate symptoms",
+          "text": "What you're feeling deserves attention and support, and it can get better. This isn't a diagnosis — talking with your care team soon can help you choose next steps together."
+        },
+        "moderatelySevere": {
+          "label": "Moderately severe symptoms",
+          "text": "You've been carrying a lot, and support can make a real difference. This isn't a diagnosis — please talk with your care team soon so you can plan next steps together."
+        },
+        "severe": {
+          "label": "Severe symptoms",
+          "text": "You've been carrying a lot, and you deserve support now. This isn't a diagnosis — please contact your care team as soon as you can so you can plan next steps together."
+        }
+      }
+    }
   }
 }

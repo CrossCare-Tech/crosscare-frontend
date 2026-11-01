@@ -1804,5 +1804,153 @@
     "requests": "Requisições simuladas recentes",
     "noRequests": "Nenhuma requisição ainda.",
     "unmatched": "sem rota"
+  },
+  "wellbeingCare": {
+    "sectionLabel": "Ciclo e saúde mental",
+    "cycleLog": "Registro do ciclo",
+    "cycleCalendar": "Calendário do ciclo",
+    "privateLog": "Registro de sintomas",
+    "moodCheckIn": "Check-in de humor",
+    "fullCheckIn": "Check-in de saúde mental",
+    "cycleDay": "Dia do ciclo",
+    "dayNumber": "Dia {{day}}",
+    "noCycleDay": "Sem menstruação registrada",
+    "flow": "Fluxo",
+    "flows": {
+      "light": "Leve",
+      "medium": "Médio",
+      "heavy": "Intenso",
+      "spotting": "Escape"
+    },
+    "symptoms": "Sintomas",
+    "cycleSymptoms": {
+      "cramps": "Cólica",
+      "headache": "Dor de cabeça",
+      "bloating": "Inchaço",
+      "fatigue": "Cansaço"
+    },
+    "saveToday": "Salvar o registro de hoje",
+    "saveDay": "Salvar o registro deste dia",
+    "save": "Salvar",
+    "saved": "Salvo.",
+    "privateNote": "Privado: só você vê, a menos que escolha compartilhar.",
+    "activity": "Atividade",
+    "activities": {
+      "protected": "Protegida",
+      "unprotected": "Sem proteção",
+      "none": "Nenhuma hoje"
+    },
+    "privateSymptoms": {
+      "discomfort": "Desconforto",
+      "spotting": "Escape",
+      "none": "Nenhum"
+    },
+    "notes": "Notas (opcional)",
+    "notesPlaceholder": "Adicione uma nota privada…",
+    "previousMonth": "Mês anterior",
+    "nextMonth": "Próximo mês",
+    "legend": {
+      "period": "Menstruação",
+      "fertile": "Janela fértil",
+      "predicted": "Prevista"
+    },
+    "nextPeriod": "Próxima menstruação prevista",
+    "nextPeriodRange_one": "{{from}} – {{to}} · com base no seu último ciclo",
+    "nextPeriodRange_other": "{{from}} – {{to}} · com base nos seus últimos {{count}} ciclos",
+    "nextPeriodEmpty": "Registre duas menstruações para ver uma previsão.",
+    "questionOf": "Pergunta {{current}} de {{total}}",
+    "questionLead": "Nas últimas 2 semanas, com que frequência você se incomodou com:",
+    "checkInPrivate": "Suas respostas são privadas e, nesta demonstração, ficam só neste celular.",
+    "next": "Próxima",
+    "options": {
+      "notAtAll": "Nenhuma vez",
+      "severalDays": "Vários dias",
+      "moreThanHalf": "Mais da metade dos dias",
+      "nearlyEvery": "Quase todos os dias"
+    },
+    "phq": {
+      "interest": {
+        "question": "Pouco interesse ou prazer em fazer as coisas",
+        "short": "Pouco interesse ou prazer"
+      },
+      "down": {
+        "question": "Sentir-se para baixo, deprimida ou sem esperança",
+        "short": "Para baixo ou sem esperança"
+      },
+      "sleep": {
+        "question": "Dificuldade para pegar no sono ou permanecer dormindo, ou dormir demais",
+        "short": "Mudanças no sono"
+      },
+      "energy": {
+        "question": "Sentir-se cansada ou com pouca energia",
+        "short": "Cansaço ou pouca energia"
+      },
+      "appetite": {
+        "question": "Falta de apetite ou comer demais",
+        "short": "Mudanças no apetite"
+      },
+      "failure": {
+        "question": "Sentir-se mal consigo mesma, ou achar que é um fracasso ou que decepcionou a si mesma ou à sua família",
+        "short": "Sentir-se mal consigo mesma"
+      },
+      "concentration": {
+        "question": "Dificuldade para se concentrar nas coisas, como ler o jornal ou ver televisão",
+        "short": "Dificuldade de concentração"
+      },
+      "movement": {
+        "question": "Mover-se ou falar tão devagar que outras pessoas poderiam notar? Ou o contrário: estar tão inquieta ou agitada que se movimenta muito mais do que de costume",
+        "short": "Mover-se ou falar diferente"
+      },
+      "selfHarm": {
+        "question": "Pensar que seria melhor estar morta ou se machucar de alguma forma",
+        "short": "Pensamentos difíceis"
+      }
+    },
+    "results": {
+      "title": "Seus resultados",
+      "phq9Score": "Sua pontuação PHQ-9",
+      "phq2Score": "Sua pontuação PHQ-2",
+      "meaning": "O que isso significa",
+      "nextSteps": "Próximos passos recomendados",
+      "supportTitle": "Você não precisa passar por isso sozinha",
+      "supportText": "Você contou que tem tido alguns pensamentos difíceis. Obrigada por responder com sinceridade. Alguém pode conversar com você agora e, se estiver em perigo imediato, ligue para o 911.",
+      "share": "Compartilhe os resultados com sua equipe de cuidado",
+      "shareText": "Nada é enviado automaticamente. Mostre suas respostas na próxima consulta.",
+      "viewAnswers": "Ver respostas",
+      "hideAnswers": "Ocultar respostas",
+      "concierge": "Fale com sua concierge",
+      "conciergeText": "Receba estratégias e recursos para se sentir melhor.",
+      "startChat": "Iniciar conversa",
+      "talkNow": "Fale com alguém agora",
+      "talkNowText": "Apoio gratuito e confidencial, 24 horas por dia.",
+      "call988": "Ligar para 988",
+      "done": "Concluir",
+      "bands": {
+        "phq2": {
+          "label": "Check-in breve",
+          "text": "Suas respostas não indicam necessidade do check-in mais longo agora. Isto não é um diagnóstico. Se algo mudar, você pode refazê-lo ou falar com sua equipe de cuidado."
+        },
+        "minimal": {
+          "label": "Sintomas mínimos",
+          "text": "Você relatou poucos sintomas no momento. Isto não é um diagnóstico. Você pode refazer o check-in quando quiser, e sua equipe de cuidado está disponível se algo mudar."
+        },
+        "mild": {
+          "label": "Sintomas leves",
+          "text": "Sintomas leves são comuns na gravidez e costumam melhorar com apoio. Isto não é um diagnóstico: sua equipe de cuidado pode ajudar você a decidir os próximos passos."
+        },
+        "moderate": {
+          "label": "Sintomas moderados",
+          "text": "O que você sente merece atenção e apoio, e pode melhorar. Isto não é um diagnóstico: conversar logo com sua equipe de cuidado pode ajudar a escolher os próximos passos."
+        },
+        "moderatelySevere": {
+          "label": "Sintomas moderadamente graves",
+          "text": "Você tem carregado muita coisa, e o apoio pode fazer uma grande diferença. Isto não é um diagnóstico: converse logo com sua equipe de cuidado para planejar os próximos passos."
+        },
+        "severe": {
+          "label": "Sintomas graves",
+          "text": "Você tem carregado muita coisa e merece apoio agora. Isto não é um diagnóstico: entre em contato com sua equipe de cuidado assim que puder para planejar os próximos passos."
+        }
+      }
+    }
   }
 }

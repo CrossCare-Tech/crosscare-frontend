@@ -1659,5 +1659,153 @@
       "continue": "Kontinye",
       "pause": "Fè Pòz"
     }
+  },
+  "wellbeingCare": {
+    "sectionLabel": "Sik ak sante mantal",
+    "cycleLog": "Jounal sik",
+    "cycleCalendar": "Kalandriye sik",
+    "privateLog": "Jounal sentòm",
+    "moodCheckIn": "Tcheke imè",
+    "fullCheckIn": "Tcheke sante mantal",
+    "cycleDay": "Jou nan sik la",
+    "dayNumber": "Jou {{day}}",
+    "noCycleDay": "Pa gen règ anrejistre",
+    "flow": "Koule",
+    "flows": {
+      "light": "Lejè",
+      "medium": "Mwayen",
+      "heavy": "Anpil",
+      "spotting": "Ti tach"
+    },
+    "symptoms": "Sentòm",
+    "cycleSymptoms": {
+      "cramps": "Kranp",
+      "headache": "Tèt fè mal",
+      "bloating": "Gonfleman",
+      "fatigue": "Fatig"
+    },
+    "saveToday": "Anrejistre jounal jodi a",
+    "saveDay": "Anrejistre jounal jou sa a",
+    "save": "Anrejistre",
+    "saved": "Anrejistre.",
+    "privateNote": "Prive: se ou sèl ki ka wè l, sòf si ou chwazi pataje l.",
+    "activity": "Aktivite",
+    "activities": {
+      "protected": "Pwoteje",
+      "unprotected": "San pwoteksyon",
+      "none": "Okenn jodi a"
+    },
+    "privateSymptoms": {
+      "discomfort": "Malèz",
+      "spotting": "Ti tach",
+      "none": "Okenn"
+    },
+    "notes": "Nòt (si ou vle)",
+    "notesPlaceholder": "Ajoute yon nòt prive…",
+    "previousMonth": "Mwa anvan",
+    "nextMonth": "Mwa pwochen",
+    "legend": {
+      "period": "Règ",
+      "fertile": "Peryòd fètil",
+      "predicted": "Prevwa"
+    },
+    "nextPeriod": "Pwochen règ prevwa",
+    "nextPeriodRange_one": "{{from}} – {{to}} · dapre dènye sik ou",
+    "nextPeriodRange_other": "{{from}} – {{to}} · dapre {{count}} dènye sik ou yo",
+    "nextPeriodEmpty": "Anrejistre de règ pou wè yon previzyon.",
+    "questionOf": "Kesyon {{current}} sou {{total}}",
+    "questionLead": "Pandan 2 dènye semèn yo, konbyen fwa bagay sa a te deranje ou:",
+    "checkInPrivate": "Repons ou yo prive epi, nan demo sa a, yo rete sèlman nan telefòn sa a.",
+    "next": "Pwochen",
+    "options": {
+      "notAtAll": "Pa ditou",
+      "severalDays": "Plizyè jou",
+      "moreThanHalf": "Plis pase mwatye jou yo",
+      "nearlyEvery": "Prèske chak jou"
+    },
+    "phq": {
+      "interest": {
+        "question": "Pa gen anpil enterè oswa plezi nan fè bagay yo",
+        "short": "Pa gen anpil enterè oswa plezi"
+      },
+      "down": {
+        "question": "Santi ou dekouraje, deprime oswa san espwa",
+        "short": "Dekouraje oswa san espwa"
+      },
+      "sleep": {
+        "question": "Difikilte pou dòmi oswa rete dòmi, oswa dòmi twòp",
+        "short": "Chanjman nan dòmi"
+      },
+      "energy": {
+        "question": "Santi ou fatige oswa ou pa gen anpil enèji",
+        "short": "Fatig oswa ti enèji"
+      },
+      "appetite": {
+        "question": "Pa gen apeti oswa manje twòp",
+        "short": "Chanjman nan apeti"
+      },
+      "failure": {
+        "question": "Santi ou mal sou tèt ou, oswa panse ou se yon echèk oswa ou desevwa tèt ou oswa fanmi ou",
+        "short": "Santi ou mal sou tèt ou"
+      },
+      "concentration": {
+        "question": "Difikilte pou konsantre sou bagay yo, tankou li jounal oswa gade televizyon",
+        "short": "Difikilte pou konsantre"
+      },
+      "movement": {
+        "question": "Deplase oswa pale tèlman dousman lòt moun ka remake? Oswa okontrè: tèlman ajite ou deplase pi plis pase dabitid",
+        "short": "Deplase oswa pale yon lòt jan"
+      },
+      "selfHarm": {
+        "question": "Panse li ta pi bon si ou te mouri oswa panse fè tèt ou mal yon jan oswa yon lòt",
+        "short": "Panse difisil"
+      }
+    },
+    "results": {
+      "title": "Rezilta ou yo",
+      "phq9Score": "Nòt PHQ-9 ou",
+      "phq2Score": "Nòt PHQ-2 ou",
+      "meaning": "Sa sa vle di",
+      "nextSteps": "Pwochen etap rekòmande yo",
+      "supportTitle": "Ou pa bezwen pase nan sa a pou kont ou",
+      "supportText": "Ou pataje ou te gen kèk panse difisil. Mèsi paske ou reponn ak onètete. Gen yon moun ki ka pale avè ou kounye a, epi si ou an danje imedya, rele 911.",
+      "share": "Pataje rezilta yo ak ekip swen ou",
+      "shareText": "Anyen pa voye otomatikman. Montre repons ou yo nan pwochen vizit ou.",
+      "viewAnswers": "Wè repons yo",
+      "hideAnswers": "Kache repons yo",
+      "concierge": "Pale ak konsyèj ou",
+      "conciergeText": "Jwenn estrateji ak resous pou santi ou pi byen.",
+      "startChat": "Kòmanse chat",
+      "talkNow": "Pale ak yon moun kounye a",
+      "talkNowText": "Sipò gratis e konfidansyèl disponib 24 sou 24.",
+      "call988": "Rele 988",
+      "done": "Fini",
+      "bands": {
+        "phq2": {
+          "label": "Tchèk kout",
+          "text": "Repons ou yo pa montre ou bezwen tchèk ki pi long lan kounye a. Sa a se pa yon dyagnostik. Si yon bagay chanje, ou ka refè l oswa pale ak ekip swen ou."
+        },
+        "minimal": {
+          "label": "Ti kras sentòm",
+          "text": "Ou rapòte kèk ti sentòm kounye a. Sa a se pa yon dyagnostik. Ou ka refè tchèk la nenpòt lè, epi ekip swen ou la si yon bagay chanje."
+        },
+        "mild": {
+          "label": "Sentòm lejè",
+          "text": "Sentòm lejè yo komen pandan gwosès epi yo souvan diminye ak sipò. Sa a se pa yon dyagnostik: ekip swen ou ka ede ou deside pwochen etap yo."
+        },
+        "moderate": {
+          "label": "Sentòm mwayen",
+          "text": "Sa ou santi a merite atansyon ak sipò, epi li ka amelyore. Sa a se pa yon dyagnostik: pale byento ak ekip swen ou ka ede ou chwazi pwochen etap yo."
+        },
+        "moderatelySevere": {
+          "label": "Sentòm mwayennman grav",
+          "text": "Ou ap pote anpil bagay, epi sipò ka fè yon gwo diferans. Sa a se pa yon dyagnostik: tanpri pale byento ak ekip swen ou pou planifye pwochen etap yo."
+        },
+        "severe": {
+          "label": "Sentòm grav",
+          "text": "Ou ap pote anpil bagay epi ou merite sipò kounye a. Sa a se pa yon dyagnostik: tanpri kontakte ekip swen ou pi vit ou kapab pou planifye pwochen etap yo."
+        }
+      }
+    }
   }
 }
