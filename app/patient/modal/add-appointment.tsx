@@ -394,15 +394,27 @@ const AppointmentModal = ({ visible, appointment, initialDate, onClose, onSaved 
             </TouchableOpacity>
 
             {isEditing && (
-              <TouchableOpacity
-                style={styles.deleteLink}
-                onPress={confirmDelete}
-                disabled={isSubmitting}
-                accessibilityRole="button"
-              >
-                <Ionicons name="trash-outline" size={16} color={Theme.colors.magenta} />
-                <Text style={styles.deleteText}>{t("appointments.deleteButton")}</Text>
-              </TouchableOpacity>
+              <View style={styles.deleteArea}>
+                {/* Prototype 9.2: a calm warning, then one clear red action */}
+                <View style={styles.warn}>
+                  <View style={styles.warnBar} />
+                  <Text style={styles.warnTitle}>{t("appointments.cancelThis")}</Text>
+                  <Text style={styles.warnHint}>
+                    {t("appointments.cancelThisHint", {
+                      title: appointment?.title,
+                      when: `${formatDate(form.date)}, ${formatTime(form.time)}`,
+                    })}
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.deleteButton}
+                  onPress={confirmDelete}
+                  disabled={isSubmitting}
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.deleteButtonText}>{t("appointments.deleteButton")}</Text>
+                </TouchableOpacity>
+              </View>
             )}
           </Pressable>
         </Pressable>
@@ -480,18 +492,36 @@ const styles = StyleSheet.create({
     fontFamily: Theme.typography.heading,
     color: Theme.colors.surface,
   },
-  deleteLink: {
-    flexDirection: "row",
+  deleteArea: {
+    gap: 12,
+    marginTop: 4,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: Theme.colors.hairline,
+  },
+  warn: {
+    backgroundColor: Theme.colors.surface,
+    borderRadius: Theme.borderRadius.md,
+    borderWidth: 1,
+    borderColor: Theme.colors.hairline,
+    overflow: "hidden",
+    paddingVertical: 14,
+    paddingLeft: 18,
+    paddingRight: 14,
+    gap: 3,
+  },
+  // The red edge of the prototype card (a border would not follow the rounded corner on Android)
+  warnBar: { position: "absolute", left: 0, top: 0, bottom: 0, width: 4, backgroundColor: Theme.colors.danger },
+  warnTitle: { fontFamily: Theme.typography.heading, fontSize: 14, color: Theme.colors.ink },
+  warnHint: { fontFamily: Theme.typography.body, fontSize: 12.5, lineHeight: 18, color: Theme.colors.inkFaint },
+  deleteButton: {
+    height: 52,
+    borderRadius: Theme.borderRadius.sm,
+    backgroundColor: Theme.colors.danger,
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
-    paddingVertical: Theme.spacing.xs,
   },
-  deleteText: {
-    fontSize: 14,
-    fontFamily: Theme.typography.heading,
-    color: Theme.colors.magenta,
-  },
+  deleteButtonText: { fontFamily: Theme.typography.heading, fontSize: 15, color: Theme.colors.surface },
 });
 
 export default AppointmentModal;

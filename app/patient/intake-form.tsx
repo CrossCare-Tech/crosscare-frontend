@@ -25,7 +25,7 @@ export default function IntakeFormScreen() {
   // The demo shows the prototype's sample answers, a real account starts empty
   const [insurance, setInsurance] = useState(demo ? "Riverside Health Plan" : "");
   const [contact, setContact] = useState(demo ? "Sam Reyes · (555) 908-1123" : "");
-  const [allergies, setAllergies] = useState("");
+  const [allergies, setAllergies] = useState(demo ? "None reported" : "");
   const [medications, setMedications] = useState("");
   const [conditions, setConditions] = useState("");
   const [pregnancies, setPregnancies] = useState("");

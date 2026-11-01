@@ -425,6 +425,8 @@
     "cta": "Criar seu primeiro lembrete"
   },
   "appointments": {
+    "confirmed": "Confirmada",
+    "pendingSync": "Aguardando sincronização",
     "title": "Consultas",
     "newTitle": "Nova consulta",
     "editTitle": "Editar consulta",
