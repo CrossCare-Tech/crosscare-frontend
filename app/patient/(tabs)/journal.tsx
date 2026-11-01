@@ -19,6 +19,7 @@ import { useTranslation } from "react-i18next";
 import { CONFIG } from "@/constants/config";
 import { Theme } from "@/constants/theme";
 import ScreenBackground from "@/components/ui/ScreenBackground";
+import { useAuthDialog } from "@/components/ui/AuthDialog";
 import LineIcon from "@/components/profile/LineIcon";
 import { JournalEntryParam } from "@/components/journal/entry";
 
@@ -78,11 +79,22 @@ const openEntry = (entry: Entry) => {
   router.push({ pathname: "/patient/entry", params: { item: JSON.stringify(item) } });
 };
 
-const PhotoTile = ({ entry, style }: { entry: Entry; style: any }) => (
+// Prototype "Select": a circle on each tile while choosing entries to delete
+const SelectMark = ({ selected }: { selected: boolean }) => (
+  <View style={[styles.mark, selected && styles.markOn]} pointerEvents="none">
+    {selected && (
+      <LineIcon size={14} color={Theme.colors.surface} strokeWidth={3}>
+        <Path d="M5 12.5l4.5 4.5L19 7" />
+      </LineIcon>
+    )}
+  </View>
+);
+
+const PhotoTile = ({ entry, style, onPress, selected }: { entry: Entry; style: any; onPress: () => void; selected?: boolean }) => (
   <TouchableOpacity
     style={[styles.tile, style]}
     activeOpacity={0.85}
-    onPress={() => openEntry(entry)}
+    onPress={onPress}
   >
     <Image source={{ uri: entry.imageUrl }} style={StyleSheet.absoluteFill} resizeMode="cover" />
     {entry.title ? (
@@ -95,19 +107,21 @@ const PhotoTile = ({ entry, style }: { entry: Entry; style: any }) => (
         </Text>
       </LinearGradient>
     ) : null}
+    {selected !== undefined && <SelectMark selected={selected} />}
   </TouchableOpacity>
 );
 
-const NoteTile = ({ entry, style, tag }: { entry: Entry; style: any; tag: string }) => (
+const NoteTile = ({ entry, style, tag, onPress, selected }: { entry: Entry; style: any; tag: string; onPress: () => void; selected?: boolean }) => (
   <TouchableOpacity
     style={[styles.tile, styles.noteTile, style]}
     activeOpacity={0.85}
-    onPress={() => openEntry(entry)}
+    onPress={onPress}
   >
     <Text style={styles.tagPill}>{tag}</Text>
     <Text style={styles.noteText} numberOfLines={4}>
       {entry.description || entry.title}
     </Text>
+    {selected !== undefined && <SelectMark selected={selected} />}
   </TouchableOpacity>
 );
 
@@ -122,6 +136,9 @@ export default function Journal() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(false);
   const [gridWidth, setGridWidth] = useState(0);
+  const [selecting, setSelecting] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const { dialog, show } = useAuthDialog();
 
   const scrollRef = useRef<ScrollView>(null);
   const dayOffsets = useRef<Record<string, number>>({});
@@ -213,9 +230,22 @@ export default function Journal() {
 
   const renderTile = (entry: Entry, style: any) =>
     entry.kind === "photo" ? (
-      <PhotoTile key={entry.id} entry={entry} style={style} />
+      <PhotoTile
+        key={entry.id}
+        entry={entry}
+        style={style}
+        onPress={() => (selecting ? toggle(entry) : openEntry(entry))}
+        selected={selecting ? selected.has(entryKey(entry)) : undefined}
+      />
     ) : (
-      <NoteTile key={entry.id} entry={entry} style={style} tag={t("journalTimeline.noteTag")} />
+      <NoteTile
+        key={entry.id}
+        entry={entry}
+        style={style}
+        tag={t("journalTimeline.noteTag")}
+        onPress={() => (selecting ? toggle(entry) : openEntry(entry))}
+        selected={selecting ? selected.has(entryKey(entry)) : undefined}
+      />
     );
 
   // Prototype grid: 3 columns of 92px rows. When a day has a multiple of 3 entries and
@@ -252,10 +282,61 @@ export default function Journal() {
 
   const openNew = () => router.push("/patient/newentry");
 
+  // Select: pick several entries and delete them together (the Edit entry screen deletes one at a time)
+  const entryKey = (entry: Entry) => `${entry.kind}:${entry.id}`;
+  const toggle = (entry: Entry) =>
+    setSelected((current) => {
+      const next = new Set(current);
+      next.has(entryKey(entry)) ? next.delete(entryKey(entry)) : next.add(entryKey(entry));
+      return next;
+    });
+  const stopSelecting = () => {
+    setSelecting(false);
+    setSelected(new Set());
+  };
+  const deleteSelected = async () => {
+    const base = `${CONFIG.API_BASE_URL}/user/activity/${user.user_id}`;
+    const results = await Promise.all(
+      entries
+        .filter((entry) => selected.has(entryKey(entry)))
+        .map((entry) =>
+          fetch(entry.kind === "photo" ? `${base}/journal/${entry.id}` : `${base}/note/${entry.id}`, { method: "DELETE" })
+            .then((response) => response.ok)
+            .catch(() => false)
+        )
+    );
+    stopSelecting();
+    await load();
+    if (results.some((ok) => !ok)) {
+      show({ variant: "error", title: t("journalTimeline.deleteFailedTitle"), message: t("journalTimeline.deleteFailed") });
+    }
+  };
+  const confirmDelete = () =>
+    show({
+      variant: "delete",
+      title: t("journalTimeline.deleteTitle"),
+      message: t("journalTimeline.deleteBody", { count: selected.size }),
+      buttons: [
+        { text: t("cancel"), style: "cancel" },
+        { text: t("journalTimeline.delete"), onPress: deleteSelected },
+      ],
+    });
+
   return (
     <ScreenBackground>
       <SafeAreaView style={styles.container} edges={["top"]}>
-        <Text style={styles.header}>{t("journalTimeline.title")}</Text>
+        <View style={styles.headerRow}>
+          <Text style={styles.header}>{t("journalTimeline.title")}</Text>
+          {!loading && entries.length > 0 && (
+            <TouchableOpacity
+              onPress={selecting ? stopSelecting : () => setSelecting(true)}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              accessibilityRole="button"
+            >
+              <Text style={styles.selectAction}>{selecting ? t("cancel") : t("journalTimeline.select")}</Text>
+            </TouchableOpacity>
+          )}
+        </View>
 
         {loading ? (
           <ActivityIndicator color={Theme.colors.magenta} style={styles.loader} />
@@ -360,7 +441,22 @@ export default function Journal() {
           </View>
         )}
 
-        <TouchableOpacity
+        {selecting && (
+          <View style={styles.selectBar}>
+            <TouchableOpacity
+              style={[styles.deleteButton, selected.size === 0 && styles.deleteDisabled]}
+              onPress={confirmDelete}
+              disabled={selected.size === 0}
+              accessibilityRole="button"
+            >
+              <Text style={[styles.deleteText, selected.size === 0 && styles.deleteTextDisabled]}>
+                {t("journalTimeline.deleteCount", { count: selected.size })}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {!selecting && <TouchableOpacity
           style={styles.fab}
           onPress={openNew}
           accessibilityRole="button"
@@ -369,7 +465,9 @@ export default function Journal() {
           <LineIcon size={24} color={Theme.colors.surface} strokeWidth={2.4}>
             <Path d="M12 5v14M5 12h14" />
           </LineIcon>
-        </TouchableOpacity>
+        </TouchableOpacity>}
+
+        {dialog}
 
       </SafeAreaView>
     </ScreenBackground>
@@ -380,13 +478,64 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 22,
+    paddingTop: 16,
+    paddingBottom: 6,
+  },
   header: {
     fontFamily: Theme.typography.heading,
     fontSize: 16.5,
     color: Theme.colors.ink,
-    paddingHorizontal: 22,
-    paddingTop: 16,
-    paddingBottom: 6,
+  },
+  selectAction: {
+    fontFamily: Theme.typography.heading,
+    fontSize: 13.5,
+    color: Theme.colors.magenta,
+  },
+  mark: {
+    position: "absolute",
+    top: 7,
+    right: 7,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 2,
+    borderColor: Theme.colors.surface,
+    backgroundColor: Theme.colors.scrim,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  markOn: {
+    backgroundColor: Theme.colors.magenta,
+  },
+  selectBar: {
+    position: "absolute",
+    left: 20,
+    right: 20,
+    bottom: 12,
+  },
+  deleteButton: {
+    height: 52,
+    borderRadius: Theme.borderRadius.sm,
+    backgroundColor: Theme.colors.danger,
+    alignItems: "center",
+    justifyContent: "center",
+    ...Theme.shadows.soft,
+  },
+  deleteDisabled: {
+    backgroundColor: Theme.colors.disabledBg,
+  },
+  deleteText: {
+    fontFamily: Theme.typography.heading,
+    fontSize: 15,
+    color: Theme.colors.surface,
+  },
+  deleteTextDisabled: {
+    color: Theme.colors.disabledText,
   },
   loader: {
     marginTop: Theme.spacing.xl,
@@ -503,7 +652,7 @@ const styles = StyleSheet.create({
   fab: {
     position: "absolute",
     right: 20,
-    bottom: 96,
+    bottom: 4, // the screen ends at the top of the dock, so this sits just above it like the prototype
     width: 52,
     height: 52,
     borderRadius: 26,

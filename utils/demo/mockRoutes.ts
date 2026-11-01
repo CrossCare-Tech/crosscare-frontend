@@ -777,6 +777,10 @@ const ROUTES: [string, string, Handler][] = [
     ),
     currentTime: new Date().toISOString(),
   })],
+  ["DELETE", `${A}/note/:noteId`, (db, p) => {
+    db.notes = db.notes.filter((n) => n.id !== p.noteId);
+    return ok({ success: true, message: "Note deleted successfully" });
+  }],
   // Backend gap: there is no GET for a single note; the full text only exists on the device here
   ["GET", `${A}/note/:noteId`, (db, p) => {
     const note = db.notes.find((n) => n.id === p.noteId);

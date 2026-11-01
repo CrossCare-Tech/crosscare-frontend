@@ -228,6 +228,13 @@
     "deleteError": "Não foi possível excluir o registro. Tente novamente."
   },
   "journalTimeline": {
+    "select": "Selecionar",
+    "deleteCount": "Apagar ({{count}})",
+    "deleteTitle": "Apagar as entradas selecionadas?",
+    "deleteBody": "{{count}} selecionadas. Isso não pode ser desfeito.",
+    "delete": "Apagar",
+    "deleteFailedTitle": "Não foi possível apagar",
+    "deleteFailed": "Algumas entradas não foram apagadas. Puxe para atualizar e tente de novo.",
     "title": "Diário",
     "today": "Hoje",
     "yesterday": "Ontem",
