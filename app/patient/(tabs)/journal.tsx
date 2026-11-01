@@ -516,7 +516,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: 20,
     right: 20,
-    bottom: 96,
+    bottom: 12,
   },
   deleteButton: {
     height: 52,
@@ -652,7 +652,7 @@ const styles = StyleSheet.create({
   fab: {
     position: "absolute",
     right: 20,
-    bottom: 96,
+    bottom: 4, // the screen ends at the top of the dock, so this sits just above it like the prototype
     width: 52,
     height: 52,
     borderRadius: 26,
