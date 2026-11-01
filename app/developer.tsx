@@ -14,6 +14,7 @@ import Toggle from "@/components/profile/Toggle";
 import { removeUser } from "@/store/userSlice";
 import { useDemoMode } from "@/utils/demo/demoMode";
 import { resetDemoDb } from "@/utils/demo/mockDb";
+import { resetDemoWellbeing } from "@/utils/demo/demoWellbeing";
 import { loadSampleConversation } from "@/utils/demo/mockConversations";
 import ListenPlayer from "@/components/chat/ListenPlayer";
 import { useReplyAudio } from "@/hooks/useReplyAudio";
@@ -82,6 +83,7 @@ const Developer = () => {
         style: "destructive",
         onPress: async () => {
           await resetDemoDb();
+          await resetDemoWellbeing();
           Alert.alert(t("developer.resetDone"));
         },
       },

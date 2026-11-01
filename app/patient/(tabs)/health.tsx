@@ -15,6 +15,7 @@ import { useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { Theme } from '@/constants/theme';
 import ScreenBackground from '@/components/ui/ScreenBackground';
+import { useDemoMode } from '@/utils/demo/demoMode';
 
 interface TrackingOption {
   id: string;
@@ -29,6 +30,7 @@ const TrackingOptionsScreen = () => {
   const userId = user?.user_id;
 
   const {t} = useTranslation();
+  const demoMode = useDemoMode((state) => state.enabled);
 
   useEffect(() => {
     const setHealthVisited = async () => {
@@ -37,6 +39,35 @@ const TrackingOptionsScreen = () => {
 
     setHealthVisited();
   }, [userId]);
+
+  // Cycle and check-in screens have no backend routes yet, so they only show with Simulated data on
+  const cycleAndMentalHealth: { title: string; options: TrackingOption[] }[] = demoMode
+    ? [
+        {
+          title: t('wellbeingCare.sectionLabel'),
+          options: [
+            {
+              id: 'cycle-log',
+              title: t('wellbeingCare.cycleLog'),
+              icon: <MaterialCommunityIcons name="water-outline" size={22} color={Theme.colors.magenta} />,
+              onPress: () => router.push('/patient/wellbeing/cycle-log'),
+            },
+            {
+              id: 'cycle-calendar',
+              title: t('wellbeingCare.cycleCalendar'),
+              icon: <Feather name="calendar" size={20} color={Theme.colors.teal} />,
+              onPress: () => router.push('/patient/wellbeing/cycle-calendar'),
+            },
+            {
+              id: 'check-in',
+              title: t('wellbeingCare.fullCheckIn'),
+              icon: <MaterialCommunityIcons name="head-heart-outline" size={22} color={Theme.colors.purple} />,
+              onPress: () => router.push('/patient/wellbeing/check-in'),
+            },
+          ],
+        },
+      ]
+    : [];
 
   // Same trackers as before, grouped so the list reads like the other redesigned screens
   const sections: { title: string; options: TrackingOption[] }[] = [
@@ -121,6 +152,7 @@ const TrackingOptionsScreen = () => {
         },
       ],
     },
+    ...cycleAndMentalHealth,
     {
       title: t('pregnancySummary.sectionLabel'),
       options: [
