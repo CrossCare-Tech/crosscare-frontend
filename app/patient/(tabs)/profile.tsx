@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import React, { useEffect, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Circle, Path, Rect } from "react-native-svg";
+import { Circle, G, Path, Rect } from "react-native-svg";
 import { useDispatch, useSelector } from "react-redux";
 import { router } from "expo-router";
 import { removeToken } from "@/store/userSlice";
@@ -43,12 +43,14 @@ const ICONS: Record<string, React.ReactNode> = {
   pregnancy: (
     <Path d="M12 20.5s-7.5-4.6-9.7-9.4C.9 7.6 3 4 6.5 4c2 0 3.5 1.1 4.5 2.6C12 5.1 13.5 4 15.5 4 19 4 21.1 7.6 19.7 11.1 17.5 15.9 12 20.5 12 20.5Z" />
   ),
+  // Person with a pencil: "edit your avatar"
   avatar: (
     <>
-      <Rect x="4" y="4" width="7" height="7" rx="1.5" />
-      <Rect x="13" y="4" width="7" height="7" rx="1.5" />
-      <Rect x="4" y="13" width="7" height="7" rx="1.5" />
-      <Rect x="13" y="13" width="7" height="7" rx="1.5" />
+      <Circle cx="9" cy="8" r="3.3" />
+      <Path d="M3 20a6 6 0 0 1 8.3-5.5" />
+      <G transform="translate(11 11) scale(0.5)">
+        <Path strokeWidth={4} d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
+      </G>
     </>
   ),
   fame: (
@@ -57,6 +59,12 @@ const ICONS: Record<string, React.ReactNode> = {
   premium: (
     <Path d="M12 2.5l2.2 6.8L21 11.5l-6.8 2.2L12 20.5l-2.2-6.8L3 11.5l6.8-2.2z" />
   ),
+  documents: (
+    <>
+      <Path d="M14 3H7.5A1.5 1.5 0 0 0 6 4.5v15A1.5 1.5 0 0 0 7.5 21h9a1.5 1.5 0 0 0 1.5-1.5V7z" />
+      <Path d="M14 3v4h4M9 12.5h6M9 16h6" />
+    </>
+  ),
   devices: (
     <>
       <Rect x="7" y="7" width="10" height="10" rx="3" />
@@ -64,11 +72,19 @@ const ICONS: Record<string, React.ReactNode> = {
       <Path d="M12 10v2.2l1.5 1" />
     </>
   ),
+  // Translate symbol: an "A" box in front of a "文" box, with an arrow each way. Thinner stroke than the
+  // other icons because it carries more detail in the same 17px.
   language: (
-    <>
-      <Circle cx="12" cy="12" r="8.5" />
-      <Path d="M12 11v5.5M12 8v.1" />
-    </>
+    <G strokeWidth={1.5}>
+      <Rect x="2" y="2" width="10.5" height="10.5" rx="2.4" />
+      <Path d="M4.9 10 7.25 4.8 9.6 10M5.8 8.2h2.9" />
+      <Path d="M12.5 11.5H19.6a2.4 2.4 0 0 1 2.4 2.4V19.6a2.4 2.4 0 0 1-2.4 2.4H13.9a2.4 2.4 0 0 1-2.4-2.4V12.5" />
+      <Path d="M16.75 13.4v1M14.6 14.6h4.3M15.1 14.6c.4 2.1 1.6 3.4 3.3 4.2M18.4 14.6c-.5 2.2-1.7 3.5-3.3 4.1" />
+      <Path d="M21.5 8.2c0-2.1-1.1-3.4-3.2-3.4h-.9M18.8 3.3l-1.5 1.5 1.5 1.5" />
+      <G transform="rotate(180 12 12)">
+        <Path d="M21.5 8.2c0-2.1-1.1-3.4-3.2-3.4h-.9M18.8 3.3l-1.5 1.5 1.5 1.5" />
+      </G>
+    </G>
   ),
   notifications: (
     <>
@@ -298,6 +314,12 @@ const Profile = () => {
               title={t("devices.title")}
               subtitle={t("devices.profileHint")}
               onPress={() => router.push("/patient/devices")}
+            />
+            <MenuRow
+              icon="documents"
+              title={t("documents.title")}
+              subtitle={t("documents.profileHint")}
+              onPress={() => router.push("/patient/documents")}
             />
             <MenuRow
               icon="language"
