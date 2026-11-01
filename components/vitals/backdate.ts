@@ -41,3 +41,6 @@ export const warnIfBackdateIgnored = async ({
     console.warn("Could not check the reading date:", error);
   }
 };
+
+// Where the blood pressure entry remembers the time of day of its latest reading
+export const BP_READING_TIME_KEY = "bp-reading-time";

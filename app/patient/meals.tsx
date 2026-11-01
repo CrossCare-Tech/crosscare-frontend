@@ -338,11 +338,15 @@ export default function FoodScreen() {
             onChange={setPeriod}
           />
 
-          <ChartCard axis={periodAxis(period, i18n.language)} legend={[{ mark: "line", label: t("foodLog.legend") }]}>
+          <ChartCard axis={periodAxis(period, i18n.language)} legend={[
+              { mark: "line", label: t("foodLog.legend") },
+              { mark: "goal", label: t("metric.dailyGoal") },
+            ]}>
             <RangeBarsChart
               bars={inRange.map((item) => ({ x: range.x(item.date), high: item.calories, low: 0 }))}
               min={0}
               max={chartMax}
+              goal={goal}
               barWidth={BAR_WIDTH[period]}
             />
           </ChartCard>

@@ -346,6 +346,13 @@
     "alertTitle": "This is above your safe range",
     "alertBody": "{{value}} is higher than 140/90. Rest for 15 minutes and check again. If it is still high, call your care team today.",
     "alertContact": "Contact your care team",
+    "alertEyebrow": "Needs your attention today",
+    "alertHeadline": "Your blood pressure is higher than usual",
+    "alertReadingLabel": "Latest reading",
+    "alertPillWeek": "Above safe range · week {{week}}",
+    "alertBodyWeek": "This is above the safe range for week {{week}}. ACOG guidelines recommend contacting your care team promptly, so let's get this checked today.",
+    "alertBodyNoWeek": "This is above the safe range. ACOG guidelines recommend contacting your care team promptly, so let's get this checked today.",
+    "alertLogAnother": "Log another reading",
     "alertRecheck": "Recheck in 15 minutes",
     "alertDismiss": "Dismiss alert",
     "recheckScheduled": "We will remind you in 15 minutes.",
@@ -355,6 +362,9 @@
   },
   "vitalsEntry": {
     "manualEntry": "Manual entry",
+    "syncUnavailable": "Device sync unavailable",
+    "syncUnavailableHint": "Enter your reading manually below.",
+    "vitalSign": "Vital sign",
     "systolic": "Systolic",
     "diastolic": "Diastolic",
     "dateTime": "Date & time",
@@ -399,6 +409,22 @@
     "title": "Title",
     "time": "Time",
     "save": "Save reminder"
+  },
+  "notificationSchedule": {
+    "title": "Notification schedule",
+    "morning": "Morning reminder",
+    "midday": "Midday nudge",
+    "evening": "Evening summary",
+    "frequency": "Frequency",
+    "daily": "Daily",
+    "weekdays": "Weekdays",
+    "custom": "Custom",
+    "dailyLower": "daily",
+    "weekdaysOnly": "weekdays only",
+    "save": "Save preferences",
+    "morningBody": "Good morning! How are you feeling today?",
+    "middayBody": "A quick pause: some water, a stretch, a deep breath.",
+    "eveningBody": "Take a look at how your day went."
   },
   "reminderEmpty": {
     "title": "Your reminders, your way",
@@ -1010,8 +1036,34 @@
     "error": "Error",
     "errorMessage": "There was a problem updating your notification settings."
   },
+  "selfCareHub": {
+    "pickLabel": "Today's pick",
+    "pickTitle": "10 minutes of prenatal breathing",
+    "start": "Start",
+    "browse": "Browse activities",
+    "movement": {
+      "title": "Gentle movement",
+      "sub": "5–15 min routines",
+      "tag": "Movement"
+    },
+    "mindfulness": {
+      "title": "Mindfulness",
+      "sub": "Guided breathing",
+      "tag": "Calm"
+    },
+    "reflection": {
+      "title": "Reflection prompts",
+      "sub": "Journal starters",
+      "tag": "Reflect"
+    },
+    "connection": {
+      "title": "Partner connection",
+      "sub": "Talk together",
+      "tag": "Connect"
+    }
+  },
   "selfCare": {
-    "title": "Self Care",
+    "title": "Self care",
     "intro": "Self-care during pregnancy is crucial for both the mother's and baby's well-being.",
     "intro2": "Prioritizing physical and mental health through healthy habits, relaxation techniques, and social support can help manage stress, improve mood, and prepare for motherhood.",
     "intro3": "Key Aspects of Self-Care During Pregnancy:",
@@ -1879,6 +1931,49 @@
     "cancel": "Cancel",
     "save": "Save"
   },
+  "intake": {
+    "title": "Intake form",
+    "pageOf": "Patient intake · page {{page}} of {{total}}",
+    "fullName": "Full legal name",
+    "fullNamePlaceholder": "Your full legal name",
+    "insurance": "Insurance provider",
+    "insurancePlaceholder": "Insurance provider name",
+    "emergencyContact": "Emergency contact",
+    "emergencyContactPlaceholder": "Name · phone number",
+    "allergies": "Known allergies",
+    "allergiesPlaceholder": "None reported",
+    "medications": "Current medications",
+    "medicationsPlaceholder": "None",
+    "conditions": "Medical conditions",
+    "conditionsPlaceholder": "None reported",
+    "pregnancies": "Previous pregnancies",
+    "consent": "By signing, you confirm that the information in this form is correct.",
+    "signature": "Signature",
+    "signaturePlaceholder": "Type your full legal name",
+    "signatureMissing": "Please type your full legal name to sign.",
+    "submitted": "Your intake form was received.",
+    "continue": "Continue",
+    "submit": "Submit"
+  },
+  "documents": {
+    "title": "Documents",
+    "profileHint": "Reports, forms and PDFs",
+    "pageOf": "Page {{page}} of {{total}}",
+    "search": "Search in document",
+    "share": "Share document",
+    "download": "Download document",
+    "previousPage": "Previous page",
+    "nextPage": "Next page",
+    "soon": "Available once documents are connected."
+  },
+  "nextGen": {
+    "title": "NextGen sync",
+    "hint": "Sync status with the NextGen system",
+    "synced": "Synced with NextGen",
+    "upToDate": "All appointments up to date · {{when}}",
+    "twoMinutes": "2 minutes ago",
+    "empty": "No upcoming appointments to sync."
+  },
   "devices": {
     "title": "Devices",
     "manage": "Manage devices",
@@ -1898,6 +1993,14 @@
     "upToDate": "All data up to date · {{when}}",
     "syncingPill": "Syncing…",
     "lastSync": "Last synced: {{when}}",
+    "deviceConnectedName": "{{name}} connected",
+    "enterManually": "Enter a reading manually",
+    "enterManuallyHint": "When your device does not sync",
+    "lastSynced": "Last synced {{when}}",
+    "syncTitle": "Device sync",
+    "battery": "Battery",
+    "autoSync": "Auto-sync",
+    "forgetDevice": "Forget device",
     "neverSynced": "never",
     "syncedNow": "just now",
     "syncedMinutes": "{{count}} min ago",

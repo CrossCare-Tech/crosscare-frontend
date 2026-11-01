@@ -5,6 +5,7 @@ import { DailyTriggerInput, SchedulableTriggerInputTypes } from 'expo-notificati
 
 // Define constants
 const REMINDER_STORAGE_KEY = 'health_reminders';
+const SCHEDULE_STORAGE_KEY = 'notification_schedule';
 const APPOINTMENT_REMINDERS_ENABLED_KEY = 'appointment_reminders_enabled';
 const MEDICATION_REMINDERS_ENABLED_KEY = 'medication_reminders_enabled';
 
@@ -25,6 +26,27 @@ export interface ReminderSettings {
   days: number[]; // 0-6 for days of week (0 = Sunday)
   message: string;
 }
+
+// "Notification schedule": three fixed nudges (morning, midday, evening) the user can switch on and set to
+// run daily, on weekdays or on chosen days. Separate from the health reminders above.
+export type ScheduleFrequency = 'daily' | 'weekdays' | 'custom';
+export interface ScheduleItem {
+  id: 'morning' | 'midday' | 'evening';
+  time: string; // 'HH:MM'
+  enabled: boolean;
+  frequency: ScheduleFrequency;
+  days: number[]; // 0-6 (0 = Sunday), used when frequency is 'custom'
+}
+export type ScheduleCopy = Record<ScheduleItem['id'], { title: string; body: string }>;
+
+export const WEEKDAYS = [1, 2, 3, 4, 5];
+export const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6];
+
+export const DEFAULT_SCHEDULE: ScheduleItem[] = [
+  { id: 'morning', time: '08:00', enabled: true, frequency: 'daily', days: ALL_DAYS },
+  { id: 'midday', time: '13:00', enabled: true, frequency: 'weekdays', days: WEEKDAYS },
+  { id: 'evening', time: '20:30', enabled: false, frequency: 'daily', days: ALL_DAYS },
+];
 
 // Request permissions
 export async function requestNotificationPermissions() {
@@ -160,6 +182,63 @@ export async function loadReminders(): Promise<ReminderSettings[]> {
   }
 }
 
+export async function loadNotificationSchedule(): Promise<ScheduleItem[]> {
+  try {
+    const stored = await AsyncStorage.getItem(SCHEDULE_STORAGE_KEY);
+    const items: ScheduleItem[] = stored ? JSON.parse(stored).items : [];
+    return DEFAULT_SCHEDULE.map((fallback) => items.find((i) => i.id === fallback.id) ?? fallback);
+  } catch (error) {
+    console.error('Error loading notification schedule:', error);
+    return DEFAULT_SCHEDULE;
+  }
+}
+
+// Weekday numbers (0 = Sunday) an item runs on, or null for every day
+function scheduleDays(item: ScheduleItem): number[] | null {
+  if (item.frequency === 'daily') return null;
+  return item.frequency === 'weekdays' ? WEEKDAYS : item.days;
+}
+
+async function applyNotificationSchedule(items: ScheduleItem[], copy: ScheduleCopy) {
+  for (const item of items) {
+    // Clear the daily id and the seven weekly ids, then schedule what the item asks for now
+    const ids = [`schedule-${item.id}`, ...ALL_DAYS.map((d) => `schedule-${item.id}-${d}`)];
+    await Promise.all(ids.map((id) => Notifications.cancelScheduledNotificationAsync(id).catch(() => {})));
+    if (!item.enabled) continue;
+
+    const [hour, minute] = item.time.split(':').map(Number);
+    const content = {
+      title: copy[item.id].title,
+      body: copy[item.id].body,
+      data: { screen: '/patient/(tabs)/home' },
+      sound: true,
+    };
+    const days = scheduleDays(item);
+    if (!days) {
+      await Notifications.scheduleNotificationAsync({
+        content,
+        trigger: { type: SchedulableTriggerInputTypes.DAILY, hour, minute },
+        identifier: `schedule-${item.id}`,
+      });
+    } else {
+      for (const day of days) {
+        await Notifications.scheduleNotificationAsync({
+          content,
+          // expo weekdays run 1-7 with Sunday as 1
+          trigger: { type: SchedulableTriggerInputTypes.WEEKLY, weekday: day + 1, hour, minute },
+          identifier: `schedule-${item.id}-${day}`,
+        });
+      }
+    }
+  }
+}
+
+// Saves the schedule with the texts it was written with (so it can be rebuilt later) and schedules it
+export async function saveNotificationSchedule(items: ScheduleItem[], copy: ScheduleCopy) {
+  await AsyncStorage.setItem(SCHEDULE_STORAGE_KEY, JSON.stringify({ items, copy }));
+  await applyNotificationSchedule(items, copy);
+}
+
 // Reschedule all active reminders (useful on app startup)
 export async function rescheduleAllReminders() {
   try {
@@ -172,6 +251,13 @@ export async function rescheduleAllReminders() {
     const activeReminders = reminders.filter(r => r.enabled);
     for (const reminder of activeReminders) {
       await scheduleDailyReminder(reminder);
+    }
+
+    // The notification schedule was cancelled above too: bring it back
+    const stored = await AsyncStorage.getItem(SCHEDULE_STORAGE_KEY);
+    if (stored) {
+      const { items, copy } = JSON.parse(stored);
+      await applyNotificationSchedule(items, copy);
     }
     
     return activeReminders.length;

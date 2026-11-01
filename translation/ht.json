@@ -266,6 +266,13 @@
     "alertTitle": "Sa a pi wo pase limit san danje ou",
     "alertBody": "{{value}} pi wo pase 140/90. Repoze w 15 minit epi tcheke ankò. Si li toujou wo, rele ekip swen ou jodi a.",
     "alertContact": "Kontakte ekip swen ou",
+    "alertEyebrow": "Li bezwen atansyon w jodi a",
+    "alertHeadline": "Tansyon ou pi wo pase nòmal",
+    "alertReadingLabel": "Dènye lekti",
+    "alertPillWeek": "Pi wo pase limit ki an sekirite · semèn {{week}}",
+    "alertBodyWeek": "Sa a pi wo pase limit ki an sekirite pou semèn {{week}}. Gid ACOG yo rekòmande pou kontakte ekip swen ou rapidman, kidonk ann verifye sa jodi a.",
+    "alertBodyNoWeek": "Sa a pi wo pase limit ki an sekirite. Gid ACOG yo rekòmande pou kontakte ekip swen ou rapidman, kidonk ann verifye sa jodi a.",
+    "alertLogAnother": "Anrejistre yon lòt lekti",
     "alertRecheck": "Tcheke ankò nan 15 minit",
     "alertDismiss": "Fèmen alèt",
     "recheckScheduled": "N ap raple w nan 15 minit.",
@@ -319,6 +326,22 @@
     "title": "Tit",
     "time": "Lè",
     "save": "Anrejistre rapèl"
+  },
+  "notificationSchedule": {
+    "title": "Orè notifikasyon",
+    "morning": "Rapèl maten",
+    "midday": "Ti kout pous midi",
+    "evening": "Rezime aswè",
+    "frequency": "Frekans",
+    "daily": "Chak jou",
+    "weekdays": "Jou travay",
+    "custom": "Pèsonalize",
+    "dailyLower": "chak jou",
+    "weekdaysOnly": "jou travay sèlman",
+    "save": "Anrejistre preferans",
+    "morningBody": "Bonjou! Kijan ou santi w jodi a?",
+    "middayBody": "Yon ti poz: yon ti dlo, yon etandi, yon gwo respirasyon.",
+    "eveningBody": "Gade kijan jounen ou a te pase."
   },
   "reminderEmpty": {
     "title": "Rapèl ou yo, jan ou vle",
@@ -928,6 +951,32 @@
     "cancel": "Anile",
     "error": "Erè",
     "errorMessage": "Te gen yon pwoblèm pandan ou t ap mete ajou paramèt notifikasyon ou."
+  },
+  "selfCareHub": {
+    "pickLabel": "Chwa jodi a",
+    "pickTitle": "10 minit respirasyon prenatal",
+    "start": "Kòmanse",
+    "browse": "Eksplore aktivite",
+    "movement": {
+      "title": "Mouvman dous",
+      "sub": "Woutin 5 a 15 min",
+      "tag": "Mouvman"
+    },
+    "mindfulness": {
+      "title": "Konsyans konplè",
+      "sub": "Respirasyon gide",
+      "tag": "Kalm"
+    },
+    "reflection": {
+      "title": "Kesyon refleksyon",
+      "sub": "Lide pou jounal",
+      "tag": "Reflechi"
+    },
+    "connection": {
+      "title": "Koneksyon ak patnè",
+      "sub": "Pale ansanm",
+      "tag": "Konekte"
+    }
   },
   "selfCare": {
     "title": "Swiv Pwòp Sante",

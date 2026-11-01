@@ -332,6 +332,13 @@
     "alertTitle": "Isso está acima da sua faixa segura",
     "alertBody": "{{value}} está acima de 140/90. Descanse por 15 minutos e meça de novo. Se continuar alta, ligue hoje para sua equipe de cuidado.",
     "alertContact": "Falar com sua equipe de cuidado",
+    "alertEyebrow": "Precisa da sua atenção hoje",
+    "alertHeadline": "Sua pressão arterial está mais alta que o normal",
+    "alertReadingLabel": "Última leitura",
+    "alertPillWeek": "Acima do limite seguro · semana {{week}}",
+    "alertBodyWeek": "Isto está acima do limite seguro para a semana {{week}}. As diretrizes do ACOG recomendam falar logo com sua equipe de cuidados, então vamos verificar isso hoje.",
+    "alertBodyNoWeek": "Isto está acima do limite seguro. As diretrizes do ACOG recomendam falar logo com sua equipe de cuidados, então vamos verificar isso hoje.",
+    "alertLogAnother": "Registrar outra leitura",
     "alertRecheck": "Medir de novo em 15 minutos",
     "alertDismiss": "Fechar alerta",
     "recheckScheduled": "Vamos te lembrar em 15 minutos.",
@@ -341,6 +348,9 @@
   },
   "vitalsEntry": {
     "manualEntry": "Registro manual",
+    "syncUnavailable": "Sincronização do dispositivo indisponível",
+    "syncUnavailableHint": "Insira sua leitura manualmente abaixo.",
+    "vitalSign": "Sinal vital",
     "systolic": "Sistólica",
     "diastolic": "Diastólica",
     "dateTime": "Data e hora",
@@ -385,6 +395,22 @@
     "title": "Título",
     "time": "Horário",
     "save": "Salvar lembrete"
+  },
+  "notificationSchedule": {
+    "title": "Agenda de notificações",
+    "morning": "Lembrete da manhã",
+    "midday": "Empurrãozinho do meio-dia",
+    "evening": "Resumo da noite",
+    "frequency": "Frequência",
+    "daily": "Diária",
+    "weekdays": "Dias úteis",
+    "custom": "Personalizada",
+    "dailyLower": "todos os dias",
+    "weekdaysOnly": "só em dias úteis",
+    "save": "Salvar preferências",
+    "morningBody": "Bom dia! Como você está se sentindo hoje?",
+    "middayBody": "Uma pausa rápida: um pouco de água, um alongamento, uma respiração profunda.",
+    "eveningBody": "Veja como foi o seu dia."
   },
   "reminderEmpty": {
     "title": "Seus lembretes, do seu jeito",
@@ -995,6 +1021,32 @@
     "cancel": "Cancelar",
     "error": "Erro",
     "errorMessage": "Houve um problema ao atualizar suas configurações de notificação."
+  },
+  "selfCareHub": {
+    "pickLabel": "Sugestão de hoje",
+    "pickTitle": "10 minutos de respiração pré-natal",
+    "start": "Começar",
+    "browse": "Explorar atividades",
+    "movement": {
+      "title": "Movimento suave",
+      "sub": "Rotinas de 5 a 15 min",
+      "tag": "Movimento"
+    },
+    "mindfulness": {
+      "title": "Atenção plena",
+      "sub": "Respiração guiada",
+      "tag": "Calma"
+    },
+    "reflection": {
+      "title": "Perguntas de reflexão",
+      "sub": "Ideias para o diário",
+      "tag": "Refletir"
+    },
+    "connection": {
+      "title": "Conexão com o parceiro",
+      "sub": "Conversem juntos",
+      "tag": "Conectar"
+    }
   },
   "selfCare": {
     "title": "Autocuidado",
@@ -1836,6 +1888,49 @@
     "cancel": "Cancelar",
     "save": "Salvar"
   },
+  "intake": {
+    "title": "Formulário de admissão",
+    "pageOf": "Admissão da paciente · página {{page}} de {{total}}",
+    "fullName": "Nome legal completo",
+    "fullNamePlaceholder": "Seu nome legal completo",
+    "insurance": "Plano de saúde",
+    "insurancePlaceholder": "Nome do plano de saúde",
+    "emergencyContact": "Contato de emergência",
+    "emergencyContactPlaceholder": "Nome · telefone",
+    "allergies": "Alergias conhecidas",
+    "allergiesPlaceholder": "Nenhuma informada",
+    "medications": "Medicamentos atuais",
+    "medicationsPlaceholder": "Nenhum",
+    "conditions": "Condições de saúde",
+    "conditionsPlaceholder": "Nenhuma informada",
+    "pregnancies": "Gestações anteriores",
+    "consent": "Ao assinar, você confirma que as informações deste formulário estão corretas.",
+    "signature": "Assinatura",
+    "signaturePlaceholder": "Digite seu nome legal completo",
+    "signatureMissing": "Digite seu nome legal completo para assinar.",
+    "submitted": "Seu formulário de admissão foi recebido.",
+    "continue": "Continuar",
+    "submit": "Enviar"
+  },
+  "documents": {
+    "title": "Documentos",
+    "profileHint": "Laudos, formulários e PDFs",
+    "pageOf": "Página {{page}} de {{total}}",
+    "search": "Buscar no documento",
+    "share": "Compartilhar documento",
+    "download": "Baixar documento",
+    "previousPage": "Página anterior",
+    "nextPage": "Próxima página",
+    "soon": "Disponível quando os documentos estiverem conectados."
+  },
+  "nextGen": {
+    "title": "Sincronização NextGen",
+    "hint": "Status da sincronização com o sistema NextGen",
+    "synced": "Sincronizado com a NextGen",
+    "upToDate": "Todas as consultas atualizadas · {{when}}",
+    "twoMinutes": "há 2 minutos",
+    "empty": "Nenhuma consulta futura para sincronizar."
+  },
   "devices": {
     "title": "Dispositivos",
     "manage": "Gerenciar dispositivos",
@@ -1855,6 +1950,14 @@
     "upToDate": "Tudo em dia · {{when}}",
     "syncingPill": "Sincronizando…",
     "lastSync": "Última sincronização: {{when}}",
+    "deviceConnectedName": "{{name}} conectado",
+    "enterManually": "Inserir uma leitura manualmente",
+    "enterManuallyHint": "Quando o dispositivo não sincroniza",
+    "lastSynced": "Última sincronização {{when}}",
+    "syncTitle": "Sincronização do dispositivo",
+    "battery": "Bateria",
+    "autoSync": "Sincronização automática",
+    "forgetDevice": "Esquecer dispositivo",
     "neverSynced": "nunca",
     "syncedNow": "agora mesmo",
     "syncedMinutes": "há {{count}} min",

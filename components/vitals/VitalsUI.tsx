@@ -19,13 +19,14 @@ import LineIcon from "@/components/profile/LineIcon";
 
 // Shared pieces of the vital sign screens (prototype 5.1–5.3)
 
-export type Tone = "success" | "warning" | "danger" | "teal";
+export type Tone = "success" | "warning" | "danger" | "teal" | "neutral";
 
 const TONES: Record<Tone, { bg: string; fg: string }> = {
   success: { bg: Theme.colors.successTint, fg: Theme.colors.success },
   warning: { bg: Theme.colors.warningTint, fg: Theme.colors.warning },
   danger: { bg: Theme.colors.dangerTint, fg: Theme.colors.danger },
   teal: { bg: Theme.colors.tealTint, fg: Theme.colors.teal },
+  neutral: { bg: Theme.colors.surfaceSunken, fg: Theme.colors.inkSoft },
 };
 
 // Prototype `.pill` with a semantic color
@@ -89,38 +90,24 @@ export const useRecordedAt = () => {
 
 const isSameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString();
 
-// Prototype 5.3 "Manual entry", shown as a pop-up. When `onRecordedAtChange` is passed (and
-// BACKDATED_READINGS is on) the date and time can be changed to an earlier moment, never a future one.
-export const ReadingModal = ({
-  visible,
-  loading,
-  onSave,
-  onClose,
+// The "Date & time" field of a manual reading, shared by the pop-ups and the Manual entry screen.
+// `active` closes an open picker when the pop-up that holds the field closes.
+export const DateTimeField = ({
   recordedAt = null,
-  onRecordedAtChange,
-  title,
-  saveLabel,
-  showDateTime = true,
-  children,
+  onChange,
+  active = true,
 }: {
-  visible: boolean;
-  loading: boolean;
-  onSave: () => void;
-  onClose: () => void;
   recordedAt?: Date | null;
-  onRecordedAtChange?: (value: Date | null) => void;
-  title?: string; // defaults to "Manual entry"
-  saveLabel?: string; // defaults to "Save reading"
-  showDateTime?: boolean; // goals and other settings have no date
-  children: React.ReactNode;
+  onChange?: (value: Date | null) => void;
+  active?: boolean;
 }) => {
   const { t, i18n } = useTranslation();
   const [step, setStep] = useState<"date" | "time" | "datetime" | null>(null);
   const [draft, setDraft] = useState(new Date());
   useEffect(() => {
-    if (!visible) setStep(null);
-  }, [visible]);
-  const editable = CONFIG.BACKDATED_READINGS && !!onRecordedAtChange;
+    if (!active) setStep(null);
+  }, [active]);
+  const editable = CONFIG.BACKDATED_READINGS && !!onChange;
   const shown = recordedAt ?? new Date();
   const time = shown.toLocaleTimeString(i18n.language, { hour: "numeric", minute: "2-digit" });
   const label = isSameDay(shown, new Date())
@@ -129,7 +116,7 @@ export const ReadingModal = ({
 
   const now = new Date();
   const earliest = new Date(now.getTime() - MAX_BACKDATE_DAYS * 24 * 60 * 60 * 1000);
-  const commit = (value: Date) => onRecordedAtChange?.(value.getTime() >= Date.now() ? null : value);
+  const commit = (value: Date) => onChange?.(value.getTime() >= Date.now() ? null : value);
 
   const openPicker = () => {
     setDraft(shown);
@@ -158,6 +145,63 @@ export const ReadingModal = ({
   };
 
   return (
+    <View style={styles.field}>
+      <Text style={styles.label}>{t("vitalsEntry.dateTime")}</Text>
+      <TouchableOpacity
+        style={styles.readOnly}
+        onPress={openPicker}
+        disabled={!editable}
+        accessibilityRole={editable ? "button" : undefined}
+        accessibilityLabel={editable ? t("vitalsEntry.changeDateTime") : undefined}
+      >
+        <Text style={styles.readOnlyText}>{label}</Text>
+        <LineIcon size={16} color={Theme.colors.inkFaint}>
+          <Rect x="4" y="5" width="16" height="15" rx="2" />
+          <Path d="M4 10h16M9 3v4M15 3v4" />
+        </LineIcon>
+      </TouchableOpacity>
+      {editable && step && (
+        <DateTimePicker
+          value={draft}
+          mode={step}
+          display={Platform.OS === "ios" ? "spinner" : "default"}
+          minimumDate={earliest}
+          maximumDate={now}
+          onChange={onPick}
+        />
+      )}
+    </View>
+  );
+};
+
+// Prototype 5.3 "Manual entry", shown as a pop-up. When `onRecordedAtChange` is passed (and
+// BACKDATED_READINGS is on) the date and time can be changed to an earlier moment, never a future one.
+export const ReadingModal = ({
+  visible,
+  loading,
+  onSave,
+  onClose,
+  recordedAt = null,
+  onRecordedAtChange,
+  title,
+  saveLabel,
+  showDateTime = true,
+  children,
+}: {
+  visible: boolean;
+  loading: boolean;
+  onSave: () => void;
+  onClose: () => void;
+  recordedAt?: Date | null;
+  onRecordedAtChange?: (value: Date | null) => void;
+  title?: string; // defaults to "Manual entry"
+  saveLabel?: string; // defaults to "Save reading"
+  showDateTime?: boolean; // goals and other settings have no date
+  children: React.ReactNode;
+}) => {
+  const { t } = useTranslation();
+
+  return (
     <Modal transparent statusBarTranslucent visible={visible} animationType="fade" onRequestClose={onClose}>
       <KeyboardAvoidingView
         style={styles.flex}
@@ -167,34 +211,7 @@ export const ReadingModal = ({
           <Pressable style={styles.card}>
             <Text style={styles.title}>{title ?? t("vitalsEntry.manualEntry")}</Text>
             {children}
-            {showDateTime && (
-            <View style={styles.field}>
-              <Text style={styles.label}>{t("vitalsEntry.dateTime")}</Text>
-              <TouchableOpacity
-                style={styles.readOnly}
-                onPress={openPicker}
-                disabled={!editable}
-                accessibilityRole={editable ? "button" : undefined}
-                accessibilityLabel={editable ? t("vitalsEntry.changeDateTime") : undefined}
-              >
-                <Text style={styles.readOnlyText}>{label}</Text>
-                <LineIcon size={16} color={Theme.colors.inkFaint}>
-                  <Rect x="4" y="5" width="16" height="15" rx="2" />
-                  <Path d="M4 10h16M9 3v4M15 3v4" />
-                </LineIcon>
-              </TouchableOpacity>
-              {editable && step && (
-                <DateTimePicker
-                  value={draft}
-                  mode={step}
-                  display={Platform.OS === "ios" ? "spinner" : "default"}
-                  minimumDate={earliest}
-                  maximumDate={now}
-                  onChange={onPick}
-                />
-              )}
-            </View>
-            )}
+            {showDateTime && <DateTimeField recordedAt={recordedAt} onChange={onRecordedAtChange} active={visible} />}
             <TouchableOpacity
               style={styles.button}
               onPress={onSave}

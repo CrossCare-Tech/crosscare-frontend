@@ -1,10 +1,13 @@
 import React, { useState } from "react";
 import { Alert, View } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
 import { warnIfBackdateIgnored } from "@/components/vitals/backdate";
 import { CONFIG } from "@/constants/config";
 import CustomTextInput from "@/components/ui/CustomTextInput";
+import { fmtDate } from "@/components/vitals/MetricUI";
+import { BP_READING_TIME_KEY } from "@/components/vitals/backdate";
 import { ReadingModal, useRecordedAt, vitalsStyles } from "@/components/vitals/VitalsUI";
 
 interface BloodPressureModalProps {
@@ -63,6 +66,12 @@ const BloodPressureModal = ({ visible, onClose, reload }: BloodPressureModalProp
       setSystolic("");
       setDiastolic("");
       const savedAt = reading.recordedAt;
+      // The API keeps one reading per day without a time, so the time is kept here for the alert (5.5)
+      const takenAt = savedAt ?? new Date();
+      AsyncStorage.setItem(
+        BP_READING_TIME_KEY,
+        JSON.stringify({ key: `${fmtDate(takenAt)} ${parseInt(systolic)}/${parseInt(diastolic)}`, at: takenAt.toISOString() })
+      ).catch(() => undefined);
       reading.reset();
       onClose();
       reload();

@@ -101,7 +101,9 @@ const ConciergeDock: React.FC<BottomTabBarProps> = ({ state, navigation }) => {
               accessibilityState={{ selected: active }}
               accessibilityLabel={titles[name]}
             >
-              <View style={[styles.iconPill, active && styles.iconPillActive]}>{icons[name](color)}</View>
+              <View collapsable={false} style={[styles.iconPill, active && styles.iconPillActive]}>
+                {icons[name](color)}
+              </View>
               <Text style={[styles.label, { color }]} numberOfLines={1}>
                 {titles[name]}
               </Text>
@@ -133,7 +135,17 @@ const styles = StyleSheet.create({
     ...Theme.shadows.soft,
   },
   slot: { flex: 1, alignItems: "center", gap: Theme.spacing.xs, minWidth: 0 },
-  iconPill: { width: 42, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center" },
+  // Always has a background (transparent when inactive) and is not flattened, or Android drops the rounded
+  // corners the first time a tab becomes active after mount
+  iconPill: {
+    width: 42,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: "transparent",
+    overflow: "hidden", // clips the fill to the pill even if the radius is lost
+    alignItems: "center",
+    justifyContent: "center",
+  },
   iconPillActive: { backgroundColor: Theme.colors.magentaTint },
   label: { fontFamily: Theme.typography.heading, fontSize: 10 },
   centerHit: { alignItems: "center", alignSelf: "stretch", height: 42 },

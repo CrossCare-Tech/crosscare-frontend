@@ -59,7 +59,8 @@ const WeightModal = ({ visible, onClose, reload, initialWeight = null }: WeightM
           ...(user.token ? { Authorization: `Bearer ${user.token}` } : {}),
         },
         body: JSON.stringify({
-          weight: weightUnit === "lbs" ? convertWeight(value, "lbs", "kg") : value,
+          // The API stores kilograms; two decimals keep a converted value readable (153.4 lbs -> 69.58 kg)
+          weight: weightUnit === "lbs" ? Math.round(convertWeight(value, "lbs", "kg") * 100) / 100 : value,
           weight_unit: "kg",
           ...reading.payload,
         }),

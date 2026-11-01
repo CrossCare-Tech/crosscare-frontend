@@ -177,6 +177,32 @@
     "upcomingAppointments": "Próximas citas",
     "noAppointments": "No hay citas próximas"
   },
+  "selfCareHub": {
+    "pickLabel": "Sugerencia de hoy",
+    "pickTitle": "10 minutos de respiración prenatal",
+    "start": "Empezar",
+    "browse": "Explorar actividades",
+    "movement": {
+      "title": "Movimiento suave",
+      "sub": "Rutinas de 5 a 15 min",
+      "tag": "Movimiento"
+    },
+    "mindfulness": {
+      "title": "Atención plena",
+      "sub": "Respiración guiada",
+      "tag": "Calma"
+    },
+    "reflection": {
+      "title": "Preguntas de reflexión",
+      "sub": "Ideas para el diario",
+      "tag": "Reflexionar"
+    },
+    "connection": {
+      "title": "Conexión con la pareja",
+      "sub": "Hablen juntos",
+      "tag": "Conectar"
+    }
+  },
   "selfCare": {
     "title": "Autocuidado",
     "intro": "El autocuidado durante el embarazo es crucial para el bienestar tanto de la madre como del bebé.",
@@ -448,6 +474,13 @@
     "alertTitle": "Esto está por encima de tu rango seguro",
     "alertBody": "{{value}} es más alta que 140/90. Descansa 15 minutos y vuelve a medir. Si sigue alta, llama hoy a tu equipo de atención.",
     "alertContact": "Contactar a tu equipo de atención",
+    "alertEyebrow": "Necesita tu atención hoy",
+    "alertHeadline": "Tu presión arterial está más alta de lo habitual",
+    "alertReadingLabel": "Última lectura",
+    "alertPillWeek": "Por encima del rango seguro · semana {{week}}",
+    "alertBodyWeek": "Esto está por encima del rango seguro para la semana {{week}}. Las guías de ACOG recomiendan contactar pronto a tu equipo de atención, así que vamos a revisarlo hoy.",
+    "alertBodyNoWeek": "Esto está por encima del rango seguro. Las guías de ACOG recomiendan contactar pronto a tu equipo de atención, así que vamos a revisarlo hoy.",
+    "alertLogAnother": "Registrar otra lectura",
     "alertRecheck": "Volver a medir en 15 minutos",
     "alertDismiss": "Cerrar alerta",
     "recheckScheduled": "Te recordaremos en 15 minutos.",
@@ -501,6 +534,22 @@
     "title": "Título",
     "time": "Hora",
     "save": "Guardar recordatorio"
+  },
+  "notificationSchedule": {
+    "title": "Horario de notificaciones",
+    "morning": "Recordatorio de la mañana",
+    "midday": "Empujoncito del mediodía",
+    "evening": "Resumen de la noche",
+    "frequency": "Frecuencia",
+    "daily": "Diaria",
+    "weekdays": "Días laborales",
+    "custom": "Personalizada",
+    "dailyLower": "todos los días",
+    "weekdaysOnly": "solo días laborales",
+    "save": "Guardar preferencias",
+    "morningBody": "¡Buenos días! ¿Cómo te sientes hoy?",
+    "middayBody": "Una pausa rápida: un poco de agua, un estiramiento, una respiración profunda.",
+    "eveningBody": "Mira cómo fue tu día."
   },
   "reminderEmpty": {
     "title": "Tus recordatorios, a tu manera",

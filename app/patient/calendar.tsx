@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { useFocusEffect } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
 import { Circle, Path } from "react-native-svg";
@@ -312,6 +312,15 @@ const Calendar = () => {
               thumbColor={Theme.colors.surface}
             />
           </View>
+
+          {/* 10.3 NextGen sync status */}
+          <TouchableOpacity style={styles.reminderCard} onPress={() => router.push("/patient/nextgen-sync")} accessibilityRole="button">
+            <View style={styles.rowText}>
+              <Text style={styles.rowTitle}>{t("nextGen.title")}</Text>
+              <Text style={styles.rowSub}>{t("nextGen.hint")}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={Theme.colors.inkFaint} />
+          </TouchableOpacity>
         </ScrollView>
 
         <TouchableOpacity

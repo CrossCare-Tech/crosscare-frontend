@@ -27,8 +27,6 @@ import {
   scheduleDailyReminder,
   generateDefaultReminders,
   ReminderSettings,
-  displayTestNotification,
-  getAllScheduledNotifications,
   hasSavedReminders,
 } from '../../../utils/NotificationManager';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -36,6 +34,7 @@ import { useTranslation } from 'react-i18next';
 import { Theme } from '@/constants/theme';
 import ScreenBackground from '@/components/ui/ScreenBackground';
 import CustomTextInput from '@/components/ui/CustomTextInput';
+import NotificationScheduleSheet from '@/components/reminders/NotificationScheduleSheet';
 
 // Calendar, heart and leaf drawn next to the illustration (prototype empty state)
 const EmptyIllustration = () => (
@@ -103,6 +102,7 @@ export default function RemindersScreen() {
   const [currentReminder, setCurrentReminder] = useState<ReminderSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showSchedule, setShowSchedule] = useState(false);
   const [newReminderType, setNewReminderType] = useState<ReminderSettings['type']>(
     (params.type as any) || 'water'
   );
@@ -324,18 +324,6 @@ default: return t('reminder.healthTracking');
     return Theme.reminderTypes[type] ?? Theme.colors.magenta;
   }
 
-  // Debug function to show all scheduled notifications
-  async function showAllScheduledNotifications() {
-    const scheduledNotifications = await getAllScheduledNotifications();
-    console.log('All scheduled notifications:', JSON.stringify(scheduledNotifications, null, 2));
-
-    Alert.alert(
-      t('scheduledNotifications'),
-      t('foundScheduledNotifications', {count: scheduledNotifications.length}),
-      [{ text: 'OK' }]
-    );
-  }
-
   // Filter reminders based on active filter
   const filteredReminders = activeFilter === 'all'
     ? reminders
@@ -405,10 +393,12 @@ default: return t('reminder.healthTracking');
           <Ionicons name="chevron-back" size={20} color={Theme.colors.ink} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{t('healthReminders')}</Text>
-        <TouchableOpacity style={styles.headerButton} onPress={() => {
-          displayTestNotification();
-          showAllScheduledNotifications();
-        }}>
+        <TouchableOpacity
+          style={styles.headerButton}
+          onPress={() => setShowSchedule(true)}
+          accessibilityRole="button"
+          accessibilityLabel={t('notificationSchedule.title')}
+        >
           <Ionicons name="notifications-outline" size={20} color={Theme.colors.ink} />
         </TouchableOpacity>
       </View>
@@ -488,6 +478,8 @@ default: return t('reminder.healthTracking');
           onChange={handleTimeChange}
         />
       )}
+
+      <NotificationScheduleSheet visible={showSchedule} onClose={() => setShowSchedule(false)} />
 
       {/* Add Reminder sheet (prototype "New reminder") */}
       <Modal

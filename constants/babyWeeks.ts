@@ -792,7 +792,8 @@ const trim = (value: number, digits = 1) => value.toFixed(digits).replace(/\.0$/
 
 // US units (inches) for lbs users, centimeters otherwise
 export const formatBabyLength = (inches: number, unit: "kg" | "lbs"): BabyMeasure => {
-  if (unit === "lbs") return [[inches < 0.1 ? "<0.1" : trim(inches), "in"]];
+  // Under 0.1 in the early weeks differ only in the second decimal ("0.04 in"), so show it instead of "<0.1"
+  if (unit === "lbs") return [[inches < 0.01 ? "<0.01" : inches < 0.1 ? trim(inches, 2) : trim(inches), "in"]];
   const cm = inches * 2.54;
   return [[cm < 0.1 ? "<0.1" : cm < 10 ? trim(cm) : String(Math.round(cm)), "cm"]];
 };
@@ -800,7 +801,8 @@ export const formatBabyLength = (inches: number, unit: "kg" | "lbs"): BabyMeasur
 // Ounces under a pound, then pounds and ounces; grams under a kilogram, then kilograms
 export const formatBabyWeight = (ounces: number, unit: "kg" | "lbs"): BabyMeasure => {
   if (unit === "lbs") {
-    if (ounces < 0.1) return [["<0.1", "oz"]];
+    if (ounces < 0.01) return [["<0.01", "oz"]];
+    if (ounces < 0.1) return [[trim(ounces, 2), "oz"]];
     if (ounces < 10) return [[trim(ounces), "oz"]];
     const total = Math.round(ounces);
     if (total < 16) return [[String(total), "oz"]];
