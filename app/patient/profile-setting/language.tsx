@@ -56,7 +56,7 @@ const Language = () => {
     loadLanguage()
   }, [])
 
-  const handleLanguageSelect = async (langId) => {
+  const handleLanguageSelect = async (langId: string) => {
     try {
       // Use the changeLanguage helper function
       await changeLanguage(langId)
@@ -75,7 +75,7 @@ const Language = () => {
     }
   }
 
-  const renderLanguageItem = ({ item }) => {
+  const renderLanguageItem = ({ item }: { item: (typeof languages)[number] }) => {
     const isSelected = selectedLanguage === item.id
 
     return (

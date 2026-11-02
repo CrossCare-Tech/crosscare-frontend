@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Text, View, StyleSheet, Button, ActivityIndicator, ScrollView } from 'react-native';
-import { CameraView, Camera } from "expo-camera";
+import { CameraView, Camera, type BarcodeScanningResult } from "expo-camera";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather, FontAwesome5, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Image } from 'react-native';
@@ -806,7 +806,7 @@ export default function upccode() {
   };
 
   // What happens when we scan the bar code
-  const handleBarCodeScanned = ({ type, data }) => {
+  const handleBarCodeScanned = ({ type, data }: BarcodeScanningResult) => {
     setScanned(true);
     setScannedCode(data);
     console.log(`Type: ${type} \nData: ${data}`);
