@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { AVATAR_IMAGES } from "@/constants/avatarImages";
+import { DEFAULT_HAIR_ID } from "@/constants/avatarCatalog";
 
 // The avatar the user picked in Avatar Selection: guide + skin tone + hairstyle + outfit (the bundled avatar pack).
 export interface AvatarChoice {
@@ -10,7 +11,8 @@ export interface AvatarChoice {
   outfit: number;
 }
 
-export const DEFAULT_AVATAR: AvatarChoice = { guide: "sofia", tone: 2, hair: 1, outfit: 1 };
+// The default look uses an unlocked hairstyle (the first one in the list).
+export const DEFAULT_AVATAR: AvatarChoice = { guide: "sofia", tone: 2, hair: DEFAULT_HAIR_ID, outfit: 1 };
 
 const KEY = "avatar.studio";
 

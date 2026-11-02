@@ -1,5 +1,5 @@
-// Avatar pack catalog: guides, skin tones, hairstyles and outfits (source: avatar-studio/catalog.json).
-// Skin tone and guide are never locked; only hairstyles and outfits can be.
+// Avatar pack catalog: guides, skin tones, hairstyles and outfits (source: avatar-studio/catalog/catalog.json).
+// Skin tone and guide are never locked; only hairstyles and outfits can be. The 10 hairstyles are shared by every guide.
 
 export type UnlockRule = string; // "start" = free from the first launch
 
@@ -99,26 +99,62 @@ export const AVATAR_GUIDES: AvatarGuide[] = [
     "name": "Sofia",
     "hairstyles": [
       {
-        "id": 1,
-        "label": "Low bun",
+        "id": 3,
+        "label": "Bob",
         "rule": "start",
         "text": "Available from the first launch (free)"
+      },
+      {
+        "id": 4,
+        "label": "Long straight",
+        "rule": "start",
+        "text": "Available from the first launch (free)"
+      },
+      {
+        "id": 5,
+        "label": "Short gray crop",
+        "rule": "start",
+        "text": "Available from the first launch (free)"
+      },
+      {
+        "id": 9,
+        "label": "Long waves",
+        "rule": "start",
+        "text": "Available from the first launch (free)"
+      },
+      {
+        "id": 10,
+        "label": "Short natural curls",
+        "rule": "start",
+        "text": "Available from the first launch (free)"
+      },
+      {
+        "id": 1,
+        "label": "Braids low bun",
+        "rule": "vitals-streak-3",
+        "text": "Log vital signs 3 days in a row"
       },
       {
         "id": 2,
-        "label": "Loose waves",
-        "rule": "start",
-        "text": "Available from the first launch (free)"
+        "label": "High puff",
+        "rule": "checkin-14",
+        "text": "Complete 14 daily check-ins"
       },
       {
-        "id": 3,
+        "id": 6,
+        "label": "Half-up curls",
+        "rule": "checkin-14",
+        "text": "Complete 14 daily check-ins"
+      },
+      {
+        "id": 7,
         "label": "High ponytail",
         "rule": "vitals-streak-3",
         "text": "Log vital signs 3 days in a row"
       },
       {
-        "id": 4,
-        "label": "Half-up curls",
+        "id": 8,
+        "label": "Low braid",
         "rule": "checkin-14",
         "text": "Complete 14 daily check-ins"
       }
@@ -129,26 +165,62 @@ export const AVATAR_GUIDES: AvatarGuide[] = [
     "name": "Amara",
     "hairstyles": [
       {
-        "id": 1,
+        "id": 3,
+        "label": "Bob",
+        "rule": "start",
+        "text": "Available from the first launch (free)"
+      },
+      {
+        "id": 4,
+        "label": "Long straight",
+        "rule": "start",
+        "text": "Available from the first launch (free)"
+      },
+      {
+        "id": 5,
+        "label": "Short gray crop",
+        "rule": "start",
+        "text": "Available from the first launch (free)"
+      },
+      {
+        "id": 9,
+        "label": "Long waves",
+        "rule": "start",
+        "text": "Available from the first launch (free)"
+      },
+      {
+        "id": 10,
         "label": "Short natural curls",
         "rule": "start",
         "text": "Available from the first launch (free)"
       },
       {
-        "id": 2,
-        "label": "Twist-out",
-        "rule": "start",
-        "text": "Available from the first launch (free)"
-      },
-      {
-        "id": 3,
+        "id": 1,
         "label": "Braids low bun",
         "rule": "vitals-streak-3",
         "text": "Log vital signs 3 days in a row"
       },
       {
-        "id": 4,
+        "id": 2,
         "label": "High puff",
+        "rule": "checkin-14",
+        "text": "Complete 14 daily check-ins"
+      },
+      {
+        "id": 6,
+        "label": "Half-up curls",
+        "rule": "checkin-14",
+        "text": "Complete 14 daily check-ins"
+      },
+      {
+        "id": 7,
+        "label": "High ponytail",
+        "rule": "vitals-streak-3",
+        "text": "Log vital signs 3 days in a row"
+      },
+      {
+        "id": 8,
+        "label": "Low braid",
         "rule": "checkin-14",
         "text": "Complete 14 daily check-ins"
       }
@@ -159,26 +231,62 @@ export const AVATAR_GUIDES: AvatarGuide[] = [
     "name": "Claire",
     "hairstyles": [
       {
-        "id": 1,
-        "label": "Straight, bob length",
-        "rule": "start",
-        "text": "Available from the first launch (free)"
-      },
-      {
-        "id": 2,
-        "label": "Shoulder waves",
-        "rule": "start",
-        "text": "Available from the first launch (free)"
-      },
-      {
         "id": 3,
-        "label": "Low bun",
+        "label": "Bob",
+        "rule": "start",
+        "text": "Available from the first launch (free)"
+      },
+      {
+        "id": 4,
+        "label": "Long straight",
+        "rule": "start",
+        "text": "Available from the first launch (free)"
+      },
+      {
+        "id": 5,
+        "label": "Short gray crop",
+        "rule": "start",
+        "text": "Available from the first launch (free)"
+      },
+      {
+        "id": 9,
+        "label": "Long waves",
+        "rule": "start",
+        "text": "Available from the first launch (free)"
+      },
+      {
+        "id": 10,
+        "label": "Short natural curls",
+        "rule": "start",
+        "text": "Available from the first launch (free)"
+      },
+      {
+        "id": 1,
+        "label": "Braids low bun",
         "rule": "vitals-streak-3",
         "text": "Log vital signs 3 days in a row"
       },
       {
-        "id": 4,
+        "id": 2,
+        "label": "High puff",
+        "rule": "checkin-14",
+        "text": "Complete 14 daily check-ins"
+      },
+      {
+        "id": 6,
+        "label": "Half-up curls",
+        "rule": "checkin-14",
+        "text": "Complete 14 daily check-ins"
+      },
+      {
+        "id": 7,
         "label": "High ponytail",
+        "rule": "vitals-streak-3",
+        "text": "Log vital signs 3 days in a row"
+      },
+      {
+        "id": 8,
+        "label": "Low braid",
         "rule": "checkin-14",
         "text": "Complete 14 daily check-ins"
       }
@@ -189,25 +297,61 @@ export const AVATAR_GUIDES: AvatarGuide[] = [
     "name": "Elena",
     "hairstyles": [
       {
-        "id": 1,
+        "id": 3,
+        "label": "Bob",
+        "rule": "start",
+        "text": "Available from the first launch (free)"
+      },
+      {
+        "id": 4,
+        "label": "Long straight",
+        "rule": "start",
+        "text": "Available from the first launch (free)"
+      },
+      {
+        "id": 5,
+        "label": "Short gray crop",
+        "rule": "start",
+        "text": "Available from the first launch (free)"
+      },
+      {
+        "id": 9,
         "label": "Long waves",
         "rule": "start",
         "text": "Available from the first launch (free)"
       },
       {
-        "id": 2,
-        "label": "Straight, side part",
+        "id": 10,
+        "label": "Short natural curls",
         "rule": "start",
         "text": "Available from the first launch (free)"
       },
       {
-        "id": 3,
-        "label": "High bun",
+        "id": 1,
+        "label": "Braids low bun",
         "rule": "vitals-streak-3",
         "text": "Log vital signs 3 days in a row"
       },
       {
-        "id": 4,
+        "id": 2,
+        "label": "High puff",
+        "rule": "checkin-14",
+        "text": "Complete 14 daily check-ins"
+      },
+      {
+        "id": 6,
+        "label": "Half-up curls",
+        "rule": "checkin-14",
+        "text": "Complete 14 daily check-ins"
+      },
+      {
+        "id": 7,
+        "label": "High ponytail",
+        "rule": "vitals-streak-3",
+        "text": "Log vital signs 3 days in a row"
+      },
+      {
+        "id": 8,
         "label": "Low braid",
         "rule": "checkin-14",
         "text": "Complete 14 daily check-ins"
@@ -219,26 +363,62 @@ export const AVATAR_GUIDES: AvatarGuide[] = [
     "name": "Mei",
     "hairstyles": [
       {
-        "id": 1,
+        "id": 3,
         "label": "Bob",
         "rule": "start",
         "text": "Available from the first launch (free)"
       },
       {
-        "id": 2,
+        "id": 4,
         "label": "Long straight",
         "rule": "start",
         "text": "Available from the first launch (free)"
       },
       {
-        "id": 3,
-        "label": "Low ponytail",
+        "id": 5,
+        "label": "Short gray crop",
+        "rule": "start",
+        "text": "Available from the first launch (free)"
+      },
+      {
+        "id": 9,
+        "label": "Long waves",
+        "rule": "start",
+        "text": "Available from the first launch (free)"
+      },
+      {
+        "id": 10,
+        "label": "Short natural curls",
+        "rule": "start",
+        "text": "Available from the first launch (free)"
+      },
+      {
+        "id": 1,
+        "label": "Braids low bun",
         "rule": "vitals-streak-3",
         "text": "Log vital signs 3 days in a row"
       },
       {
-        "id": 4,
-        "label": "Wavy lob",
+        "id": 2,
+        "label": "High puff",
+        "rule": "checkin-14",
+        "text": "Complete 14 daily check-ins"
+      },
+      {
+        "id": 6,
+        "label": "Half-up curls",
+        "rule": "checkin-14",
+        "text": "Complete 14 daily check-ins"
+      },
+      {
+        "id": 7,
+        "label": "High ponytail",
+        "rule": "vitals-streak-3",
+        "text": "Log vital signs 3 days in a row"
+      },
+      {
+        "id": 8,
+        "label": "Low braid",
         "rule": "checkin-14",
         "text": "Complete 14 daily check-ins"
       }
@@ -249,29 +429,68 @@ export const AVATAR_GUIDES: AvatarGuide[] = [
     "name": "Marianne",
     "hairstyles": [
       {
-        "id": 1,
-        "label": "Gray low ponytail",
+        "id": 3,
+        "label": "Bob",
         "rule": "start",
         "text": "Available from the first launch (free)"
       },
       {
-        "id": 2,
+        "id": 4,
+        "label": "Long straight",
+        "rule": "start",
+        "text": "Available from the first launch (free)"
+      },
+      {
+        "id": 5,
         "label": "Short gray crop",
         "rule": "start",
         "text": "Available from the first launch (free)"
       },
       {
-        "id": 3,
-        "label": "Gray waves",
-        "rule": "vitals-streak-7",
-        "text": "Log vital signs 7 days in a row"
+        "id": 9,
+        "label": "Long waves",
+        "rule": "start",
+        "text": "Available from the first launch (free)"
       },
       {
-        "id": 4,
-        "label": "Gray low bun",
+        "id": 10,
+        "label": "Short natural curls",
+        "rule": "start",
+        "text": "Available from the first launch (free)"
+      },
+      {
+        "id": 1,
+        "label": "Braids low bun",
+        "rule": "vitals-streak-3",
+        "text": "Log vital signs 3 days in a row"
+      },
+      {
+        "id": 2,
+        "label": "High puff",
+        "rule": "checkin-14",
+        "text": "Complete 14 daily check-ins"
+      },
+      {
+        "id": 6,
+        "label": "Half-up curls",
+        "rule": "checkin-14",
+        "text": "Complete 14 daily check-ins"
+      },
+      {
+        "id": 7,
+        "label": "High ponytail",
+        "rule": "vitals-streak-3",
+        "text": "Log vital signs 3 days in a row"
+      },
+      {
+        "id": 8,
+        "label": "Low braid",
         "rule": "checkin-14",
         "text": "Complete 14 daily check-ins"
       }
     ]
   }
 ];
+
+// Hairstyles are listed unlocked first, then locked. This is the first unlocked one, used for the default look.
+export const DEFAULT_HAIR_ID = 3;

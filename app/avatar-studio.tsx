@@ -6,7 +6,7 @@ import { useSafeBack } from "@/hooks/useSafeBack";
 import { useTranslation } from "react-i18next";
 import ScreenBackground from "@/components/ui/ScreenBackground";
 import { Theme } from "@/constants/theme";
-import { AVATAR_GUIDES, AVATAR_OUTFITS, AVATAR_TONES, AvatarItem } from "@/constants/avatarCatalog";
+import { AVATAR_GUIDES, AVATAR_OUTFITS, AVATAR_TONES, AvatarItem, DEFAULT_HAIR_ID } from "@/constants/avatarCatalog";
 import { loadGuideName, saveGuideName } from "@/constants/conciergeGuide";
 import { AvatarChoice, avatarImage, useAvatarStudio } from "@/zustandStore/avatarStudioStore";
 
@@ -51,9 +51,9 @@ export default function AvatarStudio() {
 
   const update = (patch: Partial<AvatarChoice>) => {
     const next = { ...draft, ...patch };
-    // Hairstyles belong to a guide: keep the nearest valid one when the guide changes.
+    // Hairstyles belong to a guide: fall back to the first unlocked one when the guide changes.
     const g = AVATAR_GUIDES.find((x) => x.id === next.guide)!;
-    if (!g.hairstyles.some((h) => h.id === next.hair)) next.hair = 1;
+    if (!g.hairstyles.some((h) => h.id === next.hair)) next.hair = DEFAULT_HAIR_ID;
     setDraft(next);
   };
 
@@ -76,7 +76,7 @@ export default function AvatarStudio() {
       return AVATAR_GUIDES.map((g) => ({
         key: g.id,
         label: g.name,
-        img: avatarImage({ ...draft, guide: g.id, hair: 1 }),
+        img: avatarImage({ ...draft, guide: g.id, hair: DEFAULT_HAIR_ID }),
         on: g.id === draft.guide,
         item: null as AvatarItem | null,
         pick: () => update({ guide: g.id }),
