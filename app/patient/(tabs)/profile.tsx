@@ -1,5 +1,3 @@
-"use client";
-
 import {
   StyleSheet,
   Text,
@@ -10,6 +8,7 @@ import {
   ScrollView,
   Alert,
   Keyboard,
+  Linking,
 } from "react-native";
 import { useEffect, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -30,281 +29,12 @@ import Globe from "@/assets/images/Svg/Globe";
 import Notification from "@/assets/images/Svg/Notification";
 import Help from "@/assets/images/Svg/Help";
 import Terms from "@/assets/images/Svg/Terms";
-
-const ProfileField = ({
-  label,
-  value,
-  onEdit,
-}: {
-  label: string;
-  value: string;
-  onEdit: () => void;
-}) => {
-  return (
-    <View style={styles.fieldContainer}>
-      <View style={styles.fieldContent}>
-        <Text style={styles.fieldLabel}>{label}</Text>
-        <TouchableOpacity onPress={onEdit} style={styles.editButton}>
-          <Feather name="edit-2" size={16} color="#F76CCF" />
-        </TouchableOpacity>
-      </View>
-      <View style={styles.separator} />
-      <Text style={styles.fieldValue}>{value}</Text>
-    </View>
-  );
-};
-
-const EditableNameField = ({
-  label,
-  value,
-  onSave,
-  onCancel,
-}: {
-  label: string;
-  value: string;
-  onSave: (value: string) => void;
-  onCancel: () => void;
-}) => {
-  const [inputValue, setInputValue] = useState(value);
-
-  return (
-    <View style={styles.fieldContainer}>
-      <View style={styles.fieldContent}>
-        <Text style={styles.fieldLabel}>{label}</Text>
-        <View style={styles.editActions}>
-          {/* <TouchableOpacity
-            onPress={() => onCancel()}
-            style={styles.editButton}
-          >
-            <Text style={{
-              color: '#E162BC',
-              fontSize: 12,
-              fontFamily:'DMSans600',
-            }}>Cancel</Text>
-          </TouchableOpacity> */}
-          <TouchableOpacity
-            onPress={() => {
-              Keyboard.dismiss();
-              onSave(inputValue);
-            }}
-            style={[styles.editButton, { marginLeft: 10 }]}
-          >
-            <Text
-              style={{
-                color: "#E162BC",
-                fontSize: 14,
-                fontFamily: "DMSans600",
-              }}
-            >
-              Save
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-      <View style={styles.separator} />
-      <TextInput
-        style={styles.fieldInput}
-        value={inputValue}
-        onChangeText={setInputValue}
-        autoFocus
-      />
-    </View>
-  );
-};
-
-// Editable age field component
-const EditableAgeField = ({
-  label,
-  age,
-  onSave,
-  onCancel,
-}: {
-  label: string;
-  age: number;
-  onSave: (age: number) => void;
-  onCancel: () => void;
-}) => {
-  const [inputValue, setInputValue] = useState(age.toString());
-
-  const handleSave = () => {
-    Keyboard.dismiss();
-    const newAge = Number.parseInt(inputValue);
-    if (!isNaN(newAge) && newAge > 0) {
-      onSave(newAge);
-    } else {
-      onCancel();
-    }
-  };
-
-  return (
-    <View style={styles.fieldContainer}>
-      <View style={styles.fieldContent}>
-        <Text style={styles.fieldLabel}>{label}</Text>
-        <View style={styles.editActions}>
-          {/* <TouchableOpacity onPress={onCancel} style={styles.editButton}>
-            <Text style={{
-              color: '#E162BC',
-              fontSize: 12,
-              fontFamily:'DMSans600',
-            }}>Cancel</Text>
-          </TouchableOpacity> */}
-          <TouchableOpacity
-            onPress={handleSave}
-            style={[styles.editButton, { marginLeft: 10 }]}
-          >
-            <Text
-              style={{
-                color: "#E162BC",
-                fontSize: 14,
-                fontFamily: "DMSans600",
-              }}
-            >
-              Save
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-      <View style={styles.separator} />
-      <View style={styles.ageInputContainer}>
-        <TextInput
-          style={styles.ageInput}
-          value={inputValue}
-          onChangeText={setInputValue}
-          keyboardType="numeric"
-          autoFocus
-        />
-        <Text style={styles.fieldValue}> Years</Text>
-      </View>
-    </View>
-  );
-};
-
-const EditableEmailField = ({
-  label,
-  value,
-  onSave,
-  onCancel,
-}: {
-  label: string;
-  value: string;
-  onSave: (value: string) => void;
-  onCancel: () => void;
-}) => {
-  const [inputValue, setInputValue] = useState(value);
-
-  return (
-    <View style={styles.fieldContainer}>
-      <View style={styles.fieldContent}>
-        <Text style={styles.fieldLabel}>{label}</Text>
-        <View style={styles.editActions}>
-          {/* <TouchableOpacity
-            onPress={() => onCancel()}
-            style={styles.editButton}
-          >
-            <Text style={{
-              color: '#E162BC',
-              fontSize: 12,
-              fontFamily:'DMSans600',
-            }}>Cancel</Text>
-          </TouchableOpacity> */}
-          <TouchableOpacity
-            onPress={() => {
-              Keyboard.dismiss();
-              onSave(inputValue);
-            }}
-            style={[styles.editButton, { marginLeft: 10 }]}
-          >
-            <Text
-              style={{
-                color: "#E162BC",
-                fontSize: 14,
-                fontFamily: "DMSans600",
-              }}
-            >
-              Save
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-      <View style={styles.separator} />
-      <TextInput
-        style={styles.fieldInput}
-        value={inputValue}
-        onChangeText={setInputValue}
-        keyboardType="email-address"
-        autoCapitalize="none"
-        autoCorrect={false}
-        autoFocus
-      />
-    </View>
-  );
-};
-
-const EditablePregnancyWeekField = ({
-  label,
-  week,
-  onSave,
-  onCancel,
-}: {
-  label: string;
-  week: number;
-  onSave: (week: number) => void;
-  onCancel: () => void;
-}) => {
-  const [inputValue, setInputValue] = useState(week.toString());
-
-  const handleSave = () => {
-    Keyboard.dismiss();
-    const newWeek = Number.parseInt(inputValue);
-    if (!isNaN(newWeek) && newWeek > 0 && newWeek <= 42) {
-      onSave(newWeek);
-    } else {
-      onCancel();
-    }
-  };
-
-  return (
-    <View style={styles.fieldContainer}>
-      <View style={styles.fieldContent}>
-        <Text style={styles.fieldLabel}>{label}</Text>
-        <View style={styles.editActions}>
-          {/* <TouchableOpacity onPress={onCancel} style={styles.editButton}>
-            <Text style={{
-              color: '#E162BC',
-              fontSize: 12,
-              fontFamily:'DMSans600',
-            }}>Cancel</Text>
-          </TouchableOpacity> */}
-          <TouchableOpacity
-            onPress={handleSave}
-            style={[styles.editButton, { marginLeft: 10 }]}
-          >
-            <Text
-              style={{
-                color: "#E162BC",
-                fontSize: 14,
-                fontFamily: "DMSans600",
-              }}
-            >
-              Save
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-      <View style={styles.separator} />
-      <View style={styles.ageInputContainer}>
-        <Text style={styles.fieldValue}>Week </Text>
-        <TextInput
-          style={styles.ageInput}
-          value={inputValue}
-          onChangeText={setInputValue}
-          keyboardType="numeric"
-          autoFocus
-        />
-      </View>
-    </View>
-  );
-};
+import Delete from "@/assets/images/Svg/Delete";
+import Logout from "@/assets/images/Svg/Logout";
+import { width, height } from "../../../constants/helper";
+import { useTranslation } from "react-i18next";
+import { CONFIG } from "@/constants/config";
+import Language from "../profile-setting/language";
 
 const Profile = () => {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
@@ -312,7 +42,6 @@ const Profile = () => {
   const user = useSelector((state: any) => state.user);
   const [name, setName] = useState(user?.user_name);
   const [age, setAge] = useState(0);
-  const [updating, setUpdating] = useState(false);
   const [email, setEmail] = useState(user?.user_email);
   const [pregnancyWeek, setPregnancyWeek] = useState(0);
   const [permissionStatus, setPermissionStatus] =
@@ -321,16 +50,13 @@ const Profile = () => {
   console.log("token", token);
   console.log("userData1", user);
   const dispatch = useDispatch();
+  const { t } = useTranslation();
 
   // State for edit modes
-  const [isEditingName, setIsEditingName] = useState(false);
-  const [isEditingAge, setIsEditingAge] = useState(false);
-  const [isEditingEmail, setIsEditingEmail] = useState(false);
-  const [isEditingPregnancyWeek, setIsEditingPregnancyWeek] = useState(false);
 
   const getProfile = async () => {
     const response = await fetch(
-      `https://crosscare-backends.onrender.com/api/user/${user?.user_id}/profile`,
+      `${CONFIG.API_BASE_URL}/user/${user?.user_id}/profile`,
       {
         method: "GET",
         headers: {
@@ -371,148 +97,43 @@ const Profile = () => {
     checkPermissions();
   }, []);
 
-  const updateProfile = async (fieldName: string, value: string | number) => {
-    if (!user?.user_id || !token) {
-      Alert.alert("Error", "User ID or token not available");
-      return;
-    }
-
-    setUpdating(true);
-
-    try {
-      // Create update payload
-      const updateData: Record<string, any> = {};
-      updateData[fieldName] = value;
-
-      const response = await fetch(
-        `https://crosscare-backends.onrender.com/api/user/${user.user_id}/profile`,
-        {
-          method: "PUT",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(updateData),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(
-          `Failed to update profile: ${response.status} ${response.statusText}`
-        );
-      }
-
-      const data = await response.json();
-      console.log("Profile updated:", data);
-
-      // Refresh profile data
-      getProfile();
-
-      const updatedUserData = { ...user };
-
-      // Update the specific fields in Redux based on what was changed
-      if (fieldName === "name") {
-        updatedUserData.user_name = value as string;
-      } else if (fieldName === "email") {
-        updatedUserData.user_email = value as string;
-      }
-
-      // Update Redux state with the updated user data
-      dispatch(setUser(updatedUserData));
-
-      // Alert.alert("Success", `Your ${fieldName} has been updated successfully.`)
-    } catch (error) {
-      console.error("Error updating profile:", error);
-      Alert.alert("Error", `Failed to update ${fieldName}. Please try again.`);
-    } finally {
-      setUpdating(false);
-    }
-  };
-
-  const toggleNotifications = async () => {
-    try {
-      if (!notificationsEnabled) {
-        // Request permissions if notifications are being enabled
-        const permissionGranted = await requestNotificationPermissions();
-        setPermissionStatus(
-          permissionGranted
-            ? Notifications.PermissionStatus.GRANTED
-            : Notifications.PermissionStatus.DENIED
-        );
-
-        if (permissionGranted) {
-          // Fixed: using permissionGranted instead of status
-          setNotificationsEnabled(true);
-          Alert.alert(
-            "Notifications Enabled",
-            "You will now receive notifications from the app.",
-            [{ text: "OK" }]
-          );
-        } else {
-          // Show alert if permission denied
-          // Alert.alert(
-          //   "Permission Required",
-          //   "Notification permission is required. Please enable notifications in your device settings.",
-          //   [{ text: "OK" }],
-          // )
-        }
-      } else {
-        // Simply disable notifications in the app
-        setNotificationsEnabled(false);
-        // Alert.alert("Notifications Disabled", "You will no longer receive notifications from the app.", [
-        //   { text: "OK" },
-        // ])
-      }
-    } catch (error) {
-      console.error("Error toggling notifications:", error);
-      Alert.alert(
-        "Error",
-        "There was a problem updating your notification settings.",
-        [{ text: "OK" }]
-      );
-    }
-  };
-
-  // Name handlers
-  const handleSaveName = async (newName: string) => {
-    if (newName.trim()) {
-      setName(newName);
-      await updateProfile("name", newName);
-    }
-    setIsEditingName(false);
-  };
-
-  // Pregnancy week handlers
-  const handleSavePregnancyWeek = async (newWeek: number) => {
-    setPregnancyWeek(newWeek);
-    await updateProfile("week", newWeek);
-    setIsEditingPregnancyWeek(false);
-  };
-
-  // Email handlers
-  const handleSaveEmail = async (newEmail: string) => {
-    if (newEmail.trim() && newEmail.includes("@")) {
-      setEmail(newEmail);
-      await updateProfile("email", newEmail);
-    }
-    setIsEditingEmail(false);
-  };
-
-  // Age handlers
-  const handleSaveAge = async (newAge: number) => {
-    setAge(newAge);
-    await updateProfile("age", newAge);
-    setIsEditingAge(false);
-  };
-
   const logout = async () => {
-    await AsyncStorage.removeItem("userToken");
-    await AsyncStorage.removeItem("user");
-    await AsyncStorage.removeItem('explorerBadgeAwarded');
-    setToken(null);
-    setUser(null);
-    dispatch(removeToken());
-    router.replace("/login");
+    Alert.alert(
+      t("profile.confirmLogout"),
+      t("profile.logoutMessage"),
+      [
+        {
+          text: t("profile.no"),
+          onPress: () => console.log("Logout Cancelled"),
+          style: "cancel",
+        },
+        {
+          text: t("profile.logoutSuccess"),
+          onPress: async () => {
+            await AsyncStorage.removeItem("userToken");
+            await AsyncStorage.removeItem("user");
+            await AsyncStorage.removeItem("explorerBadgeAwarded");
+            await AsyncStorage.clear();
+
+            setToken(null);
+            setUser(null);
+            dispatch(removeToken());
+            // await AsyncStorage.removeItem('health');
+            // await AsyncStorage.removeItem('journal');
+            // await AsyncStorage.removeItem('self-care');
+            // await AsyncStorage.removeItem('heart_2');
+            // await AsyncStorage.removeItem('meal_1');
+            // await AsyncStorage.removeItem('medication_3');
+            // const weightVisited = await AsyncStorage.getItem('weight_4');
+            // const waterVisited = await AsyncStorage.getItem('water_5');
+            // const stepVisited = await AsyncStorage.getItem('step_6');
+            // const sleepVisited = await AsyncStorage.getItem('sleep_7');
+            router.replace("/login");
+          },
+        },
+      ],
+      { cancelable: false } // Makes the alert non-dismissible unless they confirm or cancel
+    );
   };
 
   const MenuItem = ({
@@ -531,7 +152,9 @@ const Profile = () => {
         <View style={styles.iconContainer}>{icon}</View>
         <View style={styles.menuTextContainer}>
           <Text style={styles.menuTitle}>{title}</Text>
-          <Text style={styles.menuSubtitle} numberOfLines={1}>{subtitle}</Text>
+          <Text style={styles.menuSubtitle} numberOfLines={1}>
+            {subtitle}
+          </Text>
         </View>
       </TouchableOpacity>
     );
@@ -546,154 +169,92 @@ const Profile = () => {
             width: 20,
           }}
         />
-        <Text style={styles.headerTitle}>Profile</Text>
+        <Text style={styles.headerTitle}>{t("profile.title")}</Text>
         <TouchableOpacity onPress={logout}>
-          <Ionicons name="log-out" size={20} color="black" />
+          <Logout width={20} height={20} />
         </TouchableOpacity>
       </View>
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
           <MenuItem
             icon={<Person />}
-            title="Account"
-            subtitle="Name, Age, Email"
-            onPress={()=>router.push('/patient/profile-setting/name')}
+            title={t("profile.account")}
+            subtitle={`${t("profile.name")}, ${t("profile.age")}, ${t(
+              "profile.email"
+            )}`}
+            onPress={() => router.push("/patient/profile-setting/name")}
           />
           <MenuItem
             icon={<PregrantWomen />}
-            title="Your Pregnancy"
-            subtitle="Week of Pregnancy, Progress Tracking"
-            onPress={() =>router.push('/patient/profile-setting/pregrancy')}
+            title={t("profile.yourpregnancy")}
+            subtitle={`${t("profile.weekofpregnancy")}, ${t(
+              "profile.progresstracking"
+            )}`}
+            onPress={() => router.push("/patient/profile-setting/pregrancy")}
           />
           <MenuItem
-            icon={<AvatarIcon/>}
-            title="Customize your Doula"
-            subtitle="Voice tone, Hair, Dress, Language, Skin tone"
-            onPress={() =>router.push('/avatar')}
-          />
-          <MenuItem
-            icon={<Badge/>}
-            title="Hall of Fame"
-            subtitle="Earned Badges, Rewards"
-            onPress={() => router.push('/patient/profile-setting/earnbadge')}
-          />
-          <MenuItem
-            icon={<Globe/>}
-            title="Language"
-            subtitle="Change doula language"
-            onPress={() => router.push('/patient/profile-setting/language')}
-          />
-
-          <MenuItem
-            icon={<Notification/>}
-            title="Notification"
-            subtitle="Messages, Alerts"
-            onPress={() => router.push('/patient/profile-setting/notification')}
-          />
-
-          <MenuItem
-            icon={<Help/>}
-            title="Help"
-            subtitle="Help Centre, Support, Contact Us"
-            onPress={() => router.push('/patient/profile-setting/help')}
-          />
-
-          <MenuItem
-            icon={<Terms/>}
-            title="Terms & Conditions"
-            subtitle="Privacy Policy, Terms of Use"
-            onPress={() => router.push('/patient/profile-setting/tnc')}
-          />
-          {/* {isEditingName ? (
-            <EditableNameField
-              label="Name"
-              value={name || ""}
-              onSave={handleSaveName}
-              onCancel={() => setIsEditingName(false)}
-            />
-          ) : (
-            <ProfileField
-              label="Name"
-              value={name || ""}
-              onEdit={() => setIsEditingName(true)}
-            />
-          )}
-
-          {isEditingAge ? (
-            <EditableAgeField
-              label="Age"
-              age={age}
-              onSave={handleSaveAge}
-              onCancel={() => setIsEditingAge(false)}
-            />
-          ) : (
-            <ProfileField
-              label="Age"
-              value={`${age} Years`}
-              onEdit={() => setIsEditingAge(true)}
-            />
-          )}
-
-          {isEditingEmail ? (
-            <EditableEmailField
-              label="Email"
-              value={email}
-              onSave={handleSaveEmail}
-              onCancel={() => setIsEditingEmail(false)}
-            />
-          ) : (
-            <ProfileField
-              label="Email"
-              value={email}
-              onEdit={() => setIsEditingEmail(true)}
-            />
-          )}
-
-          {isEditingPregnancyWeek ? (
-            <EditablePregnancyWeekField
-              label="Week of Pregnancy"
-              week={pregnancyWeek}
-              onSave={handleSavePregnancyWeek}
-              onCancel={() => setIsEditingPregnancyWeek(false)}
-            />
-          ) : (
-            <ProfileField
-              label="Week of Pregnancy"
-              value={`Week ${pregnancyWeek}`}
-              onEdit={() => setIsEditingPregnancyWeek(true)}
-            />
-          )}
-
-          <TouchableOpacity
-            style={styles.avatarContainer}
+            icon={<AvatarIcon />}
+            title={t("profile.customizeyourdoula")}
+            subtitle={`${t("profile.voicetone")}, ${t("profile.hair")}, ${t(
+              "profile.dress"
+            )}, ${t("profile.language")}, ${t("profile.skintone")}`}
             onPress={() => router.push("/avatar")}
-          >
-            <Text style={styles.avatarText}>Customize your Avatar</Text>
-            <View style={styles.avatarRight}>
-              <Image
-                source={{
-                  uri: user?.avatar_url,
-                }}
-                style={styles.avatarImage}
-              />
-              <Ionicons name="chevron-forward" size={20} color="#E162BC" />
-            </View>
-          </TouchableOpacity>
+          />
+          <MenuItem
+            icon={<Badge />}
+            title={t("profile.halloffame")}
+            subtitle={`${t("profile.earnbadge")}, ${t("profile.rewards")}`}
+            onPress={() => router.push("/patient/profile-setting/earnbadge")}
+          />
+          <MenuItem
+            icon={<Globe />}
+            title={t("profile.language")}
+            subtitle={`${t("profile.changedoulalanguage")}`}
+            onPress={() => router.push("/patient/profile-setting/language")}
+          />
 
-          <View style={styles.notificationContainer}>
-            <Text style={styles.notificationText}>Allow Notifications</Text>
-            <Switch
-              trackColor={{ false: "#E5E5E5", true: "#F76CCF" }}
-              thumbColor={"#fff"}
-              ios_backgroundColor="#E5E5E5"
-              onValueChange={toggleNotifications}
-              value={notificationsEnabled}
-            />
-          </View>
+          <MenuItem
+            icon={<Notification />}
+            title={t("profile.notifications")}
+            subtitle={`${t("profile.messages")}, ${t("profile.alerts")}`}
+            onPress={() => router.push("/patient/profile-setting/notification")}
+          />
 
-          <TouchableOpacity style={styles.termsContainer}>
-            <Text style={styles.termsText}>Terms & Conditions</Text>
-          </TouchableOpacity> */}
+          <MenuItem
+            icon={<Help />}
+            title={`${t("profile.help")}`}
+            subtitle={`${t("profile.helpcenter")}, ${t("profile.support")}, ${t(
+              "profile.contactus"
+            )}`}
+            onPress={() => router.push("/patient/profile-setting/help")}
+          />
+
+          <MenuItem
+            icon={<Terms />}
+            title={`${t("profile.tnc")}`}
+            subtitle={`${t("profile.privacy")}, ${t("profile.Termsofuse")}`}
+            onPress={() =>
+              Linking.openURL("https://crosscaretech.com/privacy-policy")
+            }
+          />
+
+          <MenuItem
+            icon={<Globe />}
+            title={`${t("profile.citations")}`}
+            subtitle={`${t("profile.citationsDescription")}`}
+            onPress={() => {
+              router.push("/patient/profile-setting/citations");
+            }}
+          />
+
+          <MenuItem
+            icon={<Delete />}
+            title={`${t("profile.deleteaccount")}`}
+            subtitle={`${t("profile.deleteaccountDescription")}`}
+            onPress={() => {
+              router.push("/patient/profile-setting/delete-account");
+            }}
+          />
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -741,13 +302,13 @@ const styles = StyleSheet.create({
   },
   menuTitle: {
     fontSize: 16,
-    fontFamily:'DMSans600',
-    color: "#AF4D93", // Magenta/purple color from the image
+    fontFamily: "DMSans600",
+    color: "#F66DCE", // Magenta/purple color from the image
     marginBottom: 4,
   },
   menuSubtitle: {
     fontSize: 14,
-    fontFamily:'DMSans500',
+    fontFamily: "DMSans500",
     color: "#7B7B7B",
   },
   fieldContainer: {

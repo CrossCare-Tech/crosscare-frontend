@@ -5,6 +5,8 @@ import { DailyTriggerInput, SchedulableTriggerInputTypes } from 'expo-notificati
 
 // Define constants
 const REMINDER_STORAGE_KEY = 'health_reminders';
+const APPOINTMENT_REMINDERS_ENABLED_KEY = 'appointment_reminders_enabled';
+const MEDICATION_REMINDERS_ENABLED_KEY = 'medication_reminders_enabled';
 
 // Configure notification behavior
 Notifications.setNotificationHandler({
@@ -219,7 +221,324 @@ export async function displayTestNotification() {
   });
 }
 
+// Schedule a one-time appointment reminder
+export async function scheduleAppointmentReminder(
+  appointmentDateTime: Date, 
+  description: string,
+  appointmentId?: string
+): Promise<string[] | null> {
+  try {
+    console.log('📅 Scheduling appointment reminder...');
+    console.log('Appointment DateTime (from backend):', appointmentDateTime);
+    console.log('Current time:', new Date());
+    
+    // Request notification permissions
+    const hasPermission = await requestNotificationPermissions();
+    if (!hasPermission) {
+      console.log('❌ Notification permissions not granted');
+      return null;
+    }
+
+    const now = new Date();
+    const reminderIds: string[] = [];
+
+    // Ensure we're working with proper Date objects
+    const appointmentDate = new Date(appointmentDateTime);
+    
+    // Calculate reminder times
+    const oneHourBefore = new Date(appointmentDate.getTime() - (60 * 60 * 1000)); // 1 hour in milliseconds
+    const oneDayBefore = new Date(appointmentDate.getTime() - (24 * 60 * 60 * 1000)); // 24 hours in milliseconds
+
+    console.log('One hour before:', oneHourBefore);
+    console.log('One day before:', oneDayBefore);
+
+    // Schedule 1-hour reminder if it's in the future
+    if (oneHourBefore > now) {
+      const oneHourReminderId = `appointment-1h-${appointmentId || Date.now()}`;
+      const secondsUntilReminder = Math.floor((oneHourBefore.getTime() - now.getTime()) / 1000);
+      
+      console.log(`⏰ Scheduling 1-hour reminder in ${secondsUntilReminder} seconds`);
+      
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: '📅 Appointment Reminder',
+          body: `You have an appointment "${description}" in 1 hour`,
+          data: { 
+            screen: '/patient/calendar',
+            appointmentId: appointmentId || 'unknown'
+          },
+          sound: true,
+        },
+        trigger: {
+          type: SchedulableTriggerInputTypes.TIME_INTERVAL,
+          seconds: secondsUntilReminder, // Fixed: Convert milliseconds to seconds
+        },
+        identifier: oneHourReminderId,
+      });
+      
+      console.log('✅ 1-hour appointment reminder scheduled for:', oneHourBefore);
+      reminderIds.push(oneHourReminderId);
+    } else {
+      console.log('⏭️ 1-hour reminder time has passed, skipping');
+    }
+
+    // Schedule 24-hour reminder if it's in the future
+    if (oneDayBefore > now) {
+      const oneDayReminderId = `appointment-24h-${appointmentId || Date.now()}`;
+      const secondsUntilDayReminder = Math.floor((oneDayBefore.getTime() - now.getTime()) / 1000);
+      
+      console.log(`⏰ Scheduling 24-hour reminder in ${secondsUntilDayReminder} seconds`);
+      
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: '📅 Appointment Reminder',
+          body: `You have an appointment "${description}" tomorrow`,
+          data: { 
+            screen: '/patient/calendar',
+            appointmentId: appointmentId || 'unknown'
+          },
+          sound: true,
+        },
+        trigger: {
+          type: SchedulableTriggerInputTypes.TIME_INTERVAL,
+          seconds: secondsUntilDayReminder, // Fixed: Proper time calculation
+        },
+        identifier: oneDayReminderId,
+      });
+      
+      console.log('✅ 24-hour appointment reminder scheduled for:', oneDayBefore);
+      reminderIds.push(oneDayReminderId);
+    } else {
+      console.log('⏭️ 24-hour reminder time has passed, skipping');
+    }
+
+    // Debug: Show what was scheduled
+    const debugInfo = await debugNotifications();
+    console.log('🔍 Current scheduled notifications:', debugInfo);
+
+    return reminderIds.length > 0 ? reminderIds : null;
+  } catch (error) {
+    console.error('❌ Error scheduling appointment reminder:', error);
+    return null;
+  }
+}
+
+export async function debugNotifications() {
+  try {
+    const permissions = await Notifications.getPermissionsAsync();
+    console.log('Notification Permissions:', permissions);
+    
+    const scheduled = await getAllScheduledNotifications();
+    console.log('Scheduled Notifications:', scheduled);
+    
+    return {
+      permissions,
+      scheduledCount: scheduled.length,
+      scheduled: scheduled.map(n => ({
+        identifier: n.identifier,
+        trigger: n.trigger,
+        content: n.content.title
+      }))
+    };
+  } catch (error) {
+    console.error('Error debugging notifications:', error);
+    return null;
+  }
+}
+
 // Get all scheduled notifications (for debugging)
 export async function getAllScheduledNotifications() {
   return await Notifications.getAllScheduledNotificationsAsync();
+}
+
+// Cancel all reminders for a specific appointment
+export async function cancelAppointmentReminders(appointmentId: string): Promise<void> {
+  try {
+    // Get all scheduled notifications
+    const scheduledNotifications = await Notifications.getAllScheduledNotificationsAsync();
+    
+    // Filter notifications related to this appointment
+    const appointmentNotifications = scheduledNotifications.filter(
+      notification => notification.identifier?.includes(`appointment-`) && 
+                     notification.content.data?.appointmentId === appointmentId
+    );
+    
+    // Cancel each notification
+    for (const notification of appointmentNotifications) {
+      if (notification.identifier) {
+        await Notifications.cancelScheduledNotificationAsync(notification.identifier);
+        console.log(`Canceled reminder: ${notification.identifier}`);
+      }
+    }
+  } catch (error) {
+    console.error('Error canceling appointment reminders:', error);
+  }
+}
+
+// Check if appointment reminders are enabled
+export async function areAppointmentRemindersEnabled(): Promise<boolean> {
+  try {
+    const reminderPreference = await AsyncStorage.getItem(APPOINTMENT_REMINDERS_ENABLED_KEY);
+    // Default to true if the preference hasn't been set
+    return reminderPreference !== 'false';
+  } catch (error) {
+    console.error('Error checking reminder preference:', error);
+    // Default to true if there's an error
+    return true;
+  }
+}
+
+// Set appointment reminders enabled/disabled
+export async function setAppointmentRemindersEnabled(enabled: boolean): Promise<void> {
+  try {
+    await AsyncStorage.setItem(APPOINTMENT_REMINDERS_ENABLED_KEY, enabled.toString());
+    console.log(`Appointment reminders ${enabled ? 'enabled' : 'disabled'}`);
+  } catch (error) {
+    console.error('Error saving reminder preference:', error);
+  }
+}
+
+// Schedule medication reminder
+export async function scheduleMedicationReminder(
+  medicationDateTime: Date, 
+  medicationName: string,
+  medicationId?: string
+): Promise<string[] | null> {
+  try {
+    console.log('💊 Scheduling medication reminder...');
+    console.log('Medication DateTime:', medicationDateTime);
+    console.log('Current time:', new Date());
+    
+    // Request notification permissions
+    const hasPermission = await requestNotificationPermissions();
+    if (!hasPermission) {
+      console.log('❌ Notification permissions not granted');
+      return null;
+    }
+
+    const now = new Date();
+    const reminderIds: string[] = [];
+
+    // Ensure we're working with proper Date objects
+    const medicationDate = new Date(medicationDateTime);
+    
+    // Calculate reminder times
+    const oneHourBefore = new Date(medicationDate.getTime() - (60 * 60 * 1000)); // 1 hour in milliseconds
+    const exactTime = new Date(medicationDate);
+
+    console.log('One hour before:', oneHourBefore);
+    console.log('Exact time:', exactTime);
+
+    // Schedule 1-hour reminder if it's in the future
+    if (oneHourBefore > now) {
+      const oneHourReminderId = `medication-1h-${medicationId || Date.now()}`;
+      const secondsUntilReminder = Math.floor((oneHourBefore.getTime() - now.getTime()) / 1000);
+      
+      console.log(`⏰ Scheduling 1-hour reminder in ${secondsUntilReminder} seconds`);
+      
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: '💊 Medication Reminder',
+          body: `Time to take "${medicationName}" in 1 hour`,
+          data: { 
+            screen: '/patient/medication/medications',
+            medicationId: medicationId || 'unknown'
+          },
+          sound: true,
+        },
+        trigger: {
+          type: SchedulableTriggerInputTypes.TIME_INTERVAL,
+          seconds: secondsUntilReminder,
+        },
+        identifier: oneHourReminderId,
+      });
+      
+      console.log('✅ 1-hour medication reminder scheduled for:', oneHourBefore);
+      reminderIds.push(oneHourReminderId);
+    } else {
+      console.log('⏭️ 1-hour reminder time has passed, skipping');
+    }
+
+    // Schedule exact time reminder if it's in the future
+    if (exactTime > now) {
+      const exactTimeReminderId = `medication-exact-${medicationId || Date.now()}`;
+      const secondsUntilExactReminder = Math.floor((exactTime.getTime() - now.getTime()) / 1000);
+      
+      console.log(`⏰ Scheduling exact time reminder in ${secondsUntilExactReminder} seconds`);
+      
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: '💊 Medication Reminder',
+          body: `It's time to take "${medicationName}"`,
+          data: { 
+            screen: '/patient/medication/medications',
+            medicationId: medicationId || 'unknown'
+          },
+          sound: true,
+        },
+        trigger: {
+          type: SchedulableTriggerInputTypes.TIME_INTERVAL,
+          seconds: secondsUntilExactReminder,
+        },
+        identifier: exactTimeReminderId,
+      });
+      
+      console.log('✅ Exact time medication reminder scheduled for:', exactTime);
+      reminderIds.push(exactTimeReminderId);
+    } else {
+      console.log('⏭️ Exact time reminder has passed, skipping');
+    }
+
+    return reminderIds.length > 0 ? reminderIds : null;
+  } catch (error) {
+    console.error('❌ Error scheduling medication reminder:', error);
+    return null;
+  }
+}
+
+// Cancel all reminders for a specific medication
+export async function cancelMedicationReminders(medicationId: string): Promise<void> {
+  try {
+    // Get all scheduled notifications
+    const scheduledNotifications = await Notifications.getAllScheduledNotificationsAsync();
+    
+    // Filter notifications related to this medication
+    const medicationNotifications = scheduledNotifications.filter(
+      notification => notification.identifier?.includes(`medication-`) && 
+                     notification.content.data?.medicationId === medicationId
+    );
+    
+    // Cancel each notification
+    for (const notification of medicationNotifications) {
+      if (notification.identifier) {
+        await Notifications.cancelScheduledNotificationAsync(notification.identifier);
+        console.log(`Canceled medication reminder: ${notification.identifier}`);
+      }
+    }
+  } catch (error) {
+    console.error('Error canceling medication reminders:', error);
+  }
+}
+
+// Check if medication reminders are enabled
+export async function areMedicationRemindersEnabled(): Promise<boolean> {
+  try {
+    const reminderPreference = await AsyncStorage.getItem(MEDICATION_REMINDERS_ENABLED_KEY);
+    // Default to true if the preference hasn't been set
+    return reminderPreference !== 'false';
+  } catch (error) {
+    console.error('Error checking medication reminder preference:', error);
+    // Default to true if there's an error
+    return true;
+  }
+}
+
+// Set medication reminders enabled/disabled
+export async function setMedicationRemindersEnabled(enabled: boolean): Promise<void> {
+  try {
+    await AsyncStorage.setItem(MEDICATION_REMINDERS_ENABLED_KEY, enabled.toString());
+    console.log(`Medication reminders ${enabled ? 'enabled' : 'disabled'}`);
+  } catch (error) {
+    console.error('Error saving medication reminder preference:', error);
+  }
 }

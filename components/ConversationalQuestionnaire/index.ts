@@ -1,0 +1,1991 @@
+import { useState, useEffect, useRef, useReducer } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { QUESTIONNAIRE_DOMAINS } from "../../constants/questionaireData";
+import {
+  ConversationalQuestionnaireProps,
+  ConversationalQuestionnaireManager,
+  QuestionnaireAction,
+} from "./types";
+import { CONFIG } from "@/constants/config";
+import { getTranslatedQuestionnaireDomains } from "../../utils/questionnaireTranslations";
+import {
+  initialConversationContext,
+  conversationReducer,
+  saveConversationContext,
+  loadConversationContext,
+} from "../../utils/ConversationalSystem/ConversationalContext/contextManager";
+import {
+  classifyIntentWithAI,
+  fallbackClassification,
+} from "../../utils/ConversationalSystem/IntentClassification/classifier";
+import { getCachedClassification } from "../../utils/ConversationalSystem/IntentClassification/cache";
+import {
+  detectEmpathyTrigger,
+  generateEmpathyResponse,
+} from "../../utils/ConversationalSystem/EmpathyResponses/generator";
+import axios from "axios";
+import { AppState, type AppStateStatus } from "react-native";
+import i18n from "@/translation/i18next";
+
+// Default OpenAI API key (you'll want to store this securely)
+const DEFAULT_API_KEY = `${CONFIG.OPENAI_API_KEY}` || "";
+
+interface SensitiveDisclosure {
+  topic: string;
+  questionId: string;
+  domainId: string;
+  response: string;
+  timestamp: Date | string;
+}
+
+interface SerializedSensitiveDisclosure
+  extends Omit<SensitiveDisclosure, "timestamp"> {
+  timestamp: string;
+}
+
+interface QuestionnaireResponse {
+  timestamp: Date | string;
+  [key: string]: any; // for other response properties
+}
+
+interface SerializedQuestionnaireResponse
+  extends Omit<QuestionnaireResponse, "timestamp"> {
+  timestamp: string;
+}
+
+const ConversationalQuestionnaire = ({
+  userId,
+  onQuestionReady,
+  onQuestionnaireComplete,
+  onResponseSaved,
+  setIsPaused,
+  openAIApiKey = DEFAULT_API_KEY,
+  t,
+}: ConversationalQuestionnaireProps): ConversationalQuestionnaireManager => {
+  // Get translated questionnaire domains
+  const QUESTIONNAIRE_DOMAINS = getTranslatedQuestionnaireDomains(t);
+  const currentLanguage = i18n.language || "en";
+  console.log("Current language:", currentLanguage);
+  // Use useReducer instead of multiple useState calls for complex state
+  const [context, dispatch] = useReducer(
+    conversationReducer,
+    initialConversationContext
+  );
+
+  // Track sent messages to prevent duplicates
+  const sentMessages = useRef(new Set<string>()).current;
+
+  // Flag to prevent multiple starts
+  const isStartingQuestionnaire = useRef(false);
+  
+  // Flag to prevent duplicate messages during resume
+  const isResuming = useRef(false);
+
+  // Flag to track if intro has been shown
+  const [hasSeenIntro, setHasSeenIntro] = useState(false);
+
+  // Intro step tracking
+  const [introStep, setIntroStep] = useState(0);
+
+  // Tracking for "Do you have a few minutes" question
+  const [hasAskedForTime, setHasAskedForTime] = useState(false);
+  const [userWantsToStart, setUserWantsToStart] = useState(false);
+
+  // Flag for waiting for domain transition confirmation
+  const [waitingForDomainTransition, setWaitingForDomainTransition] =
+    useState(false);
+  const [nextDomainIndex, setNextDomainIndex] = useState(-1);
+  const hasLoadedRef = useRef(false);
+
+  // Track app state for auto-pause/resume
+  const appStateRef = useRef(AppState.currentState);
+  const wasManuallyPaused = useRef(false);
+
+  // Add AppState listener to handle app going to background/foreground
+  useEffect(() => {
+    const subscription = AppState.addEventListener(
+      "change",
+      handleAppStateChange
+    );
+
+    return () => {
+      subscription.remove();
+    };
+  }, []);
+
+  // Handle app state changes (active, background, inactive)
+  const handleAppStateChange = async (nextAppState: AppStateStatus) => {
+    console.log(
+      `App state changed from ${appStateRef.current} to ${nextAppState}`
+    );
+
+    // If app is going to background and questionnaire is active but not paused
+    if (
+      appStateRef.current.match(/active/) &&
+      (nextAppState === "background" || nextAppState === "inactive") &&
+      context.isActive &&
+      !context.isPaused &&
+      !context.isCompleted
+    ) {
+      console.log("App going to background - auto-pausing questionnaire");
+      wasManuallyPaused.current = false;
+
+      // Auto-pause the questionnaire
+      await pauseQuestionnaire();
+
+      // Save the auto-pause state
+      await AsyncStorage.setItem(`questionnaire_auto_paused_${userId}`, "true");
+    }
+
+    appStateRef.current = nextAppState;
+  };
+
+  // Save context whenever it changes
+  useEffect(() => {
+    if (context.isActive) {
+      saveConversationState();
+    }
+  }, [context, userId]);
+
+  // Improved progress calculation in askdoula.tsx
+  // In ConversationalQuestionnaire.tsx
+  // Replace the existing useEffect that loads the conversation context
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadInitialContext = async () => {
+      try {
+        console.log("Loading initial conversation context for user:", userId);
+
+        // Load the saved context
+        const savedContext = await loadConversationContext(userId);
+
+        if (savedContext && isMounted) {
+          console.log("Loaded saved context:", {
+            isPaused: savedContext.isPaused,
+            isCompleted: savedContext.isCompleted,
+            domainIndex: savedContext.currentDomainIndex,
+            questionIndex: savedContext.currentQuestionIndex,
+            responseCount: savedContext.responses?.length,
+          });
+
+          // Properly restore all context
+          dispatch({
+            type: "RESET",
+            payload: savedContext,
+          });
+
+          // Set UI state based on loaded context
+          if (savedContext.isPaused || savedContext.stage === "paused") {
+            setWaitingForDomainTransition(false);
+            setNextDomainIndex(-1);
+            setHasSeenIntro(true);
+            setIntroStep(4);
+            setHasAskedForTime(true);
+            setUserWantsToStart(true);
+          } else if (savedContext.isActive) {
+            // If active but not paused
+            setHasSeenIntro(true);
+            setIntroStep(4);
+            setHasAskedForTime(true);
+            setUserWantsToStart(true);
+          }
+
+          console.log("Initial conversation context load complete");
+        } else {
+          console.log("No saved context found or component unmounted");
+        }
+
+        // Check if intro has been shown previously
+        const introShown = await AsyncStorage.getItem(`intro_shown_${userId}`);
+        if (introShown === "true") {
+          setHasSeenIntro(true);
+          setIntroStep(4);
+        }
+
+        // Check if questionnaire was auto-paused
+        const autoPaused = await AsyncStorage.getItem(
+          `questionnaire_auto_paused_${userId}`
+        );
+        if (autoPaused === "true") {
+          wasManuallyPaused.current = false;
+        } else {
+          wasManuallyPaused.current = true;
+        }
+
+        hasLoadedRef.current = true;
+      } catch (error) {
+        console.error("Error loading conversation context:", error);
+      }
+    };
+
+    if (!hasLoadedRef.current) {
+      loadInitialContext();
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [userId]);
+
+  useEffect(() => {
+    if (
+      context.isActive &&
+      !context.isPaused &&
+      !context.isCompleted &&
+      context.currentQuestionIndex !== null &&
+      !isResuming.current
+    ) {
+      sendNextQuestion();
+    }
+  }, [context.currentQuestionIndex, context.currentDomainIndex]);
+
+  // Intro sequence effect - similar to the current implementation but with improvements
+  useEffect(() => {
+    if (!context.isActive || context.isCompleted) return;
+
+    // First, ask if they have a few minutes if we haven't asked yet
+    if (!hasAskedForTime) {
+      const timeQuestion = t('conversationalQuestionnaire.timeQuestion');
+
+      if (!sentMessages.has("time_question")) {
+        sentMessages.add("time_question");
+        saveLastQuestion("time", "time_question", timeQuestion);
+        onQuestionReady(timeQuestion);
+        setHasAskedForTime(true);
+      }
+      return;
+    }
+
+    // Only proceed if user has indicated they want to start
+    if (!userWantsToStart) {
+      return;
+    }
+
+    // First-time user who needs to see the intro
+    if (!hasSeenIntro && introStep < 4) {
+      const introMessages = [
+        t('conversationalQuestionnaire.introMessages.intro1'),
+        t('conversationalQuestionnaire.introMessages.intro2'),
+        t('conversationalQuestionnaire.introMessages.intro3'),
+      ];
+
+      if (introStep < 3) {
+        // Send the current intro message if not already sent
+        const messageKey = `intro_${introStep}`;
+        if (!sentMessages.has(messageKey)) {
+          sentMessages.add(messageKey);
+          onQuestionReady(introMessages[introStep]);
+        }
+
+        // Schedule the next intro message with a delay
+        const timer = setTimeout(() => {
+          setIntroStep((prevStep) => prevStep + 1);
+        }, 1500);
+
+        return () => clearTimeout(timer);
+      } else if (introStep === 3) {
+        // Start the actual questionnaire after a delay
+        const timer = setTimeout(() => {
+          setIntroStep(4); // Mark intro as complete
+
+          // Mark intro as shown in AsyncStorage
+          AsyncStorage.setItem(`intro_shown_${userId}`, "true")
+            .then(() => {
+              setHasSeenIntro(true);
+
+              // Send the first question if not already sent
+              if (!sentMessages.has("first_question")) {
+                sendNextQuestion();
+              }
+            })
+            .catch((error) =>
+              console.error("Error saving intro shown status:", error)
+            );
+        }, 1500);
+
+        return () => clearTimeout(timer);
+      }
+    }
+    // Returning user who has seen the intro
+    else if (hasSeenIntro && introStep >= 4 && !isResuming.current) {
+      // Send the first question if not already sent
+      setTimeout(() => {
+        if (!sentMessages.has("first_question")) {
+          sendNextQuestion();
+        }
+      }, 500);
+    }
+  }, [
+    context.isActive,
+    context.isCompleted,
+    introStep,
+    hasSeenIntro,
+    hasAskedForTime,
+    userWantsToStart,
+    isResuming,
+  ]);
+
+  // Load conversation state from storage
+  const loadConversationState = async () => {
+    try {
+      const savedContext = await loadConversationContext(userId);
+      if (savedContext) {
+        // Dispatch the loaded context to our reducer
+        dispatch({
+          type: "RESET",
+          payload: savedContext,
+        });
+
+        // If the conversation was paused, we'll need to restore the appropriate state variables
+        if (savedContext.isPaused) {
+          setWaitingForDomainTransition(false);
+          setNextDomainIndex(-1);
+
+          // Skip intro for returning users
+          setIntroStep(4);
+          setHasSeenIntro(true);
+          setHasAskedForTime(true);
+          setUserWantsToStart(true);
+        }
+      }
+
+      // Check if intro has been shown previously
+      const introShown = await AsyncStorage.getItem(`intro_shown_${userId}`);
+      if (introShown === "true") {
+        setHasSeenIntro(true);
+        setIntroStep(4);
+      }
+    } catch (error) {
+      console.error("Error loading conversation state:", error);
+    }
+  };
+
+  // Save conversation state to storage
+  // Enhanced saveConversationState function with better error handling
+  const saveConversationState = async () => {
+    try {
+      if (!userId) {
+        console.error("Cannot save context: No user ID provided");
+        return;
+      }
+
+      console.log("Saving conversation context:", {
+        isActive: context.isActive,
+        isPaused: context.isPaused,
+        responseCount: context.responses?.length || 0,
+        domainIdx: context.currentDomainIndex,
+        questionIdx: context.currentQuestionIndex,
+      });
+
+      // Create a deep copy to avoid any reference issues
+      const contextToSave = JSON.parse(JSON.stringify(context));
+
+      // Make sure the context has valid arrays
+      if (!contextToSave.responses) contextToSave.responses = [];
+      if (!contextToSave.sensitiveDisclosures)
+        contextToSave.sensitiveDisclosures = [];
+
+      // Convert dates to ISO strings for storage
+
+      contextToSave.responses = contextToSave.responses.map(
+        (r: QuestionnaireResponse): SerializedQuestionnaireResponse => ({
+          ...r,
+          timestamp:
+            r.timestamp instanceof Date
+              ? r.timestamp.toISOString()
+              : typeof r.timestamp === "string"
+              ? r.timestamp
+              : new Date().toISOString(),
+        })
+      );
+
+      contextToSave.sensitiveDisclosures =
+        contextToSave.sensitiveDisclosures.map(
+          (d: SensitiveDisclosure): SerializedSensitiveDisclosure => ({
+            ...d,
+            timestamp:
+              d.timestamp instanceof Date
+                ? d.timestamp.toISOString()
+                : typeof d.timestamp === "string"
+                ? d.timestamp
+                : new Date().toISOString(),
+          })
+        );
+
+      // First verify the key is correct
+      const storageKey = `conversation_context_${userId}`;
+      console.log(`Saving to key: ${storageKey}`);
+
+      // Use AsyncStorage directly for maximum reliability
+      await AsyncStorage.setItem(storageKey, JSON.stringify(contextToSave));
+
+      // Verify the save worked by immediately reading it back
+      const savedContext = await AsyncStorage.getItem(storageKey);
+      if (savedContext) {
+        const parsed = JSON.parse(savedContext);
+        console.log(
+          "Context saved and verified: responses=",
+          parsed.responses?.length || 0
+        );
+      } else {
+        console.error("Failed to verify saved context");
+      }
+    } catch (error: any) {
+      console.error("Error saving conversation context:", error);
+      console.error("Error details:", error.message);
+
+      // Try a more minimal save as fallback
+      try {
+        const minimalContext = {
+          responses: context.responses || [],
+          currentDomainIndex: context.currentDomainIndex || 0,
+          currentQuestionIndex: context.currentQuestionIndex || 0,
+          isActive: context.isActive,
+          isPaused: context.isPaused,
+          isCompleted: context.isCompleted,
+        };
+
+        await AsyncStorage.setItem(
+          `conversation_context_minimal_${userId}`,
+          JSON.stringify(minimalContext)
+        );
+        console.log("Minimal context saved as fallback");
+      } catch (fallbackError) {
+        console.error("Even fallback save failed:", fallbackError);
+      }
+    }
+  };
+
+  // Track the last question we sent
+  const saveLastQuestion = (
+    domainId: string,
+    questionId: string,
+    questionText: string
+  ) => {
+    try {
+      const lastQuestion = {
+        domainId,
+        questionId,
+        text: questionText,
+      };
+
+      // Update the context
+      dispatch({
+        type: "SET_LAST_QUESTION",
+        payload: { lastQuestion },
+      });
+
+      // Also save directly to AsyncStorage for resuming
+      AsyncStorage.setItem(
+        `last_question_${userId}`,
+        JSON.stringify(lastQuestion)
+      ).catch((error) => console.error("Error saving last question:", error));
+    } catch (error) {
+      console.error("Error in saveLastQuestion:", error);
+    }
+  };
+
+  // Helper function to check if a question is an info message
+  const isInfoMessage = (questionId: string): boolean => {
+    return questionId.includes('-info');
+  };
+
+  // Send the next question in the sequence
+  const sendNextQuestion = () => {
+    try {
+      // Don't send questions if paused
+      if (context.isPaused) {
+        console.log("Questionnaire is paused, not sending next question");
+        return;
+      }
+
+      // Debug log with current state
+      console.log("sendNextQuestion called with state:", {
+        currentDomainIndex: context.currentDomainIndex,
+        currentQuestionIndex: context.currentQuestionIndex,
+        introStep,
+        hasSeenIntro,
+        waitingForDomainTransition,
+      });
+
+      // Get the current domain
+      const currentDomain = QUESTIONNAIRE_DOMAINS[context.currentDomainIndex];
+      if (!currentDomain) {
+        console.error("Invalid domain index:", context.currentDomainIndex);
+        completeQuestionnaire();
+        return;
+      }
+
+      // Get the current question
+      const currentQuestion =
+        currentDomain.questions[context.currentQuestionIndex];
+
+      // Log before checking to see what's happening
+      console.log(
+        `Looking for question at index ${context.currentQuestionIndex} in domain ${currentDomain.id}`
+      );
+      console.log(
+        `Found question:`,
+        currentQuestion ? currentQuestion.id : "NOT FOUND"
+      );
+
+      if (!currentQuestion) {
+        console.error("Invalid question index:", context.currentQuestionIndex);
+        askToContinue();
+        return;
+      }
+
+      // Create a unique key for this question
+      const questionKey = `question_${currentDomain.id}_${currentQuestion.id}`;
+
+      // Only send if we haven't sent this question before
+      if (!sentMessages.has(questionKey)) {
+        sentMessages.add(questionKey);
+
+        // Format the question conversationally
+        let formattedQuestion = formatQuestionConversationally(
+          currentDomain,
+          currentQuestion
+        );
+
+        // Add options if available
+        if (currentQuestion.options && currentQuestion.options.length > 0) {
+          formattedQuestion +=
+            " " + currentQuestion.options.map((opt) => `"${opt}"`).join(" or ");
+        }
+
+        // Save the last question
+        saveLastQuestion(
+          currentDomain.id,
+          currentQuestion.id,
+          formattedQuestion
+        );
+
+        // Set the conversation stage to question
+        dispatch({
+          type: "SET_STAGE",
+          payload: { stage: "question" },
+        });
+
+        // Send the question
+        onQuestionReady(formattedQuestion);
+
+        // Mark first question as sent if this is the first one
+        if (
+          context.currentDomainIndex === 0 &&
+          context.currentQuestionIndex === 0
+        ) {
+          sentMessages.add("first_question");
+        }
+
+        // Check if this is an info message and auto-continue
+        if (isInfoMessage(currentQuestion.id)) {
+          console.log("Info message detected, will auto-continue after delay");
+          
+          // Auto-continue after 2 seconds for info messages
+          setTimeout(() => {
+            console.log("Auto-continuing from info message");
+            
+            // Move to next question automatically
+            const nextQuestionIndex = context.currentQuestionIndex + 1;
+            if (nextQuestionIndex < currentDomain.questions.length) {
+              dispatch({
+                type: "SET_POSITION",
+                payload: {
+                  currentQuestionIndex: nextQuestionIndex,
+                },
+              });
+            } else {
+              // End of domain, ask to continue
+              askToContinue();
+            }
+          }, 2000);
+        }
+      }
+    } catch (error) {
+      console.error("Error in sendNextQuestion:", error);
+    }
+  };
+
+  // Format question in a conversational way
+  const formatQuestionConversationally = (domain: any, question: any) => {
+    // For the first question in a domain, introduce the domain
+    if (context.currentQuestionIndex === 0) {
+      return t('conversationalQuestionnaire.questionFormat.domainIntro', {
+        domain: domain.description.toLowerCase(),
+        question: question.text
+      });
+    }
+
+    // Otherwise just ask the question naturally
+    const conversationalLeadIns = [
+      "",
+      // "Could you tell me, ",
+      // "I'd like to know, ",
+    ];
+    const leadIn =
+      conversationalLeadIns[
+        Math.floor(Math.random() * conversationalLeadIns.length)
+      ];
+    return `${leadIn}${question.text}`;
+  };
+
+  // Ask if user wants to continue to the next domain
+  const askToContinue = () => {
+    try {
+      const continueKey = `continue_${context.currentDomainIndex}`;
+      if (!sentMessages.has(continueKey)) {
+        sentMessages.add(continueKey);
+
+        // Set waiting for domain transition
+        setWaitingForDomainTransition(true);
+        setNextDomainIndex(context.currentDomainIndex + 1);
+
+        // Set stage to domain transition
+        dispatch({
+          type: "SET_STAGE",
+          payload: { stage: "domain_transition" },
+        });
+
+        // Create the message
+        const nextDomainIndex = context.currentDomainIndex + 1;
+        let continueMessage = t('conversationalQuestionnaire.continue.basicQuestion');
+
+        if (nextDomainIndex < QUESTIONNAIRE_DOMAINS.length) {
+          const nextDomain = QUESTIONNAIRE_DOMAINS[nextDomainIndex];
+          continueMessage = t('conversationalQuestionnaire.continue.domainTransition', {
+            domain: nextDomain.description.toLowerCase()
+          });
+        }
+
+        // Save the message
+        saveLastQuestion(
+          "continue",
+          `continue_${context.currentDomainIndex}`,
+          continueMessage
+        );
+
+        // Send the message
+        onQuestionReady(continueMessage);
+      }
+    } catch (error) {
+      console.error("Error in askToContinue:", error);
+    }
+  };
+
+  // Core function to handle user responses
+
+  const handleUserResponse = async (response: string): Promise<boolean> => {
+    try {
+      console.log("Processing user response:", response);
+
+      // Early return if questionnaire is not active
+      if (!context.isActive || context.isCompleted) {
+        console.log("Questionnaire is not active or is completed");
+        return false;
+      }
+
+      // Handle the "Do you have a few minutes?" question
+      if (hasAskedForTime && !userWantsToStart) {
+        console.log(
+          "Processing response to 'Do you have a few minutes?' question"
+        );
+
+        // Use our AI-powered intent classifier
+        const classificationKey = `time_${response.trim().toLowerCase()}`;
+        const classification = await getCachedClassification(
+          classificationKey,
+          () =>
+            classifyIntentWithAI(
+              response,
+              {
+                questionText:
+                  "Do you have a few minutes to answer some health questions?",
+                options: ["Yes", "No"],
+                currentDomainId: "intro",
+                currentQuestionId: "time_question",
+              },
+              openAIApiKey
+            )
+        );
+
+        console.log(
+          `Classified intent for time question: ${classification.intent} (confidence: ${classification.confidence})`
+        );
+
+        // Handle positive responses
+        if (
+          classification.intent === "yes" ||
+          (classification.selectedOption &&
+            classification.selectedOption.toLowerCase() === "yes")
+        ) {
+          console.log("User wants to start the questionnaire");
+          setUserWantsToStart(true);
+          return true;
+        }
+
+        // Handle negative responses
+        if (
+          classification.intent === "no" ||
+          classification.isPauseRequest ||
+          (classification.selectedOption &&
+            classification.selectedOption.toLowerCase() === "no")
+        ) {
+          console.log("User doesn't want to start the questionnaire now");
+
+          // Send a polite response and mark as paused
+          const noTimeKey = "no_time_response";
+          if (!sentMessages.has(noTimeKey)) {
+            sentMessages.add(noTimeKey);
+            const noTimeMessage = t('conversationalQuestionnaire.responses.noTime');
+
+            // Save as last message
+            saveLastQuestion("pause", noTimeKey, noTimeMessage);
+            setIsPaused(true);
+
+            // Set paused state
+            dispatch({
+              type: "SET_PAUSED",
+              payload: {},
+            });
+
+            // Send response
+            onQuestionReady(noTimeMessage);
+          }
+          return true;
+        }
+
+        // For unclear or other responses, assume they want to start
+        console.log(
+          "Unclear response to time question, assuming user wants to start"
+        );
+        setUserWantsToStart(true);
+        return true;
+      }
+
+      // Handle domain transition responses
+      if (waitingForDomainTransition) {
+        console.log("Processing response to domain transition question");
+
+        // Use enhanced classification
+        const classification = await classifyIntentWithAI(
+          response,
+          {
+            questionText:
+              "Would you like to continue with more questions or take a break?",
+            options: ["Continue", "Pause"],
+            currentDomainId: "domain_transition",
+            currentQuestionId: `continue_${context.currentDomainIndex}`,
+          },
+          openAIApiKey
+        );
+
+        console.log(
+          `Classified intent for domain transition: ${classification.intent}`
+        );
+
+        // If they want to continue
+        if (
+          classification.intent === "yes" ||
+          (classification.selectedOption &&
+            classification.selectedOption.toLowerCase().includes("continue"))
+        ) {
+          console.log("User wants to continue to the next domain");
+
+          // Reset waiting flag
+          setWaitingForDomainTransition(false);
+
+          // Move to the next domain if valid
+          if (
+            nextDomainIndex >= 0 &&
+            nextDomainIndex < QUESTIONNAIRE_DOMAINS.length
+          ) {
+            dispatch({
+              type: "SET_POSITION",
+              payload: {
+                currentDomainIndex: nextDomainIndex,
+                currentQuestionIndex: 0,
+              },
+            });
+          } else {
+            moveToNextDomain();
+          }
+          return true;
+        }
+
+        // If they want to pause
+        if (
+          classification.intent === "no" ||
+          classification.isPauseRequest ||
+          (classification.selectedOption &&
+            (classification.selectedOption.toLowerCase().includes("pause") ||
+              classification.selectedOption.toLowerCase().includes("break")))
+        ) {
+          console.log("User wants to pause the questionnaire");
+
+          // Reset waiting flags
+          setWaitingForDomainTransition(false);
+          setNextDomainIndex(-1);
+
+          // Set context to paused with slight delay
+          setTimeout(() => {
+            dispatch({
+              type: "SET_PAUSED",
+              payload: {},
+            });
+          }, 100);
+
+          // Send confirmation message
+          const pauseKey = `pause_${context.currentDomainIndex}`;
+          if (!sentMessages.has(pauseKey)) {
+            sentMessages.add(pauseKey);
+            const pauseMessage = t('conversationalQuestionnaire.responses.pauseConfirmation');
+
+            // Save as last message
+            saveLastQuestion("pause", pauseKey, pauseMessage);
+
+            // Send message
+            onQuestionReady(pauseMessage);
+          }
+          return true;
+        }
+
+        // For unclear responses or questions, provide clarification
+        if (
+          classification.intent === "unclear" ||
+          classification.intent === "question"
+        ) {
+          const clarificationKey = `clarify_${context.currentDomainIndex}`;
+          if (!sentMessages.has(clarificationKey)) {
+            sentMessages.add(clarificationKey);
+
+            let clarificationMessage = t('conversationalQuestionnaire.continue.clarification');
+
+            // Add context about the next domain if available
+            if (
+              nextDomainIndex >= 0 &&
+              nextDomainIndex < QUESTIONNAIRE_DOMAINS.length
+            ) {
+              const nextDomain = QUESTIONNAIRE_DOMAINS[nextDomainIndex];
+              clarificationMessage = t('conversationalQuestionnaire.continue.domainClarification', {
+                domain: nextDomain.description.toLowerCase()
+              });
+            }
+
+            // Send clarification
+            onQuestionReady(clarificationMessage);
+          }
+          return true;
+        }
+
+        // For any other response, assume they want to continue
+        console.log("Assuming user wants to continue based on response");
+
+        // Reset waiting flag
+        setWaitingForDomainTransition(false);
+
+        // Move to next domain
+        if (
+          nextDomainIndex >= 0 &&
+          nextDomainIndex < QUESTIONNAIRE_DOMAINS.length
+        ) {
+          dispatch({
+            type: "SET_POSITION",
+            payload: {
+              currentDomainIndex: nextDomainIndex,
+              currentQuestionIndex: 0,
+            },
+          });
+        } else {
+          moveToNextDomain();
+        }
+        return true;
+      }
+
+      // Process regular question responses
+      return await processQuestionResponse(response);
+    } catch (error) {
+      console.error("Error in handleUserResponse:", error);
+      return false;
+    }
+  };
+
+  // Process a response to a regular question
+  const processQuestionResponse = async (
+    response: string
+  ): Promise<boolean> => {
+    try {
+      // Get the current domain and question
+      const currentDomain = QUESTIONNAIRE_DOMAINS[context.currentDomainIndex];
+      if (!currentDomain) {
+        console.error("Invalid domain index:", context.currentDomainIndex);
+        return false;
+      }
+
+      // Validate question index
+      if (context.currentQuestionIndex >= currentDomain.questions.length) {
+        console.log("At the end of domain questions, asking to continue");
+        askToContinue();
+        return true;
+      }
+
+      // Get the current question
+      const currentQuestion =
+        currentDomain.questions[context.currentQuestionIndex];
+      if (!currentQuestion) {
+        console.error("Invalid question index:", context.currentQuestionIndex);
+        return false;
+      }
+
+      console.log("Processing response to question:", currentQuestion.id);
+
+      // Use enhanced classification with full context
+      const classification = await classifyIntentWithAI(
+        response,
+        {
+          questionText: currentQuestion.text,
+          options: currentQuestion.options || [],
+          currentDomainId: currentDomain.id,
+          currentQuestionId: currentQuestion.id,
+        },
+        openAIApiKey
+      );
+
+      console.log("Response classification:", classification);
+
+      // Check if the response needs empathy
+      if (
+        classification.needsEmpathy ||
+        classification.emotionalContent !== "none"
+      ) {
+        const empathyTrigger = detectEmpathyTrigger(
+          response,
+          classification,
+          currentQuestion.text
+        );
+
+        if (empathyTrigger) {
+          console.log(
+            "Detected need for empathetic response, trigger:",
+            empathyTrigger
+          );
+
+          // Generate an empathetic response
+          const empathyResponse = await generateEmpathyResponse(
+            empathyTrigger,
+            response,
+            currentQuestion.text,
+            currentLanguage,
+            openAIApiKey
+          );
+
+          // Record this as a sensitive disclosure
+          const sensitiveDisclosure = {
+            topic: empathyTrigger,
+            questionId: currentQuestion.id,
+            domainId: currentDomain.id,
+            response: response,
+            timestamp: new Date(),
+          };
+
+          // Add to context
+          dispatch({
+            type: "ADD_SENSITIVE_DISCLOSURE",
+            payload: sensitiveDisclosure,
+          });
+
+          // Update emotional state
+          dispatch({
+            type: "SET_EMOTIONAL_STATE",
+            payload: {
+              emotionalState:
+                empathyTrigger === "physical_harm" ||
+                empathyTrigger === "safety_concern"
+                  ? "distressed"
+                  : "concerned",
+            },
+          });
+
+          // Set stage to empathetic response
+          dispatch({
+            type: "SET_STAGE",
+            payload: { stage: "empathetic_response" },
+          });
+
+          // Send the empathetic response
+          onQuestionReady(empathyResponse.responseText);
+
+          console.log("Current question ID:", currentQuestion.id);
+          console.log("Follow-up mapping:", currentQuestion.followUp);
+          console.log("Selected option:", classification.selectedOption);
+
+          // If there's a follow-up question, send that after a delay
+          // Save the response first
+          const questionnaireResponse = {
+            questionId: currentQuestion.id,
+            domainId: currentDomain.id,
+            response: response,
+            flag: currentQuestion.flag || "",
+            timestamp: new Date(),
+          };
+
+          // Add to context
+          dispatch({
+            type: "ADD_RESPONSE",
+            payload: questionnaireResponse,
+          });
+
+          // Notify parent
+          onResponseSaved(questionnaireResponse);
+
+          // Wait a brief moment and then move to the next question
+          setTimeout(() => {
+            // If followUp is defined, use that logic
+            if (currentQuestion.followUp) {
+              // Check if this option has a follow-up defined
+              let followUpId = null;
+
+              // Check exact match with selected option from classification
+              if (
+                classification.selectedOption &&
+                currentQuestion.followUp[classification.selectedOption]
+              ) {
+                followUpId =
+                  currentQuestion.followUp[classification.selectedOption];
+              }
+              // Check wildcard
+              else if (currentQuestion.followUp["*"]) {
+                followUpId = currentQuestion.followUp["*"];
+              }
+
+              if (followUpId) {
+                const targetQuestionIndex = currentDomain.questions.findIndex(
+                  (q) => q.id === followUpId
+                );
+                if (targetQuestionIndex !== -1) {
+                  dispatch({
+                    type: "SET_POSITION",
+                    payload: {
+                      currentQuestionIndex: targetQuestionIndex,
+                    },
+                  });
+
+                  // Send next question after a short delay
+                  setTimeout(() => sendNextQuestion(), 500);
+                  return;
+                }
+              }
+            }
+
+            // Default case: move to the next sequential question
+            const nextQuestionIndex = context.currentQuestionIndex + 1;
+            if (nextQuestionIndex < currentDomain.questions.length) {
+              dispatch({
+                type: "SET_POSITION",
+                payload: {
+                  currentQuestionIndex: nextQuestionIndex,
+                },
+              });
+
+              // Send next question
+              setTimeout(() => sendNextQuestion(), 500);
+            } else {
+              // End of domain, ask to continue
+              askToContinue();
+            }
+          }, 2000); // Wait 2 seconds after empathy response before showing next question
+
+          return true;
+        }
+      }
+
+      // ADD THIS SECTION - handle unclear responses to branching questions
+      if (
+        (classification.intent === "unclear" ||
+          (classification.intent === "specific_option" &&
+            classification.selectedOption === "other")) &&
+        currentQuestion.followUp &&
+        currentQuestion.options &&
+        currentQuestion.options.length > 0
+      ) {
+        console.log(
+          "Detected unclear response to branching question, asking for clarification"
+        );
+
+        // Generate clarification key different from the original question key
+        const clarificationKey = `clarify_${currentDomain.id}_${currentQuestion.id}`;
+
+        if (!sentMessages.has(clarificationKey)) {
+          sentMessages.add(clarificationKey);
+
+          // Clear the original question from sentMessages to allow it to be sent again
+          const originalQuestionKey = `question_${currentDomain.id}_${currentQuestion.id}`;
+          sentMessages.delete(originalQuestionKey);
+
+          // Ask for clarification
+          let clarificationMsg = `I need a clearer answer to proceed. ${currentQuestion.text}`;
+
+          // Add options if available
+          if (currentQuestion.options && currentQuestion.options.length > 0) {
+            clarificationMsg +=
+              " Please choose " +
+              currentQuestion.options.map((opt) => `"${opt}"`).join(" or ");
+          }
+
+          // Send the clarification
+          onQuestionReady(clarificationMsg);
+
+          return true;
+        }
+      }
+
+      // Process follow-up logic if present and we have options
+      if (
+        currentQuestion.followUp &&
+        Object.keys(currentQuestion.followUp).length > 0 &&
+        currentQuestion.options &&
+        currentQuestion.options.length > 0
+      ) {
+        // Get the selected option from classification
+        const selectedOption = classification.selectedOption;
+
+        if (selectedOption) {
+          // Check if this option has a follow-up defined
+          let followUpId = null;
+
+          // Check exact match
+          if (currentQuestion.followUp[selectedOption]) {
+            followUpId = currentQuestion.followUp[selectedOption];
+          } else {
+            // Check case-insensitive match
+            for (const option of Object.keys(currentQuestion.followUp)) {
+              if (option.toLowerCase() === selectedOption.toLowerCase()) {
+                followUpId = currentQuestion.followUp[option];
+                break;
+              }
+            }
+          }
+
+          // Check for wildcard
+          if (!followUpId && currentQuestion.followUp["*"]) {
+            followUpId = currentQuestion.followUp["*"];
+          }
+
+          if (followUpId) {
+            console.log(
+              `Found follow-up ID ${followUpId} for selected option ${selectedOption}`
+            );
+
+            // Handle domain transition if specified
+            if (followUpId.startsWith("domain[")) {
+              const targetQuestionId =
+                followUpId.match(/domain\[([^\]]+)\]/)?.[1];
+              if (targetQuestionId) {
+                // Find the domain that contains this question
+                for (let i = 0; i < QUESTIONNAIRE_DOMAINS.length; i++) {
+                  if (
+                    QUESTIONNAIRE_DOMAINS[i].questions.some(
+                      (q) => q.id === targetQuestionId
+                    )
+                  ) {
+                    // Save the response
+                    const questionnaireResponse = {
+                      questionId: currentQuestion.id,
+                      domainId: currentDomain.id,
+                      response: selectedOption,
+                      flag: currentQuestion.flag || "",
+                      timestamp: new Date(),
+                    };
+
+                    // Save state after processing a response
+                    await saveConversationState();
+
+                    // Add to context
+                    dispatch({
+                      type: "ADD_RESPONSE",
+                      payload: questionnaireResponse,
+                    });
+
+                    // Notify parent
+                    onResponseSaved(questionnaireResponse);
+
+                    // Set up for domain transition
+                    setNextDomainIndex(i);
+                    setWaitingForDomainTransition(true);
+
+                    // Ask to continue
+                    askToContinue();
+
+                    return true;
+                  }
+                }
+              }
+            } else {
+              // Regular follow-up within the same domain
+              // Find the index of the target question
+              const targetQuestionIndex = currentDomain.questions.findIndex(
+                (q) => q.id === followUpId
+              );
+
+              if (targetQuestionIndex !== -1) {
+                console.log(
+                  `Found follow-up question at index ${targetQuestionIndex}`
+                );
+
+                // Save the response
+                const questionnaireResponse = {
+                  questionId: currentQuestion.id,
+                  domainId: currentDomain.id,
+                  response: selectedOption,
+                  flag: currentQuestion.flag || "",
+                  timestamp: new Date(),
+                };
+
+                // Update parent
+                onResponseSaved(questionnaireResponse);
+
+                // Update context with explicit state management
+                const newState = {
+                  ...context,
+                  currentQuestionIndex: targetQuestionIndex,
+                };
+
+                // Use dispatch action to update the state
+                dispatch({
+                  type: "SET_POSITION",
+                  payload: {
+                    currentQuestionIndex: targetQuestionIndex,
+                  },
+                });
+
+                // Add a log before and after sending the next question
+                console.log(
+                  `Will send follow-up question ${followUpId} after state update`
+                );
+
+                console.log(
+                  "State should be updated now, sending next question"
+                );
+                console.log(
+                  `Current question index should be ${targetQuestionIndex}`
+                );
+
+                return true;
+              }
+            }
+          }
+        }
+      }
+
+      // Handle wildcard follow-up for non-option questions
+      if (currentQuestion.followUp && currentQuestion.followUp["*"]) {
+        const followUpId = currentQuestion.followUp["*"];
+
+        // Handle domain transition if specified
+        if (followUpId.startsWith("domain[")) {
+          const targetQuestionId = followUpId.match(/domain\[([^\]]+)\]/)?.[1];
+          if (targetQuestionId) {
+            // Find the domain that contains this question
+            for (let i = 0; i < QUESTIONNAIRE_DOMAINS.length; i++) {
+              if (
+                QUESTIONNAIRE_DOMAINS[i].questions.some(
+                  (q) => q.id === targetQuestionId
+                )
+              ) {
+                // Save the response and continue to next domain
+                saveResponseAndContinue(
+                  response,
+                  currentQuestion,
+                  currentDomain
+                );
+
+                // Set up for domain transition
+                setNextDomainIndex(i);
+                setWaitingForDomainTransition(true);
+
+                // Ask to continue
+                askToContinue();
+
+                return true;
+              }
+            }
+          }
+        } else {
+          // Regular follow-up within the same domain
+          // Find the index of the target question
+          const targetQuestionIndex = currentDomain.questions.findIndex(
+            (q) => q.id === followUpId
+          );
+
+          if (targetQuestionIndex !== -1) {
+            // Save the response
+            const questionnaireResponse = {
+              questionId: currentQuestion.id,
+              domainId: currentDomain.id,
+              response: response,
+              flag: currentQuestion.flag || "",
+              timestamp: new Date(),
+            };
+
+            // Add to context
+            dispatch({
+              type: "ADD_RESPONSE",
+              payload: questionnaireResponse,
+            });
+
+            // Update position
+            dispatch({
+              type: "SET_POSITION",
+              payload: {
+                currentQuestionIndex: targetQuestionIndex,
+              },
+            });
+
+            // Notify parent
+            onResponseSaved(questionnaireResponse);
+
+            // Send the next question
+            setTimeout(() => sendNextQuestion(), 500);
+
+            return true;
+          }
+        }
+      }
+
+      // For regular responses with no special handling needed:
+      return saveResponseAndContinue(response, currentQuestion, currentDomain);
+    } catch (error) {
+      console.error("Error in processQuestionResponse:", error);
+      return false;
+    }
+  };
+
+  // Helper to save a response and continue to the next question
+  const saveResponseAndContinue = (
+    response: string,
+    currentQuestion: any,
+    currentDomain: any
+  ): boolean => {
+    try {
+      // Create the response object
+      const questionnaireResponse = {
+        questionId: currentQuestion.id,
+        domainId: currentDomain.id,
+        response: response,
+        flag: currentQuestion.flag || "",
+        timestamp: new Date(),
+      };
+
+      // Add to context
+      dispatch({
+        type: "ADD_RESPONSE",
+        payload: questionnaireResponse,
+      });
+
+      // Notify parent
+      onResponseSaved(questionnaireResponse);
+
+      // Move to next question
+      if (currentQuestion.followUp) {
+        // If followUp is defined, the existing logic in processQuestionResponse handles it
+        moveToNextQuestion(currentQuestion.id);
+      } else {
+        // If no followUp, move to the next question by index
+        const nextQuestionIndex = context.currentQuestionIndex + 1;
+        if (nextQuestionIndex < currentDomain.questions.length) {
+          const nextQuestion = currentDomain.questions[nextQuestionIndex];
+          dispatch({
+            type: "SET_POSITION",
+            payload: {
+              currentQuestionIndex: nextQuestionIndex,
+            },
+          });
+
+          // Send next question after a short delay
+          setTimeout(() => {
+            console.log(
+              `Moving to next question at index ${nextQuestionIndex}`
+            );
+            sendNextQuestion();
+          }, 1000);
+        } else {
+          // End of domain, ask to continue
+          askToContinue();
+        }
+      }
+
+      return true;
+    } catch (error) {
+      console.error("Error in saveResponseAndContinue:", error);
+      return false;
+    }
+  };
+
+  // Move to the next question
+  const moveToNextQuestion = (targetQuestionId: string) => {
+    try {
+      console.log(`Moving to specific question: ${targetQuestionId}`);
+
+      // Get the current domain
+      const currentDomain = QUESTIONNAIRE_DOMAINS[context.currentDomainIndex];
+      if (!currentDomain) {
+        console.error(
+          "Invalid domain index in moveToNextQuestion:",
+          context.currentDomainIndex
+        );
+        return;
+      }
+
+      // Find the index of the target question
+      const targetIndex = currentDomain.questions.findIndex(
+        (q) => q.id === targetQuestionId
+      );
+
+      if (targetIndex === -1) {
+        console.error(
+          `Question ${targetQuestionId} not found in domain ${currentDomain.id}`
+        );
+        return;
+      }
+
+      console.log(`Found question ${targetQuestionId} at index ${targetIndex}`);
+
+      // Update the state directly with the new question index
+      dispatch({
+        type: "SET_POSITION",
+        payload: {
+          currentQuestionIndex: targetIndex,
+        },
+      });
+
+      // Use a longer delay to ensure state is updated
+      setTimeout(() => {
+        console.log(
+          `State should be updated, current question index should be ${targetIndex}`
+        );
+        console.log(`Sending question: ${targetQuestionId}`);
+        sendNextQuestion();
+      }, 1000);
+    } catch (error) {
+      console.error("Error in moveToNextQuestion:", error);
+    }
+  };
+
+  // Move to the next domain
+  const moveToNextDomain = () => {
+    try {
+      // Check if we're at the last domain
+      if (context.currentDomainIndex >= QUESTIONNAIRE_DOMAINS.length - 1) {
+        // All domains completed
+        completeQuestionnaire();
+        return;
+      }
+
+      // Move to the first question of the next domain
+      dispatch({
+        type: "SET_POSITION",
+        payload: {
+          currentDomainIndex: context.currentDomainIndex + 1,
+          currentQuestionIndex: 0,
+        },
+      });
+
+      // Reset transition flags
+      setWaitingForDomainTransition(false);
+      setNextDomainIndex(-1);
+
+      // Send the first question of the new domain
+      setTimeout(() => sendNextQuestion(), 500);
+    } catch (error) {
+      console.error("Error in moveToNextDomain:", error);
+    }
+  };
+
+  // Complete the questionnaire
+  const completeQuestionnaire = async () => {
+    try {
+      // Mark as completed first
+      dispatch({
+        type: "SET_COMPLETED",
+        payload: {},
+      });
+
+      await saveConversationState();
+
+      // Submit responses to backend
+      try {
+        await submitResponsesToBackend();
+
+        // Save completion status
+        await AsyncStorage.setItem(`questionnaire_completed_${userId}`, "true");
+
+        // Send thank you message
+        const thankYouKey = "thank_you_message";
+        if (!sentMessages.has(thankYouKey)) {
+          sentMessages.add(thankYouKey);
+          const thankYouMessage = t('conversationalQuestionnaire.responses.thankYou');
+
+          // Save as last message
+          saveLastQuestion("complete", thankYouKey, thankYouMessage);
+
+          // Send the message
+          onQuestionReady(thankYouMessage);
+        }
+      } catch (error) {
+        console.error("Error submitting questionnaire responses:", error);
+
+        // Still show thank you message even if API fails
+        const thankYouKey = "thank_you_message";
+        if (!sentMessages.has(thankYouKey)) {
+          sentMessages.add(thankYouKey);
+          const thankYouMessage = t('conversationalQuestionnaire.responses.thankYou');
+
+          // Send the message
+          onQuestionReady(thankYouMessage);
+        }
+      }
+
+      // Notify parent component
+      onQuestionnaireComplete();
+    } catch (error) {
+      console.error("Error in completeQuestionnaire:", error);
+    }
+  };
+
+  // Submit responses to backend
+  const submitResponsesToBackend = async () => {
+    try {
+      // Format responses for the API
+      const formattedResponses = context.responses.map((response) => ({
+        domainId: response.domainId,
+        questionId: response.questionId,
+        response: response.response,
+        flag: response.flag,
+        timestamp: response.timestamp.toISOString(),
+      }));
+
+      console.log(
+        "Submitting responses to backend:",
+        formattedResponses.length
+      );
+
+      // Submit each response individually to ensure all are saved
+      for (const responseData of formattedResponses) {
+        const response = await axios.post(
+          `${CONFIG.API_BASE_URL}/user/${userId}/domain`,
+          responseData,
+          {
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
+        console.log(
+          `Response saved for question ${responseData.questionId}:`,
+          response.status
+        );
+      }
+
+      console.log("All responses submitted successfully");
+    } catch (error: any) {
+      console.error("Error submitting responses to backend:", error);
+
+      // Show more detailed error information
+      if (error.response) {
+        console.error("Error status:", error.response.status);
+        console.error("Error data:", JSON.stringify(error.response.data));
+      } else if (error.request) {
+        console.error("No response received:", error.request);
+      } else {
+        console.error("Error message:", error.message);
+      }
+
+      // Mark as completed anyway to prevent restart issues
+      await AsyncStorage.setItem(`questionnaire_completed_${userId}`, "true");
+      console.log("Marked questionnaire as completed despite API error");
+
+      throw error;
+    }
+  };
+
+  // Check if questionnaire is completed
+  const isQuestionnaireCompleted = async (): Promise<boolean> => {
+    // First check in-memory state
+    if (context.isCompleted) {
+      return true;
+    }
+
+    try {
+      const completedStatus = await AsyncStorage.getItem(
+        `questionnaire_completed_${userId}`
+      );
+      return completedStatus === "true";
+    } catch (error) {
+      console.error("Error checking questionnaire completion status:", error);
+      return false;
+    }
+  };
+
+  // Start the questionnaire
+  const startQuestionnaire = () => {
+    // Prevent multiple starts
+    if (isStartingQuestionnaire.current) return;
+    isStartingQuestionnaire.current = true;
+
+    console.log("Starting questionnaire, checking intro status...");
+
+    // Reset transition flags
+    setWaitingForDomainTransition(false);
+    setNextDomainIndex(-1);
+
+    // Check if user has seen intro before
+    AsyncStorage.getItem(`intro_shown_${userId}`)
+      .then((introShown) => {
+        // Clear sent messages
+        sentMessages.clear();
+
+        // Set state to active
+        dispatch({
+          type: "SET_ACTIVE",
+          payload: {},
+        });
+
+        // Always start by asking if they have time
+        setHasAskedForTime(false);
+        setUserWantsToStart(false);
+
+        if (introShown === "true") {
+          // Skip intro for returning users
+          console.log(
+            "User has seen intro before, will skip after time confirmation"
+          );
+          setHasSeenIntro(true);
+          setIntroStep(4);
+        } else {
+          // Show intro for new users
+          console.log(
+            "First time user, will show intro after time confirmation"
+          );
+          setHasSeenIntro(false);
+          setIntroStep(0);
+        }
+
+        // Reset starting flag
+        setTimeout(() => {
+          isStartingQuestionnaire.current = false;
+        }, 2000);
+      })
+      .catch((error) => {
+        console.error("Error checking intro status:", error);
+
+        // Default to showing intro
+        setHasSeenIntro(false);
+        setIntroStep(0);
+        setHasAskedForTime(false);
+        setUserWantsToStart(false);
+
+        // Set active state
+        dispatch({
+          type: "SET_ACTIVE",
+          payload: {},
+        });
+
+        isStartingQuestionnaire.current = false;
+      });
+  };
+
+  const pauseQuestionnaire = async (): Promise<any> => {
+    try {
+      console.log("Pausing questionnaire");
+
+      // Mark as manually paused if called directly (not from app state change)
+      if (appStateRef.current === "active") {
+        wasManuallyPaused.current = true;
+        await AsyncStorage.removeItem(`questionnaire_auto_paused_${userId}`);
+      } else {
+        // This is an auto-pause
+        wasManuallyPaused.current = false;
+        await AsyncStorage.setItem(
+          `questionnaire_auto_paused_${userId}`,
+          "true"
+        );
+      }
+
+      // Save the current state first
+      await saveConversationState();
+
+      // Then mark as paused
+      dispatch({
+        type: "SET_PAUSED",
+        payload: {},
+      });
+
+      // Save again with updated pause flag
+      await saveConversationState();
+
+      // Debug log the saved context
+      console.log("Paused questionnaire, saved context:", context);
+
+      return context;
+    } catch (error) {
+      console.error("Error pausing questionnaire:", error);
+      return null;
+    }
+  };
+
+  // Resume a paused questionnaire
+  const resumeQuestionnaire = async (): Promise<void> => {
+    console.log("Resuming questionnaire");
+
+    try {
+      // Set resuming flag to prevent duplicate messages
+      isResuming.current = true;
+
+      // Clear sent messages
+      sentMessages.clear();
+
+      // Reset transition flags
+      setWaitingForDomainTransition(false);
+      setNextDomainIndex(-1);
+
+      await AsyncStorage.removeItem(`questionnaire_auto_paused_${userId}`);
+      wasManuallyPaused.current = true;
+
+      // Load the saved context
+      const savedContext = await loadConversationContext(userId);
+      console.log("Loaded saved context for resuming:", savedContext);
+      if (!savedContext) {
+        console.error("No saved context found for resuming");
+        isResuming.current = false;
+        return;
+      }
+      // Mark intro as seen
+      await AsyncStorage.setItem(`intro_shown_${userId}`, "true");
+
+      // Skip intro sequence
+      setIntroStep(4);
+      setHasSeenIntro(true);
+      setHasAskedForTime(true);
+      setUserWantsToStart(true);
+
+      // Set state with saved values but make active
+      dispatch({
+        type: "SET_ACTIVE",
+        payload: savedContext,
+      });
+
+      // Load the last question
+      const lastQuestionJson = await AsyncStorage.getItem(
+        `last_question_${userId}`
+      );
+      let lastQuestion = null;
+
+      if (lastQuestionJson) {
+        lastQuestion = JSON.parse(lastQuestionJson);
+        console.log("Loaded last question for resuming:", lastQuestion);
+      }
+
+      // Wait before continuing
+      setTimeout(() => {
+        // Check if we were at a domain continuation point
+        if (
+          savedContext.currentQuestionIndex >=
+          QUESTIONNAIRE_DOMAINS[savedContext.currentDomainIndex]?.questions
+            .length
+        ) {
+          console.log("Resuming at domain continuation point");
+
+          // Set waiting for transition
+          setWaitingForDomainTransition(true);
+          setNextDomainIndex(savedContext.currentDomainIndex + 1);
+
+          // Mark the continue message as sent to prevent duplicates
+          const continueKey = `continue_${savedContext.currentDomainIndex}`;
+          sentMessages.add(continueKey);
+
+          // Create continuation message
+          const nextDomainIndex = savedContext.currentDomainIndex + 1;
+          let continueMessage =
+            t('conversationalQuestionnaire.responses.welcomeBack');
+
+          if (nextDomainIndex < QUESTIONNAIRE_DOMAINS.length) {
+            const nextDomain = QUESTIONNAIRE_DOMAINS[nextDomainIndex];
+            continueMessage = t('conversationalQuestionnaire.responses.welcomeBack') + ` We were about to discuss ${nextDomain.description.toLowerCase()}. Would you like to continue?`;
+          }
+
+          // Use last question if available
+          if (lastQuestion && lastQuestion.domainId === "continue") {
+            continueMessage = t('conversationalQuestionnaire.responses.welcomeBack') + `${lastQuestion.text.replace(
+              /Would you like to keep going/,
+              "Would you like to continue"
+            )}`;
+          }
+
+          // Send the message
+          onQuestionReady(continueMessage);
+
+          // Reset resuming flag after a delay
+          setTimeout(() => {
+            isResuming.current = false;
+          }, 2000);
+        } else {
+          // Resume at specific question
+          console.log("Resuming at specific question");
+
+          const currentDomain =
+            QUESTIONNAIRE_DOMAINS[savedContext.currentDomainIndex];
+          if (!currentDomain) {
+            console.error(
+              "Invalid domain index when resuming:",
+              savedContext.currentDomainIndex
+            );
+            isResuming.current = false;
+            return;
+          }
+
+          const currentQuestion =
+            currentDomain.questions[savedContext.currentQuestionIndex];
+          if (!currentQuestion) {
+            console.error(
+              "Invalid question index when resuming:",
+              savedContext.currentQuestionIndex
+            );
+            isResuming.current = false;
+            return;
+          }
+
+          // Mark the current question as sent to prevent duplicates
+          const questionKey = `question_${currentDomain.id}_${currentQuestion.id}`;
+          sentMessages.add(questionKey);
+
+          // Also mark any previous messages to prevent them from being resent
+          sentMessages.add("time_question");
+          if (savedContext.currentDomainIndex === 0 && savedContext.currentQuestionIndex === 0) {
+            sentMessages.add("first_question");
+          }
+
+          // Create resume message with welcome back text
+          let resumeMessage =
+            t('conversationalQuestionnaire.responses.welcomeBack')
+
+          // Add the question
+          if (
+            lastQuestion &&
+            lastQuestion.domainId === currentDomain.id &&
+            lastQuestion.questionId === currentQuestion.id
+          ) {
+            resumeMessage += lastQuestion.text;
+          } else {
+            resumeMessage += formatQuestionConversationally(
+              currentDomain,
+              currentQuestion
+            );
+          }
+
+          // Send the message
+          onQuestionReady(resumeMessage);
+
+          // Check if this is an info message and auto-continue
+          if (isInfoMessage(currentQuestion.id)) {
+            console.log("Resumed on info message, will auto-continue after delay");
+            
+            // Auto-continue after 2 seconds for info messages
+            setTimeout(() => {
+              console.log("Auto-continuing from resumed info message");
+              
+              // Move to next question automatically
+              const nextQuestionIndex = savedContext.currentQuestionIndex + 1;
+              if (nextQuestionIndex < currentDomain.questions.length) {
+                dispatch({
+                  type: "SET_POSITION",
+                  payload: {
+                    currentQuestionIndex: nextQuestionIndex,
+                  },
+                });
+              } else {
+                // End of domain, ask to continue
+                askToContinue();
+              }
+              
+              // Reset resuming flag after auto-continue
+              isResuming.current = false;
+            }, 2000);
+          } else {
+            // Reset resuming flag after a delay for regular questions
+            setTimeout(() => {
+              isResuming.current = false;
+            }, 2000);
+          }
+        }
+      }, 1000);
+    } catch (error) {
+      console.error("Error resuming questionnaire:", error);
+      isResuming.current = false;
+    }
+  };
+
+  const reloadContextFromStorage = async () => {
+    try {
+      console.log(
+        "Explicitly reloading context from storage for user:",
+        userId
+      );
+      const savedContext = await loadConversationContext(userId);
+
+      if (savedContext) {
+        console.log(
+          "Found saved context with pause state:",
+          savedContext.isPaused
+        );
+
+        // Always preserve the pause state exactly as it was saved
+        const wasPaused = savedContext.isPaused || false;
+
+        // Directly apply the saved context
+        dispatch({
+          type: "RESET",
+          payload: savedContext,
+        });
+
+        // If it was paused, ensure that state is preserved
+        if (wasPaused) {
+          dispatch({
+            type: "SET_PAUSED",
+            payload: {},
+          });
+        }
+
+        // Check if it was auto-paused
+        const autoPaused = await AsyncStorage.getItem(
+          `questionnaire_auto_paused_${userId}`
+        );
+        wasManuallyPaused.current = autoPaused !== "true";
+
+        return true;
+      }
+
+      console.log("No saved context found for reloading");
+      return false;
+    } catch (error) {
+      console.error("Error reloading context from storage:", error);
+      return false;
+    }
+  };
+
+  // Return the public API for the questionnaire manager
+  return {
+    startQuestionnaire,
+    handleUserResponse,
+    resumeQuestionnaire,
+    isPaused: context.isPaused,
+    isActive: context.isActive,
+    isCompleted: context.isCompleted,
+    isQuestionnaireCompleted,
+    pauseQuestionnaire,
+    reloadContextFromStorage,
+    context,
+  };
+};
+
+export default ConversationalQuestionnaire;

@@ -11,34 +11,28 @@ import {
   Platform,
   Switch,
   Dimensions,
+  Image,
+  Pressable,
+  Linking
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-// import * as WebBrowser from "expo-web-browser";
-// import * as AuthSession from "expo-auth-session";
-// import {
-//   GoogleSignin,
-//   GoogleSigninButton,
-//   statusCodes,
-// } from "@react-native-google-signin/google-signin";
-import { useDispatch } from "react-redux";
+import { Provider, useDispatch } from "react-redux";
 import { setToken, setUser } from "@/store/userSlice";
 import LogoSvg from "@/assets/images/Svg/LogoSvg";
 import CustomTextInput from "@/components/ui/CustomTextInput";
 import { width } from "@/constants/helper";
 import { LinearGradient } from "expo-linear-gradient";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { CONFIG } from "@/constants/config";
+import appLogo from "@/assets/images/Svg/appLogo.png";
+import { store } from "../store/store";
 
-// WebBrowser.maybeCompleteAuthSession();
-// GoogleSignin.configure({
-//   webClientId:
-//     "457085426884-5aboj03hndd1l6teed5hl85vq2ba9t1b.apps.googleusercontent.com",
-// });
 const height = Dimensions.get("window").height;
 
-const Login: FC = () => {
-  // console.log(Dimensions.get('window').width /430 * 12 , "font size")
-  // console.log(Dimensions.get('window').height , "font size")
+// Separate component that uses Redux hooks
+const LoginContent: FC = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -55,15 +49,11 @@ const Login: FC = () => {
   }, [navigation]);
 
   const handleLogin = async () => {
-    // const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const newError: any = {};
 
     if (!email) {
       newError.email = "Email is required.";
     }
-    // else if (!emailRegex.test(email)) {
-    //   newError.email = "Invalid email format.";
-    // }
 
     if (!password) {
       newError.password = "Password is required.";
@@ -78,22 +68,45 @@ const Login: FC = () => {
     setLoading(true);
 
     try {
-      // console.log(`${process.env.DATABASE_URL}`);
-      const response = await fetch(
-        `https://crosscare-backends.onrender.com/api/login`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ email: email, password: password }),
-        }
-      );
+      const response = await fetch(`${CONFIG.API_BASE_URL}/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: email.toLowerCase().trim(),
+          password: password,
+        }),
+      });
 
       const data = await response.json();
       console.log("API Response:", data);
 
       if (!response.ok) {
+        // Check if email verification is required
+        if (data.requiresVerification) {
+          Alert.alert(
+            "Email Verification Required",
+            "Please verify your email address before logging in.",
+            [
+              {
+                text: "Verify Now",
+                onPress: () =>
+                  router.push({
+                    pathname: "/verify-email",
+                    params: { email: data.email || email },
+                  }),
+              },
+              {
+                text: "Cancel",
+                style: "cancel",
+              },
+            ]
+          );
+          setLoading(false);
+          return;
+        }
+
         throw new Error(data.message || "Login failed");
       }
 
@@ -101,14 +114,14 @@ const Login: FC = () => {
         console.log("Dispatching User Data to Redux:", data);
         dispatch(
           setUser({
-            user_id: data.userId || data.patientId,  // ✅ Handle correct field name
+            user_id: data.userId || data.patientId,
             user_email: data.email,
             user_name: data.name,
-            user_photo: data.profilePicture || "",  // ✅ Handle missing photo
-            token: data.accessToken, // ✅ Store token inside setUser()
+            user_photo: data.profilePicture || "",
+            token: data.accessToken,
           })
         );
-  
+
         dispatch(setToken(data.accessToken));
         await AsyncStorage.setItem(
           "user",
@@ -119,10 +132,10 @@ const Login: FC = () => {
             user_photo: data.profilePicture || "",
             token: data.accessToken,
           })
-        ); // ✅ Must be stringified
+        );
 
-        await AsyncStorage.setItem("userToken", data.accessToken); // ✅ Save token persistently
-  
+        await AsyncStorage.setItem("userToken", data.accessToken);
+
         router.replace("/patient/(tabs)/home");
       }
 
@@ -150,130 +163,145 @@ const Login: FC = () => {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    <SafeAreaView
+      style={{
+        flex: 1,
+        backgroundColor: "#fff",
+        justifyContent: "center",
+        alignItems: "center",
+      }}
     >
-      <View
-        style={{
-          justifyContent: "center",
-          marginTop: 60,
-        }}
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         <View
           style={{
-            alignItems: "center",
+            justifyContent: "center",
+            marginTop: 40,
           }}
         >
-          <LogoSvg />
-        </View>
-        <Text style={styles.title}>Welcome, Get Started!</Text>
-        <View
-          style={{
-            width: "100%",
-            marginTop: width * 56,
-            flexDirection: "column",
-            gap: 20,
-          }}
-        >
-          <CustomTextInput
-            icon="user"
-            type="email"
-            value={email}
-            onChangeText={handleChangeEmail}
-            placeholder="Username"
-            errorMessage={emailError}
-          />
-          <CustomTextInput
-            icon="lock"
-            type="password"
-            value={password}
-            onChangeText={handleChangePassword}
-            placeholder="Password"
-            secureTextEntry={true}
-            errorMessage={passwordError}
-          />
-          <TouchableOpacity
-            style={styles.button}
-            onPress={handleLogin}
-            disabled={loading}
-          >
-            <LinearGradient
-              colors={["#87247D", "#E05FA0"]} // Gradient colors
-              start={{ x: 0, y: 0 }} // Start of the gradient (top-left)
-              end={{ x: 1, y: 0 }} // End of the gradient (top-right)
-              style={styles.gradient} // Apply gradient as background
-            >
-              {loading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.buttonText}>Log In</Text>
-              )}
-            </LinearGradient>
-          </TouchableOpacity>
-        </View>
-
-        <TouchableOpacity onPress={() => router.push("/forget-password")}>
-          <Text
+          <View
             style={{
-              fontSize: width * 14,
+              alignItems: "center",
+            }}
+          >
+            <Image source={appLogo} style={{ width: 100, height: 100 }} resizeMode="contain" />
+          </View>
+          <Text style={styles.title}>Welcome, Get Started!</Text>
+          <View
+            style={{
               width: "100%",
-              textAlign: "left",
-              color: "#E05FA0",
-              fontFamily: "DMSans400",
-              marginTop: 17,
-              textDecorationLine: "underline",
+              marginTop: 56,
+              flexDirection: "column",
+              gap: 20,
             }}
           >
-            Forgot Password?
-          </Text>
-        </TouchableOpacity>
-        <View
-          style={{
-            flexDirection: "column",
-            gap: 12,
-            marginTop: 12,
-          }}
-        >
-          <Text
-            style={{
-              fontSize: width * 14,
-              color: "#1B2559",
-              fontFamily: "DMSans400",
-              marginTop: 0.017,
-              textAlign: "center",
-              // textDecorationLine: "underline",
-            }}
-          >
-            -OR-
-          </Text>
-          <Text
-            style={{
-              fontSize: width * 14,
-              color: "#545454",
-              fontFamily: "Poppins400",
+            <CustomTextInput
+              icon="user"
+              type="email"
+              value={email}
+              onChangeText={handleChangeEmail}
+              placeholder="Email"
+              errorMessage={emailError}
+            />
+            <CustomTextInput
+              icon="lock"
+              type="password"
+              value={password}
+              onChangeText={handleChangePassword}
+              placeholder="Password"
+              secureTextEntry={true}
+              errorMessage={passwordError}
+            />
+            <TouchableOpacity
+              style={styles.button}
+              onPress={handleLogin}
+              disabled={loading}
+            >
+              <LinearGradient
+                colors={["#EF99D9", "#E35ABB"]}
+                start={{
+                  x: Math.cos((117 * Math.PI) / 180),
+                  y: Math.sin((117 * Math.PI) / 180),
+                }}
+                end={{
+                  x: Math.cos(((117 + 180) * Math.PI) / 180),
+                  y: Math.sin(((117 + 180) * Math.PI) / 180),
+                }}
+                style={styles.gradient}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.buttonText}>Log In</Text>
+                )}
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
 
-              textAlign: "center",
-            }}
-          >
-            Login as{" "}
+          <TouchableOpacity onPress={() => router.push("/forget-password")}>
             <Text
               style={{
-                fontFamily: "DMSans400",
+                fontSize: 14,
+                width: "100%",
+                textAlign: "left",
                 color: "#E05FA0",
+                fontFamily: "DMSans400",
+                marginTop: 17,
                 textDecorationLine: "underline",
               }}
-              onPress={() => router.push("/signup")}
             >
-              Administrator/Doctor
+              Forgot Password?
             </Text>
-          </Text>
+          </TouchableOpacity>
+          <View
+            style={{
+              flexDirection: "column",
+              gap: 12,
+              marginTop: 12,
+            }}
+          >
+            <Text
+              style={{
+                fontSize: 14,
+                color: "#545454",
+                fontFamily: "DMSans400",
+                textAlign: "center",
+                marginTop: 8,
+              }}
+            >
+              New patient?{" "}
+              <Text
+                style={{
+                  fontFamily: "DMSans500",
+                  color: "#E05FA0",
+                  textDecorationLine: "underline",
+                }}
+                onPress={() => router.push("/signup")}
+              >
+                Sign up
+              </Text>
+            </Text>
+          </View>
         </View>
-      </View>
-      <Text style={styles.footerText}>
-        Terms & Conditions | Privacy Policy | Contact Us
-      </Text>
-    </KeyboardAvoidingView>
+        <Pressable onPress={() => Linking.openURL("https://crosscaretech.com/privacy-policy")}>
+          <Text style={styles.footerText}>DISCLAIMER: CrossCare Concierge is not a medical device and does not diagnose, treat, cure, or prevent any medical condition. Please consult a healthcare professional for medical advice, diagnosis, or treatment.</Text>
+          <Text style={styles.footerText}>
+            Terms & Conditions | Privacy Policy | Contact Us
+          </Text>
+        </Pressable>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+};
+
+// Main component that wraps Redux Provider
+const Login: FC = () => {
+  return (
+    <Provider store={store}>
+      <LoginContent />
+    </Provider>
   );
 };
 
@@ -287,17 +315,13 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
   },
   title: {
-    fontSize: width * 18,
-    // fontWeight: '600',
+    fontSize: 18,
     textAlign: "center",
-    // marginBottom: 16,
-    fontFamily: "Satoshi500",
+    fontFamily: "DMSans500",
     color: "#545454",
   },
   subtitle: {
-    // fontSize: ,
     color: "#555",
-    // marginBottom: 20,
   },
   input: {
     width: "100%",
@@ -305,15 +329,15 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderRadius: 10,
     paddingHorizontal: 15,
-    // marginBottom: 15,
     borderWidth: 1,
     borderColor: "#ddd",
     fontSize: 16,
     color: "#333",
   },
   gradient: {
-    width: "100%", // Make the gradient fill the entire button
-    height: "100%", // Make the gradient fill the entire button
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    width: "100%",
     justifyContent: "center",
     alignItems: "center",
     borderRadius: 8,
@@ -335,23 +359,21 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   button: {
-    height: 56,
     backgroundColor: "#87247D",
     justifyContent: "center",
     alignItems: "center",
     borderRadius: 8,
   },
   buttonText: {
-    fontSize: width * 18,
+    fontSize: 20,
     color: "#fff",
     letterSpacing: 0.2,
-    // fontWeight: "bold",
-    fontFamily: "Satoshi700",
+    fontFamily: "DMSans600",
   },
   footerText: {
     textAlign: "center",
-    fontFamily: "Poppins400",
-    fontSize: width * 12,
+    fontFamily: "DMSans400",
+    fontSize: 12,
     color: "#545454",
     paddingBottom: 20,
   },

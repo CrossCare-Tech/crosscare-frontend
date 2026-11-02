@@ -1,175 +1,188 @@
-"use client"
+"use client";
 
-import { useRef, useEffect, useState } from "react"
-import { StyleSheet, Text, View, TouchableOpacity, Image, Animated, StatusBar, ActivityIndicator } from "react-native"
-import { SafeAreaView } from "react-native-safe-area-context"
-import { Ionicons } from "@expo/vector-icons"
-import { LinearGradient } from "expo-linear-gradient"
-import { useLocalSearchParams, useRouter } from "expo-router"
+import { useRef, useEffect, useState } from "react";
+import {
+  StyleSheet,
+  Text,
+  View,
+  TouchableOpacity,
+  Image,
+  Animated,
+  StatusBar,
+  ActivityIndicator,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { CONFIG } from "@/constants/config";
 
 // Define the exercise item interface
 interface ExerciseItem {
-  id: string
-  type: string
-  title: string
-  duration: string
-  image: string
-  isLocked: boolean
-  isFavorite: boolean
-  content?: string
+  id: string;
+  type: string;
+  title: string;
+  duration: string;
+  image: string;
+  isLocked: boolean;
+  isFavorite: boolean;
+  content?: string;
 }
 
 interface AudioItem {
-    id: string
-    title: string
-    url: string
-    duration: string
-    image: string | null
-    categoryId: string
-    createdAt: string
-    updatedAt: string
-  }
+  id: string;
+  title: string;
+  url: string;
+  duration: string;
+  image: string | null;
+  categoryId: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
 // Define the category interface
 interface Category {
-  id: string
-  title: string
-  iconType: string
-  count: number
-  contentType: string
-  gradientColors: string[]
-  content: ExerciseItem[] | AudioItem[]
+  id: string;
+  title: string;
+  iconType: string;
+  count: number;
+  contentType: string;
+  gradientColors: string[];
+  content: ExerciseItem[] | AudioItem[];
 }
 
 const ExerciseDetailScreen = () => {
-  const router = useRouter()
-  const params = useLocalSearchParams()
+  const router = useRouter();
+  const params = useLocalSearchParams();
 
   // Parse params (all params come as strings in Expo Router)
-  const title = (params.title as string) || "Exercise Details"
-  const count = Number.parseInt((params.count as string) || "0", 10)
-  const contentType = (params.contentType as string) || "EXERCISES"
+  const title = (params.title as string) || "Exercise Details";
+  const count = Number.parseInt((params.count as string) || "0", 10);
+  const contentType = (params.contentType as string) || "EXERCISES";
 
   // Parse gradient colors from params or use default blue gradient
-  let gradientColors: string[] = ["#0039C6", "#0039C6", "#7B96FF"]
+  let gradientColors: string[] = ["#0039C6", "#0039C6", "#7B96FF"];
   try {
     if (params.gradientColors) {
-      const parsedColors = JSON.parse(params.gradientColors as string)
+      const parsedColors = JSON.parse(params.gradientColors as string);
       if (Array.isArray(parsedColors) && parsedColors.length >= 2) {
-        gradientColors = parsedColors
+        gradientColors = parsedColors;
       }
     }
   } catch (error) {
-    console.log("Error parsing gradient colors:", error)
+    console.log("Error parsing gradient colors:", error);
   }
 
-  const [categoryData, setCategoryData] = useState<Category | null>(null)
-  const [exercises, setExercises] = useState<ExerciseItem[] | AudioItem[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [categoryData, setCategoryData] = useState<Category | null>(null);
+  const [exercises, setExercises] = useState<ExerciseItem[] | AudioItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Get the 'id' from params
-  const id = params.id as string
+  const id = params.id as string;
 
-  console.log("Exercise ID:", id) // Log the exercise ID
+  console.log("Exercise ID:", id); // Log the exercise ID
 
   // Fetch the exercise details using the `id` from URL params
   useEffect(() => {
     const fetchExerciseDetails = async () => {
-      setIsLoading(true)
-      setError(null)
+      setIsLoading(true);
+      setError(null);
 
       try {
         if (!id) {
-          console.log("No category ID provided")
-          setExercises([])
-          setIsLoading(false)
-          return
+          console.log("No category ID provided");
+          setExercises([]);
+          setIsLoading(false);
+          return;
         }
 
         // Use the correct API URL and endpoint
-        const response = await fetch(`https://crosscare-backends.onrender.com/api/categories/${id}`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        })
+        const response = await fetch(
+          `${CONFIG.API_BASE_URL}/categories/${id}`,
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
 
         if (!response.ok) {
-          throw new Error(`API responded with status: ${response.status}`)
+          throw new Error(`API responded with status: ${response.status}`);
         }
 
         // Get response as text first to debug
-        const responseText = await response.text()
-        console.log("Exercise Details:", responseText)
+        const responseText = await response.text();
+        console.log("Exercise Details:", responseText);
 
         // Check if response is empty or "null"
         if (!responseText || responseText.trim() === "null") {
-          console.log("Empty or null response received")
-          setExercises([])
-          setIsLoading(false)
-          return
+          console.log("Empty or null response received");
+          setExercises([]);
+          setIsLoading(false);
+          return;
         }
 
         // Try to parse the text as JSON
-        let data
+        let data;
         try {
-          data = JSON.parse(responseText)
+          data = JSON.parse(responseText);
         } catch (parseError) {
-          console.error("JSON parse error:", parseError)
-        //   throw new Error(`Failed to parse JSON: ${parseError.message}`)
+          console.error("JSON parse error:", parseError);
+          //   throw new Error(`Failed to parse JSON: ${parseError.message}`)
         }
 
         // Check if data has the expected structure
         if (data && data.content && Array.isArray(data.content)) {
-          setCategoryData(data)
-          setExercises(data.content)
+          setCategoryData(data);
+          setExercises(data.content);
         } else {
-          console.log("Unexpected data structure")
-          setExercises([])
+          console.log("Unexpected data structure");
+          setExercises([]);
         }
       } catch (fetchError) {
-        console.error("Error fetching exercise details:", fetchError)
+        console.error("Error fetching exercise details:", fetchError);
         // setError(fetchError.message)
-        setExercises([])
+        setExercises([]);
       } finally {
-        setIsLoading(false)
+        setIsLoading(false);
       }
-    }
+    };
 
-    fetchExerciseDetails()
-  }, [id])
+    fetchExerciseDetails();
+  }, [id]);
 
   // Animation values
-  const fadeAnim = useRef(new Animated.Value(0)).current
-  const scrollY = useRef(new Animated.Value(0)).current
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scrollY = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    StatusBar.setBarStyle("light-content")
+    StatusBar.setBarStyle("light-content");
     Animated.timing(fadeAnim, {
       toValue: 1,
       duration: 600,
       useNativeDriver: true,
-    }).start()
+    }).start();
 
     return () => {
-      StatusBar.setBarStyle("dark-content")
-    }
-  }, [])
+      StatusBar.setBarStyle("dark-content");
+    };
+  }, []);
 
   // Header background color animation
   const headerBackgroundColor = scrollY.interpolate({
     inputRange: [0, 100],
     outputRange: ["transparent", "white"],
     extrapolate: "clamp",
-  })
+  });
 
   // Header title opacity animation
   const headerTitleOpacity = scrollY.interpolate({
     inputRange: [0, 80, 100],
     outputRange: [0, 0.5, 1],
     extrapolate: "clamp",
-  })
+  });
 
   const handleExercisePress = (exercise: ExerciseItem | AudioItem) => {
     if (!exercise.isLocked) {
@@ -181,9 +194,9 @@ const ExerciseDetailScreen = () => {
           contentType: "Exercise",
           gradientColors: JSON.stringify(gradientColors),
         },
-      })
+      });
     }
-  }
+  };
 
   // Render empty state when no exercises are available
   const renderEmptyState = () => {
@@ -191,10 +204,12 @@ const ExerciseDetailScreen = () => {
       <View style={styles.emptyContainer}>
         {/* <Ionicons name="folder-open-outline" size={64} color="#ccc" /> */}
         <Text style={styles.emptyTitle}>No Exercises Found</Text>
-        <Text style={styles.emptyText}>There are no exercises available for this category yet.</Text>
+        <Text style={styles.emptyText}>
+          There are no exercises available for this category yet.
+        </Text>
       </View>
-    )
-  }
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -216,7 +231,10 @@ const ExerciseDetailScreen = () => {
             },
           ]}
         >
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
             <Animated.Text
               style={{
                 color: scrollY.interpolate({
@@ -253,10 +271,16 @@ const ExerciseDetailScreen = () => {
       <Animated.ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
-        onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: false })}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: false }
+        )}
         scrollEventThrottle={16}
       >
-        <LinearGradient colors={gradientColors} style={styles.gradientContainer}>
+        <LinearGradient
+          colors={gradientColors}
+          style={styles.gradientContainer}
+        >
           <View style={styles.headerContent}>
             <Animated.Text
               style={[
@@ -270,7 +294,8 @@ const ExerciseDetailScreen = () => {
                 },
               ]}
             >
-              {categoryData?.count || count} {categoryData?.contentType || contentType}
+              {categoryData?.count || count}{" "}
+              {categoryData?.contentType || contentType}
             </Animated.Text>
             <Animated.Text
               style={[
@@ -327,12 +352,19 @@ const ExerciseDetailScreen = () => {
                   onPress={() => handleExercisePress(exercise)}
                   activeOpacity={exercise.isLocked ? 1 : 0.7} // Only show press effect if not locked
                 >
-                  <Animated.View style={[styles.exerciseCard, { opacity: fadeAnim }]}>
-                    <Image source={{ uri: exercise.image }} style={styles.exerciseImage} />
+                  <Animated.View
+                    style={[styles.exerciseCard, { opacity: fadeAnim }]}
+                  >
+                    <Image
+                      source={{ uri: exercise.image }}
+                      style={styles.exerciseImage}
+                    />
                     <View style={styles.exerciseInfo}>
                       <Text style={styles.exerciseType}>{exercise.type}</Text>
                       <Text style={styles.exerciseTitle}>{exercise.title}</Text>
-                      <Text style={styles.exerciseDuration}>{exercise.duration}</Text>
+                      <Text style={styles.exerciseDuration}>
+                        {exercise.duration}
+                      </Text>
                       {/* {exercise.content && (
                         <Text style={styles.exerciseContent} numberOfLines={2}>
                           {exercise.content}
@@ -343,18 +375,28 @@ const ExerciseDetailScreen = () => {
                       {!exercise.isLocked && (
                         <TouchableOpacity style={styles.actionButton}>
                           <Ionicons
-                            name={exercise.isFavorite ? "heart" : "heart-outline"}
+                            name={
+                              exercise.isFavorite ? "heart" : "heart-outline"
+                            }
                             size={24}
                             color={exercise.isFavorite ? "#f06292" : "#666"}
                           />
                         </TouchableOpacity>
                       )}
                       <TouchableOpacity style={styles.actionButton}>
-                        <Ionicons name="information-circle-outline" size={24} color="#666" />
+                        <Ionicons
+                          name="information-circle-outline"
+                          size={24}
+                          color="#666"
+                        />
                       </TouchableOpacity>
                       {exercise.isLocked && (
                         <View style={styles.lockContainer}>
-                          <Ionicons name="lock-closed" size={18} color="white" />
+                          <Ionicons
+                            name="lock-closed"
+                            size={18}
+                            color="white"
+                          />
                         </View>
                       )}
                     </View>
@@ -364,8 +406,8 @@ const ExerciseDetailScreen = () => {
         </View>
       </Animated.ScrollView>
     </View>
-  )
-}
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
@@ -550,6 +592,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
     maxWidth: "80%",
   },
-})
+});
 
-export default ExerciseDetailScreen
+export default ExerciseDetailScreen;

@@ -7,7 +7,6 @@ export default function ProfileStack() {
         }}>
             <Stack.Screen name="name" />
             <Stack.Screen name='pregrancy'/>
-            <Stack.Screen name='earnbadge'/>
             <Stack.Screen name='language'/>
             <Stack.Screen name='notification'/>
             <Stack.Screen name='help'/>

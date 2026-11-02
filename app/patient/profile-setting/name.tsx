@@ -30,6 +30,9 @@ import Globe from "@/assets/images/Svg/Globe";
 import Notification from "@/assets/images/Svg/Notification";
 import Help from "@/assets/images/Svg/Help";
 import Terms from "@/assets/images/Svg/Terms";
+import { useTranslation } from "react-i18next";
+import { CONFIG } from "@/constants/config";
+
 
 const ProfileField = ({
   label,
@@ -65,6 +68,7 @@ const EditableNameField = ({
   onSave: (value: string) => void;
   onCancel: () => void;
 }) => {
+  const { t } = useTranslation();
   const [inputValue, setInputValue] = useState(value);
 
   return (
@@ -96,7 +100,7 @@ const EditableNameField = ({
                 fontFamily: "DMSans600",
               }}
             >
-              Save
+              {t("save")}
             </Text>
           </TouchableOpacity>
         </View>
@@ -124,6 +128,7 @@ const EditableAgeField = ({
   onSave: (age: number) => void;
   onCancel: () => void;
 }) => {
+  const { t } = useTranslation();
   const [inputValue, setInputValue] = useState(age.toString());
 
   const handleSave = () => {
@@ -159,7 +164,7 @@ const EditableAgeField = ({
                 fontFamily: "DMSans600",
               }}
             >
-              Save
+              {t("save")}
             </Text>
           </TouchableOpacity>
         </View>
@@ -190,6 +195,7 @@ const EditableEmailField = ({
   onSave: (value: string) => void;
   onCancel: () => void;
 }) => {
+  const { t } = useTranslation();
   const [inputValue, setInputValue] = useState(value);
 
   return (
@@ -221,7 +227,7 @@ const EditableEmailField = ({
                 fontFamily: "DMSans600",
               }}
             >
-              Save
+              {t("save")}
             </Text>
           </TouchableOpacity>
         </View>
@@ -240,72 +246,6 @@ const EditableEmailField = ({
   );
 };
 
-const EditablePregnancyWeekField = ({
-  label,
-  week,
-  onSave,
-  onCancel,
-}: {
-  label: string;
-  week: number;
-  onSave: (week: number) => void;
-  onCancel: () => void;
-}) => {
-  const [inputValue, setInputValue] = useState(week.toString());
-
-  const handleSave = () => {
-    Keyboard.dismiss();
-    const newWeek = Number.parseInt(inputValue);
-    if (!isNaN(newWeek) && newWeek > 0 && newWeek <= 42) {
-      onSave(newWeek);
-    } else {
-      onCancel();
-    }
-  };
-
-  return (
-    <View style={styles.fieldContainer}>
-      <View style={styles.fieldContent}>
-        <Text style={styles.fieldLabel}>{label}</Text>
-        <View style={styles.editActions}>
-          {/* <TouchableOpacity onPress={onCancel} style={styles.editButton}>
-            <Text style={{
-              color: '#E162BC',
-              fontSize: 12,
-              fontFamily:'DMSans600',
-            }}>Cancel</Text>
-          </TouchableOpacity> */}
-          <TouchableOpacity
-            onPress={handleSave}
-            style={[styles.editButton, { marginLeft: 10 }]}
-          >
-            <Text
-              style={{
-                color: "#E162BC",
-                fontSize: 14,
-                fontFamily: "DMSans600",
-              }}
-            >
-              Save
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-      <View style={styles.separator} />
-      <View style={styles.ageInputContainer}>
-        <Text style={styles.fieldValue}>Week </Text>
-        <TextInput
-          style={styles.ageInput}
-          value={inputValue}
-          onChangeText={setInputValue}
-          keyboardType="numeric"
-          autoFocus
-        />
-      </View>
-    </View>
-  );
-};
-
 const name = () => {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [profile, setProfile] = useState();
@@ -314,6 +254,7 @@ const name = () => {
   const [age, setAge] = useState(0);
   const [updating, setUpdating] = useState(false);
   const [email, setEmail] = useState(user?.user_email);
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [pregnancyWeek, setPregnancyWeek] = useState(0);
   const [permissionStatus, setPermissionStatus] =
     useState<Notifications.PermissionStatus | null>(null);
@@ -321,16 +262,18 @@ const name = () => {
   console.log("token", token);
   console.log("userData1", user);
   const dispatch = useDispatch();
+  const { t } = useTranslation();
 
   // State for edit modes
   const [isEditingName, setIsEditingName] = useState(false);
   const [isEditingAge, setIsEditingAge] = useState(false);
   const [isEditingEmail, setIsEditingEmail] = useState(false);
+  const [isEditingPhoneNumber, setIsEditingPhoneNumber] = useState(false);
   const [isEditingPregnancyWeek, setIsEditingPregnancyWeek] = useState(false);
 
   const getProfile = async () => {
     const response = await fetch(
-      `https://crosscare-backends.onrender.com/api/user/${user?.user_id}/profile`,
+      `${CONFIG.API_BASE_URL}/user/${user?.user_id}/profile`,
       {
         method: "GET",
         headers: {
@@ -345,6 +288,7 @@ const name = () => {
     setAge(data.age || 0);
     setName(data.name || "");
     setEmail(data.email || "");
+    setPhoneNumber(data.phoneNumber || "");
     setPregnancyWeek(data.week || 0);
 
     // Extract and log question responses
@@ -385,7 +329,7 @@ const name = () => {
       updateData[fieldName] = value;
 
       const response = await fetch(
-        `https://crosscare-backends.onrender.com/api/user/${user.user_id}/profile`,
+        `${CONFIG.API_BASE_URL}/user/${user.user_id}/profile`,
         {
           method: "PUT",
           headers: {
@@ -415,6 +359,8 @@ const name = () => {
         updatedUserData.user_name = value as string;
       } else if (fieldName === "email") {
         updatedUserData.user_email = value as string;
+      } else if (fieldName === "phoneNumber") {
+        updatedUserData.phoneNumber = value as string;
       }
 
       // Update Redux state with the updated user data
@@ -429,50 +375,6 @@ const name = () => {
     }
   };
 
-  const toggleNotifications = async () => {
-    try {
-      if (!notificationsEnabled) {
-        // Request permissions if notifications are being enabled
-        const permissionGranted = await requestNotificationPermissions();
-        setPermissionStatus(
-          permissionGranted
-            ? Notifications.PermissionStatus.GRANTED
-            : Notifications.PermissionStatus.DENIED
-        );
-
-        if (permissionGranted) {
-          // Fixed: using permissionGranted instead of status
-          setNotificationsEnabled(true);
-          Alert.alert(
-            "Notifications Enabled",
-            "You will now receive notifications from the app.",
-            [{ text: "OK" }]
-          );
-        } else {
-          // Show alert if permission denied
-          // Alert.alert(
-          //   "Permission Required",
-          //   "Notification permission is required. Please enable notifications in your device settings.",
-          //   [{ text: "OK" }],
-          // )
-        }
-      } else {
-        // Simply disable notifications in the app
-        setNotificationsEnabled(false);
-        // Alert.alert("Notifications Disabled", "You will no longer receive notifications from the app.", [
-        //   { text: "OK" },
-        // ])
-      }
-    } catch (error) {
-      console.error("Error toggling notifications:", error);
-      Alert.alert(
-        "Error",
-        "There was a problem updating your notification settings.",
-        [{ text: "OK" }]
-      );
-    }
-  };
-
   // Name handlers
   const handleSaveName = async (newName: string) => {
     if (newName.trim()) {
@@ -480,13 +382,6 @@ const name = () => {
       await updateProfile("name", newName);
     }
     setIsEditingName(false);
-  };
-
-  // Pregnancy week handlers
-  const handleSavePregnancyWeek = async (newWeek: number) => {
-    setPregnancyWeek(newWeek);
-    await updateProfile("week", newWeek);
-    setIsEditingPregnancyWeek(false);
   };
 
   // Email handlers
@@ -505,9 +400,43 @@ const name = () => {
     setIsEditingAge(false);
   };
 
+  // Phone Number handlers
+  const handleSavePhoneNumber = async (newPhoneNumber: string) => {
+    if (newPhoneNumber.trim()) {
+      setPhoneNumber(newPhoneNumber);
+      await updateProfile("phoneNumber", newPhoneNumber);
+    }
+    setIsEditingPhoneNumber(false);
+  };
+
+  // Pregnancy Week handlers
+  const handleSavePregnancyWeek = async (newWeek: number) => {
+    setPregnancyWeek(newWeek);
+    await updateProfile("week", newWeek);
+    setIsEditingPregnancyWeek(false);
+  };
+
+  // Notification handlers
+  const toggleNotifications = async () => {
+    try {
+      if (notificationsEnabled) {
+        // Disable notifications
+        setNotificationsEnabled(false);
+      } else {
+        // Request permission and enable notifications
+        const hasPermission = await requestNotificationPermissions();
+        setNotificationsEnabled(hasPermission);
+      }
+    } catch (error) {
+      console.error("Error toggling notifications:", error);
+    }
+  };
+
   const logout = async () => {
     await AsyncStorage.removeItem("userToken");
     await AsyncStorage.removeItem("user");
+    await AsyncStorage.clear();
+
     setToken(null);
     setUser(null);
     dispatch(removeToken());
@@ -530,7 +459,9 @@ const name = () => {
         <View style={styles.iconContainer}>{icon}</View>
         <View style={styles.menuTextContainer}>
           <Text style={styles.menuTitle}>{title}</Text>
-          <Text style={styles.menuSubtitle} numberOfLines={1}>{subtitle}</Text>
+          <Text style={styles.menuSubtitle} numberOfLines={1}>
+            {subtitle}
+          </Text>
         </View>
       </TouchableOpacity>
     );
@@ -540,10 +471,18 @@ const name = () => {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={"white"} />
       <View style={styles.header}>
-        <TouchableOpacity onPress={()=>router.back()}>
-            <Ionicons name="chevron-back" size={20} color="black" />
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={{
+            width: 20,
+            height: 20,
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
+          <Ionicons name="chevron-back" size={20} color="black" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Account</Text>
+        <Text style={styles.headerTitle}>{t("profile.account")}</Text>
         <View
           style={{
             width: 20,
@@ -554,14 +493,14 @@ const name = () => {
         <View style={styles.content}>
           {isEditingName ? (
             <EditableNameField
-              label="Name"
+              label={t("profile.name")}
               value={name || ""}
               onSave={handleSaveName}
               onCancel={() => setIsEditingName(false)}
             />
           ) : (
             <ProfileField
-              label="Name"
+              label={t("profile.name")}
               value={name || ""}
               onEdit={() => setIsEditingName(true)}
             />
@@ -569,14 +508,14 @@ const name = () => {
 
           {isEditingAge ? (
             <EditableAgeField
-              label="Age"
+              label={t("profile.age")}
               age={age}
               onSave={handleSaveAge}
               onCancel={() => setIsEditingAge(false)}
             />
           ) : (
             <ProfileField
-              label="Age"
+              label={t("profile.age")}
               value={`${age} Years`}
               onEdit={() => setIsEditingAge(true)}
             />
@@ -584,29 +523,44 @@ const name = () => {
 
           {isEditingEmail ? (
             <EditableEmailField
-              label="Email"
+              label={t("profile.email")}
               value={email}
               onSave={handleSaveEmail}
               onCancel={() => setIsEditingEmail(false)}
             />
           ) : (
             <ProfileField
-              label="Email"
+              label={t("profile.email")}
               value={email}
               onEdit={() => setIsEditingEmail(true)}
             />
           )}
 
+          {isEditingPhoneNumber ? (
+            <EditableNameField
+              label={t("profile.phoneNumber")}
+              value={phoneNumber}
+              onSave={handleSavePhoneNumber}
+              onCancel={() => setIsEditingPhoneNumber(false)}
+            />
+          ) : (
+            <ProfileField
+              label={t("profile.phoneNumber")}
+              value={phoneNumber}
+              onEdit={() => setIsEditingPhoneNumber(true)}
+            />
+          )}
+
           {/* {isEditingPregnancyWeek ? (
-            <EditablePregnancyWeekField
-              label="Week of Pregnancy"
-              week={pregnancyWeek}
+            <EditableAgeField
+              label={t('profile.pregnancyWeek')}
+              age={pregnancyWeek}
               onSave={handleSavePregnancyWeek}
               onCancel={() => setIsEditingPregnancyWeek(false)}
             />
           ) : (
             <ProfileField
-              label="Week of Pregnancy"
+              label={t('profile.pregnancyWeek')}
               value={`Week ${pregnancyWeek}`}
               onEdit={() => setIsEditingPregnancyWeek(true)}
             />
@@ -689,13 +643,13 @@ const styles = StyleSheet.create({
   },
   menuTitle: {
     fontSize: 16,
-    fontFamily:'DMSans600',
+    fontFamily: "DMSans600",
     color: "#AF4D93", // Magenta/purple color from the image
     marginBottom: 4,
   },
   menuSubtitle: {
     fontSize: 14,
-    fontFamily:'DMSans500',
+    fontFamily: "DMSans500",
     color: "#7B7B7B",
   },
   fieldContainer: {

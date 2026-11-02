@@ -1,5 +1,6 @@
 import { router } from "expo-router";
 import React, { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   StyleSheet,
   View,
@@ -12,6 +13,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useSelector } from "react-redux";
+import { CONFIG } from "@/constants/config";
 
 export default function NewNotes() {
   const [title, setTitle] = useState("");
@@ -21,7 +23,7 @@ export default function NewNotes() {
   const handleSave = async () => {
     try {
       const response = await fetch(
-        `https://crosscare-backends.onrender.com/api/user/activity/${user.user_id}/note`,
+        `${CONFIG.API_BASE_URL}/user/activity/${user.user_id}/note`,
         {
           method: "POST",
           headers: {
@@ -30,25 +32,23 @@ export default function NewNotes() {
           body: JSON.stringify({ title: title, description: content }),
         }
       );
-  
+
       if (!response.ok) {
         throw new Error(`Failed to save note: ${response.statusText}`);
       }
-  
+
       const data = await response.json();
       console.log("Note saved successfully:", data);
-      if(data.success){
+      if (data.success) {
         setTitle("");
         setContent("");
         router.back();
       }
-  
-    } catch (error:any) {
+    } catch (error: any) {
       console.error("Error saving note:", error.message);
       alert("Failed to save the note. Please try again.");
     }
   };
-  
 
   const handleCancel = () => {
     setTitle("");
@@ -57,15 +57,17 @@ export default function NewNotes() {
     router.back();
   };
 
+  const { t } = useTranslation();
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={handleCancel}>
-          <Text style={styles.cancelText}>Cancel</Text>
+          <Text style={styles.cancelText}>{t("cancel")}</Text>
         </TouchableOpacity>
-        <Text style={styles.headerText}>New Entry</Text>
+        <Text style={styles.headerText}>{t("new_entry")}</Text>
         <TouchableOpacity onPress={handleSave}>
-          <Text style={styles.saveText}>Save</Text>
+          <Text style={styles.saveText}>{t("save")}</Text>
         </TouchableOpacity>
       </View>
 
@@ -76,7 +78,7 @@ export default function NewNotes() {
         <ScrollView>
           <TextInput
             style={styles.titleInput}
-            placeholder="Title"
+            placeholder={t("journal.title")}
             multiline
             autoFocus
             value={title}
@@ -85,7 +87,7 @@ export default function NewNotes() {
           />
           <TextInput
             style={styles.contentInput}
-            placeholder="Start writing ..."
+            placeholder={t("journal.start_writing")}
             value={content}
             onChangeText={setContent}
             placeholderTextColor="#E5E5E5"
