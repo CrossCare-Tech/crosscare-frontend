@@ -154,7 +154,7 @@ export default function AvatarSelectionScreen() {
   // Reference for ViewShot
   const viewShotRef = useRef(null);
   // Reference for avatar ViewShot
-  const avatarViewShotRef = useRef(null);
+  const avatarViewShotRef = useRef<ViewShot>(null);
 
   // Animation values
   const scaleAnim = useRef(new Animated.Value(1)).current;
@@ -514,7 +514,12 @@ export default function AvatarSelectionScreen() {
     try {
       setIsSaving(true);
 
-      if (!avatarViewShotRef.current) {
+      const viewShot = avatarViewShotRef.current;
+
+      // react-native-view-shot declares capture as optional, so the guard has
+      // to cover the method and not only the ref. Reading the ref into a local
+      // also keeps the narrowing across the statements below.
+      if (!viewShot?.capture) {
         throw new Error("Avatar ViewShot reference is not available");
       }
 
@@ -523,7 +528,7 @@ export default function AvatarSelectionScreen() {
       }
 
       // Capture the avatar image from the viewshot
-      const uri = await avatarViewShotRef.current.capture();
+      const uri = await viewShot.capture();
 
       // Save avatar data to AsyncStorage as a backup
       const avatarData = {

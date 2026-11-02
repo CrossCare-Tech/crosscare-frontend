@@ -176,7 +176,9 @@ const AudioPlayerScreen = () => {
       console.log("Creating sound object...")
       try {
         // Add a timeout to the audio loading
-        const timeoutPromise = new Promise((_, reject) =>
+        // Types as Promise<never>: this promise only ever rejects, so it must
+        // not widen the Promise.race result and erase the sound handle.
+        const timeoutPromise = new Promise<never>((_, reject) =>
           setTimeout(() => reject(new Error("Audio loading timed out")), 10000),
         )
 
