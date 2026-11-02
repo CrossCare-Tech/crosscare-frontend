@@ -842,7 +842,7 @@ export default function AvatarSelectionScreen() {
                       />
                     ) : (
                       <Image
-                        source={{ uri: hairstyle.image }}
+                        source={{ uri: hairstyle.image ?? undefined }}
                         style={[
                           styles.optionImage,
                           hairstyle.grayScale && styles.grayscaleImage,
@@ -899,7 +899,7 @@ export default function AvatarSelectionScreen() {
                     />
                   ) : (
                     <Image
-                      source={{ uri: outfit.image }}
+                      source={{ uri: outfit.image ?? undefined }}
                       style={[
                         styles.outfitImage,
                         outfit.grayScale && styles.grayscaleImage,
