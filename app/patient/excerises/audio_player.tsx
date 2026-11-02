@@ -44,7 +44,7 @@ const AudioPlayerScreen = () => {
   const fadeAnim = useRef(new Animated.Value(0)).current
 
   // Timer for manual progress updates
-  const progressTimer = useRef<NodeJS.Timeout | null>(null)
+  const progressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Format time as MM:SS
   const formatTime = (seconds: number) => {

@@ -142,7 +142,7 @@ const step = () => {
 
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [tooltipAnim] = useState(new Animated.Value(0));
-  const tooltipTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const tooltipTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // State for dropdown
   const [timeRange, setTimeRange] = useState("week");

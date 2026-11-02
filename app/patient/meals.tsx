@@ -82,7 +82,7 @@ const FoodItems = ({
   const { t } = useTranslation();
 
   useEffect(() => {
-    let timeoutId: NodeJS.Timeout | null = null
+    let timeoutId: ReturnType<typeof setTimeout> | null = null
 
     if (menuVisible) {
       timeoutId = setTimeout(() => {
@@ -277,7 +277,7 @@ const meals = () => {
   const [timeRange, setTimeRange] = useState("week")
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
   const [tooltipAnim] = useState(new Animated.Value(0))
-  const tooltipTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const tooltipTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const periodSelectorRef = useRef<View>(null)
   const [dropdownVisible, setDropdownVisible] = useState(false)
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, right: 0 })
