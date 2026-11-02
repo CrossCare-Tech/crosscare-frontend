@@ -825,18 +825,16 @@ const EarnBadge = () => {
         // Combine earned and unearned badges, with earned ones first
         setAllBadges([...earnedBadgesData, ...unearnedBadgesData]);
       } else {
-        const badgeTypes = data.map((badge) => badge.badge.type);
-        setEarnedBadges(badgeTypes.length);
-        setBadgeData(data);
+        // Reached when `data` is falsy, not an array, or empty, so it must not
+        // be iterated: an error response such as null or { message } used to
+        // throw here on `data.map`. No badges are earned in this branch, so
+        // every badge type becomes a virtual, unearned one below.
+        const badgeTypes: string[] = [];
+        setEarnedBadges(0);
+        setBadgeData([]);
 
-        // Create arrays to hold earned and unearned badges
         const earnedBadgesData: Badge[] = [];
         const unearnedBadgesData: VirtualBadge[] = [];
-
-        // First add all earned badges
-        data.forEach((earnedBadge) => {
-          earnedBadgesData.push(earnedBadge);
-        });
         // If no data, create virtual badges for all badge types
         ALL_BADGE.forEach((badgeType) => {
           // Check if this badge type is already earned

@@ -1316,6 +1316,25 @@ const styles = StyleSheet.create({
     resizeMode: 'cover',
     marginRight: 15,
   },
+  // Fallback box shown in place of productImage when a product has no
+  // picture. Mirrors productImage's footprint so the header does not reflow.
+  placeholderImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 10,
+    marginRight: 15,
+    backgroundColor: '#f2f2f2',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // Wrapper for each titled nutrition block. Matches ingredientsContainer,
+  // the sibling wrapper already used for this screen's detail sections.
+  nutritionSection: {
+    marginVertical: 10,
+    padding: 10,
+    backgroundColor: '#f9f9f9',
+    borderRadius: 5,
+  },
   productInfo: {
     flex: 1,
     justifyContent: 'center',
