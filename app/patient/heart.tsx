@@ -86,7 +86,7 @@ export default function HeartRateScreen() {
   const [timeRange, setTimeRange] = useState("week")
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
   const [tooltipAnim] = useState(new Animated.Value(0))
-  const tooltipTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const tooltipTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [dropdownVisible, setDropdownVisible] = useState(false)
   const [logModalVisible, setLogModalVisible] = useState(false)
   const user = useSelector((state: any) => state.user)

@@ -112,7 +112,7 @@ export default function tracksleep() {
   const [loading, setLoading] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [tooltipAnim] = useState(new Animated.Value(0)); // Start with 0 opacity
-  const tooltipTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const tooltipTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [sleepLogs, setSleepLogs] = useState<SleepEntry[]>(sleepData);
   const [chartData, setChartData] = useState<ChartDataEntry[]>(emptyChartData);
   const [lastResetDate, setLastResetDate] = useState<Date | null>(null);

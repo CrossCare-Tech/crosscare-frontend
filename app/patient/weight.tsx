@@ -85,7 +85,7 @@ const WeightScreen = () => {
   const [timeRange, setTimeRange] = useState("week"); // "today", "week", "month", "lastMonth"
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [tooltipAnim] = useState(new Animated.Value(0)); // Start with 0 opacity
-  const tooltipTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const tooltipTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const periodSelectorRef = useRef<View>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [currentWeight, setCurrentWeight] = useState<number | null>(null);

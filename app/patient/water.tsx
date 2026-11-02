@@ -69,7 +69,7 @@ export default function water() {
   const user = useSelector((state: any) => state.user);
   const [goalSet, setGoalSet] = useState(false);
   const [tooltipAnim] = useState(new Animated.Value(0));
-  const tooltipTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const tooltipTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [newGoal, setNewGoal] = useState("");
@@ -455,7 +455,7 @@ export default function water() {
     func: T,
     wait: number
   ): ((...args: Parameters<T>) => void) => {
-    let timeout: NodeJS.Timeout | null = null;
+    let timeout: ReturnType<typeof setTimeout> | null = null;
 
     return function executedFunction(...args: Parameters<T>): void {
       const later = () => {
