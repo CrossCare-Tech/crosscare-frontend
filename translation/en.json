@@ -141,6 +141,7 @@
   "next": "Next",
   "cancel": "Cancel",
   "save": "Save",
+  "send": "Send",
   "delete": "Delete",
   "confirm": "Confirm",
   "resume": "Resume",
@@ -1135,6 +1136,7 @@
     }
   },
   "cards": {
+    "askDoula": "Ask Doula",
     "calendar": {
       "title": "Your Calendar",
       "description": "Track your appointments"
@@ -1671,6 +1673,7 @@
     "loading": "Loading..."
   },
   "healthData": {
+    "sleep": "Sleep",
     "weight":"Weight",
     "userhealth": "User's health data:",
     "statsMessage": "Here's a summary of your health statistics",

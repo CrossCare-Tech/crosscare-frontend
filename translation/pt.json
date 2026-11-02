@@ -127,6 +127,7 @@
   "next": "Próximo",
   "cancel": "Cancelar",
   "save": "Salvar",
+  "send": "Enviar",
   "delete": "Excluir",
   "confirm": "Confirmar",
   "loading": "Carregando...",
@@ -1121,6 +1122,7 @@
     }
   },
   "cards": {
+    "askDoula": "Pergunte à Doula",
     "calendar": {
       "title": "Seu Calendário",
       "description": "Acompanhe seus compromissos"
@@ -1653,6 +1655,7 @@
     "loading": "Carregando..."
   },
   "healthData": {
+    "sleep": "Sono",
     "userhealth": "Dados de saúde do usuário:",
     "statsMessage": "Aqui está um resumo das suas estatísticas de saúde",
     "glasses": "copos",
