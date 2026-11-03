@@ -40,31 +40,27 @@ const TrackingOptionsScreen = () => {
     setHealthVisited();
   }, [userId]);
 
-  // Cycle and check-in screens have no backend routes yet, so they only show with Simulated data on
-  const cycleAndMentalHealth: { title: string; options: TrackingOption[] }[] = demoMode
+  // Cycle and check-in screens have no backend routes yet, so they only show with Simulated data on.
+  // They belong to the Well-being section, after Mood, Symptoms and Medication.
+  const cycleAndMentalHealth: TrackingOption[] = demoMode
     ? [
         {
-          title: t('wellbeingCare.sectionLabel'),
-          options: [
-            {
-              id: 'cycle-log',
-              title: t('wellbeingCare.cycleLog'),
-              icon: <MaterialCommunityIcons name="water-outline" size={22} color={Theme.colors.magenta} />,
-              onPress: () => router.push('/patient/wellbeing/cycle-log'),
-            },
-            {
-              id: 'cycle-calendar',
-              title: t('wellbeingCare.cycleCalendar'),
-              icon: <Feather name="calendar" size={20} color={Theme.colors.teal} />,
-              onPress: () => router.push('/patient/wellbeing/cycle-calendar'),
-            },
-            {
-              id: 'check-in',
-              title: t('wellbeingCare.fullCheckIn'),
-              icon: <MaterialCommunityIcons name="head-heart-outline" size={22} color={Theme.colors.purple} />,
-              onPress: () => router.push('/patient/wellbeing/check-in'),
-            },
-          ],
+          id: 'cycle-log',
+          title: t('wellbeingCare.cycleLog'),
+          icon: <MaterialCommunityIcons name="water-outline" size={22} color={Theme.colors.magenta} />,
+          onPress: () => router.push('/patient/wellbeing/cycle-log'),
+        },
+        {
+          id: 'cycle-calendar',
+          title: t('wellbeingCare.cycleCalendar'),
+          icon: <Feather name="calendar" size={20} color={Theme.colors.teal} />,
+          onPress: () => router.push('/patient/wellbeing/cycle-calendar'),
+        },
+        {
+          id: 'check-in',
+          title: t('wellbeingCare.fullCheckIn'),
+          icon: <MaterialCommunityIcons name="head-heart-outline" size={22} color={Theme.colors.purple} />,
+          onPress: () => router.push('/patient/wellbeing/check-in'),
         },
       ]
     : [];
@@ -150,9 +146,9 @@ const TrackingOptionsScreen = () => {
           icon: <MedicationIcon width={22} height={22} />,
           onPress: () => router.push('/patient/medication/medications'),
         },
+        ...cycleAndMentalHealth,
       ],
     },
-    ...cycleAndMentalHealth,
     {
       title: t('pregnancySummary.sectionLabel'),
       options: [
