@@ -14,8 +14,8 @@ export interface BabyWeek {
 }
 
 export const BABY_WEEKS: Record<number, BabyWeek> = {
-  // Weeks 0 to 3 come before the embryo exists (pregnancy is counted from the last period), so there is no
-  // baby illustration for them: the screen shows the poppy seed picture instead. Same shape as every week.
+  // Weeks 0 to 3 come before the embryo exists (pregnancy is counted from the last period), so their
+  // illustrations are an egg (assets/images/baby/w00 to w03), not a baby. Same shape as every week.
   0: {
     object: "Poppy seed",
     lengthIn: 0,
