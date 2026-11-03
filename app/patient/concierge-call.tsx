@@ -205,10 +205,6 @@ function ConciergeCall() {
           locations={[0, 0.35, 0.75]}
           style={[styles.layer, { top: width, bottom: 0 }]}
         />
-        {/* A soft glow at the foot of the portrait that swells with the voice */}
-        <Animated.View style={[styles.glow, { top: width * 0.55, opacity: talking ? call.level.interpolate({ inputRange: [0, 1], outputRange: [0.15, 0.7] }) : 0 }]}>
-          <LinearGradient colors={["rgba(230,27,141,0)", "rgba(230,27,141,0.55)"]} style={StyleSheet.absoluteFill} />
-        </Animated.View>
       </Animated.View>
 
       <View style={[styles.top, { top: insets.top + 12 }]}>
@@ -321,7 +317,6 @@ const styles = StyleSheet.create({
   },
   callingName: { fontFamily: Theme.typography.display, fontSize: 28, color: Theme.colors.surface },
   callingText: { fontFamily: Theme.typography.subheading, fontSize: 14, color: Theme.colors.onInkSoft },
-  glow: { position: "absolute", left: 0, right: 0, height: 140 },
   top: {
     position: "absolute",
     left: Theme.spacing.md,

@@ -792,7 +792,13 @@ const Home = () => {
               style={styles.hero}
             >
               <View style={styles.heroMain}>
-                <Text style={styles.heroTag}>{t("homeB.journeyTag")}</Text>
+                <TouchableOpacity
+                  onPress={() => router.push("/patient/profile-setting/pregrancy")}
+                  accessibilityRole="button"
+                  accessibilityLabel={t("homeB.journeyTag")}
+                >
+                  <Text style={styles.heroTag}>{t("homeB.journeyTag")}</Text>
+                </TouchableOpacity>
                 <Text style={styles.heroWeek}>{t("homeB.week", { week })}</Text>
                 <Text style={styles.heroSub}>
                   {t("homeB.weeksToGo", {
