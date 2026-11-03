@@ -42,7 +42,7 @@
       "ios": {
         "credentialsSource": "remote",
         "distribution": "store",
-        "image": "macos-tahoe-26.4-xcode-26.4"
+        "image": "macos-sequoia-15.6-xcode-26.2"
       },
       "env": {
         "NPM_CONFIG_LEGACY_PEER_DEPS": "true"
