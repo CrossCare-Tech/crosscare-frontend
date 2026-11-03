@@ -51,6 +51,15 @@ import { CONFIG } from "@/constants/config";
 import i18n from "@/translation/i18next";
 import { deepgramTTS, speakWithDeepgram } from "@/utils/deepgramTTS";
 
+/**
+ * Gemini model used for chat. Google retires model names on a schedule and
+ * returns 404 NOT_FOUND once a name is withdrawn, which surfaces in the UI as
+ * "I'm having trouble connecting right now". gemini-2.0-flash was withdrawn and
+ * is no longer in the account's available model list. Kept as one constant so a
+ * future retirement is a single-line change rather than two call sites.
+ */
+const GEMINI_MODEL = "gemini-3.8-flash";
+
 
 interface PauseStateStorage {
   paused: boolean;
@@ -750,7 +759,7 @@ export default function askdoula() {
 
   const generateTranslation = async (text: string, targetLanguage: string) => {
     const apiUrl =
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
     const apiKey = `${CONFIG.GEMINI_KEY}`;
     // Replace with your actual API key
 
@@ -893,7 +902,7 @@ export default function askdoula() {
     try {
       // Correct Gemini API endpoint
       const apiUrl =
-        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+        `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
       // Your API key should be stored in an environment variable in production
       const apiKey = `${CONFIG.GEMINI_KEY}`; // Replace with your actual API key
