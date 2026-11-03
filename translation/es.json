@@ -2405,5 +2405,13 @@
       "doneTitle": "Correo verificado",
       "doneMessage": "Tu correo fue verificado. Ya puedes iniciar sesión."
     }
+  },
+  "deleteAccount": {
+    "title": "Eliminar cuenta",
+    "undoneTitle": "Esto no se puede deshacer",
+    "undoneText": "Eliminar tu cuenta borra de forma permanente tu historial de signos vitales, las entradas del diario y las conexiones con clínicas. Tu equipo de atención ya no tendrá acceso a tus registros a través de CrossCare.",
+    "typeToConfirm": "Escribe DELETE para confirmar",
+    "button": "Eliminar mi cuenta",
+    "cancel": "Cancelar"
   }
 }

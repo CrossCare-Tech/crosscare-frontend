@@ -2404,5 +2404,13 @@
       "doneTitle": "Imèl verifye",
       "doneMessage": "Imèl ou verifye. Kounye a ou ka konekte."
     }
+  },
+  "deleteAccount": {
+    "title": "Efase kont",
+    "undoneTitle": "Sa pa ka defèt",
+    "undoneText": "Efase kont ou a retire pou tout tan istwa siy vital ou yo, antre jounal yo ak koneksyon ak klinik yo. Ekip swen ou a p ap gen aksè ankò ak done ou yo atravè CrossCare.",
+    "typeToConfirm": "Ekri DELETE pou konfime",
+    "button": "Efase kont mwen",
+    "cancel": "Anile"
   }
 }

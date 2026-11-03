@@ -2373,5 +2373,13 @@
     "locked": "Bloqueado",
     "unlockHint": "Desbloquear: {{rule}}",
     "unlockRule": "Regra de desbloqueio"
+  },
+  "deleteAccount": {
+    "title": "Excluir conta",
+    "undoneTitle": "Isso não pode ser desfeito",
+    "undoneText": "Excluir sua conta remove permanentemente seu histórico de sinais vitais, as entradas do diário e as conexões com clínicas. Sua equipe de cuidados não terá mais acesso aos seus registros pelo CrossCare.",
+    "typeToConfirm": "Digite DELETE para confirmar",
+    "button": "Excluir minha conta",
+    "cancel": "Cancelar"
   }
 }

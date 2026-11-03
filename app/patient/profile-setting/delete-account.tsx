@@ -7,10 +7,11 @@ import {
   TextInput,
   ScrollView,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { StatusBar } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { useState } from "react";
@@ -18,6 +19,9 @@ import { useDispatch, useSelector } from "react-redux";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { removeToken, setUser } from "@/store/userSlice";
 import { CONFIG } from "@/constants/config";
+import { Theme } from "@/constants/theme";
+import ScreenBackground from "@/components/ui/ScreenBackground";
+import AuthTopBar from "@/components/ui/AuthTopBar";
 
 const DeleteAccount = () => {
   const { t } = useTranslation();
@@ -166,271 +170,162 @@ const DeleteAccount = () => {
     );
   };
 
+  const canDelete = confirmationText.trim().toUpperCase() === "DELETE";
+
+  // Layout from the design prototype (Delete account): warning card, confirmation field, two buttons
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="white" />
-      
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <Ionicons name="arrow-back" size={24} color="#373737" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{t("profile.deleteaccount")}</Text>
-        <View style={{ width: 24 }} />
-      </View>
+    <ScreenBackground>
+      <SafeAreaView style={styles.safeArea}>
+        <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+          <AuthTopBar title={t("deleteAccount.title")} />
 
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        <View style={styles.content}>
-          {/* Warning Icon */}
-          <View style={styles.warningIconContainer}>
-            <Ionicons name="warning" size={60} color="#FF4444" />
-          </View>
-
-          {/* Warning Title */}
-          <Text style={styles.warningTitle}>
-            {t("profile.confirmDeleteAccount")}
-          </Text>
-
-          {/* Warning Description */}
-          <Text style={styles.warningDescription}>
-            {t("profile.deleteAccountWarning")}
-          </Text>
-
-          {/* Features that will be lost */}
-          <View style={styles.featuresContainer}>
-            <Text style={styles.featuresTitle}>
-              What will be permanently deleted:
-            </Text>
-            <View style={styles.featuresList}>
-              <View style={styles.featureItem}>
-                <Ionicons name="checkmark-circle" size={20} color="#FF4444" />
-                <Text style={styles.featureText}>Your pregnancy journey data</Text>
+          <ScrollView
+            contentContainerStyle={styles.content}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            <View style={styles.warning}>
+              <View style={styles.warningEdge} />
+              <View style={styles.warningHead}>
+                <Feather name="alert-triangle" size={20} color={Theme.colors.danger} />
+                <Text style={styles.warningTitle}>{t("deleteAccount.undoneTitle")}</Text>
               </View>
-              <View style={styles.featureItem}>
-                <Ionicons name="checkmark-circle" size={20} color="#FF4444" />
-                <Text style={styles.featureText}>All earned badges and achievements</Text>
-              </View>
-              <View style={styles.featureItem}>
-                <Ionicons name="checkmark-circle" size={20} color="#FF4444" />
-                <Text style={styles.featureText}>Journal entries and notes</Text>
-              </View>
-              <View style={styles.featureItem}>
-                <Ionicons name="checkmark-circle" size={20} color="#FF4444" />
-                <Text style={styles.featureText}>Health tracking data</Text>
-              </View>
-              <View style={styles.featureItem}>
-                <Ionicons name="checkmark-circle" size={20} color="#FF4444" />
-                <Text style={styles.featureText}>Avatar customizations</Text>
-              </View>
-              <View style={styles.featureItem}>
-                <Ionicons name="checkmark-circle" size={20} color="#FF4444" />
-                <Text style={styles.featureText}>App preferences and settings</Text>
-              </View>
+              <Text style={styles.warningText}>{t("deleteAccount.undoneText")}</Text>
             </View>
-          </View>
 
-          {/* Confirmation Input */}
-          <View style={styles.confirmationContainer}>
-            <Text style={styles.confirmationLabel}>
-              {t("profile.typeDeleteToConfirm")}
-            </Text>
+            <Text style={styles.label}>{t("deleteAccount.typeToConfirm")}</Text>
             <TextInput
-              style={styles.confirmationInput}
+              style={styles.input}
               value={confirmationText}
               onChangeText={setConfirmationText}
-              placeholder={t("profile.deleteAccountPlaceholder")}
-              placeholderTextColor="#999"
+              placeholder="DELETE"
+              placeholderTextColor={Theme.colors.placeholder}
               autoCapitalize="characters"
               autoCorrect={false}
+              accessibilityLabel={t("deleteAccount.typeToConfirm")}
             />
-          </View>
 
-          {/* Action Buttons */}
-          <View style={styles.buttonsContainer}>
+            <TouchableOpacity
+              style={[styles.deleteButton, !canDelete && styles.deleteButtonOff]}
+              onPress={handleDeleteAccount}
+              disabled={!canDelete || isDeleting}
+              activeOpacity={0.88}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: !canDelete || isDeleting }}
+            >
+              {isDeleting ? (
+                <ActivityIndicator color={Theme.colors.surface} size="small" />
+              ) : (
+                <Text style={styles.deleteButtonText}>{t("deleteAccount.button")}</Text>
+              )}
+            </TouchableOpacity>
+
             <TouchableOpacity
               style={styles.cancelButton}
               onPress={() => router.back()}
+              activeOpacity={0.88}
+              accessibilityRole="button"
             >
-              <Text style={styles.cancelButtonText}>
-                {t("profile.cancel")}
-              </Text>
+              <Text style={styles.cancelButtonText}>{t("deleteAccount.cancel")}</Text>
             </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.deleteButton,
-                confirmationText.trim().toUpperCase() !== "DELETE" && styles.deleteButtonDisabled,
-              ]}
-              onPress={handleDeleteAccount}
-              disabled={confirmationText.trim().toUpperCase() !== "DELETE" || isDeleting}
-            >
-              {isDeleting ? (
-                <ActivityIndicator color="white" size="small" />
-              ) : (
-                <Text style={styles.deleteButtonText}>
-                  {t("profile.deleteaccount")}
-                </Text>
-              )}
-            </TouchableOpacity>
-          </View>
-
-          {/* Additional Warning */}
-          <View style={styles.additionalWarning}>
-            <Text style={styles.additionalWarningText}>
-              This action cannot be undone. Please make sure you want to permanently delete your account.
-            </Text>
-          </View>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </ScreenBackground>
   );
 };
 
 export default DeleteAccount;
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "white",
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F0F0F0",
-  },
-  backButton: {
-    padding: 4,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontFamily: "DMSans600",
-    color: "#373737",
-  },
-  scrollView: {
-    flex: 1,
-  },
+  safeArea: { flex: 1 },
+  flex: { flex: 1 },
   content: {
     paddingHorizontal: 20,
-    paddingVertical: 24,
+    paddingBottom: Theme.spacing.xl,
   },
-  warningIconContainer: {
+  // White card with a red edge on the left. The edge is its own view: a thick left border with a
+  // rounded corner blends into the hairline border and looks lilac.
+  warning: {
+    backgroundColor: Theme.colors.surface,
+    borderWidth: 1,
+    borderColor: Theme.colors.hairline,
+    borderRadius: Theme.borderRadius.lg,
+    padding: Theme.spacing.md,
+    paddingLeft: Theme.spacing.md + 4,
+    overflow: "hidden",
+    ...Theme.shadows.card,
+  },
+  warningEdge: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 5,
+    backgroundColor: Theme.colors.danger,
+  },
+  warningHead: {
+    flexDirection: "row",
     alignItems: "center",
-    marginBottom: 24,
+    gap: 10,
+    marginBottom: 8,
   },
   warningTitle: {
-    fontSize: 24,
-    fontFamily: "DMSans700",
-    color: "#FF4444",
-    textAlign: "center",
-    marginBottom: 16,
-  },
-  warningDescription: {
+    fontFamily: Theme.typography.heading,
     fontSize: 16,
-    fontFamily: "DMSans400",
-    color: "#373737",
-    textAlign: "center",
-    lineHeight: 24,
-    marginBottom: 32,
+    color: Theme.colors.ink,
   },
-  featuresContainer: {
-    backgroundColor: "#FFF5F5",
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 32,
-    borderLeftWidth: 4,
-    borderLeftColor: "#FF4444",
-  },
-  featuresTitle: {
-    fontSize: 16,
-    fontFamily: "DMSans600",
-    color: "#373737",
-    marginBottom: 16,
-  },
-  featuresList: {
-    gap: 12,
-  },
-  featureItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  featureText: {
+  warningText: {
+    fontFamily: Theme.typography.body,
     fontSize: 14,
-    fontFamily: "DMSans400",
-    color: "#666",
-    flex: 1,
+    lineHeight: 21,
+    color: Theme.colors.inkSoft,
   },
-  confirmationContainer: {
-    marginBottom: 32,
+  label: {
+    marginTop: Theme.spacing.lg,
+    marginBottom: 8,
+    fontFamily: Theme.typography.heading,
+    fontSize: 14,
+    color: Theme.colors.inkSoft,
   },
-  confirmationLabel: {
+  input: {
+    minHeight: 52,
+    paddingHorizontal: 16,
+    borderRadius: Theme.borderRadius.md,
+    borderWidth: 1,
+    borderColor: Theme.colors.hairline,
+    backgroundColor: Theme.colors.surface,
+    fontFamily: Theme.typography.body,
     fontSize: 16,
-    fontFamily: "DMSans600",
-    color: "#373737",
-    marginBottom: 12,
-  },
-  confirmationInput: {
-    borderWidth: 2,
-    borderColor: "#FF4444",
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    fontFamily: "DMSans500",
-    color: "#373737",
-    textAlign: "center",
-  },
-  buttonsContainer: {
-    flexDirection: "row",
-    gap: 12,
-    marginBottom: 24,
-  },
-  cancelButton: {
-    flex: 1,
-    backgroundColor: "#F5F5F5",
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: "center",
-  },
-  cancelButtonText: {
-    fontSize: 16,
-    fontFamily: "DMSans600",
-    color: "#666",
+    color: Theme.colors.ink,
   },
   deleteButton: {
-    flex: 1,
-    backgroundColor: "#FF4444",
-    paddingVertical: 16,
-    borderRadius: 12,
+    minHeight: 54,
+    marginTop: Theme.spacing.lg,
+    borderRadius: Theme.borderRadius.md,
+    backgroundColor: Theme.colors.danger,
     alignItems: "center",
+    justifyContent: "center",
   },
-  deleteButtonDisabled: {
-    backgroundColor: "#FFB3B3",
-    opacity: 0.6,
-  },
+  deleteButtonOff: { opacity: 0.55 },
   deleteButtonText: {
+    fontFamily: Theme.typography.heading,
     fontSize: 16,
-    fontFamily: "DMSans600",
-    color: "white",
+    color: Theme.colors.surface,
   },
-  additionalWarning: {
-    backgroundColor: "#FFF3E0",
-    borderRadius: 8,
-    padding: 12,
-    borderLeftWidth: 4,
-    borderLeftColor: "#FF9800",
+  cancelButton: {
+    minHeight: 54,
+    marginTop: 12,
+    borderRadius: Theme.borderRadius.md,
+    borderWidth: 1.5,
+    borderColor: Theme.colors.purple,
+    backgroundColor: Theme.colors.surface,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  additionalWarningText: {
-    fontSize: 12,
-    fontFamily: "DMSans400",
-    color: "#E65100",
-    textAlign: "center",
-    fontStyle: "italic",
+  cancelButtonText: {
+    fontFamily: Theme.typography.heading,
+    fontSize: 16,
+    color: Theme.colors.purple,
   },
 });

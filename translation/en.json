@@ -2401,5 +2401,13 @@
       "doneTitle": "Email verified",
       "doneMessage": "Your email has been verified. You can now log in."
     }
+  },
+  "deleteAccount": {
+    "title": "Delete account",
+    "undoneTitle": "This can't be undone",
+    "undoneText": "Deleting your account permanently removes your vitals history, journal entries, and clinic connections. Your care team will no longer have access to your records through CrossCare.",
+    "typeToConfirm": "Type DELETE to confirm",
+    "button": "Delete my account",
+    "cancel": "Cancel"
   }
 }
