@@ -1,11 +1,12 @@
-import React, { useEffect, useRef, useState } from "react";
-import { AccessibilityInfo, Animated, LayoutAnimation, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import React, { useEffect, useState } from "react";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { Theme } from "@/constants/theme";
 
 type Mood = "good" | "tired" | "worried" | "unwell";
+type MoodEntry = { mood: Mood; at: string };
 
 const MOODS: { id: Mood; emoji: string }[] = [
   { id: "good", emoji: "😊" },
@@ -14,54 +15,56 @@ const MOODS: { id: Mood; emoji: string }[] = [
   { id: "unwell", emoji: "🤒" },
 ];
 
-// Only the day of the last answer is kept (on this device), so the card stays away until tomorrow
-const ANSWERED_ON_KEY = "moodCheckIn.answeredOn";
-// How long the reply to Good or Tired stays before the card leaves
-const REPLY_MS = 2500;
+// Every tap is saved on this device with the time it happened, so the mood can change during the day
+// (good in the morning, tired in the afternoon). The backend keeps one mood per day on a 5-level scale,
+// so these entries are not sent to it yet.
+const ENTRIES_KEY = "moodCheckIn.entries";
+const MAX_ENTRIES = 200;
+// Tapping the mood that is already selected twice in a row within this time counts as one tap
+const DOUBLE_TAP_MS = 60_000;
 
-// Home mood check-in (prototype home version B): one tap, a short reply, then the card leaves for the day.
-// The mood itself is not saved. Worried and unwell keep the card, with a way to talk to the guide, until it is used.
+const loadEntries = async (): Promise<MoodEntry[]> => {
+  try {
+    const parsed = JSON.parse((await AsyncStorage.getItem(ENTRIES_KEY)) || "[]");
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
+// Home mood check-in (prototype home version B): one tap and a short reply. The card always stays on the
+// Home, showing the last mood of today, and a new tap adds another entry (the time is saved, not shown).
 const MoodCheckIn = () => {
   const { t } = useTranslation();
-  const [mood, setMood] = useState<Mood | null>(null);
-  const [hidden, setHidden] = useState(true);
-  const opacity = useRef(new Animated.Value(1)).current;
-  const timer = useRef<ReturnType<typeof setTimeout>>();
-  const needsGuide = mood === "worried" || mood === "unwell";
+  const [last, setLast] = useState<MoodEntry | null>(null);
 
   useEffect(() => {
-    AsyncStorage.getItem(ANSWERED_ON_KEY)
-      .then((day) => setHidden(day === new Date().toDateString()))
-      .catch(() => setHidden(false));
-    return () => clearTimeout(timer.current);
+    loadEntries().then((entries) => {
+      const latest = entries[entries.length - 1];
+      if (latest && new Date(latest.at).toDateString() === new Date().toDateString()) setLast(latest);
+    });
   }, []);
 
-  const leave = async () => {
-    const reduceMotion = await AccessibilityInfo.isReduceMotionEnabled().catch(() => false);
-    const collapse = () => {
-      if (!reduceMotion) LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-      setHidden(true);
-    };
-    if (reduceMotion) return collapse();
-    Animated.timing(opacity, { toValue: 0, duration: 250, useNativeDriver: true }).start(collapse);
+  const choose = async (mood: Mood) => {
+    const now = new Date();
+    if (last?.mood === mood && now.getTime() - new Date(last.at).getTime() < DOUBLE_TAP_MS) return;
+    const entry: MoodEntry = { mood, at: now.toISOString() };
+    setLast(entry);
+    try {
+      const entries = await loadEntries();
+      await AsyncStorage.setItem(ENTRIES_KEY, JSON.stringify([...entries, entry].slice(-MAX_ENTRIES)));
+    } catch {
+      // The tap still shows on screen; only remembering it failed
+    }
   };
 
-  const choose = (next: Mood) => {
-    setMood(next);
-    AsyncStorage.setItem(ANSWERED_ON_KEY, new Date().toDateString()).catch(() => {});
-    clearTimeout(timer.current);
-    if (next === "good" || next === "tired") timer.current = setTimeout(leave, REPLY_MS);
-  };
+  const talkToGuide = () => router.push({ pathname: "/patient/askdoula", params: { from_modal: "true" } });
 
-  const talkToGuide = () => {
-    router.push({ pathname: "/patient/askdoula", params: { from_modal: "true" } });
-    leave();
-  };
-
-  if (hidden) return null;
+  const mood = last?.mood ?? null;
+  const needsGuide = mood === "worried" || mood === "unwell";
 
   return (
-    <Animated.View style={[styles.card, { opacity }]}>
+    <View style={styles.card}>
       <Text style={styles.title}>{t("moodCheckIn.title")}</Text>
 
       <View style={styles.grid} accessibilityRole="radiogroup">
@@ -92,7 +95,7 @@ const MoodCheckIn = () => {
           <Text style={styles.ctaText}>{t("moodCheckIn.talk")}</Text>
         </TouchableOpacity>
       )}
-    </Animated.View>
+    </View>
   );
 };
 
