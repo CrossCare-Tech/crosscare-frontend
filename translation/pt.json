@@ -135,9 +135,9 @@
   "resume": "Retomar",
   "pause": "Pausa",
   "journals": "Diário",
-  "questionStatus":"Estado do questionário",
+  "questionStatus": "Estado do questionário",
   "create": "Criar",
-   "getting":"Conhecendo-o",
+  "getting": "Conhecendo-o",
   "settings": "Configurações",
   "new_entry": "Nova Entrada",
   "changephoto": "Mudar Foto",
@@ -1152,7 +1152,7 @@
   "askDoula": {
     "title": "Pergunte ao Seu CrossCare Concierge",
     "hi": "Oi",
-    "description": "Eu sou sua Digital",
+    "description": "Eu sou seu",
     "doula": "CrossCare Concierge",
     "subtitle": "Como posso ajudar você hoje?",
     "title1": "Histórico de Conversa Limpo",
@@ -1730,7 +1730,7 @@
         "description": "Habitação e Meio Ambiente"
       },
       "domain2": {
-        "title": "DOMÍNIO II", 
+        "title": "DOMÍNIO II",
         "description": "Segurança, Demografia e Transporte"
       },
       "domain3": {
@@ -1868,8 +1868,8 @@
       "salary": "Salário"
     }
   },
-  "questionaire":{
-    "do":"Você mora em uma casa ou apartamento?"
+  "questionaire": {
+    "do": "Você mora em uma casa ou apartamento?"
   },
   "conversationalQuestionnaire": {
     "timeQuestion": "Olá, você tem alguns minutos para um questionário de saúde?",
@@ -2240,6 +2240,125 @@
           "text": "Você tem carregado muita coisa e merece apoio agora. Isto não é um diagnóstico: entre em contato com sua equipe de cuidado assim que puder para planejar os próximos passos."
         }
       }
+    }
+  },
+  "authFlow": {
+    "common": {
+      "email": "E-mail",
+      "password": "Senha",
+      "logIn": "Entrar",
+      "cancel": "Cancelar",
+      "done": "Concluir",
+      "verifyNow": "Verificar agora",
+      "somethingWrong": "Algo deu errado. Tente novamente.",
+      "passwordRule": "Use 8 ou mais caracteres com pelo menos um número",
+      "didntReceive": "Não recebeu o código? ",
+      "resendCode": "Reenviar código",
+      "terms": "Termos e Condições",
+      "privacy": "Política de Privacidade",
+      "contactUs": "Fale Conosco"
+    },
+    "login": {
+      "title": "Que bom te ver de volta",
+      "subtitle": "Entre para continuar sua jornada de cuidado com o seu concierge.",
+      "demoPill": "Dados simulados ativados · qualquer e-mail funciona",
+      "passwordPlaceholder": "Digite sua senha",
+      "forgot": "Esqueceu a senha?",
+      "faceId": "Usar Face ID",
+      "orContinue": "ou continue com",
+      "continueApple": "Continuar com Apple",
+      "continueGoogle": "Continuar com Google",
+      "newHere": "Primeira vez aqui? ",
+      "createAccount": "Criar conta",
+      "disclaimer": "AVISO: o CrossCare Concierge é um guia de gravidez com inteligência artificial e não substitui aconselhamento, diagnóstico ou tratamento médico profissional.",
+      "emailRequired": "O e-mail é obrigatório.",
+      "passwordRequired": "A senha é obrigatória.",
+      "verifyTitle": "É necessário verificar o e-mail",
+      "verifyMessage": "Verifique seu e-mail antes de entrar.",
+      "noAccount": "Não encontramos uma conta com este e-mail.",
+      "wrongPassword": "Senha incorreta.",
+      "invalidCredentials": "E-mail ou senha inválidos",
+      "network": "Não conseguimos acessar o servidor. Verifique sua conexão e tente novamente.",
+      "failed": "Falha ao entrar",
+      "biometricInfo": "O login com Face ID ou biometria será ativado quando seu dispositivo for registrado na sua conta.",
+      "socialInfo": "A autenticação com {{provider}} será conectada ao seu perfil clínico."
+    },
+    "signup": {
+      "title": "Cadastro",
+      "heading": "Crie sua conta",
+      "subtitle": "Leva cerca de dois minutos.",
+      "firstName": "Nome",
+      "lastName": "Sobrenome",
+      "firstNameRequired": "O nome é obrigatório",
+      "lastNameRequired": "O sobrenome é obrigatório",
+      "dob": "Data de nascimento",
+      "selectDate": "Selecionar data",
+      "modalTitle": "Selecione a data de nascimento",
+      "phone": "Número de telefone",
+      "invalidEmail": "Digite um e-mail válido",
+      "invalidPhone": "Digite um número de telefone válido",
+      "passwordHelper": "Use 8 ou mais caracteres com pelo menos um número.",
+      "mustAgree": "Você precisa concordar com os Termos de Serviço para continuar",
+      "dobRequired": "Selecione sua data de nascimento",
+      "tooYoung": "Você precisa ter pelo menos 18 anos para se cadastrar",
+      "agreePrefix": "Concordo com os",
+      "and": "e a",
+      "termsOfService": "Termos de Serviço",
+      "createAccount": "Criar conta",
+      "already": "Já tem uma conta? ",
+      "failed": "Falha no cadastro",
+      "sentTitle": "E-mail de verificação enviado",
+      "sentMessage": "Enviamos um código de verificação de 6 dígitos para o seu e-mail. Verifique para continuar."
+    },
+    "forgot": {
+      "title1": "Esqueci a senha",
+      "title2": "Verificar código",
+      "title3": "Nova senha",
+      "head1": "Redefina sua senha",
+      "head2": "Digite o código de verificação",
+      "head3": "Crie uma nova senha",
+      "sub1": "Digite seu e-mail e enviaremos um código de verificação seguro para redefinir sua senha.",
+      "sub2": "Enviamos um código de verificação de 6 dígitos para {{email}}.",
+      "sub3": "Escolha uma senha com 8 ou mais caracteres e pelo menos um número.",
+      "checkEmail": "Verifique seu e-mail",
+      "checkEmailText": "Enviamos um código de redefinição. Pode levar um minuto para chegar, então confira também o spam.",
+      "emailRequired": "O e-mail é obrigatório.",
+      "otpLabel": "Código de verificação",
+      "newPassword": "Nova senha",
+      "newPasswordPh": "Digite uma nova senha",
+      "confirmPassword": "Confirme a nova senha",
+      "confirmPh": "Repita a nova senha",
+      "enterCode": "Digite o código de 6 dígitos",
+      "noMatch": "As senhas não coincidem",
+      "send": "Enviar código",
+      "continue": "Continuar",
+      "reset": "Redefinir senha",
+      "resentTitle": "Código reenviado",
+      "resentMessage": "Enviamos um novo código de verificação.",
+      "couldNotResend": "Não foi possível reenviar o código",
+      "sendFailed": "Falha ao enviar o código",
+      "resetFailed": "Falha ao redefinir a senha",
+      "doneTitle": "Senha atualizada",
+      "doneMessage": "Sua senha foi redefinida. Entre com a nova senha.",
+      "remember": "Lembrou da senha? "
+    },
+    "verify": {
+      "title": "Verificar e-mail",
+      "heading": "Verifique seu e-mail",
+      "subtitle": "Digite o código de 6 dígitos enviado para",
+      "yourEmail": "seu e-mail",
+      "verify": "Verificar",
+      "enterCode": "Digite o código de verificação",
+      "sixDigits": "O código de verificação deve ter 6 dígitos",
+      "failed": "Falha na verificação",
+      "missingEmail": "Falta o e-mail para reenviar o código.",
+      "resendFailed": "Falha ao reenviar o código",
+      "couldNotResend": "Não foi possível reenviar o código",
+      "resentTitle": "Código reenviado",
+      "resentMessage": "Um novo código de verificação foi enviado para o seu e-mail.",
+      "resendIn": "Reenviar código em {{time}}",
+      "doneTitle": "E-mail verificado",
+      "doneMessage": "Seu e-mail foi verificado. Agora você pode entrar."
     }
   }
 }
