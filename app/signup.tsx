@@ -23,8 +23,10 @@ import ScreenBackground from "@/components/ui/ScreenBackground";
 import { useAuthDialog } from "@/components/ui/AuthDialog";
 import InlineNotice, { Notice } from "@/components/ui/InlineNotice";
 import AuthTopBar from "@/components/ui/AuthTopBar";
+import { useTranslation } from "react-i18next";
 
 const SignUp: FC = () => {
+  const { t, i18n } = useTranslation();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [dateOfBirth, setDateOfBirth] = useState<Date | null>(null);
@@ -85,7 +87,7 @@ const SignUp: FC = () => {
   };
 
   const formatDate = (date: Date) => {
-    return date.toLocaleDateString("en-US", {
+    return date.toLocaleDateString(i18n.language === "ht" ? "fr" : i18n.language, {
       year: "numeric",
       month: "short",
       day: "numeric",
@@ -111,37 +113,37 @@ const SignUp: FC = () => {
     let isValid = true;
 
     if (!firstName.trim()) {
-      setFirstNameError("First name is required");
+      setFirstNameError(t("authFlow.signup.firstNameRequired"));
       isValid = false;
     }
     if (!lastName.trim()) {
-      setLastNameError("Last name is required");
+      setLastNameError(t("authFlow.signup.lastNameRequired"));
       isValid = false;
     }
     if (!email.trim() || !emailRegex.test(email.trim())) {
-      setEmailError("Please enter a valid email address");
+      setEmailError(t("authFlow.signup.invalidEmail"));
       isValid = false;
     }
     if (phoneNumber.replace(/\D/g, "").length < 7) {
-      setPhoneNumberError("Please enter a valid phone number");
+      setPhoneNumberError(t("authFlow.signup.invalidPhone"));
       isValid = false;
     }
     if (!password || password.length < 8 || !/\d/.test(password)) {
-      setPasswordError("Use 8+ characters with at least one number");
+      setPasswordError(t("authFlow.common.passwordRule"));
       isValid = false;
     }
     if (!agreedToTerms) {
-      setTermsError("You must agree to the Terms of Service to continue");
+      setTermsError(t("authFlow.signup.mustAgree"));
       isValid = false;
     } else {
       setTermsError("");
     }
 
     if (!dateOfBirth) {
-      setDobError("Please select your date of birth");
+      setDobError(t("authFlow.signup.dobRequired"));
       isValid = false;
     } else if (validateAge(dateOfBirth) < 18) {
-      setDobError("You must be at least 18 years old to register");
+      setDobError(t("authFlow.signup.tooYoung"));
       isValid = false;
     }
 
@@ -170,17 +172,16 @@ const SignUp: FC = () => {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || "Registration failed");
+        throw new Error(data.message || t("authFlow.signup.failed"));
       }
 
       show({
-        title: "Verification Email Sent",
-        message:
-          "We've sent a 6-digit verification code to your email. Please verify to continue.",
+        title: t("authFlow.signup.sentTitle"),
+        message: t("authFlow.signup.sentMessage"),
         variant: "success",
         buttons: [
           {
-            text: "Verify Now",
+            text: t("authFlow.common.verifyNow"),
             onPress: () =>
               router.push({
                 pathname: "/verify-email",
@@ -190,7 +191,7 @@ const SignUp: FC = () => {
         ],
       });
     } catch (error: any) {
-      const message = error.message || "Something went wrong.";
+      const message = error.message || t("authFlow.common.somethingWrong");
       if (/email/i.test(message)) {
         setEmailError(message);
       } else {
@@ -234,7 +235,7 @@ const SignUp: FC = () => {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <AuthTopBar
-          title="Sign up"
+          title={t("authFlow.signup.title")}
         />
 
         <ScrollView
@@ -244,8 +245,8 @@ const SignUp: FC = () => {
         >
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.title}>Create your account</Text>
-            <Text style={styles.subtitle}>Takes about two minutes.</Text>
+            <Text style={styles.title}>{t("authFlow.signup.heading")}</Text>
+            <Text style={styles.subtitle}>{t("authFlow.signup.subtitle")}</Text>
           </View>
 
           {/* Formulário */}
@@ -254,7 +255,7 @@ const SignUp: FC = () => {
             <View style={styles.row}>
               <View style={styles.flexHalf}>
                 <CustomTextInput
-                  label="First name"
+                  label={t("authFlow.signup.firstName")}
                   type="username"
                   value={firstName}
                   onChangeText={handleChangeFirstName}
@@ -264,7 +265,7 @@ const SignUp: FC = () => {
               </View>
               <View style={styles.flexHalf}>
                 <CustomTextInput
-                  label="Last name"
+                  label={t("authFlow.signup.lastName")}
                   type="username"
                   value={lastName}
                   onChangeText={handleChangeLastName}
@@ -276,7 +277,7 @@ const SignUp: FC = () => {
 
             {/* Data de Nascimento */}
             <View style={styles.datePickerContainer}>
-              <Text style={styles.fieldLabel}>Date of birth</Text>
+              <Text style={styles.fieldLabel}>{t("authFlow.signup.dob")}</Text>
               <TouchableOpacity
                 style={[
                   styles.dateInput,
@@ -294,7 +295,7 @@ const SignUp: FC = () => {
                 <Text
                   style={[styles.dateText, !dateOfBirth && styles.datePlaceholder]}
                 >
-                  {dateOfBirth ? formatDate(dateOfBirth) : "Select date"}
+                  {dateOfBirth ? formatDate(dateOfBirth) : t("authFlow.signup.selectDate")}
                 </Text>
                 <Feather name="chevron-down" size={16} color={Theme.colors.inkFaint} />
               </TouchableOpacity>
@@ -303,7 +304,7 @@ const SignUp: FC = () => {
 
             {/* Email */}
             <CustomTextInput
-              label="Email"
+              label={t("authFlow.common.email")}
               icon="mail"
               type="email"
               value={email}
@@ -317,7 +318,7 @@ const SignUp: FC = () => {
 
             {/* Telefone */}
             <CustomTextInput
-              label="Phone number"
+              label={t("authFlow.signup.phone")}
               icon="phone"
               type="phone"
               value={phoneNumber}
@@ -330,7 +331,7 @@ const SignUp: FC = () => {
             {/* Senha */}
             <View>
               <CustomTextInput
-                label="Password"
+                label={t("authFlow.common.password")}
                 icon="lock"
                 type="password"
                 value={password}
@@ -340,7 +341,7 @@ const SignUp: FC = () => {
                 errorMessage={passwordError}
               />
               <Text style={styles.helperText}>
-                Use 8+ characters with at least one number.
+                {t("authFlow.signup.passwordHelper")}
               </Text>
             </View>
 
@@ -367,23 +368,23 @@ const SignUp: FC = () => {
                 )}
               </View>
               <Text style={styles.checkboxText}>
-                I agree to the{" "}
+                {t("authFlow.signup.agreePrefix")}{" "}
                 <Text
                   style={styles.linkText}
                   onPress={() =>
                     Linking.openURL("https://crosscaretech.com/terms")
                   }
                 >
-                  Terms of Service
+                  {t("authFlow.signup.termsOfService")}
                 </Text>{" "}
-                and{" "}
+                {t("authFlow.signup.and")}{" "}
                 <Text
                   style={styles.linkText}
                   onPress={() =>
                     Linking.openURL("https://crosscaretech.com/privacy-policy")
                   }
                 >
-                  Privacy Policy
+                  {t("authFlow.common.privacy")}
                 </Text>
                 .
               </Text>
@@ -404,15 +405,15 @@ const SignUp: FC = () => {
               {loading ? (
                 <ActivityIndicator color="#FFFFFF" />
               ) : (
-                <Text style={styles.createButtonText}>Create account</Text>
+                <Text style={styles.createButtonText}>{t("authFlow.signup.createAccount")}</Text>
               )}
             </TouchableOpacity>
 
             {/* Link Log in */}
             <View style={styles.loginRow}>
-              <Text style={styles.loginPrompt}>Already have an account? </Text>
+              <Text style={styles.loginPrompt}>{t("authFlow.signup.already")}</Text>
               <TouchableOpacity onPress={() => router.push("/login")}>
-                <Text style={styles.loginLink}>Log in</Text>
+                <Text style={styles.loginLink}>{t("authFlow.common.logIn")}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -430,11 +431,11 @@ const SignUp: FC = () => {
               <View style={styles.modalContainerIOS}>
                 <View style={styles.modalHeader}>
                   <TouchableOpacity onPress={handleDatePickerCancel}>
-                    <Text style={styles.modalCancelButton}>Cancel</Text>
+                    <Text style={styles.modalCancelButton}>{t("authFlow.common.cancel")}</Text>
                   </TouchableOpacity>
-                  <Text style={styles.modalTitle}>Select Date of Birth</Text>
+                  <Text style={styles.modalTitle}>{t("authFlow.signup.modalTitle")}</Text>
                   <TouchableOpacity onPress={handleDatePickerConfirm}>
-                    <Text style={styles.modalDoneButton}>Done</Text>
+                    <Text style={styles.modalDoneButton}>{t("authFlow.common.done")}</Text>
                   </TouchableOpacity>
                 </View>
                 <DateTimePicker

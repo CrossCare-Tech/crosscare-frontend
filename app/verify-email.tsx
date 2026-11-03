@@ -22,6 +22,7 @@ import AuthSuccess from "@/components/ui/AuthSuccess";
 import { useAuthDialog } from "@/components/ui/AuthDialog";
 import InlineNotice, { Notice } from "@/components/ui/InlineNotice";
 import OtpInput from "@/components/ui/OtpInput";
+import { useTranslation } from "react-i18next";
 
 const officialLogo = require("@/assets/logo/logo-full.png");
 
@@ -35,6 +36,7 @@ const formatCountdown = (seconds: number) =>
   `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
 
 const VerifyEmail: FC = () => {
+  const { t } = useTranslation();
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
   const [verified, setVerified] = useState(false);
@@ -64,12 +66,12 @@ const VerifyEmail: FC = () => {
 
   const handleVerifyOTP = async () => {
     if (!otp.trim()) {
-      setOtpError("Please enter the verification code");
+      setOtpError(t("authFlow.verify.enterCode"));
       return;
     }
 
     if (otp.length !== 6) {
-      setOtpError("Verification code must be 6 digits");
+      setOtpError(t("authFlow.verify.sixDigits"));
       return;
     }
 
@@ -91,7 +93,7 @@ const VerifyEmail: FC = () => {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || "Verification failed");
+        throw new Error(data.message || t("authFlow.verify.failed"));
       }
 
       setVerified(true);
@@ -102,7 +104,7 @@ const VerifyEmail: FC = () => {
       } else {
         setNotice({
           variant: "error",
-          message: error.message || "Something went wrong. Please try again.",
+          message: error.message || t("authFlow.common.somethingWrong"),
         });
       }
     } finally {
@@ -114,7 +116,7 @@ const VerifyEmail: FC = () => {
     if (!email) {
       setNotice({
         variant: "error",
-        message: "Missing email address for resending code.",
+        message: t("authFlow.verify.missingEmail"),
       });
       return;
     }
@@ -137,12 +139,12 @@ const VerifyEmail: FC = () => {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || "Failed to resend code");
+        throw new Error(data.message || t("authFlow.verify.resendFailed"));
       }
 
       show({
-        title: "Code Resent",
-        message: "A new verification code has been sent to your email.",
+        title: t("authFlow.verify.resentTitle"),
+        message: t("authFlow.verify.resentMessage"),
         variant: "success",
       });
       setCountdown(60);
@@ -151,7 +153,7 @@ const VerifyEmail: FC = () => {
     } catch (error: any) {
       setNotice({
         variant: "error",
-        message: error.message || "Could not resend code",
+        message: error.message || t("authFlow.verify.couldNotResend"),
       });
     } finally {
       setResendLoading(false);
@@ -169,9 +171,9 @@ const VerifyEmail: FC = () => {
   if (verified) {
     return (
       <AuthSuccess
-        title="Email verified"
-        message="Your email has been verified. You can now log in."
-        buttonLabel="Log in"
+        title={t("authFlow.verify.doneTitle")}
+        message={t("authFlow.verify.doneMessage")}
+        buttonLabel={t("authFlow.common.logIn")}
         onPress={() => router.replace("/login")}
       />
     );
@@ -185,7 +187,7 @@ const VerifyEmail: FC = () => {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <AuthTopBar
-          title="Verify email"
+          title={t("authFlow.verify.title")}
         />
 
         <ScrollView
@@ -200,11 +202,11 @@ const VerifyEmail: FC = () => {
               style={styles.logo}
               resizeMode="contain"
             />
-            <Text style={styles.title}>Verify your email</Text>
+            <Text style={styles.title}>{t("authFlow.verify.heading")}</Text>
             <Text style={styles.subtitle}>
-              Enter the 6-digit code sent to{"\n"}
+              {t("authFlow.verify.subtitle")}{"\n"}
               <Text style={styles.emailHighlight}>
-                {email ? maskEmail(email) : "your email"}
+                {email ? maskEmail(email) : t("authFlow.verify.yourEmail")}
               </Text>
             </Text>
           </View>
@@ -230,13 +232,13 @@ const VerifyEmail: FC = () => {
               {loading ? (
                 <ActivityIndicator color="#FFFFFF" />
               ) : (
-                <Text style={styles.verifyButtonText}>Verify</Text>
+                <Text style={styles.verifyButtonText}>{t("authFlow.verify.verify")}</Text>
               )}
             </TouchableOpacity>
 
             {/* Reenvio */}
             <View style={styles.resendContainer}>
-              <Text style={styles.resendPrompt}>Didn&apos;t receive the code? </Text>
+              <Text style={styles.resendPrompt}>{t("authFlow.common.didntReceive")}</Text>
               <TouchableOpacity
                 onPress={handleResendOTP}
                 disabled={countdown > 0 || resendLoading}
@@ -250,7 +252,7 @@ const VerifyEmail: FC = () => {
                       countdown > 0 && styles.resendLinkDisabled,
                     ]}
                   >
-                    {countdown > 0 ? `Resend code in ${formatCountdown(countdown)}` : "Resend code"}
+                    {countdown > 0 ? t("authFlow.verify.resendIn", { time: formatCountdown(countdown) }) : t("authFlow.common.resendCode")}
                   </Text>
                 )}
               </TouchableOpacity>
@@ -265,7 +267,7 @@ const VerifyEmail: FC = () => {
               }
             >
               <Text style={styles.footerText}>
-                Terms & Conditions • Privacy Policy • Contact Us
+                {`${t("authFlow.common.terms")} • ${t("authFlow.common.privacy")} • ${t("authFlow.common.contactUs")}`}
               </Text>
             </Pressable>
           </View>

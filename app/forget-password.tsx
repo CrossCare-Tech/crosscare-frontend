@@ -22,8 +22,10 @@ import AuthSuccess from "@/components/ui/AuthSuccess";
 import { useAuthDialog } from "@/components/ui/AuthDialog";
 import InlineNotice, { Notice } from "@/components/ui/InlineNotice";
 import OtpInput from "@/components/ui/OtpInput";
+import { useTranslation } from "react-i18next";
 
 const ForgetScreen: FC = () => {
+  const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -49,7 +51,7 @@ const ForgetScreen: FC = () => {
 
   const handleSendOTP = async (isResend = false) => {
     if (!email.trim()) {
-      setEmailError("Email is required.");
+      setEmailError(t("authFlow.forgot.emailRequired"));
       return;
     }
 
@@ -66,15 +68,15 @@ const ForgetScreen: FC = () => {
 
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.message || "Failed to send reset code");
+        throw new Error(data.message || t("authFlow.forgot.sendFailed"));
       }
 
       if (isResend) {
         setOtp("");
         setOtpError("");
         show({
-          title: "Code resent",
-          message: "We sent you a new verification code.",
+          title: t("authFlow.forgot.resentTitle"),
+          message: t("authFlow.forgot.resentMessage"),
           variant: "success",
         });
       } else {
@@ -84,11 +86,11 @@ const ForgetScreen: FC = () => {
       if (isResend) {
         setNotice({
           variant: "error",
-          message: error.message || "Could not resend the code",
+          message: error.message || t("authFlow.forgot.couldNotResend"),
         });
       } else {
         // e.g. "User not found": shown under the email field.
-        setEmailError(error.message || "Failed to send code");
+        setEmailError(error.message || t("authFlow.forgot.sendFailed"));
       }
     } finally {
       setLoading(false);
@@ -99,7 +101,7 @@ const ForgetScreen: FC = () => {
   // step only checks the format before moving on.
   const handleContinue = () => {
     if (otp.length !== 6) {
-      setOtpError("Enter the 6-digit code");
+      setOtpError(t("authFlow.forgot.enterCode"));
       return;
     }
     setOtpError("");
@@ -111,12 +113,12 @@ const ForgetScreen: FC = () => {
     setConfirmError("");
 
     if (newPassword.length < 8 || !/\d/.test(newPassword)) {
-      setPasswordError("Use 8+ characters with at least one number");
+      setPasswordError(t("authFlow.common.passwordRule"));
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      setConfirmError("Passwords do not match");
+      setConfirmError(t("authFlow.forgot.noMatch"));
       return;
     }
 
@@ -137,7 +139,7 @@ const ForgetScreen: FC = () => {
 
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.message || "Failed to reset password");
+        throw new Error(data.message || t("authFlow.forgot.resetFailed"));
       }
 
       setResetDone(true);
@@ -149,7 +151,7 @@ const ForgetScreen: FC = () => {
       } else {
         setNotice({
           variant: "error",
-          message: error.message || "Failed to reset password",
+          message: error.message || t("authFlow.forgot.resetFailed"),
         });
       }
     } finally {
@@ -160,9 +162,9 @@ const ForgetScreen: FC = () => {
   if (resetDone) {
     return (
       <AuthSuccess
-        title="Password updated"
-        message="Your password has been reset. Log in with your new password."
-        buttonLabel="Log in"
+        title={t("authFlow.forgot.doneTitle")}
+        message={t("authFlow.forgot.doneMessage")}
+        buttonLabel={t("authFlow.common.logIn")}
         onPress={() => router.replace("/login")}
       />
     );
@@ -176,7 +178,7 @@ const ForgetScreen: FC = () => {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <AuthTopBar
-          title={step === 1 ? "Forgot password" : step === 2 ? "Verify code" : "New password"}
+          title={step === 1 ? t("authFlow.forgot.title1") : step === 2 ? t("authFlow.forgot.title2") : t("authFlow.forgot.title3")}
           onBack={step > 1 ? () => setStep(step - 1) : undefined}
         />
 
@@ -189,17 +191,17 @@ const ForgetScreen: FC = () => {
           <View style={styles.header}>
             <Text style={styles.title}>
               {step === 1
-                ? "Reset your password"
+                ? t("authFlow.forgot.head1")
                 : step === 2
-                ? "Enter verification code"
-                : "Create a new password"}
+                ? t("authFlow.forgot.head2")
+                : t("authFlow.forgot.head3")}
             </Text>
             <Text style={styles.subtitle}>
               {step === 1
-                ? "Enter your email address and we'll send you a secure verification code to reset your password."
+                ? t("authFlow.forgot.sub1")
                 : step === 2
-                ? `We sent a 6-digit verification code to ${email.trim()}.`
-                : "Choose a password with 8+ characters and at least one number."}
+                ? t("authFlow.forgot.sub2", { email: email.trim() })
+                : t("authFlow.forgot.sub3")}
             </Text>
           </View>
 
@@ -211,10 +213,9 @@ const ForgetScreen: FC = () => {
                   <Feather name="check" size={17} color={Theme.colors.success} />
                 </View>
                 <View style={styles.confirmBody}>
-                  <Text style={styles.confirmTitle}>Check your email</Text>
+                  <Text style={styles.confirmTitle}>{t("authFlow.forgot.checkEmail")}</Text>
                   <Text style={styles.confirmText}>
-                    We sent a reset code. It can take a minute to arrive, so be
-                    sure to check spam.
+                    {t("authFlow.forgot.checkEmailText")}
                   </Text>
                 </View>
               </View>
@@ -222,7 +223,7 @@ const ForgetScreen: FC = () => {
 
             {step === 1 && (
               <CustomTextInput
-                label="Email"
+                label={t("authFlow.common.email")}
                 placeholder="maya.reyes@email.com"
                 icon="mail"
                 value={email}
@@ -239,7 +240,7 @@ const ForgetScreen: FC = () => {
 
             {step === 2 && (
               <View style={styles.otpGroup}>
-                <Text style={styles.otpLabel}>Verification code</Text>
+                <Text style={styles.otpLabel}>{t("authFlow.forgot.otpLabel")}</Text>
                 <OtpInput
                   value={otp}
                   onChangeText={(text) => {
@@ -255,9 +256,9 @@ const ForgetScreen: FC = () => {
             {step === 3 && (
               <>
                 <CustomTextInput
-                  label="New password"
+                  label={t("authFlow.forgot.newPassword")}
                   type="password"
-                  placeholder="Enter a new password"
+                  placeholder={t("authFlow.forgot.newPasswordPh")}
                   icon="lock"
                   value={newPassword}
                   onChangeText={(text) => {
@@ -269,9 +270,9 @@ const ForgetScreen: FC = () => {
                 />
 
                 <CustomTextInput
-                  label="Confirm new password"
+                  label={t("authFlow.forgot.confirmPassword")}
                   type="password"
-                  placeholder="Repeat the new password"
+                  placeholder={t("authFlow.forgot.confirmPh")}
                   icon="lock"
                   value={confirmPassword}
                   onChangeText={(text) => {
@@ -297,25 +298,25 @@ const ForgetScreen: FC = () => {
                 <ActivityIndicator color="#FFFFFF" />
               ) : (
                 <Text style={styles.actionButtonText}>
-                  {step === 1 ? "Send reset code" : step === 2 ? "Continue" : "Reset password"}
+                  {step === 1 ? t("authFlow.forgot.send") : step === 2 ? t("authFlow.forgot.continue") : t("authFlow.forgot.reset")}
                 </Text>
               )}
             </TouchableOpacity>
 
             {step === 2 && (
               <View style={styles.loginRow}>
-                <Text style={styles.loginPrompt}>Didn&apos;t receive the code? </Text>
+                <Text style={styles.loginPrompt}>{t("authFlow.common.didntReceive")}</Text>
                 <TouchableOpacity onPress={() => handleSendOTP(true)} disabled={loading}>
-                  <Text style={styles.loginLink}>Resend code</Text>
+                  <Text style={styles.loginLink}>{t("authFlow.common.resendCode")}</Text>
                 </TouchableOpacity>
               </View>
             )}
 
             {/* Voltar para login */}
             <View style={styles.loginRow}>
-              <Text style={styles.loginPrompt}>Remember your password? </Text>
+              <Text style={styles.loginPrompt}>{t("authFlow.forgot.remember")}</Text>
               <TouchableOpacity onPress={() => router.push("/login")}>
-                <Text style={styles.loginLink}>Log in</Text>
+                <Text style={styles.loginLink}>{t("authFlow.common.logIn")}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -329,7 +330,7 @@ const ForgetScreen: FC = () => {
                   Linking.openURL("https://crosscaretech.com/privacy-policy")
                 }
               >
-                Terms & Conditions
+                {t("authFlow.common.terms")}
               </Text>{" "}
               •{" "}
               <Text
@@ -338,9 +339,9 @@ const ForgetScreen: FC = () => {
                   Linking.openURL("https://crosscaretech.com/privacy-policy")
                 }
               >
-                Privacy Policy
+                {t("authFlow.common.privacy")}
               </Text>{" "}
-              • Contact Us
+              • {t("authFlow.common.contactUs")}
             </Text>
           </View>
         </ScrollView>

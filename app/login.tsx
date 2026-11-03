@@ -27,11 +27,13 @@ import { useAuthDialog } from "@/components/ui/AuthDialog";
 import InlineNotice, { Notice } from "@/components/ui/InlineNotice";
 import { FontAwesome5, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { DEV_TOOLS_VISIBLE, useDemoMode } from "@/utils/demo/demoMode";
+import { useTranslation } from "react-i18next";
 
 // Logo oficial com o coração 3D e "CROSSCARE TECH" em ameixa
 const officialLogo = require("@/assets/logo/logo-full.png");
 
 const LoginContent: FC = () => {
+  const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -54,11 +56,11 @@ const LoginContent: FC = () => {
     const newError: { email?: string; password?: string } = {};
 
     if (!email.trim()) {
-      newError.email = "Email is required.";
+      newError.email = t("authFlow.login.emailRequired");
     }
 
     if (!password) {
-      newError.password = "Password is required.";
+      newError.password = t("authFlow.login.passwordRequired");
     }
 
     if (Object.keys(newError).length > 0) {
@@ -88,26 +90,26 @@ const LoginContent: FC = () => {
       if (!response.ok) {
         if (data.requiresVerification) {
           show({
-            title: "Email Verification Required",
-            message: "Please verify your email address before logging in.",
+            title: t("authFlow.login.verifyTitle"),
+            message: t("authFlow.login.verifyMessage"),
             variant: "info",
             buttons: [
               {
-                text: "Verify Now",
+                text: t("authFlow.common.verifyNow"),
                 onPress: () =>
                   router.push({
                     pathname: "/verify-email",
                     params: { email: data.email || email },
                   }),
               },
-              { text: "Cancel", style: "cancel" },
+              { text: t("authFlow.common.cancel"), style: "cancel" },
             ],
           });
           setLoading(false);
           return;
         }
 
-        const apiError: any = new Error(data.message || "Login failed");
+        const apiError: any = new Error(data.message || t("authFlow.login.failed"));
         apiError.status = response.status;
         apiError.isCredentialError = [400, 401, 404].includes(response.status);
         throw apiError;
@@ -145,22 +147,22 @@ const LoginContent: FC = () => {
       if (error?.isCredentialError) {
         // Shown on the fields themselves, no popup.
         if (error.status === 404) {
-          setEmailError("No account found with this email.");
+          setEmailError(t("authFlow.login.noAccount"));
         } else if (error.status === 401) {
-          setPasswordError("Incorrect password.");
+          setPasswordError(t("authFlow.login.wrongPassword"));
         } else {
-          setEmailError("Invalid email or password");
-          setPasswordError("Invalid email or password");
+          setEmailError(t("authFlow.login.invalidCredentials"));
+          setPasswordError(t("authFlow.login.invalidCredentials"));
         }
       } else if (error instanceof TypeError) {
         setNotice({
           variant: "error",
-          message: "We couldn't reach the server. Check your connection and try again.",
+          message: t("authFlow.login.network"),
         });
       } else {
         setNotice({
           variant: "error",
-          message: error?.message || "Something went wrong. Please try again.",
+          message: error?.message || t("authFlow.common.somethingWrong"),
         });
       }
       setLoading(false);
@@ -186,15 +188,14 @@ const LoginContent: FC = () => {
   const handleBiometricAuth = () => {
     setNotice({
       variant: "info",
-      message:
-        "Face ID / Biometric login will be enabled once your device is registered with your account.",
+      message: t("authFlow.login.biometricInfo"),
     });
   };
 
   const handleSocialAuth = (provider: "Apple" | "Google") => {
     setNotice({
       variant: "info",
-      message: `${provider} authentication will connect to your clinical profile.`,
+      message: t("authFlow.login.socialInfo", { provider }),
     });
   };
 
@@ -229,19 +230,19 @@ const LoginContent: FC = () => {
                 onPress={() => router.push("/developer")}
                 accessibilityRole="button"
               >
-                <Text style={styles.demoPillText}>Simulated data on · any email works</Text>
+                <Text style={styles.demoPillText}>{t("authFlow.login.demoPill")}</Text>
               </TouchableOpacity>
             )}
-            <Text style={styles.title}>Welcome back</Text>
+            <Text style={styles.title}>{t("authFlow.login.title")}</Text>
             <Text style={styles.subtitle}>
-              Sign in to continue your care journey with your concierge.
+              {t("authFlow.login.subtitle")}
             </Text>
           </View>
 
           {/* Formulário */}
           <View style={styles.form}>
             <CustomTextInput
-              label="Email"
+              label={t("authFlow.common.email")}
               type="email"
               value={email}
               onChangeText={handleChangeEmail}
@@ -253,11 +254,11 @@ const LoginContent: FC = () => {
 
             <View style={styles.passwordContainer}>
               <CustomTextInput
-                label="Password"
+                label={t("authFlow.common.password")}
                 type="password"
                 value={password}
                 onChangeText={handleChangePassword}
-                placeholder="Enter your password"
+                placeholder={t("authFlow.login.passwordPlaceholder")}
                 secureTextEntry={true}
                 errorMessage={passwordError}
               />
@@ -265,7 +266,7 @@ const LoginContent: FC = () => {
                 onPress={() => router.push("/forget-password")}
                 style={styles.forgotPasswordButton}
               >
-                <Text style={styles.forgotPasswordText}>Forgot password?</Text>
+                <Text style={styles.forgotPasswordText}>{t("authFlow.login.forgot")}</Text>
               </TouchableOpacity>
             </View>
 
@@ -281,7 +282,7 @@ const LoginContent: FC = () => {
               {loading ? (
                 <ActivityIndicator color="#FFFFFF" />
               ) : (
-                <Text style={styles.loginButtonText}>Log in</Text>
+                <Text style={styles.loginButtonText}>{t("authFlow.common.logIn")}</Text>
               )}
             </TouchableOpacity>
 
@@ -290,7 +291,7 @@ const LoginContent: FC = () => {
               style={styles.biometricButton}
               onPress={handleBiometricAuth}
               accessibilityRole="button"
-              accessibilityLabel="Use Face ID instead"
+              accessibilityLabel={t("authFlow.login.faceId")}
               activeOpacity={0.7}
             >
               <MaterialCommunityIcons
@@ -298,13 +299,13 @@ const LoginContent: FC = () => {
                 size={18}
                 color={Theme.colors.inkFaint}
               />
-              <Text style={styles.biometricText}>Use Face ID instead</Text>
+              <Text style={styles.biometricText}>{t("authFlow.login.faceId")}</Text>
             </TouchableOpacity>
 
             {/* Divisor "or continue with" */}
             <View style={styles.dividerRow}>
               <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>or continue with</Text>
+              <Text style={styles.dividerText}>{t("authFlow.login.orContinue")}</Text>
               <View style={styles.dividerLine} />
             </View>
 
@@ -314,7 +315,7 @@ const LoginContent: FC = () => {
                 style={styles.socialButton}
                 onPress={() => handleSocialAuth("Apple")}
                 accessibilityRole="button"
-                accessibilityLabel="Continue with Apple"
+                accessibilityLabel={t("authFlow.login.continueApple")}
                 activeOpacity={0.8}
               >
                 <Ionicons name="logo-apple" size={18} color={Theme.colors.ink} />
@@ -325,7 +326,7 @@ const LoginContent: FC = () => {
                 style={styles.socialButton}
                 onPress={() => handleSocialAuth("Google")}
                 accessibilityRole="button"
-                accessibilityLabel="Continue with Google"
+                accessibilityLabel={t("authFlow.login.continueGoogle")}
                 activeOpacity={0.8}
               >
                 <FontAwesome5 name="google" size={16} color={Theme.colors.ink} />
@@ -335,9 +336,9 @@ const LoginContent: FC = () => {
 
             {/* Cadastro */}
             <View style={styles.signupRow}>
-              <Text style={styles.signupPrompt}>New here? </Text>
+              <Text style={styles.signupPrompt}>{t("authFlow.login.newHere")}</Text>
               <TouchableOpacity onPress={() => router.push("/signup")}>
-                <Text style={styles.signupLink}>Create account</Text>
+                <Text style={styles.signupLink}>{t("authFlow.login.createAccount")}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -350,12 +351,10 @@ const LoginContent: FC = () => {
               }
             >
               <Text style={styles.disclaimerText}>
-                DISCLAIMER: CrossCare Concierge is an AI-powered pregnancy guide
-                and does not replace professional medical advice, diagnosis, or
-                treatment.
+                {t("authFlow.login.disclaimer")}
               </Text>
               <Text style={styles.legalLinks}>
-                Terms & Conditions • Privacy Policy • Contact Us
+                {`${t("authFlow.common.terms")} • ${t("authFlow.common.privacy")} • ${t("authFlow.common.contactUs")}`}
               </Text>
             </Pressable>
           </View>
