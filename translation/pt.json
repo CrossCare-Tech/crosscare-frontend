@@ -12,7 +12,7 @@
     "notDoctor": "Não sou médica",
     "sources": "Toque em \"fontes\" quando quiser",
     "start": "Iniciar uma conversa",
-    "choose": "Escolher outra guia"
+    "choose": "Escolher outro visual"
   },
   "conciergeVoice": {
     "title": "Fale com",
@@ -82,7 +82,7 @@
     "notMedical": "não é aconselhamento médico",
     "sources": "Fontes",
     "more": "Mais opções",
-    "live": "Fale em voz alta com sua guia",
+    "live": "Fale em voz alta com sua Concierge",
     "online": "Concierge CrossCare"
   },
   "conciergeCall": {
@@ -115,7 +115,7 @@
   },
   "conciergeHistory": {
     "title": "Conversas",
-    "settings": "Configurações da guia",
+    "settings": "Configurações da Concierge",
     "rowSub": "Mude o visual e o nome dela",
     "newChat": "Nova conversa",
     "today": "Hoje",
@@ -554,7 +554,7 @@
     "body_inactive": "No momento você não tem acesso aos recursos Premium. Entre em contato com seu provedor para saber mais.",
     "included": "Incluído no Premium",
     "concierge": "Concierge com IA",
-    "conciergeOn": "Seu guia com IA, disponível a qualquer hora",
+    "conciergeOn": "Sua Concierge com IA, disponível a qualquer hora",
     "conciergeOff": "Indisponível no momento",
     "openConcierge": "Abrir Concierge com IA",
     "note": "O acesso Premium é oferecido e pago pela sua clínica ou provedor. Ele não pode ser comprado no app.",
@@ -759,11 +759,11 @@
     "tired": "Cansado",
     "worried": "Preocupado",
     "unwell": "Não se sente bem",
-    "hint": "Leva dois segundos. Isso ajuda seu guia a saber como te ajudar.",
+    "hint": "Leva dois segundos. Isso ajuda sua Concierge a saber como te ajudar.",
     "reply_good": "Que bom saber. Aproveite o seu dia.",
     "reply_tired": "Isso é muito comum nesta fase. Descanse quando puder. Hoje não é preciso mais nada.",
-    "reply_worried": "É normal se preocupar às vezes. Você não está sozinha, e seu guia está aqui se quiser conversar.",
-    "reply_unwell": "Sinto muito que você não esteja bem. Se tiver dor forte, sangramento ou dificuldade para respirar, ligue para o 911. Para todo o resto, seu guia pode ajudar.",
+    "reply_worried": "É normal se preocupar às vezes. Você não está sozinha, e sua Concierge está aqui se quiser conversar.",
+    "reply_unwell": "Sinto muito que você não esteja bem. Se tiver dor forte, sangramento ou dificuldade para respirar, ligue para o 911. Para todo o resto, sua Concierge pode ajudar.",
     "talk": "Conversar com o Ask Your Doula"
   },
   "pregnancySummary": {
@@ -971,7 +971,6 @@
     "invalidEmail": "Digite um e-mail válido.",
     "saveError": "Não foi possível salvar as alterações. Tente novamente.",
     "accountDetails": "Detalhes da conta",
-    "avatar": "Avatar",
     "preferences": "Preferências",
     "emergency": "Emergência 911",
     "emergencyDescription": "Atalho rápido para ligar para o 911",
@@ -987,7 +986,7 @@
     "yourpregnancy": "Sua Gravidez",
     "weekofpregnancy": "Semana de Gravidez",
     "progresstracking": "Acompanhamento de Progresso",
-    "customizeyourdoula": "Personalize seu CrossCare Concierge",
+    "customizeyourdoula": "Personalize sua Concierge CrossCare",
     "voicetone": "Tom de voz",
     "hair": "Cabelo",
     "dress": "Roupas",
@@ -1007,7 +1006,7 @@
     "halloffame": "Hall da Fama",
     "earnbadge": "Distintivos Conquistados",
     "rewards": "Recompensas",
-    "changedoulalanguage": "Alterar idioma do CrossCare Concierge",
+    "changedoulalanguage": "Alterar o idioma da Concierge CrossCare",
     "notifications": "Notificações",
     "messages": "Mensagens",
     "alerts": "Alertas",
@@ -1458,13 +1457,13 @@
     "watermelon": "Melancia"
   },
   "customize": {
-    "avatar": "Seleção de Avatar",
+    "avatar": "Personalize sua Concierge CrossCare",
     "hairstyle": "Cabelo",
     "outfit": "Roupas",
     "levelUpToUnlock": "Suba de nível para desbloquear",
     "done": "Feito",
-    "title": "Seu Avatar",
-    "loadingAvatar": "Carregando avatar...",
+    "title": "Sua Concierge CrossCare",
+    "loadingAvatar": "Carregando sua Concierge...",
     "edit": "Editar",
     "save": "Salvar",
     "saving": "Salvando..."
@@ -2360,5 +2359,19 @@
       "doneTitle": "E-mail verificado",
       "doneMessage": "Seu e-mail foi verificado. Agora você pode entrar."
     }
+  },
+  "avatarStudio": {
+    "title": "Personalize sua Concierge CrossCare",
+    "guide": "Aparência",
+    "nameLabel": "Nome",
+    "cancel": "Cancelar",
+    "done": "Concluir",
+    "skinTone": "Tom de pele",
+    "hairstyle": "Penteado",
+    "outfit": "Roupa",
+    "free": "Grátis",
+    "locked": "Bloqueado",
+    "unlockHint": "Desbloquear: {{rule}}",
+    "unlockRule": "Regra de desbloqueio"
   }
 }

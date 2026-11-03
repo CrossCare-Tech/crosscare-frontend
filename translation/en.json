@@ -5,11 +5,11 @@
     "main": "Main navigation"
   },
   "avatarStudio": {
-    "title": "Avatar Selection",
+    "title": "Customize your CrossCare Concierge",
     "nameLabel": "Name",
     "cancel": "Cancel",
     "done": "Done",
-    "guide": "Guide",
+    "guide": "Look",
     "skinTone": "Skin tone",
     "hairstyle": "Hairstyle",
     "outfit": "Outfit",
@@ -26,7 +26,7 @@
     "notDoctor": "I'm not a doctor",
     "sources": "Tap \"sources\" any time",
     "start": "Start a conversation",
-    "choose": "Choose a different guide"
+    "choose": "Choose a different look"
   },
   "conciergeVoice": {
     "title": "Talk with",
@@ -96,7 +96,7 @@
     "notMedical": "not medical advice",
     "sources": "Sources",
     "more": "More options",
-    "live": "Talk with your guide out loud",
+    "live": "Talk with your Concierge out loud",
     "online": "CrossCare Concierge"
   },
   "conciergeCall": {
@@ -129,7 +129,7 @@
   },
   "conciergeHistory": {
     "title": "Conversations",
-    "settings": "Guide settings",
+    "settings": "Concierge settings",
     "rowSub": "Change her look and name",
     "newChat": "New conversation",
     "today": "Today",
@@ -568,7 +568,7 @@
     "body_inactive": "You don't have access to the Premium features right now. Please contact your provider to learn more.",
     "included": "Included in Premium",
     "concierge": "AI Concierge",
-    "conciergeOn": "Your AI guide, available anytime",
+    "conciergeOn": "Your AI Concierge, available anytime",
     "conciergeOff": "Not available right now",
     "openConcierge": "Open AI Concierge",
     "note": "Premium access is offered and paid for by your clinic or provider. It can't be bought in the app.",
@@ -773,11 +773,11 @@
     "tired": "Tired",
     "worried": "Worried",
     "unwell": "Unwell",
-    "hint": "Takes two seconds. It helps your guide know how to support you.",
+    "hint": "Takes two seconds. It helps your Concierge know how to support you.",
     "reply_good": "Lovely to hear. Enjoy your day.",
     "reply_tired": "That is very common at this stage. Rest when you can. Nothing else is needed today.",
-    "reply_worried": "It is normal to worry sometimes. You are not alone, and your guide is here if you want to talk it through.",
-    "reply_unwell": "I am sorry you do not feel well. If you have severe pain, bleeding or trouble breathing, call 911. For anything else, your guide can help.",
+    "reply_worried": "It is normal to worry sometimes. You are not alone, and your Concierge is here if you want to talk it through.",
+    "reply_unwell": "I am sorry you do not feel well. If you have severe pain, bleeding or trouble breathing, call 911. For anything else, your Concierge can help.",
     "talk": "Talk to Ask Your Doula"
   },
   "pregnancySummary": {
@@ -833,7 +833,7 @@
     "source": {
       "mood": "mood",
       "symptoms": "symptoms",
-      "guide": "sample guide notes"
+      "guide": "sample notes"
     },
     "sources": "Sources: {{sources}}.",
     "notDiagnosis": "Not a diagnosis.",
@@ -985,7 +985,6 @@
     "invalidEmail": "Please enter a valid email address.",
     "saveError": "Couldn't save your changes. Please try again.",
     "accountDetails": "Account details",
-    "avatar": "Avatar",
     "preferences": "Preferences",
     "emergency": "Emergency 911",
     "emergencyDescription": "Quick shortcut to call 911",
@@ -1022,7 +1021,7 @@
     "earnbadge": "Earned Badges",
     "rewards": "Rewards",
     "changedoulalanguage": "Change CrossCare Concierge language",
-    "notifications": "Notifications",
+    "notifications": "Notification",
     "messages": "Messages",
     "alerts": "Alerts",
     "help": "Help",
@@ -1475,13 +1474,13 @@
     "watermelon": "Watermelon"
   },
   "customize": {
-    "avatar": "Avatar Selection",
+    "avatar": "Customize your CrossCare Concierge",
     "hairstyle": "Hairstyle",
     "outfit": "Outfit",
     "levelUpToUnlock": "Level Up to Unlock",
     "done": "Done",
-    "title": "Your Avatar",
-    "loadingAvatar": "Loading avatar...",
+    "title": "Your CrossCare Concierge",
+    "loadingAvatar": "Loading your Concierge...",
     "edit": "Edit",
     "save": "Save",
     "saving": "Saving..."

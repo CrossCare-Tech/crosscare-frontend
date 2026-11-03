@@ -25,13 +25,7 @@ import ProfilePhoto, {
 import { PremiumBadge } from "@/components/premium/PremiumUI";
 import { usePremiumStore } from "@/zustandStore/premiumStore";
 import { DEV_TOOLS_VISIBLE, useDemoMode } from "@/utils/demo/demoMode";
-
-const LANGUAGE_NAMES: Record<string, string> = {
-  en: "English (US)",
-  es: "Español",
-  ht: "Kreyòl Ayisyen",
-  pt: "Português",
-};
+import { GUIDE } from "@/constants/conciergeGuide";
 
 const ICONS: Record<string, React.ReactNode> = {
   account: (
@@ -214,7 +208,9 @@ const Profile = () => {
   const [pregnancyWeek, setPregnancyWeek] = useState(0);
   const [photo, setPhoto] = useState<string>(user?.user_photo || "");
   const dispatch = useDispatch();
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
+  // Original section hints ("Name, Age, Email"), built from the same keys in every language
+  const hint = (...keys: string[]) => keys.map((key) => t(`profile.${key}`)).join(", ");
   const premiumStatus = usePremiumStore((state) => state.status);
   const demoMode = useDemoMode((state) => state.enabled);
 
@@ -298,7 +294,8 @@ const Profile = () => {
           <View style={styles.card}>
             <MenuRow
               icon="account"
-              title={t("profile.accountDetails")}
+              title={t("profile.account")}
+              subtitle={hint("name", "age", "email")}
               onPress={() => router.push("/patient/profile-setting/name")}
             />
             <MenuRow
@@ -310,6 +307,7 @@ const Profile = () => {
             <MenuRow
               icon="pregnancy"
               title={t("profile.yourpregnancy")}
+              subtitle={hint("weekofpregnancy", "progresstracking")}
               onPress={() => router.push("/patient/profile-setting/pregrancy")}
             />
             <MenuRow
@@ -319,7 +317,8 @@ const Profile = () => {
             />
             <MenuRow
               icon="avatar"
-              title={t("profile.avatar")}
+              title={GUIDE.name} // fixed: renaming the Concierge does not rename this section
+              subtitle={hint("voicetone", "hair", "dress", "language", "skintone")}
               onPress={() => router.push("/avatar-studio")}
             />
             <MenuRow
@@ -331,6 +330,7 @@ const Profile = () => {
             <MenuRow
               icon="fame"
               title={t("profile.halloffame")}
+              subtitle={hint("earnbadge", "rewards")}
               isLast
               onPress={() => router.push("/patient/profile-setting/earnbadge")}
             />
@@ -359,12 +359,13 @@ const Profile = () => {
             <MenuRow
               icon="language"
               title={t("profile.language")}
-              subtitle={LANGUAGE_NAMES[i18n.language] || LANGUAGE_NAMES.en}
+              subtitle={t("profile.changedoulalanguage")}
               onPress={() => router.push("/patient/profile-setting/language")}
             />
             <MenuRow
               icon="notifications"
               title={t("profile.notifications")}
+              subtitle={hint("messages", "alerts")}
               onPress={() =>
                 router.push("/patient/profile-setting/notification")
               }
@@ -383,12 +384,14 @@ const Profile = () => {
           <View style={styles.card}>
             <MenuRow
               icon="help"
-              title={t("profile.helpcenter")}
+              title={t("profile.help")}
+              subtitle={hint("helpcenter", "support", "contactus")}
               onPress={() => router.push("/patient/profile-setting/help")}
             />
             <MenuRow
               icon="terms"
               title={t("profile.tnc")}
+              subtitle={hint("privacy", "Termsofuse")}
               onPress={() => router.push("/patient/profile-setting/tnc")}
             />
             <MenuRow

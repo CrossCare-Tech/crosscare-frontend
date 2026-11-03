@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { useFocusEffect } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { AVATAR_GUIDES } from "@/constants/avatarCatalog";
 import { avatarImage, useAvatarStudio } from "@/zustandStore/avatarStudioStore";
 
-// The Concierge's default face (prototype: Sofia); the avatar picked in Avatar Selection replaces it.
-export const GUIDE = { name: "Sofia", portrait: require("@/assets/images/concierge/sofia.jpg") };
+// The Concierge's default name and face. The look picked in the customize screen replaces the face, and the
+// user can rename her; the catalog names (Sofia, Amara...) are only labels of the looks, never her name.
+export const GUIDE = { name: "CrossCare Concierge", portrait: require("@/assets/images/concierge/sofia.jpg") };
 
 const NAME_KEY = "concierge.name";
 
@@ -25,10 +25,9 @@ export const useGuide = () => {
         .catch(() => {});
     }, [])
   );
-  // The chosen guide's portrait and name, until the choice loads (then Sofia's original portrait). A name the user gave wins.
+  // The chosen look's portrait until the choice loads (then the original one). A name the user gave wins.
   const picked = loaded && avatarImage(choice);
-  const guideName = (loaded && AVATAR_GUIDES.find((g) => g.id === choice.guide)?.name) || GUIDE.name;
-  return { name: custom || guideName, portrait: picked || GUIDE.portrait };
+  return { name: custom || GUIDE.name, portrait: picked || GUIDE.portrait };
 };
 
 // The name the user gave the guide, or "" when she keeps the default one.

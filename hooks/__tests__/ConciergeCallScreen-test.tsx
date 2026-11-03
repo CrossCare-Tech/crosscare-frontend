@@ -10,7 +10,10 @@ jest.mock("expo-status-bar", () => ({ StatusBar: () => null }));
 jest.mock("@expo/vector-icons", () => ({ Feather: () => null, Ionicons: () => null }));
 jest.mock("react-native-safe-area-context", () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0 }) }));
 jest.mock("@/hooks/useSafeBack", () => ({ useSafeBack: () => jest.fn() }));
-jest.mock("@/constants/conciergeGuide", () => ({ useGuide: () => ({ name: "Sofia", portrait: 0 }) }));
+jest.mock("@/constants/conciergeGuide", () => ({
+  GUIDE: { name: "CrossCare Concierge" },
+  useGuide: () => ({ name: "CrossCare Concierge", portrait: 0 }),
+}));
 jest.mock("@react-native-async-storage/async-storage", () => ({ getItem: jest.fn().mockResolvedValue(null), setItem: jest.fn() }));
 jest.mock("@/utils/callSounds", () => ({ playSound: jest.fn(), startRing: async () => () => {}, buzz: jest.fn() }));
 jest.mock("@/utils/replyAudio", () => ({

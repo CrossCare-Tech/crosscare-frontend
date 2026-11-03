@@ -9,7 +9,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { Theme } from "@/constants/theme";
-import { useGuide } from "@/constants/conciergeGuide";
+import { GUIDE, useGuide } from "@/constants/conciergeGuide";
 import { CallTopic, callLang } from "@/constants/callScript";
 import { CallPhase, useCallSimulation } from "@/hooks/useCallSimulation";
 import { useSelector } from "react-redux";
@@ -211,7 +211,8 @@ function ConciergeCall() {
         <View style={styles.pill}>
           <View style={[styles.dot, !connected && styles.dotCalling]} />
           <Text style={styles.pillText}>
-            {guide.name} · {connected ? t("conciergeChat.online") : t("conciergeCall.callingShort")}
+            {guide.name !== GUIDE.name && `${guide.name} · `}
+            {connected ? t("conciergeChat.online") : t("conciergeCall.callingShort")}
           </Text>
         </View>
         <Text style={styles.timer} accessibilityLabel={formatTime(call.seconds)}>

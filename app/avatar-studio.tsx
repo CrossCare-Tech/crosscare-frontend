@@ -7,7 +7,7 @@ import { useTranslation } from "react-i18next";
 import ScreenBackground from "@/components/ui/ScreenBackground";
 import { Theme } from "@/constants/theme";
 import { AVATAR_GUIDES, AVATAR_OUTFITS, AVATAR_TONES, AvatarItem } from "@/constants/avatarCatalog";
-import { loadGuideName, saveGuideName } from "@/constants/conciergeGuide";
+import { GUIDE, loadGuideName, saveGuideName } from "@/constants/conciergeGuide";
 import { AvatarChoice, avatarImage, useAvatarStudio } from "@/zustandStore/avatarStudioStore";
 
 type TabId = "guide" | "tone" | "hair" | "outfit";
@@ -38,7 +38,7 @@ export default function AvatarStudio() {
   }, [load]);
   useEffect(() => setDraft(saved), [saved]);
 
-  // The name the user gave the guide; empty means the picked guide's own name.
+  // The name the user gave the Concierge; empty means the default name.
   const [customName, setCustomName] = useState("");
   useEffect(() => {
     loadGuideName().then(setCustomName);
@@ -61,8 +61,8 @@ export default function AvatarStudio() {
 
   const done = async () => {
     await save(draft);
-    // A name equal to the picked guide's own name is the default, so it is not stored as custom.
-    await saveGuideName(customName.trim() === guide.name ? "" : customName);
+    // saveGuideName drops an empty or default name, so only a name the user chose is stored.
+    await saveGuideName(customName);
     leave();
   };
 
@@ -141,9 +141,9 @@ export default function AvatarStudio() {
             style={styles.name}
             value={customName}
             onChangeText={setCustomName}
-            placeholder={guide.name}
+            placeholder={GUIDE.name}
             placeholderTextColor={Theme.colors.placeholder}
-            maxLength={20}
+            maxLength={24}
             autoCorrect={false}
             returnKeyType="done"
             accessibilityLabel={t("avatarStudio.nameLabel")}
@@ -239,11 +239,12 @@ const styles = StyleSheet.create({
   },
   name: {
     marginTop: Theme.spacing.sm + 4,
-    minWidth: 160,
+    // Wide enough for the default name ("CrossCare Concierge") at this size
+    minWidth: 260,
     paddingVertical: 2,
     textAlign: "center",
     fontFamily: Theme.typography.display,
-    fontSize: 22,
+    fontSize: 20,
     color: Theme.colors.ink,
     borderBottomWidth: 1,
     borderBottomColor: Theme.colors.hairline,

@@ -46,7 +46,7 @@ import { PopupDomainState } from "@/utils/questionnairePopupStore";
 import { useLocalSearchParams } from "expo-router";
 import ScreenBackground from "@/components/ui/ScreenBackground";
 import { Theme } from "@/constants/theme";
-import { useGuide } from "@/constants/conciergeGuide";
+import { GUIDE, useGuide } from "@/constants/conciergeGuide";
 import LiveBars from "@/components/ui/LiveBars";
 import User from "@/assets/images/Svg/User";
 import {
@@ -2090,7 +2090,7 @@ function AskDoulaChat() {
           </TouchableOpacity>
           <View style={styles.headerText}>
             <Text style={styles.headerName}>{guide.name}</Text>
-            <Text style={styles.headerSub}>{t("conciergeChat.online")}</Text>
+            {guide.name !== GUIDE.name && <Text style={styles.headerSub}>{t("conciergeChat.online")}</Text>}
           </View>
           <TouchableOpacity
             onPress={clearChatHistory}
