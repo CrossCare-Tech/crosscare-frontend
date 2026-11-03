@@ -1,3 +1,4 @@
+import { dateKeyOf, toLocalDateString, todayDateString } from "@/utils/date";
 import React, { useState, useEffect, useMemo, useRef } from "react"
 import {
   View,
@@ -25,6 +26,7 @@ import * as WebBrowser from "expo-web-browser"
 import { useFitbit } from "@/zustandStore/useFitbitStore"
 import { useAppleHealth } from "@/zustandStore/useAppleHealthStore"
 import { useTranslation } from "react-i18next"
+import MetricLogModal from "./modal/metriclogmodal"
 
 const { width } = Dimensions.get("window")
 const BAR_WIDTH = 20
@@ -84,8 +86,9 @@ export default function HeartRateScreen() {
   const [timeRange, setTimeRange] = useState("week")
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
   const [tooltipAnim] = useState(new Animated.Value(0))
-  const tooltipTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const tooltipTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [dropdownVisible, setDropdownVisible] = useState(false)
+  const [logModalVisible, setLogModalVisible] = useState(false)
   const user = useSelector((state: any) => state.user)
   const [heartRateData, setHeartRateData] = useState<DataItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -210,7 +213,7 @@ export default function HeartRateScreen() {
       // Try Fitbit if no Apple data or not connected
       if (currentRate === 0 && fitbitConnected) {
         try {
-          const today = new Date().toISOString().split('T')[0];
+          const today = todayDateString();
           const data = await getFitbitHeartRateDataRaw(today, '1d');
           
           if (data && data['activities-heart'] && data['activities-heart'].length > 0) {
@@ -444,7 +447,7 @@ export default function HeartRateScreen() {
     let endDate: Date
 
     if (timeRange === "today") {
-      const todayStr = today.toISOString().split("T")[0]
+      const todayStr = toLocalDateString(today)
 
       return [
         {
@@ -464,7 +467,7 @@ export default function HeartRateScreen() {
 
       const currentDate = new Date(startDate)
       while (currentDate <= endDate) {
-        const dateString = currentDate.toISOString().split("T")[0]
+        const dateString = toLocalDateString(currentDate)
         days.push({
           id: `empty-${dateString}`,
           date: dateString,
@@ -498,7 +501,7 @@ export default function HeartRateScreen() {
         if (range.start <= lastDay) {
           const labelDate = new Date(startDate)
           labelDate.setDate(range.start)
-          const labelDateString = labelDate.toISOString().split("T")[0]
+          const labelDateString = toLocalDateString(labelDate)
 
           days.push({
             id: `label-${labelDateString}`,
@@ -511,7 +514,7 @@ export default function HeartRateScreen() {
           for (let day = range.start; day <= Math.min(range.end, lastDay); day++) {
             const currentDate = new Date(startDate)
             currentDate.setDate(day)
-            const dateString = currentDate.toISOString().split("T")[0]
+            const dateString = toLocalDateString(currentDate)
 
             days.push({
               id: `day-${dateString}`,
@@ -541,7 +544,7 @@ export default function HeartRateScreen() {
         try {
           const date = safeParseDate(item.date);
           if (date) {
-            const dateKey = date.toISOString().split('T')[0];
+            const dateKey = toLocalDateString(date);
             dataMap.set(dateKey, item);
           }
         } catch (error) {
@@ -552,7 +555,7 @@ export default function HeartRateScreen() {
   
     if (timeRange === "today") {
       try {
-        const todayStr = new Date().toISOString().split('T')[0];
+        const todayStr = todayDateString();
         const todayData = dataMap.get(todayStr);
   
         if (todayData) {
@@ -654,12 +657,12 @@ export default function HeartRateScreen() {
           setCurrentHeartRate(latestHeartRate);
           
           const today = new Date();
-          const todayStr = today.toISOString().split("T")[0];
+          const todayStr = toLocalDateString(today);
           
           setHeartRateData((prevData) => {
             const updatedData = [...prevData];
             const todayIndex = updatedData.findIndex(
-              (item) => new Date(item.date).toISOString().split("T")[0] === todayStr,
+              (item) => dateKeyOf(item.date) === todayStr,
             );
             
             if (todayIndex >= 0) {
@@ -1071,6 +1074,17 @@ export default function HeartRateScreen() {
             </TouchableOpacity>
           )}
         </View>
+
+        {/* Manual entry. Deliberately outside the isAnyConnected gate: with
+            the Fitbit Web API switched off, an Android user has no connected
+            source and this is their only way to record a reading. */}
+        <TouchableOpacity
+          style={styles.addLogButton}
+          onPress={() => setLogModalVisible(true)}
+        >
+          <Ionicons name="add" size={14} color="#fff" />
+          <Text style={styles.addLogText}>{t('addLog')}</Text>
+        </TouchableOpacity>
       </ScrollView>
 
       {isAnyConnected && (
@@ -1101,6 +1115,22 @@ export default function HeartRateScreen() {
           </TouchableOpacity>
         </Modal>
       )}
+
+      <MetricLogModal
+        visible={logModalVisible}
+        onClose={() => setLogModalVisible(false)}
+        reload={getHeartRateStatus}
+        title={t('heartScreen.addHeartRateLog')}
+        placeholder={t('heartScreen.heartRatePlaceholder')}
+        path="heart"
+        buildBody={(heartRate) => ({ heartRate })}
+        min={20}
+        max={250}
+        invalidMessage={t('heartScreen.invalidHeartRate')}
+        accent="#D53E4F"
+        accentBorder="#F2C3C8"
+        inputBorder="#F2C3C8"
+      />
     </SafeAreaView>
   )
 }
@@ -1321,6 +1351,26 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#7B7B7B",
     fontFamily: "Inter400",
+  },
+  addLogButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#D53E4F",
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    marginHorizontal: 16,
+    marginTop: 24,
+    marginBottom: 8,
+    borderRadius: 25,
+    borderWidth: 1,
+    borderColor: "#F2C3C8",
+    alignSelf: "flex-start",
+  },
+  addLogText: {
+    color: "#fff",
+    marginLeft: 5,
+    fontFamily: "Inter400",
+    fontSize: 14,
   },
   reminderButton: {
     flexDirection: "row",

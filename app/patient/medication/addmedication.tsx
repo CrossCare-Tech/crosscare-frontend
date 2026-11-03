@@ -8,6 +8,7 @@ import {
   ScrollView,
   Pressable,
   Platform,
+  KeyboardAvoidingView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -20,6 +21,7 @@ import {
   areMedicationRemindersEnabled,
 } from "@/utils/NotificationManager";
 import { CONFIG } from "@/constants/config";
+import { toLocalDateString } from "@/utils/date";
 
 interface MedicationState {
   setMedicationName: string;
@@ -33,6 +35,7 @@ interface MedicationState {
 }
 
 export default function addmedication() {
+  const [submitting, setSubmitting] = useState(false);
   const [state, setState] = useState<MedicationState>({
     setMedicationName: "",
     selectedDays: ["T"],
@@ -127,6 +130,13 @@ export default function addmedication() {
   };
 
   const handleSubmit = async () => {
+    // Submitting posts the medication and then schedules a reminder for every
+    // matching day in the range, so it stays in flight long enough to tap the
+    // button twice and create the course twice. The same guard is already used
+    // in login.tsx and signup.tsx.
+    if (submitting) {
+      return;
+    }
     if (!state.setMedicationName.trim()) {
       alert("Please enter the medication name.");
       return;
@@ -152,14 +162,15 @@ export default function addmedication() {
       return;
     }
 
+    setSubmitting(true);
     try {
       const apiUrl = `${CONFIG.API_BASE_URL}/user/activity/${user.user_id}/addMedication`;
 
       const payload = {
         medicationName: state.setMedicationName,
         days: state.selectedDays,
-        startDate: state.startDate.toISOString().split("T")[0],
-        endDate: state.endDate.toISOString().split("T")[0],
+        startDate: toLocalDateString(state.startDate),
+        endDate: toLocalDateString(state.endDate),
         times: state.selectedTimes,
       };
 
@@ -227,7 +238,7 @@ export default function addmedication() {
                       const medicationId =
                         data.data?.id || data.id || "new-medication";
                       const uniqueId = `${medicationId}-${
-                        currentDate.toISOString().split("T")[0]
+                        toLocalDateString(currentDate)
                       }-${timeString}`;
 
                       console.log(
@@ -291,6 +302,8 @@ export default function addmedication() {
     } catch (error: any) {
       console.log("Error occurred", error.message);
       alert("Something went wrong!");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -310,7 +323,14 @@ export default function addmedication() {
         <View style={{ width: 25, height: 1 }} />
       </View>
 
-      <ScrollView style={styles.content}>
+      {/* The medication name input sits above a long form, so the keyboard
+          covered it and the save button without this. Matches the pattern
+          already used in newnotes.tsx. */}
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoider}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
+      <ScrollView style={styles.content} keyboardShouldPersistTaps="handled">
         <View style={{ flexDirection: "column", gap: 36 }}>
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>{t("medicationName")}</Text>
@@ -466,13 +486,18 @@ export default function addmedication() {
 
           {/* Add Medication Button */}
           <TouchableOpacity
-            style={styles.addMedicationButton}
+            style={[
+              styles.addMedicationButton,
+              submitting && styles.addMedicationButtonDisabled,
+            ]}
             onPress={handleSubmit}
+            disabled={submitting}
           >
             <Text style={styles.addMedicationText}>{t("saveAndContinue")}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -662,6 +687,12 @@ const styles = StyleSheet.create({
     width: 40,
     // paddingHorizontal: 14,
     borderRadius: 20,
+  },
+  keyboardAvoider: {
+    flex: 1,
+  },
+  addMedicationButtonDisabled: {
+    opacity: 0.6,
   },
   addMedicationButton: {
     backgroundColor: "#00A991",

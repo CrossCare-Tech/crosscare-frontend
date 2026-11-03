@@ -51,6 +51,55 @@ import { CONFIG } from "@/constants/config";
 import i18n from "@/translation/i18next";
 import { deepgramTTS, speakWithDeepgram } from "@/utils/deepgramTTS";
 
+/**
+ * Gemini model used for chat. Google retires model names on a schedule and
+ * returns 404 NOT_FOUND once a name is withdrawn, which surfaces in the UI as
+ * "I'm having trouble connecting right now". gemini-2.0-flash was withdrawn and
+ * is no longer in the account's available model list. Kept as one constant so a
+ * future retirement is a single-line change rather than two call sites.
+ */
+const GEMINI_MODEL = "gemini-3.6-flash";
+
+/**
+ * Gemini 3.x models reason before answering, and that reasoning is billed
+ * against maxOutputTokens. Left at its default the model spent 842-961 of the
+ * 1000 token budget thinking and returned a reply truncated mid-word with
+ * finishReason MAX_TOKENS. gemini-3.7-flash and gemini-3.8-flash thought for so
+ * long that the request never came back at all, which is what made the chat
+ * appear to hang.
+ *
+ * thinkingBudget 0 turns reasoning off. The same prompt then returns
+ * finishReason STOP with 0 thinking tokens and 602 answer tokens.
+ *
+ * Model choice is measured, not assumed. With reasoning off, 3.5 and 3.6 were
+ * the only models that answered at all: 3.6 in 4.7s and 3.5 in 5.9s, while
+ * 3.7, 3.8 and the gemini-flash-latest alias returned 503 or never responded.
+ * 3.6 is both the faster of the two and the better answer, and it volunteers a
+ * "consult your doctor or midwife" line that 3.5 omits.
+ */
+const GEMINI_THINKING_CONFIG = { thinkingBudget: 0 };
+
+/**
+ * Nothing bounded these requests, so a stalled or overloaded upstream left the
+ * chat spinning with no way out. Abort after this long and let the existing
+ * catch report it.
+ */
+const GEMINI_TIMEOUT_MS = 30000;
+
+const fetchWithTimeout = async (
+  url: string,
+  init: RequestInit,
+  ms: number = GEMINI_TIMEOUT_MS
+): Promise<Response> => {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+};
+
 
 interface PauseStateStorage {
   paused: boolean;
@@ -750,7 +799,7 @@ export default function askdoula() {
 
   const generateTranslation = async (text: string, targetLanguage: string) => {
     const apiUrl =
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
     const apiKey = `${CONFIG.GEMINI_KEY}`;
     // Replace with your actual API key
 
@@ -772,12 +821,13 @@ export default function askdoula() {
         topK: 40,
         topP: 0.95,
         maxOutputTokens: 1000,
+        thinkingConfig: GEMINI_THINKING_CONFIG,
       },
     };
 
     // Use fetch instead of axios
     try {
-      const response = await fetch(`${apiUrl}?key=${apiKey}`, {
+      const response = await fetchWithTimeout(`${apiUrl}?key=${apiKey}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -893,7 +943,7 @@ export default function askdoula() {
     try {
       // Correct Gemini API endpoint
       const apiUrl =
-        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+        `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
       // Your API key should be stored in an environment variable in production
       const apiKey = `${CONFIG.GEMINI_KEY}`; // Replace with your actual API key
@@ -1009,12 +1059,13 @@ export default function askdoula() {
           topK: 40,
           topP: 0.95,
           maxOutputTokens: 1000,
+          thinkingConfig: GEMINI_THINKING_CONFIG,
         },
       };
 
       console.log("Current Language: ", currentLanguage);
 
-      const response = await fetch(`${apiUrl}?key=${apiKey}`, {
+      const response = await fetchWithTimeout(`${apiUrl}?key=${apiKey}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1038,7 +1089,10 @@ export default function askdoula() {
         data.candidates?.[0]?.content?.parts?.[0]?.text ||
         "I'm sorry, I couldn't process your request at this time.";
 
-      responseText = responseText.replace(/\*/g, "");
+      // Not stripped of "*" any more. Doula messages render through
+      // <Markdown> further down, so removing the asterisks deleted every bold
+      // span and every bullet before the renderer could see them, leaving
+      // indented plain text. Only "###" headings survived.
       console.log("Response Text", responseText);
       return {
         response: responseText,
@@ -2541,6 +2595,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     // height: 48,
     height: "100%",
+    // Without an explicit colour the field inherits the platform default, which
+    // on Android in dark mode is white. The screen sets backgroundColor white
+    // unconditionally, so typed text was white on white and invisible while the
+    // placeholder, which sets its own colour, stayed readable. Matches
+    // doulaMessageText.
+    color: "#434343",
   },
   micButton: {
     padding: 4,

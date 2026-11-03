@@ -2,9 +2,10 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { CONFIG } from "@/constants/config";
+import { todayDateString } from "@/utils/date";
 
 // Helper function to get today's date in YYYY-MM-DD format
-const getTodayDate = () => new Date().toISOString().split("T")[0];
+const getTodayDate = () => todayDateString();
 
 interface WaterStore {
   glassCount: number;

@@ -17,6 +17,7 @@ import { supabase } from "@/supabase/supabase";
 import { store } from "../store/store";
 import { setToken, setUser } from "../store/userSlice";
 import { FloatingProvider } from "@/context/FloatingContext";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import '../translation/i18next'
 import { loadSavedLanguage } from "@/translation/i18next";
@@ -166,11 +167,16 @@ export default function RootLayout() {
         flex: 1,
       }}
     >
-      <Provider store={store}>
-        <FloatingProvider>
-          <RootLayoutNav />
-        </FloatingProvider>
-      </Provider>
+      {/* react-native-safe-area-context requires this at the app root for
+          useSafeAreaInsets to resolve. The native SafeAreaView the screens use
+          works without it, which is why its absence went unnoticed. */}
+      <SafeAreaProvider>
+        <Provider store={store}>
+          <FloatingProvider>
+            <RootLayoutNav />
+          </FloatingProvider>
+        </Provider>
+      </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 }

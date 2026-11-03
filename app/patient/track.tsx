@@ -4,9 +4,7 @@ import {
   View,
   Image,
   ScrollView,
-  TouchableOpacity,
-  FlatList,
-  Animated,
+  TouchableOpacity,  Animated,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -194,10 +192,14 @@ export default function track() {
           <WeekSelector onWeekChange={handleWeekChange} initialWeek={selectedWeek} />
           <Text style={styles.currentWeekText}>{t("currentWeek")}</Text>
 
-          <FlatList
-            data={sections}
-            renderItem={({ item }) => (
+          {/* Mapped rather than a FlatList: this sits inside the page
+              ScrollView, which disables virtualisation anyway and logs
+              "VirtualizedLists should never be nested inside plain
+              ScrollViews". sections holds two static items. */}
+          <View style={{ marginTop: 30, flexGrow: 1 }}>
+            {sections.map((item) => (
               <View
+                key={String(item.id)}
                 style={[styles.card, { backgroundColor: item.backgroundColor }]}
               >
                 {item.id === 1 && (
@@ -236,11 +238,8 @@ export default function track() {
                 )}
                 
               </View>
-            )}
-            keyExtractor={(item, index) => index.toString()}
-            contentContainerStyle={{ marginTop: 30, flexGrow: 1 }}
-            style={{ flex: 1 }}
-          />
+            ))}
+          </View>
         </ScrollView>
       </LinearGradient>
     </SafeAreaView>

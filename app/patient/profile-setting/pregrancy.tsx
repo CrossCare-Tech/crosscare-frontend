@@ -131,8 +131,10 @@ const EditablePregnancyWeekField = ({
     if (!isNaN(newWeek) && newWeek >= 0 && newWeek <= 42) {
       onSave(newWeek);
     } else {
+      // Stay in edit mode so the typed value survives and can be corrected.
+      // Calling onCancel() here discarded the edit, which no comparable
+      // field in the app does.
       Alert.alert("Invalid Week", "Please enter a week between 0 and 42");
-      onCancel();
     }
   };
 

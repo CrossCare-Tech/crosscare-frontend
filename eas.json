@@ -24,6 +24,11 @@
     },
     "preview": {
       "distribution": "internal",
+      "environment": "production",
+      "android": {
+        "buildType": "apk",
+        "credentialsSource": "remote"
+      },
       "env": {
         "NPM_CONFIG_LEGACY_PEER_DEPS": "true"
       }
@@ -37,7 +42,7 @@
       "ios": {
         "credentialsSource": "remote",
         "distribution": "store",
-        "image": "latest"
+        "image": "macos-sequoia-15.6-xcode-26.2"
       },
       "env": {
         "NPM_CONFIG_LEGACY_PEER_DEPS": "true"
