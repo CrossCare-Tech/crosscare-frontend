@@ -58,7 +58,41 @@ import { deepgramTTS, speakWithDeepgram } from "@/utils/deepgramTTS";
  * is no longer in the account's available model list. Kept as one constant so a
  * future retirement is a single-line change rather than two call sites.
  */
-const GEMINI_MODEL = "gemini-3.8-flash";
+const GEMINI_MODEL = "gemini-3.5-flash";
+
+/**
+ * Gemini 3.x models reason before answering, and that reasoning is billed
+ * against maxOutputTokens. Left at its default the model spent 842-961 of the
+ * 1000 token budget thinking and returned a reply truncated mid-word with
+ * finishReason MAX_TOKENS. gemini-3.7-flash and gemini-3.8-flash thought for so
+ * long that the request never came back at all, which is what made the chat
+ * appear to hang.
+ *
+ * thinkingBudget 0 turns reasoning off. The same prompt then returns
+ * finishReason STOP with 0 thinking tokens and 668 answer tokens.
+ */
+const GEMINI_THINKING_CONFIG = { thinkingBudget: 0 };
+
+/**
+ * Nothing bounded these requests, so a stalled or overloaded upstream left the
+ * chat spinning with no way out. Abort after this long and let the existing
+ * catch report it.
+ */
+const GEMINI_TIMEOUT_MS = 30000;
+
+const fetchWithTimeout = async (
+  url: string,
+  init: RequestInit,
+  ms: number = GEMINI_TIMEOUT_MS
+): Promise<Response> => {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+};
 
 
 interface PauseStateStorage {
@@ -781,12 +815,13 @@ export default function askdoula() {
         topK: 40,
         topP: 0.95,
         maxOutputTokens: 1000,
+        thinkingConfig: GEMINI_THINKING_CONFIG,
       },
     };
 
     // Use fetch instead of axios
     try {
-      const response = await fetch(`${apiUrl}?key=${apiKey}`, {
+      const response = await fetchWithTimeout(`${apiUrl}?key=${apiKey}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1018,12 +1053,13 @@ export default function askdoula() {
           topK: 40,
           topP: 0.95,
           maxOutputTokens: 1000,
+          thinkingConfig: GEMINI_THINKING_CONFIG,
         },
       };
 
       console.log("Current Language: ", currentLanguage);
 
-      const response = await fetch(`${apiUrl}?key=${apiKey}`, {
+      const response = await fetchWithTimeout(`${apiUrl}?key=${apiKey}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
