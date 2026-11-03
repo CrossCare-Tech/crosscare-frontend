@@ -42,6 +42,60 @@ interface AccordionProps {
   onPress: () => void
 }
 
+/**
+ * Declared at module scope on purpose. While this lived inside SelfCare, every
+ * parent render produced a new component type, so React unmounted and remounted
+ * each accordion on every toggle and on every language change. That reset the
+ * animated value and the measured content height to zero, and since the content
+ * was measured while its container was still clipped to a height of zero, the
+ * measurement could come back at or near zero and lock the panel shut.
+ *
+ * The explicit height animation is gone with it. toggleSection already calls
+ * LayoutAnimation.configureNext, which animates the expand and collapse without
+ * measuring anything, so the content is simply rendered when active. Only the
+ * chevron is animated here, which also lets it run on the native driver.
+ */
+const Accordion = ({ title, content, active, onPress }: AccordionProps) => {
+  const animation = useRef(new Animated.Value(active ? 1 : 0)).current
+
+  useEffect(() => {
+    Animated.timing(animation, {
+      toValue: active ? 1 : 0,
+      duration: 300,
+      easing: Easing.bezier(0.4, 0.0, 0.2, 1),
+      useNativeDriver: true,
+    }).start()
+  }, [active, animation])
+
+  const rotateZ = animation.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["0deg", "180deg"],
+  })
+
+  return (
+    <View style={styles.accordionSection}>
+      <TouchableOpacity style={styles.accordionHeader} activeOpacity={0.8} onPress={onPress}>
+        <Text style={styles.accordionTitle}>{title}</Text>
+        <Animated.View style={{ transform: [{ rotateZ }] }}>
+          <Feather name="chevron-down" size={18} color="#883B72" />
+        </Animated.View>
+      </TouchableOpacity>
+
+      {active ? (
+        <View style={styles.accordionContent}>
+          {content.map((item, index) => (
+            <View key={index} style={styles.contentItem}>
+              <Text style={styles.contentSubtitle}>{item.subtitle}</Text>
+              <Text style={styles.contentText}>{item.text}</Text>
+            </View>
+          ))}
+        </View>
+      ) : null}
+    </View>
+  )
+}
+
+
 const SelfCare = () => {
   const router = useRouter();
   const { t, i18n } = useTranslation()
@@ -124,19 +178,10 @@ const SelfCare = () => {
   // };
 
   const [activeIndex, setActiveIndex] = useState<number | null>(null)
-  const [contentHeights, setContentHeights] = useState<{ [key: number]: number }>({})
 
   const toggleSection = (index: ToggleSectionProps["index"]): void => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
     setActiveIndex(activeIndex === index ? null : index)
-  }
-
-  const measureContentHeight = (index: number, event: any) => {
-    const { height } = event.nativeEvent.layout
-    setContentHeights((prev) => ({
-      ...prev,
-      [index]: height,
-    }))
   }
 
   const [forceUpdate, setForceUpdate] = useState(0)
@@ -153,66 +198,6 @@ const SelfCare = () => {
       i18n.off("languageChanged", handleLanguageChange)
     }
   }, [i18n])
-
-  const Accordion = ({ title, content, active, onPress }: AccordionProps) => {
-    const [animation] = useState(new Animated.Value(0))
-    const contentRef = useRef<View>(null)
-    const [contentHeight, setContentHeight] = useState(0)
-
-    // Measure content height when content changes
-    useEffect(() => {
-      if (contentRef.current && active) {
-        contentRef.current.measure((x, y, width, height) => {
-          setContentHeight(height)
-        })
-      }
-    }, [content, active])
-
-    useEffect(() => {
-      Animated.timing(animation, {
-        toValue: active ? 1 : 0,
-        duration: 300,
-        easing: Easing.bezier(0.4, 0.0, 0.2, 1),
-        useNativeDriver: false,
-      }).start()
-    }, [active])
-
-    const animatedHeight = animation.interpolate({
-      inputRange: [0, 1],
-      outputRange: [0, contentHeight || 1000], // Use measured height or fallback
-    })
-
-    const rotateZ = animation.interpolate({
-      inputRange: [0, 1],
-      outputRange: ["0deg", "180deg"],
-    })
-
-    return (
-      <View style={styles.accordionSection}>
-        <TouchableOpacity style={styles.accordionHeader} activeOpacity={0.8} onPress={onPress}>
-          <Text style={styles.accordionTitle}>{title}</Text>
-          <Animated.View style={{ transform: [{ rotateZ }] }}>
-            <Feather name="chevron-down" size={18} color="#883B72" />
-          </Animated.View>
-        </TouchableOpacity>
-
-        <Animated.View style={[styles.accordionContent, { height: animatedHeight, opacity: animation }]}>
-          <View
-            ref={contentRef}
-            style={{ position: active ? "relative" : "absolute", opacity: active ? 1 : 0 }}
-            onLayout={(e) => active && setContentHeight(e.nativeEvent.layout.height)}
-          >
-            {content.map((item, index) => (
-              <View key={index} style={styles.contentItem}>
-                <Text style={styles.contentSubtitle}>{item.subtitle}</Text>
-                <Text style={styles.contentText}>{item.text}</Text>
-              </View>
-            ))}
-          </View>
-        </Animated.View>
-      </View>
-    )
-  }
 
    const sections = [
     {
