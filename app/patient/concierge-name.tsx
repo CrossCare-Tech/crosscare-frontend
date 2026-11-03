@@ -22,22 +22,23 @@ import { saveGuideName, useGuide } from "@/constants/conciergeGuide";
 
 export const CONCIERGE_MET_KEY = "concierge.met";
 
-// Name the guide (prototype /guide-setup/ step 4). After this the user has met her:
+// Name the Concierge (prototype AI.2, "Her name"). After this the user has met her:
 // the history opens under the chat, so the chat's back arrow lands on the conversations.
 function ConciergeName() {
   const { t } = useTranslation();
   const router = useRouter();
   const guide = useGuide();
-  const [value, setValue] = useState("");
+  const [value, setValue] = useState(guide.name);
   const [busy, setBusy] = useState(false);
   const started = useRef(false);
 
-  const finish = async (keepDefault: boolean) => {
+  const finish = async () => {
     // Opening the chat takes a moment: extra taps must not stack more chats on top.
     if (started.current) return;
     started.current = true;
     setBusy(true);
-    await saveGuideName(keepDefault ? "" : value);
+    // The field starts with the current name; saveGuideName drops an empty or default name
+    await saveGuideName(value);
     try {
       await AsyncStorage.setItem(CONCIERGE_MET_KEY, "true");
     } catch {
@@ -57,7 +58,7 @@ function ConciergeName() {
             <Text style={styles.heading} accessibilityRole="header">
               {t("conciergeName.heading")}
             </Text>
-            <Text style={styles.lead}>{t("conciergeName.lead", { name: guide.name })}</Text>
+            <Text style={styles.lead}>{t("conciergeName.lead")}</Text>
             <View style={styles.field}>
               <Text style={styles.label}>{t("conciergeName.label")}</Text>
               <TextInput
@@ -66,22 +67,17 @@ function ConciergeName() {
                 onChangeText={setValue}
                 placeholder={guide.name}
                 placeholderTextColor={Theme.colors.placeholder}
-                maxLength={20}
+                maxLength={24}
                 autoCorrect={false}
                 returnKeyType="done"
-                onSubmitEditing={() => finish(false)}
+                onSubmitEditing={finish}
               />
             </View>
             <Text style={styles.hint}>{t("conciergeName.hint")}</Text>
-          </ScrollView>
-          <View style={styles.foot}>
-            <Pressable onPress={() => finish(false)} disabled={busy} accessibilityRole="button" accessibilityState={{ busy }} style={[styles.primary, busy && styles.busy]}>
+            <Pressable onPress={finish} disabled={busy} accessibilityRole="button" accessibilityState={{ busy }} style={[styles.primary, busy && styles.busy]}>
               <Text style={styles.primaryText}>{t("conciergeName.start")}</Text>
             </Pressable>
-            <Pressable onPress={() => finish(true)} disabled={busy} accessibilityRole="button" style={styles.text}>
-              <Text style={styles.textLabel}>{t("conciergeName.keep", { name: guide.name })}</Text>
-            </Pressable>
-          </View>
+          </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
     </ScreenBackground>
@@ -92,8 +88,8 @@ const styles = StyleSheet.create({
   safe: { flex: 1 },
   busy: { opacity: 0.6 },
   flex: { flex: 1 },
-  scroll: { alignItems: "center", paddingHorizontal: 24, paddingTop: Theme.spacing.lg, gap: 12 },
-  hero: { width: 132, height: 132, borderRadius: 66, borderWidth: 3, borderColor: Theme.colors.surface },
+  scroll: { alignItems: "center", paddingHorizontal: 24, paddingTop: Theme.spacing.lg, paddingBottom: Theme.spacing.lg, gap: 12 },
+  hero: { width: 132, height: 132, borderRadius: 66, borderWidth: 3, borderColor: Theme.colors.surface, ...Theme.shadows.soft },
   heading: { fontFamily: Theme.typography.display, fontSize: 24, lineHeight: 30, color: Theme.colors.ink, textAlign: "center" },
   lead: { fontFamily: Theme.typography.body, fontSize: 14, lineHeight: 21, color: Theme.colors.inkSoft, textAlign: "center" },
   field: { alignSelf: "stretch", gap: 6, marginTop: 8 },
@@ -109,18 +105,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: Theme.colors.ink,
   },
-  hint: { fontFamily: Theme.typography.caption, fontSize: 12, color: Theme.colors.inkFaint, textAlign: "center" },
-  foot: { paddingHorizontal: 24, paddingBottom: Theme.spacing.md, gap: 4 },
+  hint: { alignSelf: "stretch", fontFamily: Theme.typography.caption, fontSize: 12, lineHeight: 18, color: Theme.colors.inkFaint },
   primary: {
+    alignSelf: "stretch",
     height: 50,
+    marginTop: 8,
     borderRadius: Theme.borderRadius.sm,
     backgroundColor: Theme.colors.magenta,
     alignItems: "center",
     justifyContent: "center",
   },
   primaryText: { fontFamily: Theme.typography.heading, fontSize: 15, color: Theme.colors.surface },
-  text: { height: 40, alignItems: "center", justifyContent: "center" },
-  textLabel: { fontFamily: Theme.typography.heading, fontSize: 14, color: Theme.colors.magenta },
 });
 
 export default withPremiumGate(ConciergeName);

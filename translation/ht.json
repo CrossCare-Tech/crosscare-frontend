@@ -53,12 +53,11 @@
   },
   "conciergeName": {
     "title": "Non li",
-    "heading": "Ki jan ou ta renmen rele li?",
-    "lead": "Pa defo li rele {{name}}. Chwazi non ou pi pito.",
+    "heading": "Ki jan ou vle rele Konsyèj ou a?",
+    "lead": "Chwazi yon non ki fè eksperyans ou a pi pèsonèl.",
     "label": "Non",
-    "hint": "Ou ka chanje non li pita nan paramèt yo.",
-    "start": "Kòmanse chat",
-    "keep": "Kenbe “{{name}}”"
+    "hint": "Ou ka chanje non an nenpòt ki lè nan Paramèt.",
+    "start": "Sove epi kòmanse chat"
   },
   "conciergeHistory": {
     "title": "Konvèsasyon",

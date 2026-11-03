@@ -106,12 +106,11 @@
   },
   "conciergeName": {
     "title": "O nome dela",
-    "heading": "Como você quer chamá-la?",
-    "lead": "Por padrão ela é {{name}}. Escolha o nome que preferir.",
+    "heading": "Como você quer chamar sua Concierge?",
+    "lead": "Escolha um nome que deixe a sua experiência mais pessoal.",
     "label": "Nome",
-    "hint": "Você pode renomeá-la depois nas configurações.",
-    "start": "Começar a conversar",
-    "keep": "Manter “{{name}}”"
+    "hint": "Você pode mudar o nome a qualquer momento em Configurações.",
+    "start": "Salvar e começar a conversar"
   },
   "conciergeHistory": {
     "title": "Conversas",
