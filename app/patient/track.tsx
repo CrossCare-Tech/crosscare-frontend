@@ -157,10 +157,12 @@ export default function BabyDevelopmentScreen() {
   const left = 40 - week;
   const trimester = week < 14 ? 1 : week < 28 ? 2 : 3;
 
-  // Keep the selected week in the middle of the strip
+  // Keep the selected week in the middle of the strip (weeks 0 and 1 stay at the left edge)
   useEffect(() => {
     if (!stripWidth) return;
-    stripRef.current?.scrollTo({ x: BABY_WEEK_NUMBERS.indexOf(week) * CHIP_STEP, animated: true });
+    // Centre the week, but never scroll past the start, so the first weeks sit next to the arrow
+    const centred = BABY_WEEK_NUMBERS.indexOf(week) * CHIP_STEP - (stripWidth - CHIP) / 2;
+    stripRef.current?.scrollTo({ x: Math.max(0, centred), animated: true });
   }, [week, stripWidth]);
 
   const selectWeek = (next: number) => {
@@ -228,8 +230,7 @@ export default function BabyDevelopmentScreen() {
               scrollEventThrottle={32}
               snapToInterval={CHIP_STEP}
               decelerationRate="fast"
-              // Side padding lets the first and last week reach the middle
-              contentContainerStyle={[styles.stripContent, { paddingHorizontal: Math.max(0, (stripWidth - CHIP) / 2) }]}
+              contentContainerStyle={styles.stripContent}
             >
               {BABY_WEEK_NUMBERS.map((number) => {
                 const selected = number === week;

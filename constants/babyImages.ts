@@ -1,5 +1,9 @@
-// Baby illustrations: one every two weeks from the design prototype (8 to 40), plus week 39.
+// Illustrations: weeks 0 to 3 show the egg (no embryo yet), then one every two weeks from the design prototype (8 to 40), plus week 39.
 const BABY_IMAGES: Record<number, any> = {
+  0: require("@/assets/images/baby/w00.jpg"),
+  1: require("@/assets/images/baby/w01.jpg"),
+  2: require("@/assets/images/baby/w02.jpg"),
+  3: require("@/assets/images/baby/w03.jpg"),
   8: require("@/assets/images/baby/w08.jpg"),
   10: require("@/assets/images/baby/w10.jpg"),
   12: require("@/assets/images/baby/w12.jpg"),
@@ -20,8 +24,9 @@ const BABY_IMAGES: Record<number, any> = {
   40: require("@/assets/images/baby/w40.jpg"),
 };
 
-// The illustration of the week when there is one, else the closest one below (weeks before 8 use week 8)
+// The illustration of the week when there is one, else the closest one below (weeks 4 to 7 use week 8)
 export const babyImageForWeek = (week: number) => {
+  if (week < 4) return BABY_IMAGES[Math.max(week, 0)];
   const clamped = Math.min(Math.max(week, 8), 40);
   return BABY_IMAGES[clamped] ?? BABY_IMAGES[clamped - (clamped % 2)];
 };

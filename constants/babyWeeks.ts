@@ -14,6 +14,80 @@ export interface BabyWeek {
 }
 
 export const BABY_WEEKS: Record<number, BabyWeek> = {
+  // Weeks 0 to 3 come before the embryo exists (pregnancy is counted from the last period), so there is no
+  // baby illustration for them: the screen shows the poppy seed picture instead. Same shape as every week.
+  0: {
+    object: "Poppy seed",
+    lengthIn: 0,
+    weightOz: 0,
+    big: {
+      icon: "🌱",
+      head: "Getting ready",
+      text: "There is no baby yet. This is the time to get your body and your routine ready.",
+      why: "Healthy habits before conception support the first weeks of a pregnancy.",
+    },
+    highlights: ["There is no baby yet, your body is getting ready", "Folic acid before conception is recommended", "A good time to book a pre-pregnancy visit"],
+    parts: [
+      { key: "development", text: "Pregnancy is counted from the first day of your last period, so the first weeks come before conception.", dyk: "A pregnancy is dated from your last period, not from the day of conception." },
+      { key: "organs", text: "Your body is preparing an egg for release this cycle." },
+    ],
+    notice: ["Your period, if you are still in your cycle", "The usual changes in mood and energy", "Nothing special to watch for yet"],
+    tip: "Talk with your care team about folic acid and any medicines before you try to conceive.",
+  },
+  1: {
+    object: "Poppy seed",
+    lengthIn: 0,
+    weightOz: 0,
+    big: {
+      icon: "🌸",
+      head: "Your cycle begins",
+      text: "The pregnancy count starts on the first day of your last period, so your body is still preparing. There is no baby yet.",
+      why: "Counting this way gives every pregnancy the same starting line, with a due date about 40 weeks later.",
+    },
+    highlights: ["Your period marks the start of the count", "The womb lining is shed and renewed", "A new egg begins to mature"],
+    parts: [
+      { key: "development", text: "There is no embryo yet. The count starts on the first day of your last period." },
+      { key: "organs", text: "The womb lining sheds during your period and starts to rebuild, while an egg begins to mature in an ovary." },
+    ],
+    notice: ["Period bleeding and cramps", "Tiredness or mood changes", "Nothing different from a usual cycle"],
+    tip: "Keep taking folic acid and note the first day of your last period, your care team uses it to date the pregnancy.",
+  },
+  2: {
+    object: "Poppy seed",
+    lengthIn: 0,
+    weightOz: 0,
+    big: {
+      icon: "🥚",
+      head: "An egg is maturing",
+      text: "The womb lining thickens and an egg matures, getting ready to be released. There is still no baby.",
+      why: "The days around ovulation are when conception is most likely.",
+    },
+    highlights: ["The womb lining thickens", "An egg is getting ready to be released", "Ovulation usually comes around the start of week 3"],
+    parts: [
+      { key: "development", text: "There is no embryo yet. Your body is getting ready to release an egg." },
+      { key: "organs", text: "Hormones thicken the womb lining and one egg finishes maturing in an ovary." },
+    ],
+    notice: ["Clearer, slippery cervical fluid", "A mild twinge on one side of the pelvis around ovulation", "A slight rise in body temperature after ovulation"],
+    tip: "If you are trying to conceive, the days around ovulation are the most fertile.",
+  },
+  3: {
+    object: "Poppy seed",
+    lengthIn: 0.004,
+    weightOz: 0,
+    big: {
+      icon: "✨",
+      head: "Conception",
+      text: "The egg is released and, if a sperm reaches it, it is fertilized. The new cell starts dividing as it travels toward the womb.",
+      why: "This is the moment a pregnancy begins.",
+    },
+    highlights: ["The egg is released and can be fertilized", "The fertilized egg is one cell that starts to divide", "It travels down the tube toward the womb"],
+    parts: [
+      { key: "development", text: "After fertilization the cell divides again and again, forming a tiny ball of cells by the end of the week.", dyk: "A fertilized egg is smaller than a poppy seed." },
+      { key: "organs", text: "There are no organs yet. The cells are all alike and take on different roles in the weeks ahead." },
+    ],
+    notice: ["Often nothing at all, most people do not know yet", "A light twinge when the egg is released", "A period that has not come yet"],
+    tip: "A pregnancy test is not reliable yet. Wait until the first day of a missed period.",
+  },
   4: {
     object: "Poppy seed",
     lengthIn: 0.04,
