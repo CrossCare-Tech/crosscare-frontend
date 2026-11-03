@@ -102,6 +102,10 @@ const addmeals = () => {
   const [isSearchMode, setIsSearchMode] = useState(false);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const animatedValues = useRef<{ [key: number]: Animated.Value }>({});
+  // Guards re-entry into handleFoodClassification. The modal's confirm button
+  // stays mounted for the frame in which the item is added and router.back()
+  // is called, so two quick taps logged the food twice.
+  const committingFood = useRef(false);
   const user = useSelector((state: any) => state.user);
   const { addFoodItem } = useMealStore();
   const [foodClassifications, setFoodClassifications] = useState(new Map());
@@ -132,7 +136,9 @@ const addmeals = () => {
 
   const handleFoodClassification = (classification: 'good' | 'bad', quantity: number): void => {
     if (!selectedFoodForClassification) return;
-  
+    if (committingFood.current) return;
+    committingFood.current = true;
+
     const item: ToggleSelectionItem = selectedFoodForClassification;
     const newSelected: Set<number> = new Set(selectedItems);
     newSelected.add(item.fdcId);
@@ -168,9 +174,10 @@ const addmeals = () => {
     }
   
     router.back();
-  
+
     setClassificationModalVisible(false);
     setSelectedFoodForClassification(null);
+    committingFood.current = false;
   };
 
   // Handle modal close without classification

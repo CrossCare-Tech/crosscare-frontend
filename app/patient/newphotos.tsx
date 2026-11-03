@@ -24,6 +24,7 @@ export default function NewPhotos() {
   const [title, setTitle] = useState("");
   const [imageUri, setImageUri] = useState<string | null>(null); // To store the selected image URI
   const [hasPermission, setHasPermission] = useState<boolean | null>(null); // For camera permission
+  const [saving, setSaving] = useState(false);
   const user = useSelector((state: any) => state.user); // Assuming you have a Redux store set up
   const { t } = useTranslation();
 
@@ -44,10 +45,16 @@ export default function NewPhotos() {
   }, []);
 
   const handleSave = async () => {
+    // An image upload is slow enough to tap Create twice, which uploaded the
+    // photo twice. The same guard is already used in login.tsx and signup.tsx.
+    if (saving) {
+      return;
+    }
     if (!title) {
       Alert.alert("Title is required", "Please enter a title for your entry.");
       return;
     }
+    setSaving(true);
     const formData = new FormData();
 
     // Add title to the FormData
@@ -86,6 +93,8 @@ export default function NewPhotos() {
     } catch (error: any) {
       console.error("Error saving note:", error.message);
       alert("Failed to save the note. Please try again.");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -129,8 +138,10 @@ export default function NewPhotos() {
           <Text style={styles.cancelText}>{t("cancel")}</Text>
         </TouchableOpacity>
         <Text style={styles.headerText}>{t("new_entry")}</Text>
-        <TouchableOpacity onPress={handleSave}>
-          <Text style={styles.createText}>{t("create")}</Text>
+        <TouchableOpacity onPress={handleSave} disabled={saving}>
+          <Text style={[styles.createText, saving && styles.createTextDisabled]}>
+            {t("create")}
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -216,6 +227,9 @@ const styles = StyleSheet.create({
     color: "#F76CCF",
     fontSize: 16,
     fontFamily: "OpenSans600",
+  },
+  createTextDisabled: {
+    opacity: 0.4,
   },
   inputContainer: {
     flex: 1,

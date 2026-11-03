@@ -2,6 +2,12 @@ import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import * as FileSystem from 'expo-file-system';
+import type {
+  CacheEnvelope,
+  ContentfulAsset,
+  ContentfulAssetLink,
+  ContentfulEntry,
+} from '@/types/contentful';
 
 // Constants for Contentful
 const SPACE_ID = 'ar5yaphmi182';
@@ -19,7 +25,8 @@ const CACHE_EXPIRY_MS = 12 * 60 * 60 * 1000; // 12 hours
 interface Hairstyle {
   id: string;
   title: string;
-  image: string;
+  /** null when the entry carries no image asset link. */
+  image: string | null;
   localImagePath?: string;
   locked: boolean;
   grayScale: boolean;
@@ -29,7 +36,8 @@ interface Hairstyle {
 interface Outfit {
   id: string;
   title: string;
-  image: string;
+  /** null when the entry carries no image asset link. */
+  image: string | null;
   localImagePath?: string;
   locked: boolean;
   grayScale: boolean;
@@ -39,8 +47,9 @@ interface Outfit {
 interface AvatarCombination {
   hairstyleId: string;
   outfitId: string;
-  combinedImage: string;
-  faceImage: string;
+  /** Both are null when the entry carries no matching asset link. */
+  combinedImage: string | null;
+  faceImage: string | null;
   localCombinedImagePath?: string;
   localFaceImagePath?: string;
 }
@@ -68,12 +77,35 @@ interface AvatarState {
   getOutfitById: (id: string) => Outfit | null;
   getCombination: (hairstyleId: string, outfitId: string) => AvatarCombination | null;
   
-  downloadImage: (imageUrl: string, prefix: string) => Promise<string | null>;
+  /**
+   * Accepts null because entry images are optional in Contentful. The
+   * implementation already returns null for a falsy url; this widens the
+   * declaration to match it.
+   */
+  downloadImage: (imageUrl: string | null, prefix: string) => Promise<string | null>;
   downloadHairstyleImage: (hairstyleId: string) => Promise<string | null>;
   downloadOutfitImage: (outfitId: string) => Promise<string | null>;
   downloadCombinationImages: (hairstyleId: string, outfitId: string) => Promise<{combinedImage: string | null, faceImage: string | null}>;
   
   updateUnlockedItems: (unlockResult: UnlockResult) => void;
+}
+
+interface HairstyleFields {
+  id?: string;
+  title?: string;
+  image?: ContentfulAssetLink;
+  isDefault?: boolean;
+  order?: number;
+}
+
+/** Outfit entries carry the same field shape as hairstyle entries. */
+type OutfitFields = HairstyleFields;
+
+interface CombinationFields {
+  hairstyleId?: string;
+  outfitId?: string;
+  combinedImage?: ContentfulAssetLink;
+  faceImage?: ContentfulAssetLink;
 }
 
 // Helper function to fetch hairstyles from Contentful
@@ -87,14 +119,14 @@ const fetchHairstylesFromContentful = async (): Promise<Hairstyle[]> => {
       }
     );
 
-    const includes = response.data.includes?.Asset || [];
-    const assetMap = {};
+    const includes: ContentfulAsset[] = response.data.includes?.Asset || [];
+    const assetMap: Record<string, string> = {};
 
     includes.forEach((asset) => {
       assetMap[asset.sys.id] = `https:${asset.fields.file.url}`;
     });
 
-    return response.data.items.map((item) => {
+    return (response.data.items as ContentfulEntry<HairstyleFields>[]).map((item) => {
       const fields = item.fields;
       return {
         id: fields.id || item.sys.id,
@@ -124,14 +156,14 @@ const fetchOutfitsFromContentful = async (): Promise<Outfit[]> => {
       }
     );
 
-    const includes = response.data.includes?.Asset || [];
-    const assetMap = {};
+    const includes: ContentfulAsset[] = response.data.includes?.Asset || [];
+    const assetMap: Record<string, string> = {};
 
     includes.forEach((asset) => {
       assetMap[asset.sys.id] = `https:${asset.fields.file.url}`;
     });
 
-    return response.data.items.map((item) => {
+    return (response.data.items as ContentfulEntry<OutfitFields>[]).map((item) => {
       const fields = item.fields;
       return {
         id: fields.id || item.sys.id,
@@ -161,14 +193,14 @@ const fetchCombinationsFromContentful = async (): Promise<AvatarCombination[]> =
       }
     );
 
-    const includes = response.data.includes?.Asset || [];
-    const assetMap = {};
+    const includes: ContentfulAsset[] = response.data.includes?.Asset || [];
+    const assetMap: Record<string, string> = {};
 
     includes.forEach((asset) => {
       assetMap[asset.sys.id] = `https:${asset.fields.file.url}`;
     });
 
-    return response.data.items.map((item) => {
+    return (response.data.items as ContentfulEntry<CombinationFields>[]).map((item) => {
       const fields = item.fields;
       console.log(fields.combinedImage, "this is the combined image")
       return {
@@ -438,7 +470,7 @@ export const useAvatarStore = create<AvatarState>((set, get) => ({
       try {
         const cachedData = await AsyncStorage.getItem(CACHE_KEY_HAIRSTYLES);
         if (cachedData) {
-          const parsedData = JSON.parse(cachedData);
+          const parsedData = JSON.parse(cachedData) as CacheEnvelope<Hairstyle>;
           const updatedData = {
             ...parsedData,
             data: parsedData.data.map(h => 
@@ -482,7 +514,7 @@ export const useAvatarStore = create<AvatarState>((set, get) => ({
       try {
         const cachedData = await AsyncStorage.getItem(CACHE_KEY_OUTFITS);
         if (cachedData) {
-          const parsedData = JSON.parse(cachedData);
+          const parsedData = JSON.parse(cachedData) as CacheEnvelope<Outfit>;
           const updatedData = {
             ...parsedData,
             data: parsedData.data.map(o => 
@@ -546,7 +578,7 @@ export const useAvatarStore = create<AvatarState>((set, get) => ({
       try {
         const cachedData = await AsyncStorage.getItem(CACHE_KEY_COMBOS);
         if (cachedData) {
-          const parsedData = JSON.parse(cachedData);
+          const parsedData = JSON.parse(cachedData) as CacheEnvelope<AvatarCombination>;
           const updatedData = {
             ...parsedData,
             data: parsedData.data.map(c => 
@@ -593,7 +625,7 @@ export const useAvatarStore = create<AvatarState>((set, get) => ({
         try {
           const cachedData = await AsyncStorage.getItem(CACHE_KEY_HAIRSTYLES);
           if (cachedData) {
-            const parsedData = JSON.parse(cachedData);
+            const parsedData = JSON.parse(cachedData) as CacheEnvelope<Hairstyle>;
             const updatedData = {
               ...parsedData,
               data: parsedData.data.map(h => 
@@ -613,7 +645,7 @@ export const useAvatarStore = create<AvatarState>((set, get) => ({
         try {
           const cachedData = await AsyncStorage.getItem(CACHE_KEY_OUTFITS);
           if (cachedData) {
-            const parsedData = JSON.parse(cachedData);
+            const parsedData = JSON.parse(cachedData) as CacheEnvelope<Outfit>;
             const updatedData = {
               ...parsedData,
               data: parsedData.data.map(o => 

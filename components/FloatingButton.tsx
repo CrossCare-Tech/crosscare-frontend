@@ -250,7 +250,7 @@ const FloatingButton: React.FC<FloatingButtonProps> = ({
 
   // Update position whenever it changes - with debounce to prevent too many updates
   useEffect(() => {
-    let debounceTimer: NodeJS.Timeout
+    let debounceTimer: ReturnType<typeof setTimeout>
 
     const xListener = pan.x.addListener(({ value }) => {
       clearTimeout(debounceTimer)

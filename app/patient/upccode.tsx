@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Text, View, StyleSheet, Button, ActivityIndicator, ScrollView } from 'react-native';
-import { CameraView, Camera } from "expo-camera";
+import { CameraView, Camera, type BarcodeScanningResult } from "expo-camera";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather, FontAwesome5, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Image } from 'react-native';
@@ -806,7 +806,7 @@ export default function upccode() {
   };
 
   // What happens when we scan the bar code
-  const handleBarCodeScanned = ({ type, data }) => {
+  const handleBarCodeScanned = ({ type, data }: BarcodeScanningResult) => {
     setScanned(true);
     setScannedCode(data);
     console.log(`Type: ${type} \nData: ${data}`);
@@ -1315,6 +1315,25 @@ const styles = StyleSheet.create({
     borderRadius:10,
     resizeMode: 'cover',
     marginRight: 15,
+  },
+  // Fallback box shown in place of productImage when a product has no
+  // picture. Mirrors productImage's footprint so the header does not reflow.
+  placeholderImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 10,
+    marginRight: 15,
+    backgroundColor: '#f2f2f2',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // Wrapper for each titled nutrition block. Matches ingredientsContainer,
+  // the sibling wrapper already used for this screen's detail sections.
+  nutritionSection: {
+    marginVertical: 10,
+    padding: 10,
+    backgroundColor: '#f9f9f9',
+    borderRadius: 5,
   },
   productInfo: {
     flex: 1,

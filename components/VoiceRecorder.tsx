@@ -49,7 +49,7 @@ export default function VoiceRecorder({
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
-  const [recordingTimer, setRecordingTimer] = useState<NodeJS.Timeout | null>(
+  const [recordingTimer, setRecordingTimer] = useState<ReturnType<typeof setTimeout> | null>(
     null
   );
   // const [isProcessing, setIsProcessing] = useState(false);

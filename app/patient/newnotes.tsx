@@ -18,9 +18,16 @@ import { CONFIG } from "@/constants/config";
 export default function NewNotes() {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  const [saving, setSaving] = useState(false);
   const user = useSelector((state: any) => state.user);
 
   const handleSave = async () => {
+    // The request takes long enough to tap Save twice, which posted the note
+    // twice. The same guard is already used in login.tsx and signup.tsx.
+    if (saving) {
+      return;
+    }
+    setSaving(true);
     try {
       const response = await fetch(
         `${CONFIG.API_BASE_URL}/user/activity/${user.user_id}/note`,
@@ -47,6 +54,8 @@ export default function NewNotes() {
     } catch (error: any) {
       console.error("Error saving note:", error.message);
       alert("Failed to save the note. Please try again.");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -66,8 +75,10 @@ export default function NewNotes() {
           <Text style={styles.cancelText}>{t("cancel")}</Text>
         </TouchableOpacity>
         <Text style={styles.headerText}>{t("new_entry")}</Text>
-        <TouchableOpacity onPress={handleSave}>
-          <Text style={styles.saveText}>{t("save")}</Text>
+        <TouchableOpacity onPress={handleSave} disabled={saving}>
+          <Text style={[styles.saveText, saving && styles.saveTextDisabled]}>
+            {t("save")}
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -126,6 +137,9 @@ const styles = StyleSheet.create({
     color: "#F76CCF",
     fontSize: 16,
     fontFamily: "OpenSans600",
+  },
+  saveTextDisabled: {
+    opacity: 0.4,
   },
   inputContainer: {
     flex: 1,

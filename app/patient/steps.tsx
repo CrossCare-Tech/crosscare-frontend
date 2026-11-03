@@ -31,6 +31,8 @@ import { Alert } from "react-native";
 import { useTranslation } from "react-i18next";
 import { CONFIG } from "@/constants/config";
 import StepsModal from "./modal/stepsmodal";
+import MetricLogModal from "./modal/metriclogmodal";
+import { dateKeyOf, toLocalDateString, todayDateString } from "@/utils/date";
 
 const { width } = Dimensions.get("window");
 const BAR_WIDTH = 20;
@@ -100,7 +102,7 @@ const emptyTodayData = [
     id: "today-empty",
     day: "Today",
     steps: 0,
-    date: new Date().toISOString().split("T")[0],
+    date: todayDateString(),
   },
 ];
 
@@ -115,6 +117,7 @@ const step = () => {
   const [filteredData, setFilteredData] = useState<StepDataItem[]>([]);
   const [lastResetDate, setLastResetDate] = useState<Date | null>(null);
   const [stepModalVisible, setStepModalVisible] = useState(false);
+  const [logModalVisible, setLogModalVisible] = useState(false);
 
   // Calculate progress based on goal (if set)
   const progress = stepGoal ? stepsWalked / stepGoal : 0;
@@ -139,7 +142,7 @@ const step = () => {
 
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [tooltipAnim] = useState(new Animated.Value(0));
-  const tooltipTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const tooltipTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // State for dropdown
   const [timeRange, setTimeRange] = useState("week");
@@ -288,8 +291,8 @@ const step = () => {
       }
 
       // Format dates for API (yyyy-MM-dd)
-      const startDateStr = startDate.toISOString().split("T")[0];
-      const endDateStr = today.toISOString().split("T")[0];
+      const startDateStr = toLocalDateString(startDate);
+      const endDateStr = toLocalDateString(today);
 
       let data;
       if (isUsingAppleHealth) {
@@ -329,7 +332,7 @@ const step = () => {
       return null;
     }
 
-    const today = new Date().toISOString().split("T")[0];
+    const today = todayDateString();
     const todayData = healthData["activities-steps"].find(
       (item: any) => item.dateTime === today
     );
@@ -474,7 +477,7 @@ const step = () => {
 
     if (timeRange === "today") {
       // Today view - just show today
-      const todayStr = today.toISOString().split("T")[0];
+      const todayStr = toLocalDateString(today);
 
       return [
         {
@@ -496,7 +499,7 @@ const step = () => {
 
       const currentDate = new Date(startDate);
       while (currentDate <= endDate) {
-        const dateString = currentDate.toISOString().split("T")[0];
+        const dateString = toLocalDateString(currentDate);
         days.push({
           id: `empty-${dateString}`,
           date: dateString,
@@ -536,7 +539,7 @@ const step = () => {
           // Add the main label date
           const labelDate = new Date(startDate);
           labelDate.setDate(range.start);
-          const labelDateString = labelDate.toISOString().split("T")[0];
+          const labelDateString = toLocalDateString(labelDate);
 
           days.push({
             id: `label-${labelDateString}`,
@@ -555,7 +558,7 @@ const step = () => {
           ) {
             const currentDate = new Date(startDate);
             currentDate.setDate(day);
-            const dateString = currentDate.toISOString().split("T")[0];
+            const dateString = toLocalDateString(currentDate);
 
             days.push({
               id: `day-${dateString}`,
@@ -584,14 +587,14 @@ const step = () => {
     const dataMap = new Map();
     data.forEach((item) => {
       if (item.date) {
-        const dateKey = new Date(item.date).toISOString().split("T")[0];
+        const dateKey = dateKeyOf(item.date);
         dataMap.set(dateKey, item);
       }
     });
 
     // For "today" view, we need to specifically check if today's data exists
     if (timeRange === "today") {
-      const todayStr = new Date().toISOString().split("T")[0];
+      const todayStr = todayDateString();
       const todayData = dataMap.get(todayStr);
 
       if (todayData) {
@@ -636,7 +639,7 @@ const step = () => {
       date.setDate(today.getDate() - i);
 
       // Format the date as ISO string for consistency
-      const dateString = date.toISOString().split("T")[0];
+      const dateString = toLocalDateString(date);
 
       // Get day abbreviation (S, M, T, W, T, F, S)
       const dayIndex = date.getDay(); // 0 = Sunday, 1 = Monday, etc.
@@ -669,7 +672,7 @@ const step = () => {
 
         if (healthData && healthData.length > 0) {
           // Get today's steps for the current count
-          const today = new Date().toISOString().split('T')[0];
+          const today = todayDateString();
           const todayData = healthData.find((item: any) => item.date === today);
           if (todayData) {
             setStepsWalked(todayData.steps);
@@ -737,7 +740,7 @@ const step = () => {
           // If day is not found, use the first character of the day
           const dayLetter =
             dayIndex !== -1 ? fixedWeekdays[dayIndex] : entry.day.charAt(0);
-          const dateString = entryDate.toISOString().split("T")[0];
+          const dateString = toLocalDateString(entryDate);
 
           // Store data with ISO date string as key
           stepMap.set(dateString, {
@@ -1366,6 +1369,17 @@ const step = () => {
             </View>
           </View>
         </View>
+
+        {/* Manual entry. Not gated on a connected source: with the Fitbit Web
+            API switched off, an Android user has no source feeding steps and
+            this is their only way to record them. */}
+        <TouchableOpacity
+          style={styles.addLogButton}
+          onPress={() => setLogModalVisible(true)}
+        >
+          <Ionicons name="add" size={14} color="#fff" />
+          <Text style={styles.addLogText}>{t("addLog")}</Text>
+        </TouchableOpacity>
       </ScrollView>
 
       {/* Time Range Dropdown Modal */}
@@ -1428,11 +1442,47 @@ const step = () => {
           reload={getStepStatus}
         />
       )}
+
+      <MetricLogModal
+        visible={logModalVisible}
+        onClose={() => setLogModalVisible(false)}
+        reload={getStepStatus}
+        title={t("stepScreen.addStepLog")}
+        placeholder={t("stepScreen.stepsPlaceholder")}
+        path="steps"
+        buildBody={(steps) => ({ steps })}
+        min={0}
+        max={200000}
+        invalidMessage={t("stepScreen.invalidSteps")}
+        accent="#5E4FA2"
+        accentBorder="#CDC8E2"
+        inputBorder="#CDC8E2"
+      />
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  addLogButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#5E4FA2",
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    marginHorizontal: 16,
+    marginTop: 24,
+    marginBottom: 8,
+    borderRadius: 25,
+    borderWidth: 1,
+    borderColor: "#CDC8E2",
+    alignSelf: "flex-start",
+  },
+  addLogText: {
+    color: "#fff",
+    marginLeft: 5,
+    fontFamily: "Inter400",
+    fontSize: 14,
+  },
   container: {
     flex: 1,
     backgroundColor: "#FFFFFF",

@@ -97,7 +97,7 @@ export const FloatingProvider: React.FC<FloatingProviderProps> = ({
 
   // Auto show message after delay if enabled
   useEffect(() => {
-    let timer: NodeJS.Timeout
+    let timer: ReturnType<typeof setTimeout>
 
     if (autoShowMessage && shouldShowButton) {
       timer = setTimeout(() => {
