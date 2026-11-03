@@ -293,6 +293,13 @@ const Profile = () => {
           <Text style={styles.sectionTitle}>{t("profile.account")}</Text>
           <View style={styles.card}>
             <MenuRow
+              icon="emergency"
+              tone="sos"
+              title={t("profile.emergency")}
+              subtitle={t("profile.emergencyDescription")}
+              onPress={() => Linking.openURL("tel:911")}
+            />
+            <MenuRow
               icon="account"
               title={t("profile.account")}
               subtitle={hint("name", "age", "email")}
@@ -314,6 +321,12 @@ const Profile = () => {
               icon="summary"
               title={t("pregnancySummary.title")}
               onPress={() => router.push("/patient/pregnancy-summary")}
+            />
+            <MenuRow
+              icon="documents"
+              title={t("documents.title")}
+              subtitle={t("documents.profileHint")}
+              onPress={() => router.push("/patient/documents")}
             />
             <MenuRow
               icon="avatar"
@@ -345,12 +358,6 @@ const Profile = () => {
               onPress={() => router.push("/patient/devices")}
             />
             <MenuRow
-              icon="documents"
-              title={t("documents.title")}
-              subtitle={t("documents.profileHint")}
-              onPress={() => router.push("/patient/documents")}
-            />
-            <MenuRow
               icon="security"
               title={t("security.title")}
               subtitle={t("security.profileHint")}
@@ -366,17 +373,10 @@ const Profile = () => {
               icon="notifications"
               title={t("profile.notifications")}
               subtitle={hint("messages", "alerts")}
+              isLast
               onPress={() =>
                 router.push("/patient/profile-setting/notification")
               }
-            />
-            <MenuRow
-              icon="emergency"
-              tone="sos"
-              title={t("profile.emergency")}
-              subtitle={t("profile.emergencyDescription")}
-              isLast
-              onPress={() => Linking.openURL("tel:911")}
             />
           </View>
 
