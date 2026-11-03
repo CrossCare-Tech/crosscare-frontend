@@ -331,7 +331,7 @@ const Profile = () => {
             <MenuRow
               icon="avatar"
               title={GUIDE.name} // fixed: renaming the Concierge does not rename this section
-              subtitle={hint("voicetone", "hair", "dress", "language", "skintone")}
+              subtitle={hint("name", "hair", "dress", "skintone")}
               onPress={() => router.push("/avatar-studio")}
             />
             <MenuRow
