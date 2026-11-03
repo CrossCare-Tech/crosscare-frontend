@@ -18,6 +18,8 @@ import ContentCard from "@/components/ContentCard";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useSelector } from "react-redux";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useTranslation } from "react-i18next";
+import { CONFIG } from "@/constants/config";
 
 // Define types
 interface NoteItem {
@@ -59,13 +61,14 @@ export default function Journal() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const { t, i18n } = useTranslation();
 
   useEffect(() => {
     const setJournalVisited = async () => {
-      await AsyncStorage.setItem('journal', 'true');
+      await AsyncStorage.setItem("journal", "true");
     };
     setJournalVisited();
-  }, [])
+  }, []);
   // Hooks
   const theme = useTheme();
   const user = useSelector((state: RootState) => state.user);
@@ -115,7 +118,7 @@ export default function Journal() {
       setError(null);
 
       const response = await fetch(
-        `https://crosscare-backends.onrender.com/api/user/activity/${user.user_id}/notes`,
+        `${CONFIG.API_BASE_URL}/user/activity/${user.user_id}/notes`,
         {
           method: "GET",
           headers: {
@@ -155,7 +158,7 @@ export default function Journal() {
       setError(null);
 
       const response = await fetch(
-        `https://crosscare-backends.onrender.com/api/user/activity/${user.user_id}/journal`,
+        `${CONFIG.API_BASE_URL}/user/activity/${user.user_id}/journal`,
         {
           method: "GET",
           headers: {
@@ -213,7 +216,7 @@ export default function Journal() {
     if (loading) {
       return (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#f06292" />
+          <ActivityIndicator size="large" color="#F66DCE" />
         </View>
       );
     }
@@ -237,8 +240,8 @@ export default function Journal() {
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>
             {notesSearchQuery.trim() !== ""
-              ? "No notes match your search"
-              : "No notes yet. Click 'Add new' to create your first note."}
+              ? t("noNotesSearch")
+              : t("noNotesDefault")}
           </Text>
         </View>
       );
@@ -267,28 +270,42 @@ export default function Journal() {
   // Render photos section
   const renderPhotosSection = () => {
     const filteredPhotos = filterPhotos(photosSearchQuery); // Define filteredPhotos
+
+    if (filteredPhotos.length === 0) {
+      return (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>
+            {photosSearchQuery.trim() !== ""
+              ? t("noPhotosSearch")
+              : t("noPhotosDefault")}
+          </Text>
+        </View>
+      );
+    }
+
     return (
       <View style={styles.sectionsContainer}>
-        {filteredPhotos.map((section, sectionIndex) => (
-          section.items.length > 0 && (
-            <View key={sectionIndex}>
-              <Text style={styles.sectionTitle}>{section.title}</Text>
-              {section.items.map((photo, index) => (
-                <ContentCard1
-                  key={index}
-                  id={photo.id}
-                  title={photo.title}
-                  imageSource={{ uri: photo.imageUrl }}
-                  date={photo.date}
-                />
-              ))}
-            </View>
-          )
-        ))}
+        {filteredPhotos.map(
+          (section, sectionIndex) =>
+            section.items.length > 0 && (
+              <View key={sectionIndex}>
+                <Text style={styles.sectionTitle}>{section.title}</Text>
+                {section.items.map((photo, index) => (
+                  <ContentCard1
+                    key={index}
+                    id={photo.id}
+                    title={photo.title}
+                    imageSource={{ uri: photo.imageUrl }}
+                    date={photo.date}
+                  />
+                ))}
+              </View>
+            )
+        )}
       </View>
     );
   };
-  
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
@@ -301,7 +318,7 @@ export default function Journal() {
         >
           <Ionicons name="chevron-back" size={20} color="black" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Journal</Text>
+        <Text style={styles.headerTitle}>{t("journals")}</Text>
         <TouchableOpacity style={styles.menuButton}>
           <Feather name="more-vertical" size={20} color="#E5E5E5" />
         </TouchableOpacity>
@@ -319,7 +336,7 @@ export default function Journal() {
               activeTab === "Notes" && styles.activeTabText,
             ]}
           >
-            Notes
+            {t("journal.notes")}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -332,7 +349,7 @@ export default function Journal() {
               activeTab === "Photos" && styles.activeTabText,
             ]}
           >
-            Photos
+            {t("journal.photos")}
           </Text>
         </TouchableOpacity>
       </View>
@@ -342,7 +359,7 @@ export default function Journal() {
         <Feather name="search" size={20} color="rgba(60, 60, 67, 0.60)" />
         {activeTab === "Notes" ? (
           <TextInput
-            placeholder="Search Notes"
+            placeholder={t("journal.placeholderNotes")}
             value={notesSearchQuery}
             onChangeText={setNotesSearchQuery}
             placeholderTextColor="rgba(60, 60, 67, 0.60)"
@@ -350,7 +367,7 @@ export default function Journal() {
           />
         ) : (
           <TextInput
-            placeholder="Search Photos"
+            placeholder={t("journal.placeholderPhoto")}
             value={photosSearchQuery}
             onChangeText={setPhotosSearchQuery}
             placeholderTextColor="rgba(60, 60, 67, 0.60)"
@@ -387,7 +404,7 @@ export default function Journal() {
           }}
         >
           <Feather name="plus" size={16} color="white" />
-          <Text style={styles.fabText}>Add new</Text>
+          <Text style={styles.fabText}>{t("journal.addNew")}</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -441,7 +458,7 @@ const styles = StyleSheet.create({
   },
   activeTab: {
     borderBottomWidth: 2,
-    borderBottomColor: "#f06292",
+    borderBottomColor: "#F76CCF",
   },
   tabText: {
     fontSize: 16,
@@ -503,7 +520,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: "#f06292",
+    backgroundColor: "#F66DCE",
     borderWidth: 1,
     borderColor: "#FCD2F0",
     paddingHorizontal: 20,
@@ -529,12 +546,12 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 16,
-    color: "#f06292",
+    color: "#F66DCE",
     marginBottom: 15,
     textAlign: "center",
   },
   refreshButton: {
-    backgroundColor: "#f06292",
+    backgroundColor: "#F66DCE",
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 25,

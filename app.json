@@ -1,52 +1,54 @@
 {
   "expo": {
-    "name": "crosscare",
+    "name": "Crosscare Concierge",
     "slug": "crosscare",
-    "version": "1.0.0",
+    "version": "1.0.5",
     "orientation": "portrait",
-    "icon": "./assets/images/app-logo.png",
+    "icon": "./assets/images/app-splash.png",
     "scheme": "com.crosscare.tech",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "description": "Crosscare Concierge is your AI-powered pregnancy companion that provides personalized health insights, tracks your pregnancy journey, and offers 24/7 support through an intelligent doula chatbot. Monitor your health metrics, log meals and activities, capture pregnancy memories, and get expert guidance throughout your maternal health journey.",
+    "newArchEnabled": false,
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "infoPlist": {
-        "NSMicrophoneUsageDescription": "This app requires access to your microphone for voice processing."
+        "NSMicrophoneUsageDescription": "We use your microphone for conversating with Doula chatbot using your voice.",
+        "NSHealthShareUsageDescription": "This app needs access to read your health data including steps, heart rate, and sleep information to provide personalized health insights.",
+        "NSPhotoLibraryUsageDescription": "We use your photos to help you track your pregnancy journey, show it on your profile and give you analysis of your pregnancy journey.",
+        "ITSAppUsesNonExemptEncryption": false
       },
-      "bundleIdentifier": "com.crosscare.tech"
+      "bundleIdentifier": "com.crosscare.tech",
+      "entitlements": {
+        "com.apple.developer.healthkit": true
+      }
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/logo.png",
+        "foregroundImage": "./assets/images/app-splash.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.crosscare.tech",
+      "package": "com.crosscaretech.concierge",
       "permissions": [
         "RECORD_AUDIO",
         "INTERNET",
         "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO",
-        "android.permission.READ_HEALTH_DATA",
-        "android.permission.WRITE_HEALTH_DATA",
-        "android.permission.READ_STEPS",
-        "android.permission.WRITE_STEPS",
-        "android.permission.health.READ_HEART_RATE"
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "web": {
       "bundler": "metro",
       "output": "static",
       "favicon": "./assets/images/favicon.png",
-      "package": "com.crosscare.tech"
+      "package": "com.crosscaretech.concierge"
     },
-    "plugins": [    
+    "plugins": [
       "expo-router",
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/app-logo.png",
-          "width":200,
-          "height":200,
+          "image": "./assets/images/app-splash.png",
+          "width": 300,
+          "height": 300,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
@@ -54,16 +56,33 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera",
-          "microphonePermission": "Allow $(PRODUCT_NAME) to access your microphone",
+          "cameraPermission": "Allow Crosscare Concierge to access your camera to capture your pregnancy journey",
+          "microphonePermission": "Allow Crosscare Concierge to access your microphone to chat with Doula chatbot",
           "recordAudioAndroid": true
         }
       ],
       [
         "expo-notifications",
         {
-          "icon": "./assets/images/app-logo.png",
+          "icon": "./assets/images/app-splash.png",
           "color": "#ffffff"
+        }
+      ],
+      [
+        "react-native-health",
+        {
+          "healthSharePermission": "Allow Crosscare Concierge to access your health data to provide personalized insights and recommendations.",
+          "healthSharePermissionDescription": "This app requires access to your health data to provide personalized insights and recommendations."
+        }
+      ],
+      [
+        "expo-build-properties", 
+        {
+          "android": {
+              "compileSdkVersion": 35,
+              "targetSdkVersion": 35,
+              "buildToolsVersion": "35.0.0"
+            }
         }
       ]
     ],
@@ -75,8 +94,9 @@
         "origin": false
       },
       "eas": {
-        "projectId": "b10d128f-00f3-4a0e-baa3-4ffca8140854"
+        "projectId": "5db0fad2-5b84-466e-a322-46415afcd371"
       }
-    }
+    },
+    "owner": "crosscaretech"
   }
 }

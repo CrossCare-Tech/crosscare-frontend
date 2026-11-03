@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   StyleSheet,
   Text,
@@ -12,10 +12,13 @@ import {
   Platform,
   Animated,
   Alert,
+  AppState,
+  type AppStateStatus,
 } from "react-native";
+import Markdown from "react-native-markdown-display";
 import { Ionicons, Feather } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router, usePathname } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import VoiceRecorder from "@/components/VoiceRecorder";
 import AudioMessage from "@/components/AudioMessage";
 import { useSelector } from "react-redux";
@@ -26,8 +29,33 @@ import {
   QUESTIONNAIRE_DOMAINS,
   type QuestionnaireResponse,
 } from "@/constants/questionaireData";
-import QuestionnaireManager from "@/components/QuestionaireManager";
 import { useLocalSearchParams } from "expo-router";
+import User from "@/assets/images/Svg/User";
+import {
+  fetchHealthData,
+  type HealthData,
+} from "@/utils/DoulaChatUtils/fetchHealthData";
+import { detectAndHandleLogRequest } from "@/utils/DoulaChatUtils/detectAndHandleLogRequest";
+import { detectAndHandleGoalRequest } from "@/utils/DoulaChatUtils/detectAndHandleGoalRequest";
+import { processUserQuery } from "@/utils/DoulaChatUtils/processUserQuery";
+import ConversationalQuestionnaire from "@/components/ConversationalQuestionnaire";
+import { BackHandler } from "react-native";
+import { useTranslation } from "react-i18next";
+import { Audio } from 'expo-av';
+import {
+  GOAL_PATTERNS,
+  isIncrementalRequest,
+  LOG_PATTERNS,
+} from "@/utils/DoulaChatUtils/doulaLogPatterns";
+import { CONFIG } from "@/constants/config";
+import i18n from "@/translation/i18next";
+import { deepgramTTS, speakWithDeepgram } from "@/utils/deepgramTTS";
+
+
+interface PauseStateStorage {
+  paused: boolean;
+  userId: string | undefined;
+}
 
 interface Message {
   id: string;
@@ -35,77 +63,17 @@ interface Message {
   timestamp: Date;
   type: "text" | "audio";
   content: string; // text content or audio URI
-}
-
-// Define regex patterns for more advanced pattern matching
-const LOG_PATTERNS = {
-  water: [
-    /(?:log|record|track|add|drank|had|consumed).*?(\d+(?:\.\d+)?).*?(?:glass|glasses|cup|cups|ml|milliliters|millilitres)/i,
-    /(?:track|log|record|add)\s+(\d+(?:\.\d+)?)\s+(?:glass|glasses|cup|cups|ml|milliliters|millilitres).*?water/i,
-    /my water intake (?:today|now|just now) (?:is|was)\s+(\d+(?:\.\d+)?)\s+(?:glass|glasses|cup|cups|ml|milliliters|millilitres)/i,
-    /(?:i\s+)?(?:drank|had|took|consumed)\s+(\d+(?:\.\d+)?)\s+(?:glass|glasses|cup|cups|ml|milliliters|millilitres)(?:\s+of water)?/i,
-    // New patterns for incremental logging
-    /(?:i\s+)?(?:drank|had|took|consumed)\s+(\d+(?:\.\d+)?)\s+(?:more|additional|extra)\s+(?:glass|glasses|cup|cups|ml|milliliters|millilitres)(?:\s+of water)?/i,
-    /(?:add|log|record|track)\s+(\d+(?:\.\d+)?)\s+(?:more|additional|extra)\s+(?:glass|glasses|cup|cups|ml|milliliters|millilitres)(?:\s+of water)?/i,
-    /(?:i\s+)?(?:just|now|recently)\s+(?:drank|had|took|consumed)\s+(?:another|an additional|an extra)\s+(\d+(?:\.\d+)?)\s+(?:glass|glasses|cup|cups|ml|milliliters|millilitres)(?:\s+of water)?/i,
-  ],
-  weight: [
-    /(?:log|record|track|add|weigh|measure).*?(\d+(?:\.\d+)?).*?(?:kg|kgs|kilograms?|lbs?|pounds?)/i,
-    /(?:track|log|record|add)\s+(\d+(?:\.\d+)?)\s+(?:kg|kgs|kilograms?|lbs?|pounds?).*?weight/i,
-    /my weight (?:today|now|just now) (?:is|was)\s+(\d+(?:\.\d+)?)\s+(?:kg|kgs|kilograms?|lbs?|pounds?)/i,
-    /(?:i\s+)?(?:weigh|am|measure)\s+(\d+(?:\.\d+)?)\s+(?:kg|kgs|kilograms?|lbs?|pounds?)/i,
-  ],
-  steps: [
-    /(?:log|record|track|add|walk|measure).*?(\d+(?:\.\d+)?).*?(?:steps?|walked)/i,
-    /(?:track|log|record|add)\s+(\d+(?:\.\d+)?)\s+steps/i,
-    /(?:my steps?|my step count) (?:today|now|just now) (?:is|was)\s+(\d+(?:\.\d+)?)/i,
-    /(?:i\s+)?(?:walked|did|took)\s+(\d+(?:\.\d+)?)\s+steps/i,
-  ],
-  heartRate: [
-    /(?:log|record|track|add|measured).*?(\d+(?:\.\d+)?).*?(?:bpm|beats per minute|heart rate|pulse)/i,
-    /(?:track|log|record|add)\s+(\d+(?:\.\d+)?)\s+(?:bpm|beats per minute).*?(?:heart|pulse)/i,
-    /my (?:heart rate|pulse) (?:today|now|just now) (?:is|was)\s+(\d+(?:\.\d+)?)/i,
-    /(?:i\s+)?(?:have|had|measured)\s+(?:a\s+)?(?:heart rate|pulse|HR) of\s+(\d+(?:\.\d+)?)/i,
-  ],
-  sleep: [
-    /(?:log|record|track|add).*?sleep.*?from\s+(\d+(?::\d+)?\s*(?:am|pm)?).*?to\s+(\d+(?::\d+)?\s*(?:am|pm)?)/i,
-    /(?:i\s+)?(?:slept|sleep).*?from\s+(\d+(?::\d+)?\s*(?:am|pm)?).*?to\s+(\d+(?::\d+)?\s*(?:am|pm)?)/i,
-    /(?:i\s+)?(?:went to bed|fell asleep).*?(?:at|around)\s+(\d+(?::\d+)?\s*(?:am|pm)?).*?(?:woke up|got up).*?(?:at|around)\s+(\d+(?::\d+)?\s*(?:am|pm)?)/i,
-    /my sleep (?:yesterday|last night) was from\s+(\d+(?::\d+)?\s*(?:am|pm)?).*?to\s+(\d+(?::\d+)?\s*(?:am|pm)?)/i,
-  ],
-};
-
-const GOAL_PATTERNS = {
-  water: [
-    /(?:set|update|change).*?(?:water|hydration).*?goal.*?(\d+(?:\.\d+)?).*?(?:glass|glasses|cup|cups|ml|milliliters|millilitres)/i,
-    /(?:goal|target) (?:is|to drink|for|of).*?(\d+(?:\.\d+)?).*?(?:glass|glasses|cup|cups|ml|milliliters|millilitres)/i,
-    /(?:want|aim|going) to drink\s+(\d+(?:\.\d+)?)\s+(?:glass|glasses|cup|cups|ml|milliliters|millilitres)/i,
-    /my water goal (?:is|should be)\s+(\d+(?:\.\d+)?)\s+(?:glass|glasses|cup|cups|ml|milliliters|millilitres)/i,
-  ],
-  steps: [
-    /(?:set|update|change).*?(?:steps?).*?goal.*?(\d+(?:\.\d+)?).*?(?:steps?)/i,
-    /(?:step goal|step target|walking goal|walking target) (?:is|to reach|for|of).*?(\d+(?:\.\d+)?).*?(?:steps?)/i,
-    /(?:want|aim|going) to (?:walk|reach|do)\s+(\d+(?:\.\d+)?)\s+steps/i,
-    /my step goal (?:is|should be)\s+(\d+(?:\.\d+)?)/i,
-  ],
-};
-
-// Function to check if the request is for an incremental update
-function isIncrementalRequest(query: string) {
-  const incrementalPatterns = [
-    /(?:more|additional|extra|another)\s+(?:glass|glasses|cup|cups|ml|milliliters|millilitres)/i,
-    /(?:increase|increment|add to|on top of)/i,
-  ];
-
-  return incrementalPatterns.some((pattern) => pattern.test(query));
+  isEducational?: boolean;
 }
 
 export default function askdoula() {
   const [inputText, setInputText] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const { t, i18n } = useTranslation();
+  const currentLanguage = i18n.language;
   const [messages, setMessages] = useState<Message[]>([]);
   const user = useSelector((state: any) => state.user);
-  const [healthData, setHealthData] = useState(null);
+  const [healthData, setHealthData] = useState<HealthData | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [healthStats, setHealthStats] = useState({
     water: { today: 0, weekly: 0, monthly: 0, avgWeekly: 0, avgMonthly: 0 },
@@ -122,25 +90,24 @@ export default function askdoula() {
     sleep: { today: 0, weekly: 0, monthly: 0, avgWeekly: 0, avgMonthly: 0 },
   });
 
+  const [isPaused, setIsPaused] = useState(true);
+  const appState = useRef(AppState.currentState);
+  const wasActiveRef = useRef(true);
+
   const params = useLocalSearchParams();
   const fromModal = params.from_modal === "true";
-
-  // Check if back button should be shown
-  // const shouldShowBackButton = !hideBackButtonPaths.includes(path);
-
+  const RAG_SERVICE_URL = `${CONFIG.RAG_SERVICE_URL}/chat`;
   const [isAssistantResponding, setIsAssistantResponding] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [progress, setProgress] = useState(0);
 
   const scrollViewRef = useRef<ScrollView>(null);
   const loadingAnimation = useRef(new Animated.Value(0)).current;
 
-  // Questionnaire state
-  const [showStartQuestionnaire, setShowStartQuestionnaire] = useState(false);
-
   // Initialize questionnaire manager
-  const questionnaireManager = QuestionnaireManager({
+  const questionnaireManager = ConversationalQuestionnaire({
     userId: user?.user_id,
-    onQuestionReady: (question) => {
+    onQuestionReady: (question, isEducational = false) => {
       // Add the question as a message from the assistant
       setMessages((prevMessages) => [
         ...prevMessages,
@@ -150,47 +117,25 @@ export default function askdoula() {
           content: question,
           isUser: false,
           timestamp: new Date(),
+          isEducational: isEducational,
         },
       ]);
     },
     onQuestionnaireComplete: () => {
-      // Send a completion message
-      // setMessages((prevMessages) => [
-      //   ...prevMessages,
-      //   {
-      //     id: Date.now().toString(),
-      //     type: "text",
-      //     content:
-      //       "Thank you for sharing this information with me. Understanding these aspects of your life helps me provide better support and connect you with resources that can address any challenges you're facing. Remember, you're not alone, and there are organizations ready to assist you.",
-      //     isUser: false,
-      //     timestamp: new Date(),
-      //   },
-      // ])
+      // Questionnaire completion is handled internally by the ConversationalQuestionnaire
+      // Any additional actions can be added here
+      console.log("Questionnaire completed");
     },
     onResponseSaved: (response: QuestionnaireResponse) => {
       // You can do additional processing here if needed
       console.log("Response saved:", response);
     },
+    setIsPaused: (val: boolean) => setIsPaused(val),
+    // You need to add your OpenAI API key here
+    openAIApiKey: `${CONFIG.OPENAI_API_KEY}` || "",
+    t, // Pass the translation function
+    currentLanguage,
   });
-
-  // useEffect(() => {
-  //   if (messages.length === 0 && questionnaireManager.isActive) {
-  //     // Add welcome message
-  //     setMessages([
-  //       {
-  //         id: Date.now().toString(),
-  //         type: "text",
-  //         content: `Hello ${user?.user_name || "there"}!  as your doula, I'm here to support you not just physically, but also emotionally and socially throughout your pregnancy and postpartum journey.`,
-  //         isUser: false,
-  //         timestamp: new Date(),
-  //       },
-  //     ])
-  //   }
-  // }, [questionnaireManager.isActive, messages.length])
-
-  // Check if we should show the questionnaire option
-
-  // Replace the existing useEffect for checkQuestionnaireStatus with this:
 
   const checkQuestionnaireCompletionStatus = async () => {
     try {
@@ -313,134 +258,364 @@ export default function askdoula() {
   //   }
   // }, [user?.user_id])
 
+  const [isMuted, setIsMuted] = useState(false);
+
   const userId = user?.user_id;
 
   useEffect(() => {
-    const checkQuestionnaireStatus = async () => {
-      const isPaused = await questionnaireManager.checkForPausedQuestionnaire();
+    const subscription = AppState.addEventListener(
+      "change",
+      handleAppStateChange
+    );
 
-      // In the useEffect for checkQuestionnaireStatus, modify the paused questionnaire section
-      // If there's a paused questionnaire and no messages yet, ask if they want to continue
-      if (isPaused && messages.length === 0) {
-        console.log("Found paused questionnaire, asking to continue");
-
-        // Try to load the last question that was asked
-        try {
-          const lastQuestionJson = await AsyncStorage.getItem(
-            `last_question_${user?.user_id}`
-          );
-          if (lastQuestionJson) {
-            const lastQuestion = JSON.parse(lastQuestionJson);
-            console.log(
-              "Found last question for paused questionnaire:",
-              lastQuestion
-            );
-
-            // If the last message was a pause confirmation, use a different message to resume
-            if (lastQuestion.domainId === "pause") {
-              setMessages([
-                {
-                  id: Date.now().toString(),
-                  type: "text",
-                  content: `Hey ${
-                    user?.user_name || "there"
-                  }, you have an unfinished questionnaire. Would you like to continue where you left off?`,
-                  isUser: false,
-                  timestamp: new Date(),
-                },
-              ]);
-              return;
-            }
-
-            // If it was a domain continuation question, use that context
-            if (lastQuestion.domainId === "continue") {
-              const savedState = await AsyncStorage.getItem(
-                `questionnaire_state_${user?.user_id}`
-              );
-              if (savedState) {
-                const parsedState = JSON.parse(savedState);
-                const nextDomainIndex = parsedState.currentDomainIndex + 1;
-
-                if (nextDomainIndex < QUESTIONNAIRE_DOMAINS.length) {
-                  const nextDomain =
-                    QUESTIONNAIRE_DOMAINS[parsedState.currentDomainIndex];
-                  setMessages([
-                    {
-                      id: Date.now().toString(),
-                      type: "text",
-                      content: `Hey ${
-                        user?.user_name || "there"
-                      }, we were discussing ${QUESTIONNAIRE_DOMAINS[
-                        parsedState.currentDomainIndex
-                      ].description.toLowerCase()} and about to move to ${nextDomain.description.toLowerCase()}. Would you like to continue where you left off?`,
-                      isUser: false,
-                      timestamp: new Date(),
-                    },
-                  ]);
-                  return;
-                }
-              }
-            }
-
-            // For a regular question, use the domain context
-            const savedState = await AsyncStorage.getItem(
-              `questionnaire_state_${user?.user_id}`
-            );
-            if (savedState) {
-              const parsedState = JSON.parse(savedState);
-              const currentDomain =
-                QUESTIONNAIRE_DOMAINS[parsedState.currentDomainIndex];
-
-              if (currentDomain) {
-                setMessages([
-                  {
-                    id: Date.now().toString(),
-                    type: "text",
-                    content: `Hey ${
-                      user?.user_name || "there"
-                    }, you have an unfinished questionnaire about ${currentDomain.description.toLowerCase()}. Would you like to continue where you left off?`,
-                    isUser: false,
-                    timestamp: new Date(),
-                  },
-                ]);
-                return;
-              }
-            }
-          }
-        } catch (error) {
-          console.error("Error getting last question:", error);
-        }
-
-        // Fallback message if we can't determine the context
-        setMessages([
-          {
-            id: Date.now().toString(),
-            type: "text",
-            content: `Hey ${
-              user?.user_name || "there"
-            }, you have an unfinished questionnaire. Would you like to continue where you left off?`,
-            isUser: false,
-            timestamp: new Date(),
-          },
-        ]);
-        return;
-      }
+    return () => {
+      subscription.remove();
     };
-
-    checkQuestionnaireStatus();
-  }, [
-    questionnaireManager,
-    messages,
-    user,
-    checkQuestionnaireCompletionStatus,
-  ]);
-
-  // Fetch health data when component mounts
-  useEffect(() => {
-    fetchHealthData();
   }, []);
 
-  // Auto-scroll to bottom when messages change or when typing indicator appears
+  useEffect(() => {
+    console.log("This is the current language", currentLanguage);
+  }, [currentLanguage]);
+
+  const contextSavingRef = useRef(false);
+  const isNavigatingAwayRef = useRef(false);
+
+  // 3. ADD this comprehensive go back handler function
+  const handleGoBack = useCallback(async () => {
+    try {
+      console.log(
+        "Go back handler triggered - saving context before navigation"
+      );
+
+      // Prevent multiple simultaneous saves
+      if (contextSavingRef.current) {
+        console.log(
+          "Context save already in progress, proceeding with navigation"
+        );
+        router.back();
+        return true;
+      }
+
+      contextSavingRef.current = true;
+      isNavigatingAwayRef.current = true;
+
+      // Step 1: Check if questionnaire is active and needs saving
+      const isQuestionnaireActive =
+        questionnaireManager.isActive && !questionnaireManager.isCompleted;
+
+      if (isQuestionnaireActive) {
+        console.log(
+          "Active questionnaire detected - saving state before navigation"
+        );
+
+        // Step 2: Save current conversation context
+        const currentContext = questionnaireManager.context;
+        if (currentContext) {
+          try {
+            // Create a snapshot of the current state
+            const contextSnapshot = {
+              ...currentContext,
+              isPaused: true, // Always pause when navigating away
+              stage: questionnaireManager.isPaused
+                ? currentContext.stage
+                : "paused",
+              lastSaved: new Date().toISOString(),
+              navigationPaused: true, // Flag to indicate paused due to navigation
+            };
+
+            // Convert dates to strings for storage
+            if (contextSnapshot.responses) {
+              contextSnapshot.responses = contextSnapshot.responses.map(
+                (r: any) => ({
+                  ...r,
+                  timestamp:
+                    r.timestamp instanceof Date
+                      ? r.timestamp.toISOString()
+                      : r.timestamp,
+                })
+              );
+            }
+
+            if (contextSnapshot.sensitiveDisclosures) {
+              contextSnapshot.sensitiveDisclosures =
+                contextSnapshot.sensitiveDisclosures.map((d: any) => ({
+                  ...d,
+                  timestamp:
+                    d.timestamp instanceof Date
+                      ? d.timestamp.toISOString()
+                      : d.timestamp,
+                }));
+            }
+
+            // Save to multiple storage keys for reliability
+            const contextKey = `conversation_context_${user?.user_id}`;
+            const backupKey = `conversation_context_backup_${user?.user_id}`;
+
+            await Promise.all([
+              AsyncStorage.setItem(contextKey, JSON.stringify(contextSnapshot)),
+              AsyncStorage.setItem(backupKey, JSON.stringify(contextSnapshot)),
+              AsyncStorage.setItem(
+                `questionnaire_paused_${user?.user_id}`,
+                "true"
+              ),
+              AsyncStorage.setItem(
+                `questionnaire_navigation_paused_${user?.user_id}`,
+                "true"
+              ),
+              AsyncStorage.setItem(
+                `last_navigation_time_${user?.user_id}`,
+                Date.now().toString()
+              ),
+            ]);
+
+            console.log("Context saved successfully before navigation:", {
+              responses: contextSnapshot.responses?.length || 0,
+              isPaused: contextSnapshot.isPaused,
+              domainIndex: contextSnapshot.currentDomainIndex,
+              questionIndex: contextSnapshot.currentQuestionIndex,
+            });
+          } catch (contextError) {
+            console.error("Error saving context:", contextError);
+            // Continue with navigation even if context save fails
+          }
+        }
+
+        // Step 3: Pause the questionnaire manager if it's not already paused
+        if (!questionnaireManager.isPaused) {
+          try {
+            await questionnaireManager.pauseQuestionnaire();
+            console.log("Questionnaire paused before navigation");
+          } catch (pauseError) {
+            console.error("Error pausing questionnaire:", pauseError);
+          }
+        }
+
+        // Step 4: Save any unsaved responses to database
+        if (currentContext?.responses?.length > 0) {
+          try {
+            console.log("Saving responses to database before navigation");
+
+            // Save in background, don't wait for completion
+            const savePromises = currentContext.responses.map(
+              async (response: any) => {
+                try {
+                  await axios.post(
+                    `${CONFIG.API_BASE_URL}/user/${user?.user_id}/domain`,
+                    {
+                      domainId: response.domainId,
+                      questionId: response.questionId,
+                      response: response.response,
+                      flag: response.flag,
+                      timestamp:
+                        response.timestamp instanceof Date
+                          ? response.timestamp.toISOString()
+                          : response.timestamp,
+                    }
+                  );
+                } catch (error) {
+                  console.error(
+                    `Error saving response ${response.questionId}:`,
+                    error
+                  );
+                }
+              }
+            );
+
+            // Don't wait for all saves to complete - let them run in background
+            Promise.all(savePromises)
+              .then(() => {
+                console.log("All responses saved to database");
+              })
+              .catch((error) => {
+                console.error("Some responses failed to save:", error);
+              });
+          } catch (saveError) {
+            console.error("Error initiating response save:", saveError);
+          }
+        }
+      }
+
+      // Step 5: Save current chat messages
+      if (messages.length > 0) {
+        try {
+          const serializedMessages = messages.map((msg) => ({
+            ...msg,
+            timestamp: msg.timestamp.toISOString(),
+          }));
+
+          await AsyncStorage.setItem(
+            "chatHistory",
+            JSON.stringify(serializedMessages)
+          );
+          await AsyncStorage.setItem(
+            "chatHistory_backup",
+            JSON.stringify(serializedMessages)
+          );
+          console.log("Chat messages saved before navigation");
+        } catch (messageError) {
+          console.error("Error saving messages:", messageError);
+        }
+      }
+
+      // Step 6: Update UI state for navigation
+      setIsPaused(true);
+
+      console.log(
+        "All context saved successfully - proceeding with navigation"
+      );
+    } catch (error) {
+      console.error("Error in go back handler:", error);
+    } finally {
+      contextSavingRef.current = false;
+
+      // Always proceed with navigation, even if save fails
+      router.back();
+    }
+
+    return true; // Indicate we handled the back press
+  }, [questionnaireManager, messages, user?.user_id, router]);
+
+  useEffect(() => {
+    const backAction = () => {
+      handleGoBack();
+      return true; // Prevent default back action
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      "hardwareBackPress",
+      backAction
+    );
+
+    return () => backHandler.remove();
+  }, [handleGoBack]);
+
+  // Handle app state changes (active, background, inactive)
+  const handleAppStateChange = async (nextAppState: AppStateStatus) => {
+    console.log(
+      `App state changed from ${appState.current} to ${nextAppState}`
+    );
+
+    // If app is going to background and questionnaire is active but not paused
+    if (
+      appState.current.match(/active/) &&
+      (nextAppState === "background" || nextAppState === "inactive") &&
+      questionnaireManager.isActive &&
+      !questionnaireManager.isPaused &&
+      !questionnaireManager.isCompleted
+    ) {
+      console.log("App going to background - auto-pausing questionnaire");
+      wasActiveRef.current = true;
+
+      await AsyncStorage.setItem(
+        `questionnaire_auto_paused_${user?.user_id}`,
+        "true"
+      );
+      await AsyncStorage.setItem(
+        `questionnaire_paused_${user?.user_id}`,
+        "true"
+      );
+
+      if (typeof questionnaireManager.resumeQuestionnaire === "function") {
+        await questionnaireManager.resumeQuestionnaire();
+      } else {
+        // fallback: if only toggle is available, call it only if currently paused
+        if (questionnaireManager.isPaused) {
+          await handlePauseResumeToggle();
+        }
+      }
+
+      setIsPaused(false);
+    }
+
+    // If app is coming back to foreground and was auto-paused
+    if (
+      (appState.current === "background" || appState.current === "inactive") &&
+      nextAppState === "active" &&
+      wasActiveRef.current
+    ) {
+      console.log(
+        "App returning to foreground - questionnaire was auto-paused"
+      );
+      wasActiveRef.current = true;
+
+      await AsyncStorage.setItem(
+        `questionnaire_auto_paused_${user?.user_id}`,
+        "true"
+      );
+      await AsyncStorage.setItem(
+        `questionnaire_paused_${user?.user_id}`,
+        "true"
+      );
+
+      setIsPaused(true);
+
+      // Don't auto-resume, but update UI to show the resume button
+      await loadPauseState();
+    }
+
+    appState.current = nextAppState;
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      console.log("Screen focused - loading progress and pause state");
+
+      // Load progress directly from storage
+      const loadProgressAndPauseState = async () => {
+        try {
+          // First check the dedicated pause state storage
+          const pauseState = await AsyncStorage.getItem(
+            `questionnaire_paused_${user?.user_id}`
+          );
+          const isPausedFromDedicated =
+            pauseState === null ? true : pauseState === "true";
+          // Get the progress
+          const storedProgress = await getProgressFromStorage();
+          setProgress(storedProgress);
+
+          // Also get the pause state from context as a fallback
+          const contextString = await AsyncStorage.getItem(
+            `conversation_context_${user?.user_id}`
+          );
+          if (contextString) {
+            const context = JSON.parse(contextString);
+            // Use dedicated storage value first, fall back to context
+            const wasPaused =
+              isPausedFromDedicated ?? context?.isPaused ?? true;
+
+            console.log(
+              `Loaded pause state from storage: isPaused=${wasPaused}`
+            );
+            setIsPaused(wasPaused);
+
+            // Also force the questionnaire manager to update its state if possible
+            if (questionnaireManager && wasPaused) {
+              console.log("Setting questionnaire manager to paused state");
+              // If we have a reloadContextFromStorage method, use it
+              if (
+                typeof questionnaireManager.reloadContextFromStorage ===
+                "function"
+              ) {
+                await questionnaireManager.reloadContextFromStorage();
+              }
+            }
+          } else if (pauseState === "true") {
+            // If we have no context but we do have a pause state, still set it
+            setIsPaused(true);
+          }
+        } catch (error) {
+          console.error("Error loading progress and pause state:", error);
+        }
+      };
+
+      loadProgressAndPauseState();
+
+      return () => {
+        // Nothing to clean up
+      };
+    }, [user?.user_id])
+  );
+
   useEffect(() => {
     if (scrollViewRef.current && (messages.length > 0 || isTyping)) {
       setTimeout(() => {
@@ -478,321 +653,238 @@ export default function askdoula() {
 
   const systemPrompt = `${systemPrompts}`;
 
-  const fetchHealthData = async () => {
+  const getLanguageName = (langCode: string) => {
+    const languages = {
+      en: "English",
+      es: "Spanish",
+      pt: "Portuguese",
+      ht: "Haitian Creole",
+    };
+    return languages[langCode as keyof typeof languages] || "English";
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      const loadContextAndUpdateProgress = async () => {
+        console.log("Screen focused - updating progress bar");
+        setIsContextLoaded(false);
+
+        // Wait a moment to allow context to load
+        setTimeout(async () => {
+          // If questionnaireManager exists, make sure it's properly initialized
+          if (questionnaireManager) {
+            try {
+              const savedContext = await AsyncStorage.getItem(
+                `conversation_context_${user?.user_id}`
+              );
+              if (savedContext) {
+                console.log("Found saved context for progress calculation");
+                // Force a re-render of the progress bar
+                setForceUpdate((prev) => prev + 1);
+              }
+            } catch (error) {
+              console.error("Error checking saved context:", error);
+            }
+          }
+          setIsContextLoaded(true);
+        }, 500);
+      };
+
+      loadContextAndUpdateProgress();
+
+      return () => {
+        // Nothing to clean up
+      };
+    }, [])
+  );
+
+  // Get current domain title
+  const getCurrentDomainIndex = () => {
+    return questionnaireManager.context?.currentDomainIndex || 0;
+  };
+
+  useEffect(() => {
+    // Initialize progress when component mounts
+    const initProgress = async () => {
+      const initialProgress = await getProgressFromStorage();
+      setProgress(initialProgress);
+      console.log(`Initial progress set to ${initialProgress}%`);
+    };
+
+    initProgress();
+  }, []);
+
+  // Auto-scroll to bottom when messages change or when typing indicator appears
+  useEffect(() => {
+    if (scrollViewRef.current && (messages.length > 0 || isTyping)) {
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+    }
+  }, [messages, isTyping]);
+
+  useEffect(() => {
+    if (isTyping) {
+      Animated.loop(
+        Animated.timing(loadingAnimation, {
+          toValue: 1,
+          duration: 1500,
+          useNativeDriver: false,
+        })
+      ).start();
+    } else {
+      loadingAnimation.setValue(0);
+    }
+  }, [isTyping, loadingAnimation]);
+
+  useFocusEffect(
+    useCallback(() => {
+      // This will run when the screen comes into focus
+      console.log("Screen focused, reloading context if needed");
+      loadMessages();
+
+      // If questionnaireManager exists, make sure it's properly initialized
+      // No need to call questionnaireManager.loadConversationState here, as it does not exist.
+    }, [])
+  );
+
+  const generateTranslation = async (text: string, targetLanguage: string) => {
+    const apiUrl =
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+    const apiKey = `${CONFIG.GEMINI_KEY}`;
+    // Replace with your actual API key
+
+    // Prepare the request body for translation
+    const requestBody = {
+      contents: [
+        {
+          parts: [
+            {
+              text: `Translate the following text to ${getLanguageName(
+                targetLanguage
+              )} without any explanations or additional context. Only return the translated text:\n\n"${text}"`, // Adjust the structure of the prompt
+            },
+          ],
+        },
+      ],
+      generationConfig: {
+        temperature: 0.0, // Ensuring deterministic output
+        topK: 40,
+        topP: 0.95,
+        maxOutputTokens: 1000,
+      },
+    };
+
+    // Use fetch instead of axios
+    try {
+      const response = await fetch(`${apiUrl}?key=${apiKey}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept-Language": targetLanguage, // Use target language here
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        console.error("API Error:", errorData);
+        throw new Error(
+          `Failed to send message to Gemini API: ${response.status}`
+        );
+      }
+
+      const data = await response.json();
+
+      // Extract the response text from Gemini's response format
+      let responseText =
+        data.candidates?.[0]?.content?.parts?.[0]?.text ||
+        "I'm sorry, I couldn't process your request at this time.";
+
+      responseText = responseText
+        .replace(/^["']|["']$/g, "") // Remove surrounding quotes
+        .replace(/^Translation:?\s*/i, "") // Remove "Translation:" prefix
+        .trim(); // Clean up unwanted characters
+      console.log("Response Text:", responseText);
+
+      return {
+        response: responseText,
+      };
+    } catch (error) {
+      console.error("Error sending message to Gemini API:", error);
+      return {
+        response:
+          "I'm having trouble connecting right now. Please try again later.",
+      };
+    }
+  };
+
+  // Add this function to directly get progress from AsyncStorage
+  const getProgressFromStorage = async () => {
+    try {
+      // Get the conversation context directly from storage
+      const contextString = await AsyncStorage.getItem(
+        `conversation_context_${user?.user_id}`
+      );
+      if (!contextString) {
+        console.log("No context found in storage");
+        return 0;
+      }
+
+      // Parse the context and get the response count
+      const context = JSON.parse(contextString);
+      const responseCount = context?.responses?.length || 0;
+
+      // Calculate progress
+      const totalQuestions = QUESTIONNAIRE_DOMAINS.reduce(
+        (sum, domain) => sum + domain.questions.length,
+        0
+      );
+
+      const percentage = Math.min(
+        Math.round((responseCount / totalQuestions) * 100),
+        100
+      );
+      console.log(
+        `Direct progress calculation: ${responseCount}/${totalQuestions} = ${percentage}%`
+      );
+
+      return percentage;
+    } catch (error) {
+      console.error("Error getting progress from storage:", error);
+      return 0;
+    }
+  };
+
+  // Add useEffect to save messages when they change
+  useEffect(() => {
+    if (messages.length > 0) {
+      saveMessages(messages);
+    }
+  }, [messages]);
+
+  const fetchAndUpdateHealthData = async () => {
     if (user && user.user_id) {
       try {
-        // Use the specified endpoint format
-        const apiUrl = `https://crosscare-backends.onrender.com/api/user/activity/${user.user_id}`;
-        console.log(`Making API call to: ${apiUrl}`);
+        const { healthStats: newHealthStats, healthData: newHealthData } =
+          await fetchHealthData(user.user_id);
 
-        // Make the API call
-        const response = await axios.get(apiUrl);
-        const apiData = response.data.activities 
-
-
-
-        // Process the data if we got a response
-        if (
-          apiData &&
-          Array.isArray(apiData) &&
-          apiData.length > 0
-        ) {
-          console.log(
-            "API data found. First record:",
-            JSON.stringify(apiData[0], null, 2)
-          );
-
-          // Sort by date (newest first)
-          const sortedRecords = [...apiData].sort(
-            (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-          );
-
-
-          // Get the most recent record
-          const latestRecord = sortedRecords[0];
-
-          // Get the last 7 days of records for weekly stats
-          const last7Days = sortedRecords.slice(0, 7);
-
-          // Get the last 30 days of records for monthly stats
-          const last30Days = sortedRecords.slice(0, 30);
-
-          // Calculate sleep duration in hours for a record
-          const calculateSleepDuration = (record: any) => {
-            if (
-              record.details &&
-              record.details.sleep &&
-              record.details.sleep.start &&
-              record.details.sleep.end
-            ) {
-              const start = new Date(record.details.sleep.start);
-              const end = new Date(record.details.sleep.end);
-              return (end.getTime() - start.getTime()) / (1000 * 60 * 60); // Convert ms to hours
-            }
-            return 0;
-          };
-
-          // Create a new stats object to update state
-          const newHealthStats = {
-            water: {
-              today: 0,
-              weekly: 0,
-              monthly: 0,
-              avgWeekly: 0,
-              avgMonthly: 0,
-            },
-            steps: {
-              today: 0,
-              weekly: 0,
-              monthly: 0,
-              avgWeekly: 0,
-              avgMonthly: 0,
-            },
-            weight: {
-              today: 0,
-              weekly: 0,
-              monthly: 0,
-              avgWeekly: 0,
-              avgMonthly: 0,
-              unit: "kg",
-            },
-            heart: {
-              today: 0,
-              weekly: 0,
-              monthly: 0,
-              avgWeekly: 0,
-              avgMonthly: 0,
-            },
-            sleep: {
-              today: 0,
-              weekly: 0,
-              monthly: 0,
-              avgWeekly: 0,
-              avgMonthly: 0,
-            },
-          };
-
-          // TODAY'S STATS
-          newHealthStats.water.today = latestRecord.details?.water || 0;
-          newHealthStats.steps.today = latestRecord.details?.steps || 0;
-          newHealthStats.heart.today = latestRecord.details?.heart || 0;
-          newHealthStats.sleep.today = calculateSleepDuration(latestRecord);
-          if (latestRecord.details?.weight?.value) {
-            newHealthStats.weight.today = latestRecord.details.weight.value;
-            newHealthStats.weight.unit =
-              latestRecord.details.weight.unit || "kg";
-          }
-
-          // WEEKLY STATS
-          // Filter records with valid data for each metric
-          const weeklyWaterRecords = last7Days.filter(
-            (r) =>
-              r.details &&
-              typeof r.details.water === "number" &&
-              r.details.water > 0
-          );
-          const weeklyStepsRecords = last7Days.filter(
-            (r) =>
-              r.details &&
-              typeof r.details.steps === "number" &&
-              r.details.steps > 0
-          );
-          const weeklyHeartRecords = last7Days.filter(
-            (r) =>
-              r.details &&
-              typeof r.details.heart === "number" &&
-              r.details.heart > 0
-          );
-          const weeklySleepRecords = last7Days.filter(
-            (r) => calculateSleepDuration(r) > 0
-          );
-          const weeklyWeightRecords = last7Days.filter(
-            (r) =>
-              r.details &&
-              r.details.weight &&
-              typeof r.details.weight.value === "number" &&
-              r.details.weight.value > 0
-          );
-
-          // Calculate totals
-          newHealthStats.water.weekly = weeklyWaterRecords.reduce(
-            (sum, r) => sum + r.details.water,
-            0
-          );
-          newHealthStats.steps.weekly = weeklyStepsRecords.reduce(
-            (sum, r) => sum + r.details.steps,
-            0
-          );
-          newHealthStats.heart.weekly = weeklyHeartRecords.reduce(
-            (sum, r) => sum + r.details.heart,
-            0
-          );
-          newHealthStats.sleep.weekly = weeklySleepRecords.reduce(
-            (sum, r) => sum + calculateSleepDuration(r),
-            0
-          );
-          newHealthStats.weight.weekly = weeklyWeightRecords.reduce(
-            (sum, r) => sum + r.details.weight.value,
-            0
-          );
-
-          // Calculate averages
-          newHealthStats.water.avgWeekly =
-            weeklyWaterRecords.length > 0
-              ? newHealthStats.water.weekly / weeklyWaterRecords.length
-              : 0;
-          newHealthStats.steps.avgWeekly =
-            weeklyStepsRecords.length > 0
-              ? newHealthStats.steps.weekly / weeklyStepsRecords.length
-              : 0;
-          newHealthStats.heart.avgWeekly =
-            weeklyHeartRecords.length > 0
-              ? newHealthStats.heart.weekly / weeklyHeartRecords.length
-              : 0;
-          newHealthStats.sleep.avgWeekly =
-            weeklySleepRecords.length > 0
-              ? newHealthStats.sleep.weekly / weeklySleepRecords.length
-              : 0;
-          newHealthStats.weight.avgWeekly =
-            weeklyWeightRecords.length > 0
-              ? newHealthStats.weight.weekly / weeklyWeightRecords.length
-              : 0;
-
-          // MONTHLY STATS
-          // Filter records with valid data for each metric
-          const monthlyWaterRecords = last30Days.filter(
-            (r) =>
-              r.details &&
-              typeof r.details.water === "number" &&
-              r.details.water > 0
-          );
-          const monthlyStepsRecords = last30Days.filter(
-            (r) =>
-              r.details &&
-              typeof r.details.steps === "number" &&
-              r.details.steps > 0
-          );
-          const monthlyHeartRecords = last30Days.filter(
-            (r) =>
-              r.details &&
-              typeof r.details.heart === "number" &&
-              r.details.heart > 0
-          );
-          const monthlySleepRecords = last30Days.filter(
-            (r) => calculateSleepDuration(r) > 0
-          );
-          const monthlyWeightRecords = last30Days.filter(
-            (r) =>
-              r.details &&
-              r.details.weight &&
-              typeof r.details.weight.value === "number" &&
-              r.details.weight.value > 0
-          );
-
-          // Calculate totals
-          newHealthStats.water.monthly = monthlyWaterRecords.reduce(
-            (sum, r) => sum + r.details.water,
-            0
-          );
-          newHealthStats.steps.monthly = monthlyStepsRecords.reduce(
-            (sum, r) => sum + r.details.steps,
-            0
-          );
-          newHealthStats.heart.monthly = monthlyHeartRecords.reduce(
-            (sum, r) => sum + r.details.heart,
-            0
-          );
-          newHealthStats.sleep.monthly = monthlySleepRecords.reduce(
-            (sum, r) => sum + calculateSleepDuration(r),
-            0
-          );
-          newHealthStats.weight.monthly = monthlyWeightRecords.reduce(
-            (sum, r) => sum + r.details.weight.value,
-            0
-          );
-
-          // Calculate averages
-          newHealthStats.water.avgMonthly =
-            monthlyWaterRecords.length > 0
-              ? newHealthStats.water.monthly / monthlyWaterRecords.length
-              : 0;
-          newHealthStats.steps.avgMonthly =
-            monthlyStepsRecords.length > 0
-              ? newHealthStats.steps.monthly / monthlyStepsRecords.length
-              : 0;
-          newHealthStats.heart.avgMonthly =
-            monthlyHeartRecords.length > 0
-              ? newHealthStats.heart.monthly / monthlyHeartRecords.length
-              : 0;
-          newHealthStats.sleep.avgMonthly =
-            monthlySleepRecords.length > 0
-              ? newHealthStats.sleep.monthly / monthlySleepRecords.length
-              : 0;
-          newHealthStats.weight.avgMonthly =
-            monthlyWeightRecords.length > 0
-              ? newHealthStats.weight.monthly / monthlyWeightRecords.length
-              : 0;
-
-          // Create health data object with safer property access (for backward compatibility)
-          const newHealthData = {
-            steps: {
-              today: newHealthStats.steps.today,
-              weekly: newHealthStats.steps.weekly,
-            },
-            water: {
-              today: newHealthStats.water.today,
-              weekly: newHealthStats.water.weekly,
-            },
-            weight: {
-              current: latestRecord.details?.weight?.value || 0,
-              unit: latestRecord.details?.weight?.unit || "kg",
-              previous: 0,
-            },
-          };
-
-          // Find previous weight record for backward compatibility
-          const prevWeightRecord = sortedRecords.find(
-            (r) =>
-              r !== latestRecord &&
-              r.details &&
-              r.details.weight &&
-              typeof r.details.weight.value === "number" &&
-              r.details.weight.value > 0
-          );
-
-          if (
-            prevWeightRecord &&
-            prevWeightRecord.details &&
-            prevWeightRecord.details.weight
-          ) {
-            newHealthData.weight.previous =
-              prevWeightRecord.details.weight.value;
-          }
-
-          // Update state with the new health data
-          setHealthStats(newHealthStats);
-          setHealthData(newHealthData as any);
-          console.log(
-            "Health stats calculated successfully:",
-            JSON.stringify(newHealthStats, null, 2)
-          );
-        } else {
-          console.log("No valid data in API response");
-        }
-      } catch (error: any) {
-        console.error("API call error:", error.message);
-        if (error.response) {
-          console.error("API error response status:", error.response.status);
-          console.error(
-            "API error response data:",
-            JSON.stringify(error.response.data, null, 2)
-          );
-        }
+        // Update state with the new health data
+        setHealthStats(newHealthStats);
+        setHealthData(newHealthData);
+        console.log("Health stats fetched and updated successfully");
+      } catch (error) {
+        console.error("Error fetching health data:", error);
       }
     } else {
       console.log("No user ID available");
     }
   };
+
+  // Fetch health data when component mounts
+  useEffect(() => {
+    fetchAndUpdateHealthData();
+  }, []);
 
   const sendToAPI = async (
     messageContent: string,
@@ -804,60 +896,79 @@ export default function askdoula() {
         "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
 
       // Your API key should be stored in an environment variable in production
-      const apiKey = "AIzaSyD0ISmMWP4_yDqEvlrjpNJB8TnuJBkhZPs"; // Replace with your actual API key
+      const apiKey = `${CONFIG.GEMINI_KEY}`; // Replace with your actual API key
 
       // Create enhanced prompt with health data if available
       let enhancedPrompt = systemPrompt;
 
+      // Add explicit language instruction at the beginning
+      enhancedPrompt = `IMPORTANT: Always respond in ${currentLanguage} language only with the specific and accurate response`;
+
       if (healthData) {
-        enhancedPrompt += `\n\nUser's health data:\n`;
+        enhancedPrompt += `\n\n${t("healthData.userhealth")}\n`;
 
         if (healthStats.steps) {
-          enhancedPrompt += `- Steps: Today: ${
+          enhancedPrompt += `- ${t("steps")}: ${t("healthData.today1")}: ${
             healthStats.steps.today
-          }, Weekly average: ${healthStats.steps.avgWeekly.toFixed(
-            0
-          )}, Monthly average: ${healthStats.steps.avgMonthly.toFixed(0)}\n`;
+          }, ${t(
+            "healthData.weekly_averages"
+          )}: ${healthStats.steps.avgWeekly.toFixed(0)}, ${t(
+            "healthData.monthly_averages"
+          )}: ${healthStats.steps.avgMonthly.toFixed(0)}\n`;
         }
 
         if (healthStats.water) {
-          enhancedPrompt += `- Water: Today: ${
+          enhancedPrompt += `- ${t("water")}: ${t("healthData.today1")}: ${
             healthStats.water.today
-          } glasses, Weekly average: ${healthStats.water.avgWeekly.toFixed(
-            1
-          )} glasses, Monthly average: ${healthStats.water.avgMonthly.toFixed(
-            1
-          )} glasses\n`;
+          } ${t("healthData.glasses")}, ${t(
+            "healthData.weekly_averages"
+          )}: ${healthStats.water.avgWeekly.toFixed(1)} ${t(
+            "healthData.glasses"
+          )}, ${t(
+            "healthData.monthly_averages"
+          )}: ${healthStats.water.avgMonthly.toFixed(1)} ${t(
+            "healthData.glasses"
+          )}\n`;
         }
 
         if (healthStats.weight && healthStats.weight.avgWeekly > 0) {
-          enhancedPrompt += `- Weight: Current: ${healthStats.weight.today} ${
+          enhancedPrompt += `- ${t("healthData.weight")}: ${t(
+            "healthData.current"
+          )}: ${healthStats.weight.today} ${healthStats.weight.unit}, ${t(
+            "healthData.weekly_average"
+          )}: ${healthStats.weight.avgWeekly.toFixed(1)} ${
             healthStats.weight.unit
-          }, Weekly average: ${healthStats.weight.avgWeekly.toFixed(1)} ${
-            healthStats.weight.unit
-          }, Monthly average: ${healthStats.weight.avgMonthly.toFixed(1)} ${
+          }, ${t(
+            "healthData.monthly_average1"
+          )}: ${healthStats.weight.avgMonthly.toFixed(1)} ${
             healthStats.weight.unit
           }\n`;
         }
 
         if (healthStats.heart && healthStats.heart.avgWeekly > 0) {
-          enhancedPrompt += `- Heart rate: Current: ${
-            healthStats.heart.today
-          } bpm, Weekly average: ${healthStats.heart.avgWeekly.toFixed(
-            0
-          )} bpm, Monthly average: ${healthStats.heart.avgMonthly.toFixed(
-            0
-          )} bpm\n`;
+          enhancedPrompt += `- ${t("healthData.heart_rate")}: ${t(
+            "healthData.current"
+          )}: ${healthStats.heart.today} bpm, ${t(
+            "healthData.weekly_averages"
+          )}: ${healthStats.heart.avgWeekly.toFixed(0)} bpm, ${t(
+            "healthData.monthly_averages"
+          )}: ${healthStats.heart.avgMonthly.toFixed(0)} bpm\n`;
         }
 
         if (healthStats.sleep && healthStats.sleep.avgWeekly > 0) {
-          enhancedPrompt += `- Sleep: Last night: ${healthStats.sleep.today.toFixed(
-            1
-          )} hours, Weekly average: ${healthStats.sleep.avgWeekly.toFixed(
-            1
-          )} hours, Monthly average: ${healthStats.sleep.avgMonthly.toFixed(
-            1
-          )} hours\n`;
+          enhancedPrompt += `- ${t("healthData.sleep")}: ${t(
+            "healthData.last_night"
+          )}: ${healthStats.sleep.today.toFixed(1)} ${t(
+            "healthData.hours"
+          )}, ${t(
+            "healthData.weekly_averages"
+          )}: ${healthStats.sleep.avgWeekly.toFixed(1)} ${t(
+            "healthData.hours"
+          )}, ${t(
+            "healthData.monthly_averages"
+          )}: ${healthStats.sleep.avgMonthly.toFixed(1)} ${t(
+            "healthData.hours"
+          )}\n`;
         }
 
         enhancedPrompt += `\nPlease answer the user's question about their health metrics using this data. Be specific and encouraging.`;
@@ -877,16 +988,14 @@ export default function askdoula() {
         // Skip audio messages as they don't have text content we can send
         if (msg.type === "text") {
           parts.push({
-            text: msg.isUser
-              ? `User: ${msg.content}`
-              : `Assistant: ${msg.content}`,
+            text: msg.isUser ? `User ${msg.content}` : `${msg.content}`,
           });
         }
       }
 
       // Add the current message
       parts.push({
-        text: `User: ${messageContent}`,
+        text: `${messageContent}`,
       });
 
       const requestBody = {
@@ -903,10 +1012,13 @@ export default function askdoula() {
         },
       };
 
+      console.log("Current Language: ", currentLanguage);
+
       const response = await fetch(`${apiUrl}?key=${apiKey}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          // "Accept-Language": currentLanguage,
         },
         body: JSON.stringify(requestBody),
       });
@@ -927,6 +1039,7 @@ export default function askdoula() {
         "I'm sorry, I couldn't process your request at this time.";
 
       responseText = responseText.replace(/\*/g, "");
+      console.log("Response Text", responseText);
       return {
         response: responseText,
       };
@@ -940,114 +1053,121 @@ export default function askdoula() {
   };
 
   const speakResponse = (text: string) => {
-    // This function would normally use text-to-speech
-    // For now, we'll just log the response
-    console.log("Speaking response:", text);
+    // Check if muted - if so, don't speak but still process
+    if (effectiveMuted) {
+      console.log("Voice is muted, not speaking response:", text);
+      setIsProcessing(false);
+      setIsSpeaking(false);
+      return;
+    }
+
+    // If speech is already happening, stop it before starting new speech
+    if (isSpeaking) {
+      deepgramTTS.stop();
+      console.log("Speech interrupted.");
+    }
+
+    setIsSpeaking(true);
+
+    // Use Deepgram TTS with callbacks
+    speakWithDeepgram(text, {
+      language: currentLanguage,
+      onStart: () => {
+        setIsSpeaking(true);
+      },
+      onComplete: () => {
+        setIsSpeaking(false);
+        setIsProcessing(false);
+        setSpeakingMessageId(null);
+      },
+      onError: (error) => {
+        console.error("Deepgram TTS error:", error);
+        setIsSpeaking(false);
+        setIsProcessing(false);
+        setSpeakingMessageId(null);
+      },
+    }).catch((error) => {
+      console.error("Error starting Deepgram TTS:", error);
+      setIsSpeaking(false);
+      setIsProcessing(false);
+      setSpeakingMessageId(null);
+    });
   };
 
-  // Function to detect log requests using our more advanced patterns
-  function detectLogRequestWithPatterns(query: string) {
-    // Check for water intake logs
-    for (const pattern of LOG_PATTERNS.water) {
-      const match = query.match(pattern);
-      if (match && match[1]) {
-        const value = parseFloat(match[1]);
-        const isGlasses = /glass|glasses|cup|cups/i.test(query);
-        const isIncremental = isIncrementalRequest(query);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [localMuted, setLocalMuted] = useState(false);
+  const effectiveMuted = isMuted !== undefined ? isMuted : localMuted;
 
-        return {
-          type: "water",
-          value,
-          isGlasses,
-          isIncremental,
-        };
+  useEffect(() => {
+    return () => {
+      // Cleanup speech when component unmounts
+      if (isSpeaking) {
+        deepgramTTS.stop();
+        setIsSpeaking(false);
+        setSpeakingMessageId(null);
       }
-    }
+    };
+  }, [isSpeaking]);
 
-    // Check for weight logs
-    for (const pattern of LOG_PATTERNS.weight) {
-      const match = query.match(pattern);
-      if (match && match[1]) {
-        const value = parseFloat(match[1]);
-        const unit = /\b(kg|kgs|kilograms)\b/i.test(query) ? "kg" : "lbs";
-        return {
-          type: "weight",
-          value,
-          unit,
-        };
+  const wordsToNumbers = (text: string): string => {
+    const numberWords: { [key: string]: number } = {
+      zero: 0,
+      one: 1,
+      two: 2,
+      three: 3,
+      four: 4,
+      five: 5,
+      six: 6,
+      seven: 7,
+      eight: 8,
+      nine: 9,
+      ten: 10,
+      eleven: 11,
+      twelve: 12,
+      thirteen: 13,
+      fourteen: 14,
+      fifteen: 15,
+      sixteen: 16,
+      seventeen: 17,
+      eighteen: 18,
+      nineteen: 19,
+      twenty: 20,
+      thirty: 30,
+      forty: 40,
+      fifty: 50,
+      sixty: 60,
+      seventy: 70,
+      eighty: 80,
+      ninety: 90,
+      hundred: 100,
+      thousand: 1000,
+    };
+
+    const tokens = text.toLowerCase().split(/\s+/);
+    let result = 0;
+    let current = 0;
+
+    tokens.forEach((token) => {
+      if (numberWords[token] !== undefined) {
+        current += numberWords[token];
+      } else if (token === "hundred" && current !== 0) {
+        current *= 100;
+      } else if (token === "thousand" && current !== 0) {
+        current *= 1000;
+        result += current;
+        current = 0;
+      } else {
+        result += current;
+        current = 0;
       }
-    }
+    });
 
-    // Check for steps logs
-    for (const pattern of LOG_PATTERNS.steps) {
-      const match = query.match(pattern);
-      if (match && match[1]) {
-        const value = parseInt(match[1], 10);
-        return {
-          type: "steps",
-          value,
-        };
-      }
-    }
-
-    // Check for heart rate logs
-    for (const pattern of LOG_PATTERNS.heartRate) {
-      const match = query.match(pattern);
-      if (match && match[1]) {
-        const value = parseInt(match[1], 10);
-        return {
-          type: "heart",
-          value,
-        };
-      }
-    }
-
-    // Check for sleep logs
-    for (const pattern of LOG_PATTERNS.sleep) {
-      const match = query.match(pattern);
-      if (match && match[1] && match[2]) {
-        // We need both start and end time
-        return {
-          type: "sleep",
-          sleepStart: match[1],
-          sleepEnd: match[2],
-        };
-      }
-    }
-
-    return null;
-  }
-
-  // Function to detect goal requests using our more advanced patterns
-  function detectGoalRequestWithPatterns(query: string) {
-    // Check for water intake goals
-    for (const pattern of GOAL_PATTERNS.water) {
-      const match = query.match(pattern);
-      if (match && match[1]) {
-        const value = parseFloat(match[1]);
-        const isGlasses = /glass|glasses|cup|cups/i.test(query);
-        return {
-          type: "water",
-          value,
-          isGlasses,
-        };
-      }
-    }
-
-    // Check for step goals
-    for (const pattern of GOAL_PATTERNS.steps) {
-      const match = query.match(pattern);
-      if (match && match[1]) {
-        const value = parseInt(match[1], 10);
-        return {
-          type: "steps",
-          value,
-        };
-      }
-    }
-
-    return null;
-  }
+    result += current;
+    return text.replace(
+      /\b(?:zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand)\b/gi,
+      result.toString()
+    );
+  };
 
   const extractMetricFromText = (text: string, metricType: string) => {
     // Generic number extraction regex
@@ -1071,7 +1191,7 @@ export default function askdoula() {
           : "kg"; // Default to kg
 
         return {
-          value: parseFloat(numbers[0]),
+          value: Number.parseFloat(numbers[0]),
           unit: unit,
         };
 
@@ -1079,18 +1199,18 @@ export default function askdoula() {
         // Find if talking about glasses or ml
         const isGlasses = /\b(glass|glasses|cup|cups)\b/i.test(text);
         return {
-          value: parseFloat(numbers[0]),
+          value: Number.parseFloat(numbers[0]),
           isGlasses: isGlasses,
         };
 
       case "steps":
         return {
-          value: parseInt(numbers[0], 10),
+          value: Number.parseInt(numbers[0], 10),
         };
 
       case "heart":
         return {
-          value: parseInt(numbers[0], 10),
+          value: Number.parseInt(numbers[0], 10),
         };
 
       case "sleep":
@@ -1110,994 +1230,188 @@ export default function askdoula() {
 
       default:
         return {
-          value: parseFloat(numbers[0]),
+          value: Number.parseFloat(numbers[0]),
         };
     }
   };
 
-  const detectAndHandleLogRequest = async (query: string) => {
-    // First try pattern-based recognition
-    const patternMatch = detectLogRequestWithPatterns(query);
-
-    if (patternMatch) {
-      let endpoint = "";
-      let requestData = {};
-      let successMessage = "";
-
-      try {
-        if (patternMatch.type === "water") {
-          endpoint = `https://crosscare-backends.onrender.com/api/user/activity/${user.user_id}/water`;
-
-          const waterValue = patternMatch.isGlasses
-            ? patternMatch.value
-            : Math.round((patternMatch.value ?? 0) / 250);
-
-          const isIncrement = patternMatch.isIncremental || false;
-
-          requestData = {
-            water: waterValue,
-            isIncrement: isIncrement,
-          };
-
-          const incrementText = isIncrement ? " more" : "";
-          successMessage = `I've logged ${
-            patternMatch.isGlasses
-              ? patternMatch.value + incrementText + " glasses"
-              : patternMatch.value + incrementText + "ml"
-          } of water for you.`;
-
-          console.log("Water logging request:", { waterValue, isIncrement });
-        } else if (patternMatch.type === "weight") {
-          endpoint = `https://crosscare-backends.onrender.com/api/user/activity/${user.user_id}/weight`;
-          requestData = {
-            weight: patternMatch.value,
-            weight_unit: patternMatch.unit,
-          };
-          successMessage = `I've logged your weight of ${patternMatch.value} ${patternMatch.unit}.`;
-        } else if (patternMatch.type === "steps") {
-          endpoint = `https://crosscare-backends.onrender.com/api/user/activity/${user.user_id}/steps`;
-          requestData = { steps: patternMatch.value };
-          successMessage = `I've logged ${patternMatch.value} steps for you.`;
-        } else if (patternMatch.type === "heart") {
-          endpoint = `https://crosscare-backends.onrender.com/api/user/activity/${user.user_id}/heart`;
-          requestData = { heartRate: patternMatch.value };
-          successMessage = `I've logged your heart rate of ${patternMatch.value} bpm.`;
-        } else if (patternMatch.type === "sleep") {
-          endpoint = `https://crosscare-backends.onrender.com/api/user/activity/${user.user_id}/sleep`;
-
-          // Format times to ensure they have AM/PM
-          const formatTime = (timeStr) => {
-            let formattedTime = timeStr.trim();
-
-            // Convert am/pm to uppercase AM/PM
-            if (formattedTime.toLowerCase().endsWith("am")) {
-              formattedTime = formattedTime.slice(0, -2) + "AM";
-            } else if (formattedTime.toLowerCase().endsWith("pm")) {
-              formattedTime = formattedTime.slice(0, -2) + "PM";
-            }
-            // Add AM/PM if missing
-            else if (
-              !formattedTime.toUpperCase().endsWith("AM") &&
-              !formattedTime.toUpperCase().endsWith("PM")
-            ) {
-              const hour = parseInt(formattedTime.split(":")[0]);
-              // Assume hours 7-11 are AM, 12 and 1-6 are PM, and others are AM
-              if (hour >= 7 && hour <= 11) {
-                formattedTime += " AM";
-              } else {
-                formattedTime += " PM";
-              }
-            }
-
-            return formattedTime;
-          };
-
-          const sleepStart = formatTime(patternMatch.sleepStart);
-          const sleepEnd = formatTime(patternMatch.sleepEnd);
-
-          // Get today's date in ISO format (YYYY-MM-DD)
-          const today = new Date().toISOString().split("T")[0];
-
-          requestData = {
-            date: today,
-            sleepStart: sleepStart,
-            sleepEnd: sleepEnd,
-          };
-          successMessage = `I've logged your sleep from ${sleepStart} to ${sleepEnd}.`;
-        }
-
-        // If we have valid data and an endpoint, make the API call
-        if (endpoint) {
-          console.log("Logging health metric:", { endpoint, requestData });
-
-          const response = await axios.post(endpoint, requestData);
-
-          if (response.status >= 200 && response.status < 300) {
-            // Success - refresh health data
-            await fetchHealthData();
-
-            // Add response message
-            setMessages((prevMessages) => [
-              ...prevMessages,
-              {
-                id: (Date.now() + 1).toString(),
-                type: "text",
-                content: successMessage,
-                isUser: false,
-                timestamp: new Date(),
-              },
-            ]);
-
-            return true;
-          } else {
-            throw new Error(`API returned status ${response.status}`);
-          }
-        }
-      } catch (error) {
-        console.error("Error logging health metric:", error);
-
-        setMessages((prevMessages) => [
-          ...prevMessages,
-          {
-            id: (Date.now() + 1).toString(),
-            type: "text",
-            content:
-              "I'm sorry, I couldn't log that health information. Please try again or use the tracking screens.",
-            isUser: false,
-            timestamp: new Date(),
-          },
-        ]);
-      }
-
-      return true; // We had a pattern match, even if the API call failed
-    }
-
-    // If pattern matching failed, check if this is a log request with generic indicators
-    const isLogRequest = /log|record|track|add|set|update/i.test(query);
-
-    if (!isLogRequest) {
-      return false; // Not a log request
-    }
-
-    // Determine what metric is being logged
-    const isWaterLog = /water|hydration|glass|glasses|drink/i.test(query);
-    const isWeightLog = /weight|weigh/i.test(query);
-    const isStepsLog = /steps|walked|walking/i.test(query);
-    const isHeartLog = /heart|pulse|bpm/i.test(query);
-    const isSleepLog = /sleep|slept|bed time|bedtime|woke up/i.test(query);
-
-    // Extract the metric
-    let extractedData = null;
-    let endpoint = "";
-    let requestData = {};
-    let successMessage = "";
-
-    try {
-      if (isWaterLog) {
-        extractedData = extractMetricFromText(query, "water");
-
-        if (extractedData) {
-          endpoint = `https://crosscare-backends.onrender.com/api/user/activity/${user.user_id}/water`;
-
-          // If the user specified glasses, send that value directly
-          // Otherwise, convert ml to glasses (assuming 250ml per glass)
-          const waterValue = extractedData.isGlasses
-            ? extractedData.value
-            : Math.round(extractedData.value ?? 0 / 250);
-
-          requestData = { water: waterValue };
-          successMessage = `I've logged ${
-            extractedData.isGlasses
-              ? extractedData.value + " glasses"
-              : extractedData.value + "ml"
-          } of water for you.`;
-        }
-      } else if (isWeightLog) {
-        extractedData = extractMetricFromText(query, "weight");
-
-        if (extractedData) {
-          endpoint = `https://crosscare-backends.onrender.com/api/user/activity/${user.user_id}/weight`;
-          requestData = {
-            weight: extractedData.value,
-            weight_unit: extractedData.unit,
-          };
-          successMessage = `I've logged your weight of ${extractedData.value} ${extractedData.unit}.`;
-        }
-      } else if (isStepsLog) {
-        extractedData = extractMetricFromText(query, "steps");
-
-        if (extractedData) {
-          endpoint = `https://crosscare-backends.onrender.com/api/user/activity/${user.user_id}/steps`;
-          requestData = { steps: extractedData.value };
-          successMessage = `I've logged ${extractedData.value} steps for you.`;
-        }
-      } else if (isHeartLog) {
-        extractedData = extractMetricFromText(query, "heart");
-
-        if (extractedData) {
-          endpoint = `https://crosscare-backends.onrender.com/api/user/activity/${user.user_id}/heart`;
-          requestData = { heartRate: extractedData.value };
-          successMessage = `I've logged your heart rate of ${extractedData.value} bpm.`;
-        }
-      } else if (isSleepLog) {
-        extractedData = extractMetricFromText(query, "sleep");
-
-        if (extractedData) {
-          endpoint = `https://crosscare-backends.onrender.com/api/user/activity/${user.user_id}/sleep`;
-
-          // Format times to ensure they have AM/PM
-          const formatTime = (timeStr: string) => {
-            // Ensure time has AM/PM
-            if (
-              !timeStr.toLowerCase().includes("am") &&
-              !timeStr.toLowerCase().includes("pm")
-            ) {
-              // Make assumption based on typical sleep patterns
-              const hour = parseInt(timeStr.split(":")[0]);
-              // Assume hours 7-11 are AM, 12 and 1-6 are PM, and after midnight is AM
-              if (hour >= 7 && hour <= 11) {
-                return timeStr + " AM";
-              } else {
-                return timeStr + " PM";
-              }
-            }
-            return timeStr;
-          };
-
-          const sleepStart = formatTime(extractedData.sleepStart || "");
-          const sleepEnd = formatTime(extractedData.sleepEnd || "");
-
-          // Get today's date in ISO format (YYYY-MM-DD)
-          const today = new Date().toISOString().split("T")[0];
-
-          requestData = {
-            date: today,
-            sleepStart: sleepStart,
-            sleepEnd: sleepEnd,
-          };
-          successMessage = `I've logged your sleep from ${sleepStart} to ${sleepEnd}.`;
-        } else {
-          // If we couldn't extract specific sleep times, provide guidance
-          setMessages((prevMessages) => [
-            ...prevMessages,
-            {
-              id: (Date.now() + 1).toString(),
-              type: "text",
-              content:
-                "To log sleep, please specify your sleep start and end times. For example, 'I slept from 10:30 PM to 6:45 AM' or 'Log my sleep from 11 PM to 7 AM'.",
-              isUser: false,
-              timestamp: new Date(),
-            },
-          ]);
-          return true;
-        }
-      }
-
-      // If we have valid data and an endpoint, make the API call
-      if (extractedData && endpoint) {
-        console.log("Logging health metric:", { endpoint, requestData });
-
-        const response = await axios.post(endpoint, requestData);
-
-        if (response.status >= 200 && response.status < 300) {
-          // Success - refresh health data
-          await fetchHealthData();
-
-          // Add response message
-          setMessages((prevMessages) => [
-            ...prevMessages,
-            {
-              id: (Date.now() + 1).toString(),
-              type: "text",
-              content: successMessage,
-              isUser: false,
-              timestamp: new Date(),
-            },
-          ]);
-
-          return true;
-        } else {
-          throw new Error(`API returned status ${response.status}`);
-        }
-      }
-    } catch (error) {
-      console.error("Error logging health metric:", error);
-
+  const handleLogRequest = async (
+    query: string,
+    shouldSpeak: boolean
+  ): Promise<boolean> => {
+    console.log(t);
+    // Create a helper function to add messages to the chat
+    const addResponseMessage = (content: string) => {
       setMessages((prevMessages) => [
         ...prevMessages,
         {
           id: (Date.now() + 1).toString(),
           type: "text",
-          content:
-            "I'm sorry, I couldn't log that health information. Please try again or use the tracking screens.",
+          content,
           isUser: false,
           timestamp: new Date(),
         },
       ]);
+    };
 
-      return true;
+    // Call the utility function with the necessary parameters
+    const result = await detectAndHandleLogRequest(
+      query,
+      user.user_id,
+      extractMetricFromText,
+      fetchAndUpdateHealthData,
+      addResponseMessage,
+      shouldSpeak,
+      speakResponse,
+      t
+    );
+
+    if (shouldSpeak && result?.message) {
+      console.log("SJdj");
+      speakResponse(result?.message);
     }
 
-    return false; // Not handled as a log request
+    return result.handled;
   };
 
-  const detectAndHandleGoalRequest = async (query: string) => {
-    // First try pattern-based recognition
-    const patternMatch = detectGoalRequestWithPatterns(query);
-
-    if (patternMatch) {
-      let endpoint = "";
-      let requestData = {};
-      let successMessage = "";
-
-      try {
-        if (patternMatch.type === "water") {
-          endpoint = `https://crosscare-backends.onrender.com/api/user/activity/${user.user_id}/waterGoal`;
-
-          const waterGoal = patternMatch.isGlasses
-            ? patternMatch.value
-            : Math.round(patternMatch.value / 250);
-
-          requestData = { waterGoal: waterGoal };
-          successMessage = `I've set your water intake goal to ${waterGoal} glasses per day.`;
-        } else if (patternMatch.type === "steps") {
-          endpoint = `https://crosscare-backends.onrender.com/api/user/activity/${user.user_id}/steps`;
-          requestData = { stepsGoal: patternMatch.value };
-          successMessage = `I've set your step goal to ${patternMatch.value} steps per day.`;
-        }
-
-        // If we have valid data and an endpoint, make the API call
-        if (endpoint) {
-          console.log("Setting health goal:", { endpoint, requestData });
-
-          const response = await axios.post(endpoint, requestData);
-
-          if (response.status >= 200 && response.status < 300) {
-            // Success - refresh health data
-            await fetchHealthData();
-
-            // Add response message
-            setMessages((prevMessages) => [
-              ...prevMessages,
-              {
-                id: (Date.now() + 1).toString(),
-                type: "text",
-                content: successMessage,
-                isUser: false,
-                timestamp: new Date(),
-              },
-            ]);
-
-            return true;
-          } else {
-            throw new Error(`API returned status ${response.status}`);
-          }
-        }
-      } catch (error) {
-        console.error("Error setting health goal:", error);
-
-        setMessages((prevMessages) => [
-          ...prevMessages,
-          {
-            id: (Date.now() + 1).toString(),
-            type: "text",
-            content:
-              "I'm sorry, I couldn't set that health goal. Please try again or use the tracking screens.",
-            isUser: false,
-            timestamp: new Date(),
-          },
-        ]);
-      }
-
-      return true; // We had a pattern match, even if the API call failed
-    }
-
-    // Check if this is a goal setting request with generic indicators
-    const isGoalRequest = /goal|target|aim|set goal/i.test(query);
-
-    if (!isGoalRequest) {
-      return false; // Not a goal request
-    }
-
-    // Determine what type of goal is being set
-    const isWaterGoal = /water|hydration|glass|glasses/i.test(query);
-    const isStepsGoal = /steps|walking|step goal/i.test(query);
-
-    // Extract the goal value
-    let extractedData = null;
-    let endpoint = "";
-    let requestData = {};
-    let successMessage = "";
-
-    try {
-      if (isWaterGoal) {
-        extractedData = extractMetricFromText(query, "water");
-
-        if (extractedData) {
-          endpoint = `https://crosscare-backends.onrender.com/api/user/activity/${user.user_id}/waterGoal`;
-
-          // If the user specified glasses, use that value directly
-          // Otherwise, convert ml to glasses (assuming 250ml per glass)
-          const waterGoal = extractedData.isGlasses
-            ? extractedData.value
-            : Math.round((extractedData.value ?? 0) / 250);
-
-          requestData = { waterGoal: waterGoal };
-          successMessage = `I've set your water intake goal to ${waterGoal} glasses per day.`;
-        }
-      } else if (isStepsGoal) {
-        extractedData = extractMetricFromText(query, "steps");
-
-        if (extractedData) {
-          endpoint = `https://crosscare-backends.onrender.com/api/user/activity/${user.user_id}/steps`;
-          requestData = { stepsGoal: extractedData.value };
-          successMessage = `I've set your step goal to ${extractedData.value} steps per day.`;
-        }
-      }
-
-      // If we have valid data and an endpoint, make the API call
-      if (extractedData && endpoint) {
-        console.log("Setting health goal:", { endpoint, requestData });
-
-        const response = await axios.post(endpoint, requestData);
-
-        if (response.status >= 200 && response.status < 300) {
-          // Success - refresh health data
-          await fetchHealthData();
-
-          // Add response message
-          setMessages((prevMessages) => [
-            ...prevMessages,
-            {
-              id: (Date.now() + 1).toString(),
-              type: "text",
-              content: successMessage,
-              isUser: false,
-              timestamp: new Date(),
-            },
-          ]);
-
-          return true;
-        } else {
-          throw new Error(`API returned status ${response.status}`);
-        }
-      }
-    } catch (error) {
-      console.error("Error setting health goal:", error);
-
+  const handleGoalRequest = async (
+    query: string,
+    shouldSpeak: boolean
+  ): Promise<boolean> => {
+    console.log(t);
+    // Create a helper function to add messages to the chat
+    const addResponseMessage = (content: string) => {
       setMessages((prevMessages) => [
         ...prevMessages,
         {
           id: (Date.now() + 1).toString(),
           type: "text",
-          content:
-            "I'm sorry, I couldn't set that health goal. Please try again or use the tracking screens.",
+          content,
           isUser: false,
           timestamp: new Date(),
         },
       ]);
+    };
 
-      return true;
+    // Call the utility function with the necessary parameters
+    const result = await detectAndHandleGoalRequest(
+      query,
+      user.user_id,
+      extractMetricFromText,
+      fetchAndUpdateHealthData,
+      addResponseMessage,
+      shouldSpeak,
+      speakResponse,
+      t
+    );
+
+    if (shouldSpeak && result?.message) {
+      console.log("SJasddj");
+      speakResponse(result?.message);
     }
 
-    return false; // Not handled as a goal request
+    return result.handled;
   };
 
-  const processUserQuery = async (query: string) => {
-    try {
-      console.log("processUserQuery started with:", query);
-      setIsProcessing(true);
+  const handleProcessUserQuery = async (
+    query: string,
+    shouldSpeak: boolean
+  ) => {
+    console.log("=== handleProcessUserQuery called ===");
+    console.log("Query:", query);
+    console.log("shouldSpeak:", shouldSpeak);
+    console.log("currentLanguage:", currentLanguage);
+    console.log(t);
 
-      // Check if this is a response to the "continue paused questionnaire" question
-      if (messages.length > 0 && !messages[messages.length - 1].isUser) {
-        // Look for specific continuation patterns
-        const lastMessage = messages[messages.length - 1].content;
+    // Create a function for the RAG service call
+    const callRagService = async (
+      query: string,
+      conversationHistory: any[] = [],
+      currentLanguage: string
+    ) => {
+      console.log("=== callRagService called ===");
+      console.log("Query:", query);
+      console.log("ConversationHistory length:", conversationHistory.length);
+      console.log("CurrentLanguage:", currentLanguage);
 
-        // Check if the last message is asking about continuing
-        const continuationPrompts = [
-          /continue this conversation/i,
-          /continue where you left off/i,
-          /unfinished questionnaire/i,
-          /we can continue/i,
-          /ready. Just let me know/i,
-          /would you like to continue/i,
-        ];
+      try {
+        console.log(`Calling RAG service with data:`, {
+          query,
+          conversationHistoryLength: conversationHistory.length,
+          currentLanguage,
+          userId: user?.user_id,
+          url: `${RAG_SERVICE_URL}/${user?.user_id}`,
+        });
 
-        const isContinuationPrompt = continuationPrompts.some((pattern) =>
-          pattern.test(lastMessage)
+        const response = await axios.post(
+          `${RAG_SERVICE_URL}/${user?.user_id}`,
+          {
+            query: query,
+            conversationHistory: conversationHistory,
+            currentLanguage: currentLanguage,
+          }
         );
 
-        if (isContinuationPrompt) {
-          console.log("Detected continuation prompt response");
-
-          // Check for positive responses
-          const positiveResponses = [
-            /^yes$/i,
-            /^yeah$/i,
-            /^sure$/i,
-            /^ok$/i,
-            /^okay$/i,
-            /^continue$/i,
-            /^let's continue$/i,
-            /^ready$/i,
-            /^resume$/i,
-            /^let's go$/i,
-            /^go$/i,
-          ];
-
-          if (positiveResponses.some((pattern) => pattern.test(query.trim()))) {
-            console.log("User wants to resume questionnaire");
-
-            // Add user's message to the chat
-            const userMessage: Message = {
-              id: Date.now().toString(),
-              type: "text",
-              content: query,
-              isUser: true,
-              timestamp: new Date(),
-            };
-            setMessages((prevMessages) => [...prevMessages, userMessage]);
-
-            // Add a single confirmation message
-            const confirmationMessage: Message = {
-              id: (Date.now() + 1).toString(),
-              type: "text",
-              content: "Great! Let's pick up where we left off.",
-              isUser: false,
-              timestamp: new Date(),
-            };
-            setMessages((prevMessages) => [
-              ...prevMessages,
-              confirmationMessage,
-            ]);
-
-            // Use a slight delay before resuming
-            setTimeout(() => {
-              questionnaireManager.resumeQuestionnaire();
-            }, 800);
-
-            setIsProcessing(false);
-            return;
-          }
-        }
-      }
-
-      // First check if this is a questionnaire response
-      if (questionnaireManager.isActive) {
-        const wasHandledAsQuestionnaireResponse =
-          questionnaireManager.handleUserResponse(query);
-        if (wasHandledAsQuestionnaireResponse) {
-          setIsProcessing(false);
-          return;
-        }
-      }
-
-      // Check if this is a request to start the questionnaire
-      if (
-        /start questionnaire|begin questionnaire|take questionnaire|health assessment|assessment/i.test(
-          query
-        )
-      ) {
-        questionnaireManager.startQuestionnaire();
-        setIsProcessing(false);
-        return;
-      }
-
-      // First check if this is a log request
-      const wasHandledAsLogRequest = await detectAndHandleLogRequest(query);
-
-      if (wasHandledAsLogRequest) {
-        setIsProcessing(false);
-        return;
-      }
-
-      // Then check if this is a goal setting request
-      const wasHandledAsGoalRequest = await detectAndHandleGoalRequest(query);
-
-      if (wasHandledAsGoalRequest) {
-        setIsProcessing(false);
-        return;
-      }
-
-      // Check for different types of health stat queries
-      const isWaterQuery = /water|hydration/i.test(query);
-      const isWeightQuery = /weight/i.test(query);
-      const isStepsQuery = /steps|step count|walking/i.test(query);
-      const isHeartQuery = /heart|pulse|bpm/i.test(query);
-      const isSleepQuery = /sleep|slept/i.test(query);
-
-      // Check for time period queries
-      const isAverageQuery = /average|avg/i.test(query);
-      const isTodayQuery = /today|current/i.test(query);
-      const isWeeklyQuery = /week|weekly|7 days/i.test(query);
-      const isMonthlyQuery = /month|monthly|30 days/i.test(query);
-
-      // Check for comprehensive stats query
-      const isComprehensiveQuery =
-        /all stats|all metrics|health summary|overview/i.test(query) ||
-        (/avg|average/i.test(query) &&
-          /heart|water|steps|sleep|weight/i.test(query) &&
-          /heart|water|steps|sleep|weight/i.test(query) &&
-          /heart|water|steps|sleep|weight/i.test(query) &&
-          !/^what('s| is) (my |the )?(avg|average) weight/i.test(query) &&
-          !/^what('s| is) (my |the )?(avg|average) sleep/i.test(query) &&
-          !/^what('s| is) (my |the )?(avg|average) heart/i.test(query) &&
-          !/^what('s| is) (my |the )?(avg|average) water/i.test(query) &&
-          !/^what('s| is) (my |the )?(avg|average) steps/i.test(query) &&
-          !/sleep duration/i.test(query));
-
-      console.log("Query analysis:", {
-        isWaterQuery,
-        isWeightQuery,
-        isStepsQuery,
-        isHeartQuery,
-        isSleepQuery,
-        isAverageQuery,
-        isTodayQuery,
-        isWeeklyQuery,
-        isMonthlyQuery,
-        isComprehensiveQuery,
-      });
-
-      // Handle comprehensive health stats query
-      if (isComprehensiveQuery) {
-        console.log("Detected comprehensive health stats query");
-
-        // Format a comprehensive health stats response
-        let statsMessage = "Here's a summary of your health statistics:\n\n";
-
-        // Determine time period to report
-        let reportPeriod = "weekly"; // Default to weekly
-        if (isTodayQuery) reportPeriod = "today";
-        if (isMonthlyQuery) reportPeriod = "monthly";
-
-        // Water stats
-        if (reportPeriod === "today") {
-          statsMessage += `Water: ${healthStats.water.today} glasses today\n`;
-        } else if (reportPeriod === "weekly") {
-          statsMessage += `Water: ${healthStats.water.avgWeekly.toFixed(
-            1
-          )} glasses per day (weekly average)\n`;
+        if (response.status === 200 && response.data.success) {
+          console.log("RAG service responded successfully");
+          return response.data;
         } else {
-          statsMessage += `Water: ${healthStats.water.avgMonthly.toFixed(
-            1
-          )} glasses per day (monthly average)\n`;
+          console.error("RAG service error:", response.data);
+          return null;
         }
+      } catch (error: any) {
+        console.error("Error calling RAG service:", error.message);
 
-        // Steps stats
-        if (reportPeriod === "today") {
-          statsMessage += `Steps: ${healthStats.steps.today} steps today\n`;
-        } else if (reportPeriod === "weekly") {
-          statsMessage += `Steps: ${healthStats.steps.avgWeekly.toFixed(
-            0
-          )} steps per day (weekly average)\n`;
+        // Add enhanced error logging
+        if (error.response) {
+          // The server responded with a status code outside of 2xx
+          console.error("RAG service error status:", error.response.status);
+          console.error("RAG service error data:", error.response.data);
+          console.error("RAG service error headers:", error.response.headers);
+        } else if (error.request) {
+          // The request was made but no response was received
+          console.error("RAG service no response received:", error.request);
         } else {
-          statsMessage += `Steps: ${healthStats.steps.avgMonthly.toFixed(
-            0
-          )} steps per day (monthly average)\n`;
+          // Something happened in setting up the request
+          console.error("RAG service error details:", error.stack);
         }
 
-        // Weight stats
-        if (healthStats.weight.avgWeekly > 0) {
-          if (reportPeriod === "today") {
-            statsMessage += `Weight: ${healthStats.weight.today} ${healthStats.weight.unit} today\n`;
-          } else if (reportPeriod === "weekly") {
-            statsMessage += `Weight: ${healthStats.weight.avgWeekly.toFixed(
-              1
-            )} ${healthStats.weight.unit} (weekly average)\n`;
-          } else {
-            statsMessage += `Weight: ${healthStats.weight.avgMonthly.toFixed(
-              1
-            )} ${healthStats.weight.unit} (monthly average)\n`;
-          }
-        }
-
-        // Heart rate stats
-        if (healthStats.heart.avgWeekly > 0) {
-          if (reportPeriod === "today") {
-            statsMessage += `Heart rate: ${healthStats.heart.today} bpm today\n`;
-          } else if (reportPeriod === "weekly") {
-            statsMessage += `Heart rate: ${healthStats.heart.avgWeekly.toFixed(
-              0
-            )} bpm (weekly average)\n`;
-          } else {
-            statsMessage += `Heart rate: ${healthStats.heart.avgMonthly.toFixed(
-              0
-            )} bpm (monthly average)\n`;
-          }
-        }
-
-        // Sleep stats
-        if (healthStats.sleep.avgWeekly > 0) {
-          if (reportPeriod === "today") {
-            statsMessage += `Sleep: ${healthStats.sleep.today.toFixed(
-              1
-            )} hours today\n`;
-          } else if (reportPeriod === "weekly") {
-            statsMessage += `Sleep: ${healthStats.sleep.avgWeekly.toFixed(
-              1
-            )} hours per night (weekly average)\n`;
-          } else {
-            statsMessage += `Sleep: ${healthStats.sleep.avgMonthly.toFixed(
-              1
-            )} hours per night (monthly average)\n`;
-          }
-        }
-
-        // Add a note if some metrics are missing
-        if (
-          healthStats.heart.avgWeekly === 0 ||
-          healthStats.sleep.avgWeekly === 0
-        ) {
-          statsMessage +=
-            "\nSome metrics have no data. Regular tracking will provide more complete insights.";
-        }
-
-        // Speak the response
-        speakResponse(statsMessage);
-
-        // Add the response to messages
-        setMessages((prevMessages) => [
-          ...prevMessages,
-          {
-            id: (Date.now() + 1).toString(),
-            type: "text",
-            content: statsMessage,
-            isUser: false,
-            timestamp: new Date(),
-          },
-        ]);
-
-        setIsProcessing(false);
-        return; // Exit early since we've handled this specific query
-      }
-
-      // Handle specific metric queries
-      if (isWaterQuery) {
-        let waterMessage = "";
-
-        if (isTodayQuery) {
-          waterMessage = `You've consumed ${healthStats.water.today} glasses of water today.`;
-        } else if (isWeeklyQuery || isAverageQuery) {
-          waterMessage = `Your average water consumption is ${healthStats.water.avgWeekly.toFixed(
-            1
-          )} glasses per day over the past week. Your total weekly consumption was ${
-            healthStats.water.weekly
-          } glasses.`;
-        } else if (isMonthlyQuery) {
-          waterMessage = `Your average water consumption is ${healthStats.water.avgMonthly.toFixed(
-            1
-          )} glasses per day over the past month. Your total monthly consumption was ${
-            healthStats.water.monthly
-          } glasses.`;
-        } else {
-          // Default to weekly if no time period specified
-          waterMessage = `Your average water consumption is ${healthStats.water.avgWeekly.toFixed(
-            1
-          )} glasses per day over the past week. Today you've had ${
-            healthStats.water.today
-          } glasses.`;
-        }
-
-        waterMessage += " Staying hydrated is important for your pregnancy!";
-        // Speak the response
-        speakResponse(waterMessage);
-
-        // Add the response to messages
-        setMessages((prevMessages) => [
-          ...prevMessages,
-          {
-            id: (Date.now() + 1).toString(),
-            type: "text",
-            content: waterMessage,
-            isUser: false,
-            timestamp: new Date(),
-          },
-        ]);
-
-        setIsProcessing(false);
-        return;
-      }
-
-      if (
-        isWeightQuery &&
-        /^what('s| is) (my |the )?(avg|average) weight/i.test(query)
-      ) {
-        if (
-          healthStats.weight.avgWeekly === 0 &&
-          healthStats.weight.today === 0
-        ) {
-          const noDataMessage =
-            "I don't have enough weight data to calculate statistics. Please log your weight regularly to track your pregnancy progress.";
-          speakResponse(noDataMessage);
-
-          // Add the response to messages
-          setMessages((prevMessages) => [
-            ...prevMessages,
-            {
-              id: (Date.now() + 1).toString(),
-              type: "text",
-              content: noDataMessage,
-              isUser: false,
-              timestamp: new Date(),
+        // Log the request that was sent
+        try {
+          console.error("Request that caused error:", {
+            url: `${RAG_SERVICE_URL}/${user?.user_id}`,
+            payload: {
+              query: query,
+              conversationHistory: conversationHistory?.length || 0, // Just log length to avoid huge logs
+              currentLanguage: currentLanguage,
             },
-          ]);
-
-          setIsProcessing(false);
-          return;
+          });
+        } catch (logError) {
+          console.error("Error while logging request details:", logError);
         }
 
-        let weightMessage = "";
-
-        if (isMonthlyQuery) {
-          weightMessage = `Your average weight is ${healthStats.weight.avgMonthly.toFixed(
-            1
-          )} ${healthStats.weight.unit} over the past month.`;
-        } else {
-          // Default to weekly average for "what is avg weight" queries
-          weightMessage = `Your average weight is ${healthStats.weight.avgWeekly.toFixed(
-            1
-          )} ${healthStats.weight.unit} over the past week.`;
-        }
-
-        speakResponse(weightMessage);
-
-        // Add the response to messages
-        setMessages((prevMessages) => [
-          ...prevMessages,
-          {
-            id: (Date.now() + 1).toString(),
-            type: "text",
-            content: weightMessage,
-            isUser: false,
-            timestamp: new Date(),
-          },
-        ]);
-
-        setIsProcessing(false);
-        return;
+        return null;
       }
-
-      // Steps queries
-      if (isStepsQuery) {
-        let stepsMessage = "";
-
-        if (isTodayQuery) {
-          stepsMessage = `You've taken ${healthStats.steps.today} steps today.`;
-        } else if (isWeeklyQuery || isAverageQuery) {
-          stepsMessage = `Your average daily step count is ${healthStats.steps.avgWeekly.toFixed(
-            0
-          )} steps over the past week. Your total steps this week were ${
-            healthStats.steps.weekly
-          }.`;
-        } else if (isMonthlyQuery) {
-          stepsMessage = `Your average daily step count is ${healthStats.steps.avgMonthly.toFixed(
-            0
-          )} steps over the past month. Your total steps this month were ${
-            healthStats.steps.monthly
-          }.`;
-        } else {
-          // Default to weekly if no time period specified
-          stepsMessage = `Your average daily step count is ${healthStats.steps.avgWeekly.toFixed(
-            0
-          )} steps over the past week. Today you've taken ${
-            healthStats.steps.today
-          } steps.`;
-        }
-
-        stepsMessage +=
-          " Regular walking is excellent exercise during pregnancy!";
-
-        speakResponse(stepsMessage);
-
-        // Add the response to messages
-        setMessages((prevMessages) => [
-          ...prevMessages,
-          {
-            id: (Date.now() + 1).toString(),
-            type: "text",
-            content: stepsMessage,
-            isUser: false,
-            timestamp: new Date(),
-          },
-        ]);
-
-        setIsProcessing(false);
-        return;
-      }
-
-      // Heart rate queries
-      if (isHeartQuery) {
-        if (
-          healthStats.heart.avgWeekly === 0 &&
-          healthStats.heart.today === 0
-        ) {
-          const noDataMessage =
-            "I don't have enough heart rate data to calculate statistics. Please log your heart rate regularly for better tracking.";
-          speakResponse(noDataMessage);
-
-          setMessages((prevMessages) => [
-            ...prevMessages,
-            {
-              id: (Date.now() + 1).toString(),
-              type: "text",
-              content: noDataMessage,
-              isUser: false,
-              timestamp: new Date(),
-            },
-          ]);
-
-          setIsProcessing(false);
-          return;
-        }
-
-        let heartMessage = "";
-
-        if (isTodayQuery) {
-          heartMessage = `Your heart rate today is ${healthStats.heart.today} bpm.`;
-        } else if (isWeeklyQuery || isAverageQuery) {
-          heartMessage = `Your average heart rate is ${healthStats.heart.avgWeekly.toFixed(
-            0
-          )} bpm over the past week.`;
-        } else if (isMonthlyQuery) {
-          heartMessage = `Your average heart rate is ${healthStats.heart.avgMonthly.toFixed(
-            0
-          )} bpm over the past month.`;
-        } else {
-          heartMessage = `Your current heart rate is ${
-            healthStats.heart.today
-          } bpm, and your weekly average is ${healthStats.heart.avgWeekly.toFixed(
-            0
-          )} bpm.`;
-        }
-
-        speakResponse(heartMessage);
-
-        setMessages((prevMessages) => [
-          ...prevMessages,
-          {
-            id: (Date.now() + 1).toString(),
-            type: "text",
-            content: heartMessage,
-            isUser: false,
-            timestamp: new Date(),
-          },
-        ]);
-
-        setIsProcessing(false);
-        return;
-      }
-
-      // For non-health specific queries, use the regular API
-      const apiResponse = await sendToAPI(query, "text");
-
-      if (apiResponse) {
-        const assistantMessage = apiResponse.response;
-        speakResponse(assistantMessage);
-
-        // Add the response to messages
-        setMessages((prevMessages) => [
-          ...prevMessages,
-          {
-            id: (Date.now() + 1).toString(),
-            type: "text",
-            content: assistantMessage,
-            isUser: false,
-            timestamp: new Date(),
-          },
-        ]);
-      }
-
-      setIsProcessing(false);
-    } catch (error: any) {
-      console.error("Error in processUserQuery:", error.message);
-      console.error("Error stack:", error.stack);
-      setIsProcessing(false);
-      Alert.alert(
-        "Error",
-        "I couldn't process your request. Please try again."
-      );
-    }
+    };
+    await processUserQuery({
+      query,
+      userId: user.user_id,
+      messages,
+      healthStats,
+      questionnaireManager,
+      currentLanguage,
+      callbacks: {
+        setIsProcessing,
+        setMessages,
+        handleLogRequest,
+        handleGoalRequest,
+        speakResponse,
+        sendToAPI,
+        callRagService,
+      },
+      shouldSpeak,
+      t,
+    });
   };
 
   const sendMessage = async (messageContent: string = inputText) => {
@@ -2111,6 +1425,7 @@ export default function askdoula() {
         timestamp: new Date(),
       };
 
+      deepgramTTS.stop();
       // Update messages state with the new message
       const updatedMessages = [...messages, userMessage];
       setMessages(updatedMessages as Message[]);
@@ -2118,14 +1433,74 @@ export default function askdoula() {
       setIsTyping(true);
       setIsAssistantResponding(true);
 
-      // Process the query - our new implementation will check for log/goal requests first
-      await processUserQuery(messageContent);
+      if (questionnaireManager.isActive) {
+        const updatedProgress = await getProgressFromStorage();
+        setProgress(updatedProgress);
+      }
+
+      // Only process as questionnaire response when the questionnaire is active and not paused
+      if (
+        questionnaireManager.isActive &&
+        !questionnaireManager.isPaused &&
+        !questionnaireManager.isCompleted
+      ) {
+        const handled = await questionnaireManager.handleUserResponse(
+          messageContent
+        );
+        if (handled) {
+          setIsTyping(false);
+          setIsAssistantResponding(false);
+          return; // Exit if questionnaire handled the response
+        }
+      }
+
+      // Otherwise, process as a regular chat message
+      await handleProcessUserQuery(messageContent, false);
       setIsTyping(false);
       setIsAssistantResponding(false);
     }
   };
 
-  const handleAudioSent = (
+  const loadPauseState = async () => {
+    try {
+      console.log("=== DEBUG loadPauseState ===");
+      console.log("User ID:", user?.user_id);
+
+      // First check dedicated storage
+      const state = await AsyncStorage.getItem(
+        `questionnaire_paused_${user?.user_id}`
+      );
+      console.log("Dedicated storage value:", state);
+
+      if (state !== null) {
+        const isPaused = state === "true";
+        console.log(`Loaded pause state from dedicated storage: ${isPaused}`);
+        return isPaused;
+      }
+
+      // Fall back to context if dedicated storage doesn't have the value
+      const contextString = await AsyncStorage.getItem(
+        `conversation_context_${user?.user_id}`
+      );
+      console.log("Context string:", contextString);
+
+      if (contextString) {
+        const context = JSON.parse(contextString);
+        const isPaused = context?.isPaused ?? true;
+        console.log(`Loaded pause state from context: ${isPaused}`);
+        return isPaused;
+      }
+
+      console.log("No pause state found, defaulting to true");
+      console.log("=== END DEBUG loadPauseState ===");
+      return true;
+    } catch (error) {
+      console.error("Error loading pause state:", error);
+      return true;
+    }
+  };
+
+  const handleAudioSent = async (
     audioUri: string,
     transcript?: string,
     assistantResponse?: string
@@ -2154,14 +1529,31 @@ export default function askdoula() {
     if (transcript) {
       setIsTyping(true);
       setIsAssistantResponding(true);
+      // setIsSpeaking(true);
 
       // Check for log/goal requests with the same processing logic as text
       // This ensures consistent handling between voice and text
-      processUserQuery(transcript).then(() => {
+      try {
+        const processedTranscript = wordsToNumbers(transcript);
+        console.log("Processed transcript:", processedTranscript);
+
+        const translationResult = await generateTranslation(
+          processedTranscript,
+          "en"
+        );
+        const translatedText = translationResult.response;
+
+        // Pass the processed transcript to processUserQuery
+        await handleProcessUserQuery(translatedText, true);
+      } finally {
         setIsTyping(false);
         setIsAssistantResponding(false);
-      });
+      }
     }
+
+    // if(assistantResponse){
+    //     speakResponse(assistantResponse);
+    // }
   };
 
   const handleOptionPress = (optionText: string) => {
@@ -2169,36 +1561,64 @@ export default function askdoula() {
     sendMessage(optionText);
   };
 
+  useFocusEffect(
+    useCallback(() => {
+      console.log("Screen focused - reloading pause state and progress");
+
+      const refreshState = async () => {
+        // First load the pause state
+        const paused = await loadPauseState();
+        console.log(`Loaded pause state on focus: ${paused}`);
+        setIsPaused(paused);
+
+        // Then load progress
+        const storedProgress = await getProgressFromStorage();
+        setProgress(storedProgress);
+
+        // Debug log
+        console.log(
+          `Screen focused: isPaused=${paused}, progress=${storedProgress}%`
+        );
+      };
+
+      refreshState();
+
+      return () => {
+        // Nothing to clean up
+      };
+    }, [])
+  );
+
   const clearChatHistory = async () => {
     try {
       // Clear chat history from AsyncStorage
       await AsyncStorage.removeItem("chatHistory");
-
+      setIsPaused(true);
       // Clear messages from state
       setMessages([]);
 
       // Reset questionnaire state in AsyncStorage
+      await AsyncStorage.removeItem(`conversation_context_${user?.user_id}`);
       await AsyncStorage.removeItem(`questionnaire_completed_${user?.user_id}`);
       await AsyncStorage.removeItem(`questionnaire_state_${user?.user_id}`);
+      await AsyncStorage.removeItem(`last_question_${user?.user_id}`);
+      await AsyncStorage.removeItem(`questionnaire_paused_${user?.user_id}`);
       await AsyncStorage.removeItem(`intro_shown_${user?.user_id}`);
 
       console.log("Chat history cleared successfully");
 
       // Show confirmation to the user with option to start questionnaire
-      Alert.alert(
-        "Chat History Cleared",
-        "Your conversation history has been deleted. Would you like to start the health questionnaire now?",
-        [
-          {
-            text: "Yes",
-            onPress: () => {
-              // Start the questionnaire
-              questionnaireManager.startQuestionnaire();
-            },
+      Alert.alert(t("askDoula.title1"), t("askDoula.message"), [
+        {
+          text: t("askDoula.yes"),
+          onPress: () => {
+            // Start the questionnaire
+            questionnaireManager.startQuestionnaire();
+            setIsPaused(false);
           },
-          { text: "Not now" },
-        ]
-      );
+        },
+        { text: t("askDoula.no") },
+      ]);
     } catch (error) {
       console.error("Error clearing chat history:", error);
       Alert.alert("Error", "Failed to clear chat history. Please try again.");
@@ -2223,10 +1643,7 @@ export default function askdoula() {
 
     return (
       <View style={styles.messageRow}>
-        <Image
-          source={{uri : user?.avatar_url}}
-          style={styles.doulaAvatar}
-        />
+        <Image source={{ uri: user?.avatar_url }} style={styles.doulaAvatar} />
         <View style={styles.typingIndicator}>
           <Animated.View style={[styles.typingDot, { opacity: dot1Opacity }]} />
           <Animated.View style={[styles.typingDot, { opacity: dot2Opacity }]} />
@@ -2255,7 +1672,113 @@ export default function askdoula() {
     }
   };
 
-  // Function to load messages from AsyncStorage
+  // Calculate progress percentage based on completed questions
+  const savePauseState = async (paused: boolean): Promise<void> => {
+    try {
+      await AsyncStorage.setItem(
+        `questionnaire_paused_${user?.user_id}`,
+        paused ? "true" : "false"
+      );
+      console.log(`Saved pause state: ${paused}`);
+    } catch (error: unknown) {
+      console.error("Error saving pause state:", error);
+    }
+  };
+
+  const getCurrentDomainTitle = () => {
+    const domainIndex = getCurrentDomainIndex();
+    const domain = QUESTIONNAIRE_DOMAINS[domainIndex];
+    return domain ? domain.description : t("getting");
+  };
+
+  const [isContextLoaded, setIsContextLoaded] = useState(false);
+  const [forceUpdate, setForceUpdate] = useState(0);
+
+  // Handle pause/resume button press
+  const handlePauseResumeToggle = async () => {
+    try {
+      if (isPaused) {
+        // Resume questionnaire
+        console.log("Resuming questionnaire");
+
+        // Update local state first for immediate UI feedback
+        setIsPaused(false);
+
+        // Save the pause state to dedicated storage
+        await savePauseState(false);
+
+        // Also update the context
+        const contextString = await AsyncStorage.getItem(
+          `conversation_context_${user?.user_id}`
+        );
+        if (contextString) {
+          const context = JSON.parse(contextString);
+          context.isPaused = false;
+          await AsyncStorage.setItem(
+            `conversation_context_${user?.user_id}`,
+            JSON.stringify(context)
+          );
+        }
+
+        // Resume in the questionnaire manager
+        await questionnaireManager.resumeQuestionnaire();
+      } else {
+        // Pause questionnaire
+        console.log("Pausing questionnaire");
+
+        // Update local state first for immediate UI feedback
+        setIsPaused(true);
+
+        // Save the pause state to dedicated storage
+        await savePauseState(true);
+
+        // Pause in the questionnaire manager and get context
+        const context = await questionnaireManager.pauseQuestionnaire();
+
+        // Make sure the context has isPaused set to true
+        if (context) {
+          context.isPaused = true;
+          await AsyncStorage.setItem(
+            `conversation_context_${user?.user_id}`,
+            JSON.stringify(context)
+          );
+        }
+
+        // Save responses to database
+        try {
+          // Get the current responses from context
+          const responses = context?.responses || [];
+          console.log("this is the responses:", responses);
+
+          // Submit each response to database
+          for (const response of responses) {
+            await axios.post(
+              `${CONFIG.API_BASE_URL}/user/${user?.user_id}/domain`,
+              {
+                domainId: response.domainId,
+                questionId: response.questionId,
+                response: response.response,
+                flag: response.flag,
+                timestamp: response.timestamp.toISOString(),
+              }
+            );
+          }
+          console.log("Saved questionnaire responses to database");
+        } catch (error) {
+          console.error("Error saving responses to database:", JSON.stringify(error, null, 2));
+        }
+      }
+
+      // Update progress after state change
+      const updatedProgress = await getProgressFromStorage();
+      setProgress(updatedProgress);
+    } catch (error) {
+      console.error("Error in pause/resume toggle:", error);
+      // Revert state if there was an error
+      setIsPaused(!isPaused);
+    }
+  };
+
   // Function to load messages from AsyncStorage
   const loadMessages = async () => {
     try {
@@ -2263,6 +1786,22 @@ export default function askdoula() {
       const isCompleted = await checkQuestionnaireCompletionStatus();
 
       const savedMessages = await AsyncStorage.getItem("chatHistory");
+
+      if (questionnaireManager && questionnaireManager.context) {
+        try {
+          // Force the questionnaire manager to reload its context
+          const savedQContext = await AsyncStorage.getItem(
+            `conversation_context_${user?.user_id}`
+          );
+          if (savedQContext) {
+            console.log("Reloading questionnaire context for progress bar");
+            // This will trigger the next step in your existing code that handles context loading
+            setForceUpdate((prev) => prev + 1);
+          }
+        } catch (qError) {
+          console.error("Error refreshing questionnaire context:", qError);
+        }
+      }
 
       if (savedMessages) {
         // Parse the JSON and convert timestamp strings back to Date objects
@@ -2289,10 +1828,101 @@ export default function askdoula() {
     }
   };
 
+  useEffect(() => {
+    const loadMuteState = async () => {
+      try {
+        const savedMuteState = await AsyncStorage.getItem("isMuted");
+        if (savedMuteState !== null) {
+          setIsMuted(savedMuteState === "true");
+        }
+      } catch (error) {
+        console.error("Error loading mute state:", error);
+      }
+    };
+
+    loadMuteState();
+  }, []);
+
+  useEffect(() => {
+    const saveMuteState = async () => {
+      try {
+        await AsyncStorage.setItem("isMuted", isMuted.toString());
+      } catch (error) {
+        console.error("Error saving mute state:", error);
+      }
+    };
+
+    saveMuteState();
+  }, [isMuted]);
+
+  const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(
+    null
+  );
+
+  //  const toggleMute = () => {
+  //     const newMuteState = !isMuted;
+  //     setIsMuted(newMuteState);
+  //     setIsProcessing(false);
+
+  //     // Stop any ongoing speech when muting
+  //     if (newMuteState && isSpeaking) {
+  //         deepgramTTS.stop();
+  //         setIsSpeaking(false);
+  //     }
+  // };
+
+  const speakMessage = (messageId: string, messageContent: string) => {
+    setSpeakingMessageId(messageId);
+
+    // If this message is already being spoken, stop it
+    if (speakingMessageId === messageId) {
+      deepgramTTS.stop();
+      setIsSpeaking(false);
+      setSpeakingMessageId(null);
+      return;
+    }
+
+    console.log("message id", messageId);
+
+    // If another message is being spoken, stop it first
+    if (isSpeaking) {
+      deepgramTTS.stop();
+    }
+
+    // If muted, unmute first
+    if (isMuted) {
+      setIsMuted(false);
+    }
+
+    // Set the speaking state and ID before starting speech
+    setIsSpeaking(true);
+
+    // Use Deepgram TTS to speak the message
+    speakWithDeepgram(messageContent, {
+      language: currentLanguage,
+      onStart: () => {
+        setIsSpeaking(true);
+      },
+      onComplete: () => {
+        setIsSpeaking(false);
+        setSpeakingMessageId(null);
+      },
+      onError: (error: any) => {
+        console.error("Deepgram TTS error:", error);
+        setIsSpeaking(false);
+        setSpeakingMessageId(null);
+      },
+    }).catch((error) => {
+      console.error("Error starting Deepgram TTS:", error);
+      setIsSpeaking(false);
+      setSpeakingMessageId(null);
+    });
+  };
+
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
-      // behavior={Platform.OS === "ios" ? "padding" : "height"}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
       keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
     >
       <SafeAreaView style={styles.container}>
@@ -2302,31 +1932,84 @@ export default function askdoula() {
         {fromModal && (
           <View style={styles.header}>
             {/* {fromModal && ( */}
-            <View style={{
-              flexDirection: "row",
-              gap:20,
-              alignItems:'center'
-            }}>
-
-            <TouchableOpacity onPress={() => router.back()}>
-              <Ionicons name="chevron-back" size={20} color="#434343" />
-            </TouchableOpacity>
-            {/* )} */}
-            <Text style={styles.headerTitle}>Ask Your Doula</Text>
+            <View
+              style={{
+                flexDirection: "row",
+                gap: 20,
+                alignItems: "center",
+              }}
+            >
+              <TouchableOpacity onPress={() => handleGoBack()}>
+                <Ionicons name="chevron-back" size={20} color="#434343" />
+              </TouchableOpacity>
+              {/* )} */}
+              <Text style={styles.headerTitle}>{t("askDoula.title")}</Text>
             </View>
             <View style={{ flexDirection: "row" }}>
+              {}
               <TouchableOpacity
                 onPress={clearChatHistory}
                 style={{ marginRight: 12 }}
               >
-                <Feather name="trash-2" size={20} color="#E5E5E5" />
+                <Feather
+                  name="trash-2"
+                  size={20}
+                  color={messages.length > 0 ? "#434343" : "#f5f5f5"}
+                />
               </TouchableOpacity>
-              <TouchableOpacity>
+              {/* <TouchableOpacity>
                 <Feather name="more-vertical" size={20} color="#E5E5E5" />
-              </TouchableOpacity>
+              </TouchableOpacity> */}
             </View>
           </View>
         )}
+
+        {(questionnaireManager.isActive ||
+          questionnaireManager.isPaused ||
+          !questionnaireManager.isCompleted) && (
+          <View style={styles.questionnaireStatusContainer}>
+            <View style={styles.statusTextContainer}>
+              <Text style={styles.questionnaireStatusTitle}>
+                {t("questionStatus")} - {getCurrentDomainTitle()}
+              </Text>
+              <TouchableOpacity
+                style={[styles.pauseButton, isPaused && styles.resumeButton]}
+                onPress={handlePauseResumeToggle}
+              >
+                <Text
+                  style={[
+                    styles.pauseButtonText,
+                    isPaused && styles.resumeButtonText,
+                  ]}
+                >
+                  {isPaused ? t("resume") : t("pause")}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Progress Bar */}
+            <View style={styles.progressBarContainer}>
+              <View style={[styles.progressBar, { width: `${progress}%` }]} />
+              <Text style={[styles.progressText, { left: `${progress}%` }]}>
+                {progress}%
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {/* Medical sources disclaimer banner — required by Apple guideline 1.4.1 */}
+        <TouchableOpacity
+          onPress={() => router.push("/patient/profile-setting/citations")}
+          style={styles.sourcesBanner}
+          accessibilityRole="link"
+          accessibilityLabel="View medical sources and citations"
+        >
+          <Ionicons name="information-circle-outline" size={16} color="#87247D" />
+          <Text style={styles.sourcesBannerText}>
+            Medical information — tap to view trusted sources
+          </Text>
+          <Ionicons name="chevron-forward" size={14} color="#87247D" />
+        </TouchableOpacity>
 
         {/* Chat Container */}
         <ScrollView
@@ -2344,22 +2027,27 @@ export default function askdoula() {
             <View style={styles.profileSection}>
               <View style={styles.profileImageContainer}>
                 <Image
-                  source={{ uri: user?.avatar_url }}
+                  source={
+                    user?.avatar_url
+                      ? { uri: user.avatar_url } // If avatar_url exists, use the URI
+                      : require("../../assets/images/hairs/h1/face/c1.png") // Fallback to local image if no avatar_url
+                  }
                   style={styles.profileImage}
                 />
               </View>
 
               <Text style={styles.greeting}>
-                <Text>👋 Hi, </Text>
+                <Text>👋 {t("askDoula.hi")}, </Text>
                 <Text style={styles.name}>{user.user_name}</Text>
                 <Text>!</Text>
               </Text>
 
               <Text style={styles.title}>
-                I'm your Digital <Text style={styles.highlight}>Doula</Text>
+                {t("askDoula.description")}{" "}
+                <Text style={styles.highlight}>{t("askDoula.doula")}</Text>
               </Text>
 
-              <Text style={styles.subtitle}>How can I assist you today?</Text>
+              <Text style={styles.subtitle}>{t("askDoula.subtitle")}</Text>
             </View>
           ) : (
             <View style={styles.messagesContainer}>
@@ -2375,9 +2063,11 @@ export default function askdoula() {
                 >
                   {!message.isUser && (
                     <Image
-                      source={{
-                        uri: user?.avatar_url,
-                      }}
+                      source={user.avatar_url?
+                        {uri:
+                        user.avatar_url} :
+                          require("../../assets/images/doulaImg.png")
+                      }
                       style={styles.doulaAvatar}
                     />
                   )}
@@ -2389,7 +2079,35 @@ export default function askdoula() {
                         message.isUser ? styles.userBubble : styles.doulaBubble,
                       ]}
                     >
-                      <Text
+                      {!message.isUser && (
+                        <TouchableOpacity
+                          style={styles.bubbleMuteButton}
+                          onPress={() => {
+                            console.log("Pressed message ID:", message.id);
+                            console.log(
+                              "Current speaking ID:",
+                              speakingMessageId
+                            );
+                            console.log("Is speaking:", isSpeaking);
+                            speakMessage(message.id, message.content);
+                          }}
+                        >
+                          <Ionicons
+                            name={
+                              speakingMessageId === message.id && isSpeaking
+                                ? "volume-high"
+                                : "volume-medium"
+                            }
+                            size={16}
+                            color={
+                              speakingMessageId === message.id && isSpeaking
+                                ? "#E162BC"
+                                : "#CCCCCC"
+                            }
+                          />
+                        </TouchableOpacity>
+                      )}
+                      {/* <Text
                         style={[
                           styles.messageText,
                           message.isUser
@@ -2398,7 +2116,23 @@ export default function askdoula() {
                         ]}
                       >
                         {message.content}
-                      </Text>
+                      </Text> */}
+
+                      {message.isUser ? (
+                        <Text
+                          style={[styles.messageText, styles.userMessageText]}
+                        >
+                          {message.content}
+                        </Text>
+                      ) : (
+                        <Markdown
+                          style={{
+                            body: styles.doulaMessageText, // Customize markdown text style
+                          }}
+                        >
+                          {message.content}
+                        </Markdown>
+                      )}
                     </View>
                   ) : (
                     <AudioMessage
@@ -2408,12 +2142,28 @@ export default function askdoula() {
                   )}
 
                   {message.isUser && (
-                    <Image
-                      source={{
-                        uri: user?.user_photo,
-                      }}
-                      style={styles.userAvatar}
-                    />
+                    <>
+                      {user?.user_photo ? (
+                        <Image
+                          source={{ uri: user.user_photo }}
+                          style={styles.userAvatar}
+                        />
+                      ) : (
+                        <>
+                          <View
+                            style={{
+                              borderWidth: 1.44,
+                              borderRadius: 25,
+                              borderColor: "#FDE8F8",
+                              boxShadow:
+                                "0px 0px 0.72px 0px rgba(0, 0, 0, 0.30);",
+                            }}
+                          >
+                            <User width={36} height={36} />
+                          </View>
+                        </>
+                      )}
+                    </>
                   )}
                 </View>
               ))}
@@ -2438,48 +2188,44 @@ export default function askdoula() {
           >
             <TouchableOpacity
               style={styles.optionButton}
-              onPress={() => handleOptionPress("Show my health stats")}
+              onPress={() => handleOptionPress(t("options.healthStats1"))}
               disabled={isAssistantResponding}
             >
-              <Text style={styles.optionText}>Health Stats</Text>
+              <Text style={styles.optionText}>{t("options.healthStats")}</Text>
             </TouchableOpacity>
 
             {/* Standard advice options */}
             <TouchableOpacity
               style={styles.optionButton}
-              onPress={() =>
-                handleOptionPress(
-                  "What foods should I eat during my third trimester?"
-                )
-              }
+              onPress={() => handleOptionPress(t("options.nutritionAdvice1"))}
               disabled={isAssistantResponding}
             >
-              <Text style={styles.optionText}>Nutrition Advice</Text>
+              <Text style={styles.optionText}>
+                {t("options.nutritionAdvice")}
+              </Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.optionButton}
-              onPress={() =>
-                handleOptionPress("What exercises are safe during pregnancy?")
-              }
+              onPress={() => handleOptionPress(t("options.exerciseTips1"))}
               disabled={isAssistantResponding}
             >
-              <Text style={styles.optionText}>Exercise Tips</Text>
+              <Text style={styles.optionText}>{t("options.exerciseTips")}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.optionButton}
-              onPress={() => handleOptionPress("How do I create a birth plan?")}
+              onPress={() => handleOptionPress(t("options.birthPlanning1"))}
               disabled={isAssistantResponding}
             >
-              <Text style={styles.optionText}>Birth Planning</Text>
+              <Text style={styles.optionText}>
+                {t("options.birthPlanning")}
+              </Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.optionButton}
-              onPress={() =>
-                handleOptionPress("Is it safe to travel during pregnancy?")
-              }
+              onPress={() => handleOptionPress(t("options.travelSafety1"))}
               disabled={isAssistantResponding}
             >
-              <Text style={styles.optionText}>Travel Safety</Text>
+              <Text style={styles.optionText}>{t("options.travelSafety")}</Text>
             </TouchableOpacity>
           </ScrollView>
 
@@ -2487,7 +2233,7 @@ export default function askdoula() {
             <View style={styles.inputWrapper}>
               <TextInput
                 style={styles.input}
-                placeholder="Ask me anything or log your health data..."
+                placeholder={t("inputPlaceholder")}
                 placeholderTextColor="#999"
                 value={inputText}
                 onChangeText={(text) => setInputText(text)}
@@ -2497,6 +2243,11 @@ export default function askdoula() {
               <VoiceRecorder
                 onSendAudio={handleAudioSent}
                 systemPrompt={systemPrompt}
+                isMuted={isMuted}
+                isSpeaking={isSpeaking}
+                setIsSpeaking={setIsSpeaking}
+                isProcessing={isProcessing}
+                setIsProcessing={setIsProcessing}
               />
             </View>
 
@@ -2535,6 +2286,65 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: "DMSans600",
   },
+  // Add these to your styles
+  questionnaireStatusContainer: {
+    padding: 16,
+    backgroundColor: "#FFF",
+    borderBottomWidth: 1,
+    borderBottomColor: "#F0F0F0",
+  },
+  statusTextContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  questionnaireStatusTitle: {
+    fontSize: 12,
+    fontFamily: "DMSans500",
+    color: "rgba(136, 59, 114, 1)",
+    flex: 1,
+  },
+  pauseButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 20,
+    backgroundColor: "#FFF",
+    borderWidth: 1,
+    borderColor: "#FBBBE9",
+  },
+  pauseButtonText: {
+    color: "rgba(247, 108, 207, 1)",
+    fontSize: 10,
+    fontFamily: "DMSans500",
+  },
+  resumeButton: {
+    backgroundColor: "rgba(247, 108, 207, 1)",
+    borderColor: "#F989D9",
+  },
+  resumeButtonText: {
+    color: "#FFF",
+  },
+  progressBarContainer: {
+    height: 16,
+    backgroundColor: "#F0F0F0",
+    borderRadius: 10,
+    overflow: "hidden",
+  },
+  progressBar: {
+    height: "100%",
+    backgroundColor: "#F76CCF",
+    borderRadius: 10,
+  },
+  progressText: {
+    position: "absolute",
+    right: 8,
+    color: "rgba(136, 59, 114, 1)",
+    fontSize: 12,
+    fontFamily: "DMSans500",
+    flex: 1,
+    // alignSelf: "center",
+  },
   profileSection: {
     alignItems: "center",
     marginTop: 30,
@@ -2555,6 +2365,24 @@ const styles = StyleSheet.create({
   },
   chatContainer: {
     flex: 1,
+  },
+  sourcesBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FBE8F6",
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 4,
+    borderRadius: 10,
+    gap: 8,
+  },
+  sourcesBannerText: {
+    flex: 1,
+    fontSize: 12,
+    fontFamily: "DMSans500",
+    color: "#87247D",
   },
   chatContent: {
     flexGrow: 1,
@@ -2589,6 +2417,9 @@ const styles = StyleSheet.create({
   },
   doulaMessageText: {
     color: "#434343",
+    fontSize: 14,
+    lineHeight: 22,
+    fontFamily: "Inter400",
   },
   doulaAvatar: {
     width: 36,
@@ -2643,24 +2474,26 @@ const styles = StyleSheet.create({
   },
   greeting: {
     marginTop: 16,
-    fontSize: 16,
+    fontSize: 18,
   },
   name: {
     fontWeight: "bold",
   },
   title: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: "600",
     marginTop: 8,
+    textAlign: "center",
   },
   highlight: {
-    color: "#FF80AB",
+    color: "#F66DCE",
   },
   subtitle: {
     fontSize: 12,
     color: "#7B7B7B",
     fontFamily: "DMSans400",
     marginTop: 4,
+    textAlign: "center",
   },
   optionsContainer: {
     flexDirection: "row",
@@ -2706,10 +2539,24 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: "DMSans400",
     fontSize: 12,
+    // height: 48,
     height: "100%",
   },
   micButton: {
     padding: 4,
+    // paddingLeft,
+  },
+  bubbleMuteButton: {
+    position: "absolute",
+    top: 5,
+    right: 5,
+    zIndex: 1,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "rgba(255, 255, 255, 0.8)",
+    justifyContent: "center",
+    alignItems: "center",
   },
   sendButton: {
     width: 48,

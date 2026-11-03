@@ -1,5 +1,3 @@
-//
-
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
@@ -25,11 +23,14 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import StepsIcon from "@/assets/images/Svg/StepsIcon";
 import { LinearGradient } from "expo-linear-gradient";
-import StepsModal from "./modal/stepsmodal";
 import { useSelector } from "react-redux";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFitbit } from "@/zustandStore/useFitbitStore";
+import { useAppleHealth } from "@/zustandStore/useAppleHealthStore";
 import { Alert } from "react-native";
+import { useTranslation } from "react-i18next";
+import { CONFIG } from "@/constants/config";
+import StepsModal from "./modal/stepsmodal";
 
 const { width } = Dimensions.get("window");
 const BAR_WIDTH = 20;
@@ -66,13 +67,6 @@ type TimeRangeOption = {
   id: string;
   label: string;
 };
-
-const timeRangeOptions: TimeRangeOption[] = [
-  { id: "today", label: "Today" },
-  { id: "week", label: "Last 7 Days" },
-  { id: "month", label: "This Month" },
-  { id: "lastMonth", label: "Last Month" },
-];
 
 // Custom Progress Bar Component
 const CustomProgressBar = ({ progress }: { progress: number }) => {
@@ -112,8 +106,7 @@ const emptyTodayData = [
 
 const step = () => {
   const [stepGoal, setStepGoal] = useState<number | null>(null);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [stepsWalked, setStepsWalked] = useState(0); // This can be dynamic based on actual step count
+  const [stepsWalked, setStepsWalked] = useState(0);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const user = useSelector((state: any) => state.user);
   const [stepData, setStepData] = useState<StepDataItem[]>(
@@ -121,9 +114,19 @@ const step = () => {
   );
   const [filteredData, setFilteredData] = useState<StepDataItem[]>([]);
   const [lastResetDate, setLastResetDate] = useState<Date | null>(null);
+  const [stepModalVisible, setStepModalVisible] = useState(false);
 
   // Calculate progress based on goal (if set)
   const progress = stepGoal ? stepsWalked / stepGoal : 0;
+
+  const { t } = useTranslation();
+
+  const timeRangeOptions: TimeRangeOption[] = [
+    { id: "today", label: t("stepScreen.today") },
+    { id: "week", label: t("stepScreen.last7Days") },
+    { id: "month", label: t("stepScreen.thisMonth") },
+    { id: "lastMonth", label: t("stepScreen.lastMonth") },
+  ];
 
   const userId = user?.user_id;
   useEffect(() => {
@@ -135,21 +138,22 @@ const step = () => {
   }, [userId]);
 
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
-  const [tooltipAnim] = useState(new Animated.Value(0)); // Start with 0 opacity
+  const [tooltipAnim] = useState(new Animated.Value(0));
   const tooltipTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // State for dropdown
-  const [timeRange, setTimeRange] = useState("week"); // "today", "week", "month", "lastMonth"
+  const [timeRange, setTimeRange] = useState("week");
   const [dropdownVisible, setDropdownVisible] = useState(false);
 
   // Ref for the period selector button to measure its position
-  const periodSelectorRef = useRef<TouchableOpacity>(null);
+  const periodSelectorRef = useRef<View>(null);
   // State to store the dropdown position
   const [dropdownPosition, setDropdownPosition] = useState({
     top: 0,
     right: 0,
   });
 
+  // Fitbit hook (for Android)
   const {
     isConnected,
     isLoading: fitbitLoading,
@@ -157,7 +161,26 @@ const step = () => {
     disconnect,
     getStepsData,
     getDataForRange,
+    getStepsGoal,
+    syncStepsGoalWithBackend,
   } = useFitbit();
+
+  // Apple Health hook (for iOS)
+  const {
+    isConnected: appleHealthConnected,
+    isLoading: appleHealthLoading,
+    connect: appleHealthConnect,
+    disconnect: appleHealthDisconnect,
+    getStepsData: appleHealthGetStepsData,
+    getDataForRange: appleHealthGetDataForRange,
+    syncStepsGoalWithBackend: appleHealthSyncStepsGoal,  // Correct
+    syncStepsWithBackend: appleHealthSyncSteps,  // Correct
+  } = useAppleHealth();
+
+  // Determine which health service to use based on platform
+  const isUsingAppleHealth = Platform.OS === 'ios';
+  const healthServiceConnected = isUsingAppleHealth ? appleHealthConnected : isConnected;
+  const healthServiceLoading = isUsingAppleHealth ? appleHealthLoading : fitbitLoading;
 
   const [initialCheckDone, setInitialCheckDone] = useState(false);
 
@@ -176,30 +199,80 @@ const step = () => {
     checkInitialConnection();
   }, []);
 
-  const handleFitbitConnection = async () => {
-    if (isConnected) {
-      // Disconnect from Fitbit
-      await disconnect();
-      Alert.alert("Disconnected", "Successfully disconnected from Fitbit");
-    } else {
-      // Connect to Fitbit
-      const success = await connect();
-      if (success) {
-        Alert.alert("Success", "Connected to Fitbit");
-        getStepStatus(); // Refresh data with Fitbit data
+  // Update the steps goal fetching effect
+  useEffect(() => {
+    const fetchAndSyncStepsGoal = async () => {
+      if (healthServiceConnected && user?.user_id) {
+        try {
+          let syncedGoal;
+          if (isUsingAppleHealth) {
+            // For Apple Health, only pass the current goal if it's valid
+            // Don't use || 10000 as that overrides 0 values
+            const currentGoal = stepGoal && stepGoal > 0 ? stepGoal : undefined;
+            console.log(`Syncing with Apple Health, current goal: ${currentGoal || 'undefined'}`);
+            syncedGoal = await appleHealthSyncStepsGoal(user.user_id, currentGoal);
+          } else {
+            // Get steps goal from Fitbit and sync with backend
+            syncedGoal = await syncStepsGoalWithBackend(user.user_id);
+          }
+          
+          if (syncedGoal) {
+            console.log(`Received synced goal: ${syncedGoal}`);
+            setStepGoal(syncedGoal);
+          }
+        } catch (error) {
+          console.error("Error fetching and syncing steps goal:", error);
+        }
+      }
+    };
+
+    fetchAndSyncStepsGoal();
+  }, [healthServiceConnected, user?.user_id, isUsingAppleHealth]);
+
+  const handleHealthConnection = async () => {
+    if (isUsingAppleHealth) {
+      if (appleHealthConnected) {
+        await appleHealthDisconnect();
+        Alert.alert("Disconnected", "Successfully disconnected from Apple Health");
+        // Clear data when disconnected
+        setStepData([]);
+        setFilteredData([]);
+        setStepsWalked(0);
       } else {
-        Alert.alert("Error", "Failed to connect to Fitbit");
+        const success = await appleHealthConnect();
+        if (success) {
+          Alert.alert("Success", "Connected to Apple Health");
+          getStepStatus(); // Refresh data with Apple Health data
+        } else {
+          Alert.alert("Error", "Failed to connect to Apple Health");
+        }
+      }
+    } else {
+      // Existing Fitbit logic
+      if (isConnected) {
+        await disconnect();
+        Alert.alert("Disconnected", "Successfully disconnected from Fitbit");
+        // Clear data when disconnected
+        setStepData([]);
+        setFilteredData([]);
+        setStepsWalked(0);
+      } else {
+        const success = await connect();
+        if (success) {
+          Alert.alert("Success", "Connected to Fitbit");
+          getStepStatus(); // Refresh data with Fitbit data
+        } else {
+          Alert.alert("Error", "Failed to connect to Fitbit");
+        }
       }
     }
   };
 
-  const fetchFitbitStepData = async () => {
+  const fetchHealthStepData = async () => {
     try {
       // Determine date range based on timeRange
       const today = new Date();
       let startDate = new Date();
-
-      // const data = await getStepStatus(today);
 
       if (timeRange === "today") {
         // Just today
@@ -214,42 +287,50 @@ const step = () => {
         today.setTime(endDate.getTime());
       }
 
-      // Format dates for Fitbit API (yyyy-MM-dd)
+      // Format dates for API (yyyy-MM-dd)
       const startDateStr = startDate.toISOString().split("T")[0];
       const endDateStr = today.toISOString().split("T")[0];
 
-      // Get data for date range
-      const data = await getDataForRange(
-        "activities/steps",
-        startDateStr,
-        endDateStr
-      );
-      console.log(data);
-
-      if (!data) {
-        throw new Error("Failed to fetch Fitbit data");
+      let data;
+      if (isUsingAppleHealth) {
+        // Get data from Apple Health
+        data = await appleHealthGetDataForRange("activities/steps", startDateStr, endDateStr);
+        
+        // Sync with backend for Apple Health
+        if (user?.user_id) {
+          await appleHealthSyncSteps(user.user_id);
+        }
+      } else {
+        // Get data from Fitbit
+        data = await getDataForRange("activities/steps", startDateStr, endDateStr);
       }
 
-      const todaySteps = getTodayStepsFromFitbit(data);
+      console.log("Health service data:", data);
 
-      if (todaySteps !== null) {
+      if (!data) {
+        throw new Error("Failed to fetch health data");
+      }
+
+      const todaySteps = getTodayStepsFromHealthData(data);
+
+      if (todaySteps !== null && !isUsingAppleHealth) {
         await sendStepsToBackend(todaySteps);
       }
 
-      return processFitbitStepData(data);
+      return processHealthStepData(data);
     } catch (error) {
-      console.error("Error fetching Fitbit step data:", error);
+      console.error("Error fetching health step data:", error);
       return null;
     }
   };
 
-  const getTodayStepsFromFitbit = (fitbitData: any) => {
-    if (!fitbitData || !fitbitData["activities-steps"]) {
+  const getTodayStepsFromHealthData = (healthData: any) => {
+    if (!healthData || !healthData["activities-steps"]) {
       return null;
     }
 
     const today = new Date().toISOString().split("T")[0];
-    const todayData = fitbitData["activities-steps"].find(
+    const todayData = healthData["activities-steps"].find(
       (item: any) => item.dateTime === today
     );
 
@@ -259,7 +340,7 @@ const step = () => {
   const sendStepsToBackend = async (steps: number) => {
     try {
       const userId = user?.user_id;
-      const apiUrl = `https://crosscare-backends.onrender.com/api/user/activity/${userId}/steps`;
+      const apiUrl = `${CONFIG.API_BASE_URL}/user/activity/${userId}/steps`;
 
       console.log(`Sending ${steps} steps to backend API: ${apiUrl}`);
 
@@ -285,32 +366,23 @@ const step = () => {
     }
   };
 
+  // Refresh step data when health service connection status changes
   useEffect(() => {
-    if (isConnected) {
-      console.log("Setting up 1-minute refresh interval for Fitbit data");
-      // Set up interval to refresh data every 1 minute when connected to Fitbit
-      const refreshInterval = setInterval(() => {
-        console.log("Refreshing Fitbit data...");
-        getStepStatus();
-      }, 10000); // 1 minute (60000 milliseconds)
-
-      return () => {
-        console.log("Clearing Fitbit refresh interval");
-        clearInterval(refreshInterval);
-      };
+    if (healthServiceConnected) {
+      getStepStatus();
     }
-  }, [isConnected]);
+  }, [healthServiceConnected, isUsingAppleHealth]);
 
-  // Process Fitbit step data
-  const processFitbitStepData = (fitbitData: any) => {
-    if (!fitbitData || !fitbitData["activities-steps"]) {
+  // Process health step data (works for both Fitbit and Apple Health)
+  const processHealthStepData = (healthData: any) => {
+    if (!healthData || !healthData["activities-steps"]) {
       return [];
     }
 
-    const stepData = fitbitData["activities-steps"];
+    const stepData = healthData["activities-steps"];
     const fixedWeekdays = ["S", "M", "T", "W", "T", "F", "S"];
 
-    // Map Fitbit data to app format
+    // Map health data to app format
     return stepData.map((item: any) => {
       const date = new Date(item.dateTime);
       const dayIndex = date.getDay(); // 0 = Sunday, 1 = Monday, etc.
@@ -320,7 +392,7 @@ const step = () => {
       const steps = parseInt(item.value) || 0;
 
       return {
-        id: `fitbit-${item.dateTime}`,
+        id: `health-${item.dateTime}`,
         day: dayAbbr,
         steps: steps,
         date: item.dateTime,
@@ -527,7 +599,7 @@ const step = () => {
           {
             id: `today-${todayStr}`,
             date: todayStr,
-            day: "Today",
+            day: t("stepScreen.today"),
             steps: todayData.steps || 0,
             stepsGoal: todayData.stepsGoal || 0,
           },
@@ -587,34 +659,31 @@ const step = () => {
 
   // Fetch step data from API
   const getStepStatus = async () => {
-    // setIsLoading(true);
     try {
       // First check if we need to reset weekly data
       const wasReset = await checkAndResetWeeklyData();
 
-      if (isConnected) {
-        // Get step data from Fitbit
-        const fitbitData = await fetchFitbitStepData();
+      if (healthServiceConnected) {
+        // Get step data from health service (Apple Health or Fitbit)
+        const healthData = await fetchHealthStepData();
 
-        // console.log(fitbitData);
+        if (healthData && healthData.length > 0) {
+          // Get today's steps for the current count
+          const today = new Date().toISOString().split('T')[0];
+          const todayData = healthData.find((item: any) => item.date === today);
+          if (todayData) {
+            setStepsWalked(todayData.steps);
+          }
 
-        // if (fitbitData && fitbitData.length > 0) {
-        //   // Get today's steps for the current count
-        //   const today = new Date().toISOString().split('T')[0];
-        //   const todayData = fitbitData.find(item => item.date === today);
-        //   if (todayData) {
-        //     setStepsWalked(todayData.steps);
-        //   }
+          // Set step data from health service
+          setStepData(healthData);
 
-        //   // Set step data from Fitbit
-        //   setStepData(fitbitData);
-
-        //   // Process data for current time range
-        //   const filteredData = processDataForTimeRange(fitbitData, timeRange);
-        //   setFilteredData(filteredData);
-        //   // setIsLoading(false);
-        //   return;
-        // }
+          // Process data for current time range
+          const filteredData = processDataForTimeRange(healthData, timeRange);
+          setFilteredData(filteredData);
+          setIsLoading(false);
+          return;
+        }
       }
 
       // If we just reset the data, we might want to show the reset data
@@ -626,7 +695,7 @@ const step = () => {
 
       const userId = user?.user_id;
       const response = await fetch(
-        `https://crosscare-backends.onrender.com/api/user/activity/${userId}/stepsStatus`,
+        `${CONFIG.API_BASE_URL}/user/activity/${userId}/stepsStatus`,
         {
           method: "GET",
           headers: {
@@ -768,14 +837,6 @@ const step = () => {
 
     return () => clearInterval(checkInterval);
   }, []);
-
-  const handleSaveGoal = async (steps: string) => {
-    const parsedSteps = Number.parseInt(steps, 10);
-    if (!isNaN(parsedSteps) && parsedSteps > 0) {
-      setStepGoal(parsedSteps);
-      setModalVisible(false);
-    }
-  };
 
   // Calculate y-axis values using useMemo to prevent recalculation on every render
   const { yAxisLabels, roundedMax, roundedMin } = useMemo(() => {
@@ -929,6 +990,39 @@ const step = () => {
     }
   };
 
+  // Handle step goal save
+  const handleStepGoalSave = (steps: string) => {
+    const newStepGoal = parseInt(steps);
+    if (!isNaN(newStepGoal) && newStepGoal > 0) {
+      console.log(`Setting new step goal: ${newStepGoal}`);
+      
+      // Update local state
+      setStepGoal(newStepGoal);
+      
+      // Update step data with new goal
+      const updatedStepData = stepData.map(item => ({
+        ...item,
+        stepsGoal: newStepGoal
+      }));
+      setStepData(updatedStepData);
+      
+      // Update filtered data
+      const updatedFilteredData = filteredData.map(item => ({
+        ...item,
+        stepsGoal: newStepGoal
+      }));
+      setFilteredData(updatedFilteredData);
+      
+      // If using Apple Health, sync the new goal with the health store
+      if (isUsingAppleHealth && appleHealthConnected && user?.user_id) {
+        console.log(`Syncing new goal ${newStepGoal} with Apple Health store`);
+        appleHealthSyncStepsGoal(user.user_id, newStepGoal)
+          .then(() => console.log('Successfully synced goal with Apple Health store'))
+          .catch(err => console.error('Failed to sync goal with Apple Health store:', err));
+      }
+    }
+  };
+
   const CustomBar = ({
     item,
     index,
@@ -1067,7 +1161,7 @@ const step = () => {
         >
           <Ionicons name="chevron-back" size={20} color="black" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Steps</Text>
+        <Text style={styles.headerTitle}>{t("stepScreen.steps")}</Text>
         <TouchableOpacity style={styles.menuButton}>
           <Feather name="more-vertical" size={20} color="#E5E5E5" />
         </TouchableOpacity>
@@ -1098,61 +1192,88 @@ const step = () => {
                   color: "black",
                 }}
               >
-                {stepGoal ? `of ${stepGoal} steps walked` : "steps walked"}
+                {stepGoal
+                  ? `of ${stepGoal} ${t("stepScreen.stepsWalked")}`
+                  : t("stepScreen.stepsWalked")}
               </Text>
             </Text>
-            <TouchableOpacity
-              style={styles.editButton}
-              onPress={() => setModalVisible(true)}
-            >
-              <FontAwesome5 name="pen" size={15} color="#707070" />
-            </TouchableOpacity>
+            {/* Add Set Goal button for iOS */}
+            {Platform.OS === 'ios' && (
+              <TouchableOpacity
+                style={styles.setGoalButton}
+                onPress={() => setStepModalVisible(true)}
+              >
+                <Text style={styles.setGoalButtonText}>
+                  {t("stepScreen.setGoal")}
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
 
         {/* Connect to Application Section */}
-        <View style={styles.sectionContainer}>
-          <Text style={styles.sectionTitle}>Connect to Application</Text>
-          <View style={styles.connectItem}>
-            <Image
-              source={require("../../assets/images/applehealth.png")}
-              style={{ width: 24, height: 24 }}
-            />
-            <Text style={styles.connectText}>{Platform.OS === 'ios' ? 'Health App' : 'Health Connect'}</Text>
-            <TouchableOpacity>
-              <Text style={styles.connectButton}>CONNECT</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Connect to Device Section */}
-        <View style={styles.sectionContainer}>
-          <Text style={styles.sectionTitle}>Connect to Device</Text>
-          <View style={styles.connectItem}>
-            <Image
-              source={require("../../assets/images/fitbit.png")}
-              style={{ width: 24, height: 24 }}
-            />
-            <Text style={styles.connectText}>Fitbit</Text>
-            <TouchableOpacity onPress={handleFitbitConnection}>
-              <Text style={styles.connectButton}>
-                {!initialCheckDone
-                  ? "CHECKING..."
-                  : fitbitLoading
-                  ? "CONNECTING..."
-                  : isConnected
-                  ? "DISCONNECT"
-                  : "CONNECT"}
+        {Platform.OS === "ios" && (
+          <View style={styles.sectionContainer}>
+            <Text style={styles.sectionTitle}>
+              {t("stepScreen.connectToApplication")}
+            </Text>
+            <View style={styles.connectItem}>
+              <Image
+                source={require("../../assets/images/applehealth.png")}
+                style={{ width: 24, height: 24 }}
+              />
+              <Text style={styles.connectText}>
+                {t("stepScreen.appleHealth")}
               </Text>
-            </TouchableOpacity>
+              <TouchableOpacity onPress={handleHealthConnection}>
+                <Text style={styles.connectButton}>
+                  {!initialCheckDone
+                    ? t("stepScreen.checkConnection")
+                    : appleHealthLoading
+                    ? "CONNECTING..."
+                    : appleHealthConnected
+                    ? t("stepScreen.disconnect")
+                    : t("stepScreen.connect")}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
+        )}
+
+        {/* Connect to Device Section - Only show Fitbit on Android */}
+        {Platform.OS === "android" && (
+          <View style={styles.sectionContainer}>
+            <Text style={styles.sectionTitle}>
+              {t("stepScreen.connectToDevice")}
+            </Text>
+            <View style={styles.connectItem}>
+              <Image
+                source={require("../../assets/images/fitbit.png")}
+                style={{ width: 24, height: 24 }}
+              />
+              <Text style={styles.connectText}>{t("stepScreen.fitbit")}</Text>
+              <TouchableOpacity onPress={handleHealthConnection}>
+                <Text style={styles.connectButton}>
+                  {!initialCheckDone
+                    ? t("stepScreen.checkConnection")
+                    : fitbitLoading
+                    ? "CONNECTING..."
+                    : isConnected
+                    ? t("stepScreen.disconnect")
+                    : t("stepScreen.connect")}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
 
         <View style={styles.analysisContainer}>
           <View style={styles.analysisHeader}>
             <View style={styles.analysisTab}>
               <MaterialIcons name="bar-chart" size={18} color="#CDC8E2" />
-              <Text style={styles.analysisTabText}>Analysis</Text>
+              <Text style={styles.analysisTabText}>
+                {t("stepScreen.stepAnalysis")}
+              </Text>
             </View>
             <TouchableOpacity
               ref={periodSelectorRef}
@@ -1298,12 +1419,15 @@ const step = () => {
         </TouchableOpacity>
       </Modal>
 
-      <StepsModal
-        visible={modalVisible}
-        onClose={() => setModalVisible(false)}
-        onSave={handleSaveGoal}
-        reload={getStepStatus}
-      />
+      {/* Step Goal Modal for iOS */}
+      {Platform.OS === 'ios' && (
+        <StepsModal
+          visible={stepModalVisible}
+          onClose={() => setStepModalVisible(false)}
+          onSave={handleStepGoalSave}
+          reload={getStepStatus}
+        />
+      )}
     </SafeAreaView>
   );
 };
@@ -1312,7 +1436,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#FFFFFF",
-    // paddingh: 16,
   },
   header: {
     flexDirection: "row",
@@ -1332,15 +1455,12 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   stepCountContainer: {
-    // marginTop: 20,
-    // alignItems: 'center',
     paddingHorizontal: 30,
     marginTop: 10,
     marginBottom: 20,
   },
   stepsCircleContainer: {
     alignItems: "center",
-    // marginTop: 20,
     marginBottom: 20,
   },
   stepsCircle: {
@@ -1357,6 +1477,19 @@ const styles = StyleSheet.create({
   stepCountText: {
     fontFamily: "Inter600",
     fontSize: 17,
+  },
+  setGoalButton: {
+    backgroundColor: "#5E4FA2",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  setGoalButtonText: {
+    color: "white",
+    fontSize: 12,
+    fontFamily: "Inter500",
   },
   progressBarContainer: {
     width: "100%",
@@ -1570,7 +1703,6 @@ const styles = StyleSheet.create({
   // Dropdown styles
   modalOverlay: {
     flex: 1,
-    // backgroundColor: "rgba(0, 0, 0, 0.5)",
     justifyContent: "center",
     alignItems: "center",
   },

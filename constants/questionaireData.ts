@@ -1,4 +1,5 @@
 // Define the questionnaire domains and questions based on the decision tree
+import { TFunction } from 'i18next'
 
 export interface QuestionnaireQuestion {
   id: string
@@ -15,6 +16,828 @@ export interface QuestionnaireDomain {
   questions: QuestionnaireQuestion[]
 }
 
+// Function to get translated questionnaire domains
+export const getQuestionnaireDomainsWithTranslation = (t: TFunction): QuestionnaireDomain[] => {
+  return [
+    {
+      id: "domain-1",
+      title: t("questionnaire.domains.domain1.title"),
+      description: t("questionnaire.domains.domain1.description"),
+      questions: [
+        {
+          id: "q1-1",
+          text: t("questionnaire.questions.q1-1"),
+          flag: "Housing situation",
+          options: [t("questionnaire.options.house"), t("questionnaire.options.apartment")],
+          followUp: {
+            [t("questionnaire.options.house")]: "q1-a",
+            [t("questionnaire.options.apartment")]: "q1-b",
+          },
+        },
+        {
+          id: "q1-a",
+          text: t("questionnaire.questions.q1-a"),
+          options: [t("questionnaire.options.yes"), t("questionnaire.options.no")],
+          followUp: {
+            [t("questionnaire.options.yes")]: "q1-c",
+            [t("questionnaire.options.no")]: "q1-d",
+          },
+        },
+        {
+          id: "q1-b",
+          text: t("questionnaire.questions.q1-b"),
+          options: [t("questionnaire.options.yes"), t("questionnaire.options.no")],
+          followUp: {
+            [t("questionnaire.options.yes")]: "q1-d",
+            [t("questionnaire.options.no")]: "q1-f",
+          },
+        },
+        {
+          id: "q1-c",
+          text: t("questionnaire.questions.q1-c"),
+          flag: "Housing instability / temporary housing",
+          followUp: {
+           "*" : "q1-2",
+          },
+        },
+        {
+          id: "q1-d",
+          text: t("questionnaire.questions.q1-d"),
+          followUp: {
+            "*": "q1-g",
+          },
+        },
+        {
+          id: "q1-f",
+          text: t("questionnaire.questions.q1-f"),
+          followUp: {
+            "*": "q1-2",
+          },
+        },
+        {
+          id: "q1-g",
+          text: t("questionnaire.questions.q1-g"),
+          options: [t("questionnaire.options.yes"), t("questionnaire.options.no")],
+          followUp: {
+            [t("questionnaire.options.yes")]: "q1-h",
+            [t("questionnaire.options.no")]: "q1-i",
+          },
+        },
+        {
+          id: "q1-h",
+          text: t("questionnaire.questions.q1-h"),
+          followUp: {
+            "*": "q1-2",
+          },
+        },
+        {
+          id: "q1-i",
+          text: t("questionnaire.questions.q1-i"),
+          followUp: {
+            "*": "q1-2",
+          },
+        },
+        {
+          id: "q1-2",
+          text: t("questionnaire.questions.q1-2"),
+          flag: "Housing insecurity",
+          options: [t("questionnaire.options.yes"), t("questionnaire.options.no")],
+          followUp: {
+            [t("questionnaire.options.yes")]: "q1-smoke", 
+            [t("questionnaire.options.no")]: "q1-smoke",
+            "*": "q1-smoke"
+          }
+        },
+        {
+          id:"q1-smoke",
+          text: t("questionnaire.questions.q1-smoke"),
+          flag: "Smoke exposure risk",
+          options: [t("questionnaire.options.yes"), t("questionnaire.options.no")],
+          followUp: {
+            [t("questionnaire.options.yes")]: "q1-smoke-info",
+            [t("questionnaire.options.no")]: "q1-chemicals",
+          },
+        },
+        {
+          id: "q1-smoke-info",
+          text: t("questionnaire.questions.q1-smoke-info"),
+          flag: "Second-hand smoke exposure - provided information",
+          followUp: {
+            "*": "q1-chemicals",
+          },
+        },
+        {
+          id: "q1-chemicals",
+          text: t("questionnaire.questions.q1-chemicals"),
+          flag: "Chemical exposure risk",
+          options: [t("questionnaire.options.yes"), t("questionnaire.options.no")],
+          followUp: {
+            [t("questionnaire.options.yes")]: "q1-chemicals-info",
+            [t("questionnaire.options.no")]: "q1-3",
+          },
+        },
+        {
+          id: "q1-chemicals-info",
+          text: t("questionnaire.questions.q1-chemicals-info"),
+          flag: "Chemical exposure - provided safety information",
+          followUp: {
+            "*": "q1-3",
+          },
+        },
+        {
+          id: "q1-3",
+          text: t("questionnaire.questions.q1-3"),
+          flag: "Utilities support needed",
+        },
+        {
+          id: "q1-4",
+          text: t("questionnaire.questions.q1-4"),
+          flag: "Transportation barrier",
+        },
+        {
+          id: "q1-5",
+          text: t("questionnaire.questions.q1-5"),
+          flag: "Home safety concern",
+        },
+        {
+          id: "q1-6",
+          text: t("questionnaire.questions.q1-6"),
+          flag: "Neighborhood safety concern",
+          options:[t("questionnaire.options.yes"), t("questionnaire.options.no")],
+          followUp:{
+            [t("questionnaire.options.yes")]:"q1-neighborhood",
+            [t("questionnaire.options.no")]:'q1-neighborhood',
+          }
+        },
+        {
+          id: "q1-neighborhood",
+          text: t("questionnaire.questions.q1-neighborhood"),
+          flag: "Neighborhood safety assessment",
+          options: [t("questionnaire.options.yes"), t("questionnaire.options.no")],
+          followUp: {
+            [t("questionnaire.options.yes")]: "q1-highway",
+            [t("questionnaire.options.no")]: "q1-unsafe-reason",
+          },
+        },
+        {
+          id: "q1-unsafe-reason",
+          text: t("questionnaire.questions.q1-unsafe-reason"),
+          flag: "Neighborhood safety concerns",
+          followUp: {
+            "*": "q1-home-unsafe",
+          },
+        },
+        {
+          id: "q1-home-unsafe",
+          text: t("questionnaire.questions.q1-home-unsafe"),
+          flag: "Domestic safety concern - HIGH PRIORITY",
+          followUp: {
+            "*": "domain[q2-1]"
+          },
+        },
+        {
+          id: "q1-highway",
+          text: t("questionnaire.questions.q1-highway"),
+          flag: "Air quality concern - traffic",
+          options: [t("questionnaire.options.yes"), t("questionnaire.options.no")],
+          followUp: {
+            [t("questionnaire.options.yes")]: "q1-windows",
+            [t("questionnaire.options.no")]: "domain[q2-1]",
+          },
+        },
+        {
+          id: "q1-windows",
+          text: t("questionnaire.questions.q1-windows"),
+          flag: "Air quality management",
+          options: [t("questionnaire.options.yes"), t("questionnaire.options.no")],
+          followUp: {
+            [t("questionnaire.options.yes")]: "q1-exhaust-info",
+            [t("questionnaire.options.no")]: "q1-construction",
+          },
+        },
+        {
+          id: "q1-exhaust-info",
+          text: t("questionnaire.questions.q1-exhaust-info"),
+          flag: "Air quality education provided",
+          followUp: {
+            "*": "q1-air-filter",
+          },
+        },
+        {
+          id: "q1-construction",
+          text: t("questionnaire.questions.q1-construction"),
+          flag: "Air quality concern - construction",
+          options: [t("questionnaire.options.yes"), t("questionnaire.options.no")],
+          followUp: {
+            [t("questionnaire.options.yes")]: "q1-lead-info",
+            [t("questionnaire.options.no")]: "domain[q2-1]",
+          },
+        },
+        {
+          id: "q1-lead-info",
+          text: t("questionnaire.questions.q1-lead-info"),
+          flag: "Lead exposure risk - provided information",
+          followUp: {
+            "*": "domain[q2-1]",
+          },
+        },
+        {
+          id: "q1-air-filter",
+          text: t("questionnaire.questions.q1-air-filter"),
+          flag: "Air quality management",
+          options: [t("questionnaire.options.yes"), t("questionnaire.options.no")],
+          followUp: {
+            [t("questionnaire.options.yes")]: "q1-filter-info",
+            [t("questionnaire.options.no")]: "q1-no-filter-info",
+          },
+        },
+        {
+          id: "q1-filter-info",
+          text: t("questionnaire.questions.q1-filter-info"),
+          flag: "Air filter maintenance education provided",
+          followUp: {
+            "*": "domain[q2-1]",
+          },
+        },
+        {
+          id: "q1-no-filter-info",
+          text: t("questionnaire.questions.q1-no-filter-info"),
+          flag: "Air quality education provided",
+          followUp: {
+            "*": "domain[q2-1]",
+          },
+        },
+      ],
+    },
+    {
+      id: "domain-2",
+      title: t("questionnaire.domains.domain2.title"),
+      description: t("questionnaire.domains.domain2.description"),
+      questions: [
+        {
+          id: "q2-1",
+          text: t("questionnaire.questions.q2-1"),
+          flag: "",
+        },
+        {
+          id: "q2-2",
+          text: t("questionnaire.questions.q2-2"),
+          flag: "",
+        },
+        {
+          id: "q2-3",
+          text: t("questionnaire.questions.q2-3"),
+          flag: "Interpersonal violence",
+        },
+        {
+          id: "q2-4",
+          text: t("questionnaire.questions.q2-4"),
+          flag: "Urgent safety referral",
+        },
+        {
+          id: "q2-5",
+          text: t("questionnaire.questions.q2-5"),
+          flag: "Financial abuse",
+          followUp:{
+            "*":"q2-6",
+          },
+        },
+        {
+          id: "q2-6",
+          text: t("questionnaire.questions.q2-6"),
+          followUp:{
+            "*":"q2-7",
+          }
+        },
+        {
+          id: "q2-7",
+          text: t("questionnaire.questions.q2-7"),
+          flag: "Transportation support needed",
+          options: [t("questionnaire.options.yes"), t("questionnaire.options.no")],
+          followUp:{
+            [t("questionnaire.options.yes")]:"q2-8",
+            [t("questionnaire.options.no")]:"q2-11",
+          }
+        },
+        {
+          id: "q2-8",
+          text: t("questionnaire.questions.q2-8"),
+          flag: "Transportation support needed",
+          followUp:{
+            "*":"q2-9",
+          }
+        },
+        {
+          id: "q2-9",
+          text: t("questionnaire.questions.q2-9"),
+          flag: "Transportation support needed",
+          options: [t("questionnaire.options.yes"), t("questionnaire.options.no")],
+          followUp:{
+            [t("questionnaire.options.yes")]:"q2-11",
+            [t("questionnaire.options.no")]:"q2-10",
+          }
+        },
+        {
+          id: "q2-10",
+          text: t("questionnaire.questions.q2-10"),
+          flag: "Transportation support needed",
+          followUp:{
+            "*": "q2-11",
+          }
+        },
+        {
+          id: "q2-11",
+          text: t("questionnaire.questions.q2-11"),
+          flag: "Cultural beliefs",
+          followUp:{
+            "*":"q2-13",
+          }
+        },
+        {
+          id: "q2-13",
+          text: t("questionnaire.questions.q2-13"),
+          followUp:{
+            "*":"domain[q3-1]",
+          }
+        },
+        
+      ],
+    },
+    {
+      id: "domain-3",
+      title: t("questionnaire.domains.domain3.title"),
+      description: t("questionnaire.domains.domain3.description"),
+      questions: [
+        {
+          id: "q3-1",
+          text: t("questionnaire.questions.q3-1"),
+          flag: "",
+        },
+        {
+          id: "q3-2",
+          text: t("questionnaire.questions.q3-2"),
+          flag: "Employment support needed",
+        },
+        {
+          id: "q3-3",
+          text: t("questionnaire.questions.q3-3"),
+          flag: "Financial strain",
+          followUp:{
+            "*":"q3-10",
+          }
+        },
+        {
+          id:"q3-10",
+          text: t("questionnaire.questions.q3-10"),
+          options:[t("questionnaire.options.yes"), t("questionnaire.options.no")],
+          followUp:{
+            [t("questionnaire.options.yes")]:"q3-11",
+            [t("questionnaire.options.no")]:"q3-12",
+          }
+        },
+        {
+          id:"q3-11",
+          text: t("questionnaire.questions.q3-11"),
+          options:[t("questionnaire.options.hourly"), t("questionnaire.options.salary")],
+          followUp:{
+            "*": "q3-12",
+          }
+        },
+        {
+          id:"q3-12",
+          text: t("questionnaire.questions.q3-12"),
+          options:[t("questionnaire.options.yes"), t("questionnaire.options.no")],
+          followUp:{
+            "*": "q3-13",
+          }
+        },
+        {
+          id:"q3-13",
+          text: t("questionnaire.questions.q3-13"),
+          options:[t("questionnaire.options.yes"), t("questionnaire.options.no")],
+          followUp:{
+            [t("questionnaire.options.yes")]:"q3-15",
+            [t("questionnaire.options.no")]:"q3-14",
+          }
+        },
+        
+        {
+          id:"q3-14",
+          text: t("questionnaire.questions.q3-14"),
+          followUp:{
+            "*":"q3-4",
+          }
+        },
+        {
+          id:"q3-15",
+          text: t("questionnaire.questions.q3-15"),
+          followUp:{
+            "*":"q3-16",
+          }
+        },
+        {
+          id: "q3-16",
+          text: t("questionnaire.questions.q3-16"),
+          flag: "Food insecurity",
+          followUp:{
+            "*": "q3-17",
+          }
+        },
+        {
+          id: "q3-17",
+          text: t("questionnaire.questions.q3-17"),
+          followUp:{
+            "*":"q3-4",
+          }
+        },
+        {
+          id: "q3-4",
+          text: t("questionnaire.questions.q3-4"),
+          flag: "Referral to workforce navigator",
+        },
+        {
+          id: "q3-5",
+          text: t("questionnaire.questions.q3-5"),
+          flag: "Education support",
+          
+        },
+        {
+          id: "q3-6",
+          text: t("questionnaire.questions.q3-6"),
+          flag: "Childcare need",
+          followUp:{
+            "*":"q3-a",
+          }
+        },
+        {
+          id: "q3-a",
+          text: t("questionnaire.questions.q3-a"),
+          flag: "First pregnancy assessment",
+          options: [t("questionnaire.options.yes"), t("questionnaire.options.no")],
+          followUp:{
+            [t("questionnaire.options.yes")]:"q3-b",
+            [t("questionnaire.options.no")]:"q3-c",
+          }
+        },
+        {
+          id: "q3-c",
+          text: t("questionnaire.questions.q3-c"),
+          followUp:{
+            "*":"q3-l",
+          }
+        },
+        {
+          id: "q3-l",
+          text: t("questionnaire.questions.q3-l"),
+          followUp:{
+            "*":"q3-m",
+          }
+        },
+        {
+          id: "q3-m",
+          text: t("questionnaire.questions.q3-m"),
+          followUp:{
+            "*":"q3-n",
+          }
+        },
+        {
+          id: "q3-n",
+          text: t("questionnaire.questions.q3-n"),
+          followUp:{
+            "*":"q3-o",
+          }
+        },
+        {
+          id: "q3-o",
+          text: t("questionnaire.questions.q3-o"),
+          followUp:{
+            "*":"q3-p",
+          }
+        },
+        {
+          id: "q3-p",
+          text: t("questionnaire.questions.q3-p"),
+          followUp:{
+            "*":"q3-q",
+          }
+        },
+        {
+          id: "q3-q",
+          text: t("questionnaire.questions.q3-q"),
+          followUp:{
+            "*":"q3-r",
+          }
+        },
+        {
+          id: "q3-r",
+          text: t("questionnaire.questions.q3-r"),
+          followUp:{
+            "*":"q3-s",
+          }
+        },
+        {
+          id: "q3-s",
+          text: t("questionnaire.questions.q3-s"),
+          followUp:{
+            "*":"q3-t",
+          }
+        },
+        {
+          id: "q3-t",
+          text: t("questionnaire.questions.q3-t"),
+          followUp:{
+            "*":"q3-j",
+          }
+        },
+        {
+          id:"q3-b",
+          text: t("questionnaire.questions.q3-b"),
+          followUp:{
+            "*":"q3-d",
+          }
+        },
+        {
+          id:"q3-d",
+          text: t("questionnaire.questions.q3-d"),
+          followUp:{
+            "*":"q3-f",
+          }
+        },
+        {
+          id:"q3-f",
+          text: t("questionnaire.questions.q3-f"),
+          followUp:{
+            "*":"q3-g",
+          }
+        },
+        {
+          id:"q3-g",
+          text: t("questionnaire.questions.q3-g"),
+          followUp:{
+            "*":"q3-h",
+          }
+        },
+        {
+          id:"q3-h",
+          text: t("questionnaire.questions.q3-h"),
+          followUp:{
+            "*":"q3-i",
+          }
+        },
+        {
+          id:"q3-i",
+          text: t("questionnaire.questions.q3-i"),
+          followUp:{
+            "*":"q3-j",
+          }
+        },
+        {
+          id:"q3-j",
+          text: t("questionnaire.questions.q3-j"),
+          followUp:{
+            "*":"q3-k",
+          }
+        },
+        {
+          id:"q3-k",
+          text: t("questionnaire.questions.q3-k"),
+          followUp:{
+            "*":"domain[q4-1]",
+          }
+        },
+      ],
+    },
+    {
+      id: "domain-4",
+      title: t("questionnaire.domains.domain4.title"),
+      description: t("questionnaire.domains.domain4.description"),
+      questions: [
+        {
+          id: "q4-1",
+          text: t("questionnaire.questions.q4-1"),
+          flag: "Food insecurity",
+        },
+        {
+          id: "q4-2",
+          text: t("questionnaire.questions.q4-2"),
+          flag: "Food insecurity",
+        },
+        {
+          id: "q4-3",
+          text: t("questionnaire.questions.q4-3"),
+          flag: "Healthy food access",
+        },
+        {
+          id: "q4-4",
+          text: t("questionnaire.questions.q4-4"),
+          flag: "Physical activity support",
+          followUp :{
+            "*":"q4-5",
+          }
+        },
+        {
+          id: "q4-5",
+          text: t("questionnaire.questions.q4-5"),
+          followUp:{
+            "*":"q4-6",
+          }
+        },
+        {
+          id: "q4-6",
+          text: t("questionnaire.questions.q4-6"),
+          followUp:{
+            "*":"q4-7",
+          }
+        },
+        {
+          id: "q4-7",
+          text: t("questionnaire.questions.q4-7"),
+          followUp:{
+            "*":"q4-8",
+          }
+        },
+        {
+          id: "q4-8",
+          text: t("questionnaire.questions.q4-8"),
+          followUp:{
+            "*":"q4-9",
+          }
+        },
+        {
+          id: "q4-9",
+          text: t("questionnaire.questions.q4-9"),
+          options:[t("questionnaire.options.yes"), t("questionnaire.options.no")],
+          followUp:{
+            [t("questionnaire.options.yes")]:"q4-11",
+            [t("questionnaire.options.no")]:"q4-10",
+          }
+        },
+        {
+          id: "q4-10",
+          text: t("questionnaire.questions.q4-10"),
+          options:[t("questionnaire.options.yes"), t("questionnaire.options.no")],
+          followUp:{
+            [t("questionnaire.options.yes")]:"q4-13",
+            [t("questionnaire.options.no")]:"q4-14",
+          }
+        },
+        {
+          id: "q4-11",
+          text: t("questionnaire.questions.q4-11"),
+          followUp:{
+            "*":"q4-15",
+          }
+        },
+        {
+          id: "q4-13",
+          text: t("questionnaire.questions.q4-13"),
+          followUp:{
+            "*":"q4-16",
+          }
+        },
+        {
+          id: "q4-14",
+          text: t("questionnaire.questions.q4-14"),
+          followUp:{
+            "*":"q4-16",
+          }
+        },
+        {
+          id: "q4-15",
+          text: t("questionnaire.questions.q4-15"),
+          followUp:{
+            "*":"q4-16",
+          }
+        },
+        {
+          id: "q4-16",
+          text: t("questionnaire.questions.q4-16"),
+          options:[t("questionnaire.options.yes"), t("questionnaire.options.no")],
+          followUp:{
+            [t("questionnaire.options.yes")]:"q4-17",
+            [t("questionnaire.options.no")]:"q4-18",
+          }
+        },
+        {
+          id: "q4-17",
+          text: t("questionnaire.questions.q4-17"),
+          followUp:{
+            "*":"q4-19",
+          }
+        },
+        {
+          id: "q4-18",
+          text: t("questionnaire.questions.q4-18"),
+          options:[t("questionnaire.options.yes"), t("questionnaire.options.no")],
+          followUp:{
+            [t("questionnaire.options.yes")]:"q4-19",
+            [t("questionnaire.options.no")]:"domain[q5-1]",
+          }
+        },
+        {
+          id: "q4-19",
+          text: t("questionnaire.questions.q4-19"),
+          followUp:{
+            "*":"domain[q5-1]",
+          }
+        }
+      ],
+    },
+    {
+      id: "domain-5",
+      title: t("questionnaire.domains.domain5.title"),
+      description: t("questionnaire.domains.domain5.description"),
+      questions: [
+        {
+          id: "q5-1",
+          text: t("questionnaire.questions.q5-1"),
+          flag: "Environmental hazard, refer to housing services",
+        },
+      ],
+    },
+    {
+      id: "domain-6",
+      title: t("questionnaire.domains.domain6.title"),
+      description: t("questionnaire.domains.domain6.description"),
+      questions: [
+        {
+          id: "q6-1",
+          text: t("questionnaire.questions.q6-1"),
+          flag: "",
+        },
+        {
+          id: "q6-2",
+          text: t("questionnaire.questions.q6-2"),
+          flag: "Health literacy / translation support",
+        },
+      ],
+    },
+    {
+      id:"domain-7",
+      title: t("questionnaire.domains.domain7.title"),
+      description: t("questionnaire.domains.domain7.description"),
+      questions:[
+        {
+          id: "q7-1",
+          text: t("questionnaire.questions.q7-1"),
+          flag: "Stressors",
+          followUp:{
+            "*":"q7-2",
+          }
+        },
+        {
+          id: "q7-2",
+          text: t("questionnaire.questions.q7-2"),
+          flag: "Stressors",
+          followUp:{
+            "*":"q7-3",
+          }
+        },
+        {
+          id: "q7-3",
+          text: t("questionnaire.questions.q7-3"),
+          followUp:{
+            "*":"q7-4",
+          }
+        },
+        {
+          id: "q7-4",
+          text: t("questionnaire.questions.q7-4"),
+          followUp:{
+            "*":"q7-5",
+          }
+        },
+        {
+          id: "q7-5",
+          text: t("questionnaire.questions.q7-5"),
+          followUp:{
+            "*":"q7-6",
+          }
+        },
+        {
+          id: "q7-6",
+          text: t("questionnaire.questions.q7-6"),
+          followUp:{
+            "*":"q7-7",
+          }
+        },
+        {
+          id: "q7-7",
+          text: t("questionnaire.questions.q7-7"),
+          followUp:{
+            "*":"q7-8",
+          }
+        },
+        {
+          id: "q7-8",
+          text: t("questionnaire.questions.q7-8"),
+        },
+      ]
+    }
+  ]
+}
+
+// Keep the original export for backward compatibility
 export const QUESTIONNAIRE_DOMAINS: QuestionnaireDomain[] = [
   {
     id: "domain-1",
@@ -100,9 +923,10 @@ export const QUESTIONNAIRE_DOMAINS: QuestionnaireDomain[] = [
         flag: "Housing insecurity",
         options: ["Yes", "No"],
         followUp: {
-          YES: "q1-smoke", // Continue to smoke questions if "YES"
-          NO: "q1-smoke", // Continue to smoke questions if "NO"
-        },
+          "Yes": "q1-smoke", 
+          "No": "q1-smoke",
+          "*": "q1-smoke"
+        }
       },
       {
         id:"q1-smoke",
@@ -110,13 +934,13 @@ export const QUESTIONNAIRE_DOMAINS: QuestionnaireDomain[] = [
         flag: "Smoke exposure risk",
         options: ["Yes", "No"],
         followUp: {
-          YES: "q1-smoke-info", // Record information about second-hand smoke
-          NO: "q1-chemicals", // Continue to chemicals question
+          Yes: "q1-smoke-info", // Record information about second-hand smoke
+          No: "q1-chemicals", // Continue to chemicals question
         },
       },
       {
         id: "q1-smoke-info",
-        text: "Record information, effects of second hand smoke, tips?",
+        text: "How to prevent second-hand smoke?",
         flag: "Second-hand smoke exposure - provided information",
         followUp: {
           "*": "q1-chemicals", // Continue to chemicals question after providing info
@@ -128,13 +952,13 @@ export const QUESTIONNAIRE_DOMAINS: QuestionnaireDomain[] = [
         flag: "Chemical exposure risk",
         options: ["Yes", "No"],
         followUp: {
-          YES: "q1-chemicals-info", // Provide information about chemical exposure
-          NO: "q1-3", // Continue to paint question
+          Yes: "q1-chemicals-info", // Provide information about chemical exposure
+          No: "q1-3", // Continue to paint question
         },
       },
       {
         id: "q1-chemicals-info",
-        text: "Have them change their clothes, shoes, and shower  before coming in the home.  Do not wash their work clothes.  Explain why-potential exposure to chemicals",
+        text: "Have them change their clothes, shoes and shower before coming in the home. Do not wash their work clothes. Explain why-potential exposure to chemicals",
         flag: "Chemical exposure - provided safety information",
         followUp: {
           "*": "q1-3", // Continue to paint question after providing info
@@ -213,7 +1037,7 @@ export const QUESTIONNAIRE_DOMAINS: QuestionnaireDomain[] = [
       },
       {
         id: "q1-exhaust-info",
-        text: "Trucks and car exaust can put out harmful chemicals",
+        text: "Trucks and car's exhaust can put out harmful chemicals",
         flag: "Air quality education provided",
         followUp: {
           "*": "q1-air-filter", // Move to next domain after providing info
@@ -335,7 +1159,7 @@ export const QUESTIONNAIRE_DOMAINS: QuestionnaireDomain[] = [
       },
       {
         id: "q2-10",
-        text: "If transporatio is unreliable, she has to walk or take the bus ask if she has a plan to do something differently when the baby comes",
+        text: "If transportation is unreliable, do you have a plan to do something differently when the baby comes?",
         flag: "Transportation support needed",
         followUp:{
           "*": "q2-11",
@@ -343,23 +1167,15 @@ export const QUESTIONNAIRE_DOMAINS: QuestionnaireDomain[] = [
       },
       {
         id: "q2-11",
-        text:"Are there any traditions or beliefs about pregnancy in you culture?",
+        text:"Are there any traditions or beliefs about pregnancy in your culture?",
         flag: "Cultural beliefs",
-        followUp:{
-          "*":"q2-12",
-        }
-      },
-      {
-        id: "q2-12",
-        text: "Activities that you should or shoulnt do during pregnancy",
-        flag: "Pregnancy education",
         followUp:{
           "*":"q2-13",
         }
       },
       {
         id: "q2-13",
-        text: "Any foods that you should or shouldnt eat durning pregnancy in your culture",
+        text: "Avoid heavy lifting or strenuous physical labor. Do not consume alcohol, tobacco, or recreational drugs. Skip contact sports or activities with fall risk",
         followUp:{
           "*":"domain[q3-1]",
         }
@@ -401,7 +1217,7 @@ export const QUESTIONNAIRE_DOMAINS: QuestionnaireDomain[] = [
       },
       {
         id:"q3-11",
-        text:"Are you paid per hour or do you have a set salary",
+        text:"Are you paid per hour or do you have a set salary?",
         options:["Hourly", "Salary"],
         followUp:{
           "*": "q3-12",
@@ -409,7 +1225,7 @@ export const QUESTIONNAIRE_DOMAINS: QuestionnaireDomain[] = [
       },
       {
         id:"q3-12",
-        text:"Do you have any worries about money with the baby coming",
+        text:"Do you have any worries about money with the baby coming?",
         options:["Yes", "No"],
         followUp:{
           "*": "q3-13",
@@ -417,17 +1233,17 @@ export const QUESTIONNAIRE_DOMAINS: QuestionnaireDomain[] = [
       },
       {
         id:"q3-13",
-        text:"Will you have enough income to meet your needs while you are on maternity leave",
+        text:"Will you have enough income to meet your needs while you are on maternity leave?",
         options:["Yes", "No"],
         followUp:{
-          Yes:"q3-14",
-          No:"q3-15",
+          Yes:"q3-15",
+          No:"q3-14",
         }
       },
       
       {
         id:"q3-14",
-        text:"What is you plan to support yourself and the baby during maternity leave? Do you need help?",
+        text:"What is your plan to support yourself and the baby during maternity leave? Do you need help?",
         followUp:{
           "*":"q3-4",
         }
@@ -485,77 +1301,71 @@ export const QUESTIONNAIRE_DOMAINS: QuestionnaireDomain[] = [
       },
       {
         id: "q3-c",
-        text:"What was the result of the pregnancy?",
+        text: "What was the result of the pregnancy? (Girl/Boy or Abortion/Miscarriage/Medical issue)",
         followUp:{
-          "*":"q3-e",
+          "*":"q3-l", // Skip q3-e and go directly to q3-l
         }
       },
-      {
-        id: "q3-e",
-        text:"Abortion?",
-        followUp:{
-          "*":"q3-l",
-        }
-      },
+      // q3-e is removed
       {
         id: "q3-l",
-        text:"Were you able to carry the baby full term?",
+        text: "Were you able to carry the baby full term?",
         followUp:{
           "*":"q3-m",
         }
       },
       {
         id: "q3-m",
-        text:"Were there any issues during pregnancy and/or birth?",
+        text: "Did you face any issues during pregnancy or birth?",
         followUp:{
           "*":"q3-n",
         }
       },
       {
         id: "q3-n",
-        text:"What was the baby’s weight, How old is your baby?",
+        text: "What was the baby's weight? How old is the child now?",
         followUp:{
           "*":"q3-o",
         }
       },
       {
         id: "q3-o",
-        text:"Does your other child/children know that you are pregnant?",
+        text: "Do your other children know that you are pregnant?",
         followUp:{
           "*":"q3-p",
         }
       },
       {
         id: "q3-p",
-        text:"What was their reaction?",
+        text: "What was their reaction?",
         followUp:{
           "*":"q3-q",
         }
       },
       {
         id: "q3-q",
-        text:"How did their reaction make you feel?",
+        text: "How did their reaction make you feel?",
         followUp:{
           "*":"q3-r",
         }
       },
       {
         id: "q3-r",
-        text:"Do you have any child care issue with your current child/children?",
+        text: "Do you have any child care issues with your current children?",
         followUp:{
           "*":"q3-s",
         }
       },
       {
         id: "q3-s",
-        text:"Will having another baby cause any more stress?",
+        text: "Will having another baby cause any more stress?",
         followUp:{
           "*":"q3-t",
         }
       },
       {
         id: "q3-t",
-        text:"Do you have any stress connected to your children?",
+        text: "Do you have any stress connected to your children?",
         followUp:{
           "*":"q3-j",
         }
@@ -597,21 +1407,21 @@ export const QUESTIONNAIRE_DOMAINS: QuestionnaireDomain[] = [
       },
       {
         id:"q3-i",
-        text:"Are there other family members that cause you stress? Why",
+        text:"Are there other family members that cause you stress? Why?",
         followUp:{
           "*":"q3-j",
         }
       },
       {
         id:"q3-j",
-        text:"Are you still in a relationship with the baby’s father?",
+        text:"Are you still in a relationship with the baby's father?",
         followUp:{
           "*":"q3-k",
         }
       },
       {
         id:"q3-k",
-        text:"Does he have any other children? If yes is do you have any stress caused by his previous child’s mother and/or family",
+        text:"Does he have any other children? If yes, do you have any stress caused by his previous child's mother and/or family?",
         followUp:{
           "*":"domain[q4-1]",
         }
@@ -648,7 +1458,7 @@ export const QUESTIONNAIRE_DOMAINS: QuestionnaireDomain[] = [
       },
       {
         id: "q4-5",
-        text: "What is you favorite thing to eat?",
+        text: "What is your favorite thing to eat?",
         followUp:{
           "*":"q4-6",
         }
@@ -669,7 +1479,7 @@ export const QUESTIONNAIRE_DOMAINS: QuestionnaireDomain[] = [
       },
       {
         id: "q4-8",
-        text: "Any foods that you should or shouldnt eat durning pregnancy in your culture?",
+        text: "Any foods that you should or should not eat during pregnancy in your culture?",
         followUp:{
           "*":"q4-9",
         }
@@ -679,8 +1489,8 @@ export const QUESTIONNAIRE_DOMAINS: QuestionnaireDomain[] = [
         text: "Do you have a birthing plan?",
         options:["Yes", "No"],
         followUp:{
-          Yes:"q4-10",
-          No:"q4-11",
+          Yes:"q4-11",
+          No:"q4-10",
         }
       },
       {
@@ -694,7 +1504,7 @@ export const QUESTIONNAIRE_DOMAINS: QuestionnaireDomain[] = [
       },
       {
         id: "q4-11",
-        text: "What is your perfect way to give birth?  Do want pain medications?  Who do you want in the room with you?",
+        text: "What is your perfect way to give birth? Do you want pain medications? Who do you want in the room with you?",
         followUp:{
           "*":"q4-15",
         }
@@ -731,14 +1541,14 @@ export const QUESTIONNAIRE_DOMAINS: QuestionnaireDomain[] = [
       },
       {
         id: "q4-17",
-        text: "Are you nervous about breastfeeding?  Do you have assistance with breastfeeding?",
+        text: "Are you nervous about breastfeeding? Do you have assistance with breastfeeding?",
         followUp:{
           "*":"q4-19",
         }
       },
       {
         id: "q4-18",
-        text: "Did you breastfeed before?  Did you have any trouble?",
+        text: "Did you breastfeed before? Did you have any trouble?",
         options:["Yes", "No"],
         followUp:{
           Yes:"q4-19",
@@ -747,7 +1557,7 @@ export const QUESTIONNAIRE_DOMAINS: QuestionnaireDomain[] = [
       },
       {
         id: "q4-19",
-        text: "Did you breastfeed before?  Did you have any trouble?",
+        text: "Did you breastfeed before? Did you have any trouble?",
         followUp:{
           "*":"domain[q5-1]",
         }
@@ -764,7 +1574,6 @@ export const QUESTIONNAIRE_DOMAINS: QuestionnaireDomain[] = [
         text: "Do you have any issues in your home, like mold, pests, or no heat?",
         flag: "Environmental hazard, refer to housing services",
       },
-      
     ],
   },
   {
@@ -828,7 +1637,7 @@ export const QUESTIONNAIRE_DOMAINS: QuestionnaireDomain[] = [
       },
       {
         id: "q7-6",
-        text: " How often do you feel stressed?",
+        text: "How often do you feel stressed?",
         followUp:{
           "*":"q7-7",
         }
@@ -842,7 +1651,7 @@ export const QUESTIONNAIRE_DOMAINS: QuestionnaireDomain[] = [
       },
       {
         id: "q7-8",
-        text: "Do you stress about the same thing everyday or multiple times?",
+        text: "Do you stress about the same thing every day or multiple times?",
       },
     ]
   }

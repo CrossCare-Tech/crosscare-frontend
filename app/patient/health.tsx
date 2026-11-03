@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, StatusBar, ScrollView } from 'react-native';
 import { Ionicons, FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -12,51 +12,9 @@ import StepsIcon from '@/assets/images/Svg/StepsIcon';
 import SleepIcon from '@/assets/images/Svg/SleepIcon';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSelector } from 'react-redux';
+import i18n from 'i18next';
+import { useTranslation } from 'react-i18next';
 
-const trackingOptions = [
-  { 
-    id: 'food', 
-    title: 'Food', 
-    icon: <FoodIcon width={24} height={24}  />,
-    onPress: ()=> router.push('/patient/meals')
-  },
-  { 
-    id: 'heart-rate', 
-    title: 'Heart-rate', 
-    icon: <HeartIcon width={24} height={24}  />,
-    onPress: () => router.push('/patient/heart'),
-  },
-  { 
-    id: 'medication', 
-    title: 'Medication', 
-    icon: <MedicationIcon width={24} height={24}  />,
-    onPress: ()=> router.push('/patient/medication/medications')
-  },
-  { 
-    id: 'weight', 
-    title: 'Weight', 
-    icon: <WeightIcon width={24} height={24}  />,
-    onPress: ()=> router.push('/patient/weight')
-  },
-  { 
-    id: 'water', 
-    title: 'Water', 
-    icon: <WaterIcon width={24} height={24}  />,
-    onPress : () => router.push('/patient/water'),
-  },
-  { 
-    id: 'steps', 
-    title: 'Steps', 
-    icon: <StepsIcon width={24} height={24}  />,
-    onPress : () => router.push('/patient/steps'),
-  },
-  { 
-    id: 'sleep', 
-    title: 'Sleep', 
-    icon: <SleepIcon width={24} height={24}  />,
-    onPress : () => router.push('/patient/sleep'),
-  },
-];
 
 
 
@@ -64,6 +22,8 @@ const TrackingOptionsScreen = () => {
 
   const user = useSelector((state:any) => state.user);
   const userId = user?.user_id;
+  
+  const {t} = useTranslation();
 
   useEffect(() => {
     const setHealthVisited = async () => {
@@ -72,6 +32,76 @@ const TrackingOptionsScreen = () => {
     
     setHealthVisited();
   }, [userId]);
+
+  const trackingOptions = [
+  { 
+    id: 'food', 
+    title: t('food'), 
+    icon: <FoodIcon width={24} height={24}  />,
+    onPress: ()=> router.push('/patient/meals')
+  },
+  {
+    id: 'heart-rate',
+    title: t('heartRate'),
+    icon: <HeartIcon width={24} height={24}  />,
+    onPress: () => router.push('/patient/heart'),
+  },
+  {
+    id: 'blood-pressure',
+    title: 'Blood Pressure',
+    icon: <MaterialCommunityIcons name="heart-pulse" size={24} color="#E57373" />,
+    onPress: () => router.push('/patient/bloodpressure'),
+  },
+  {
+    id: 'glucose',
+    title: 'Glucose',
+    icon: <MaterialCommunityIcons name="chart-line" size={24} color="#8E44AD" />,
+    onPress: () => router.push('/patient/glucose'),
+  },
+  {
+    id: 'mood',
+    title: 'Mood',
+    icon: <MaterialCommunityIcons name="emoticon-happy-outline" size={24} color="#5E4FA2" />,
+    onPress: () => router.push('/patient/mood'),
+  },
+  {
+    id: 'symptoms',
+    title: 'Symptoms',
+    icon: <MaterialCommunityIcons name="medical-bag" size={24} color="#E74C3C" />,
+    onPress: () => router.push('/patient/symptoms'),
+  },
+  { 
+    id: 'medication', 
+    title: t('medication'), 
+    icon: <MedicationIcon width={24} height={24}  />,
+    onPress: ()=> router.push('/patient/medication/medications')
+  },
+  { 
+    id: 'weight', 
+    title: t('weight'),  
+    icon: <WeightIcon width={24} height={24}  />,
+    onPress: ()=> router.push('/patient/weight')
+  },
+  { 
+    id: 'water', 
+    title: t('water'),   
+    icon: <WaterIcon width={24} height={24}  />,
+    onPress : () => router.push('/patient/water'),
+  },
+  { 
+    id: 'steps', 
+    title: t('steps'), 
+    icon: <StepsIcon width={24} height={24}  />,
+    onPress : () => router.push('/patient/steps'),
+  },
+  { 
+    id: 'sleep', 
+    title: t('sleep'),  
+    icon: <SleepIcon width={24} height={24}  />,
+    onPress : () => router.push('/patient/sleep'),
+  },
+];
+
 
   return (
     <SafeAreaView style={styles.container}>
@@ -88,15 +118,19 @@ const TrackingOptionsScreen = () => {
       </View>
       
       {/* Title */}
-      <Text style={styles.title}>What Would You Like To Track?</Text>
+      <Text style={styles.title}>{t('track_title')}</Text>
       
       {/* Tracking Options List */}
-      <View style={styles.optionsContainer}>
+      <ScrollView
+        style={styles.optionsContainer}
+        contentContainerStyle={{ paddingBottom: 40 }}
+        showsVerticalScrollIndicator={false}
+      >
         {trackingOptions.map((option) => (
-          <TouchableOpacity 
+          <TouchableOpacity
             key={option.id}
             style={styles.optionItem}
-            onPress={option.onPress} // Navigate to the respective screen
+            onPress={option.onPress}
           >
             <View style={styles.optionIconContainer}>
               {option.icon}
@@ -105,7 +139,7 @@ const TrackingOptionsScreen = () => {
             <Ionicons name="chevron-forward" size={20} color="black" />
           </TouchableOpacity>
         ))}
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 };

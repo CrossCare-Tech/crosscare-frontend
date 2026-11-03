@@ -11,21 +11,26 @@ import { useEffect } from "react";
 import "react-native-reanimated";
 import { Provider, useDispatch, useSelector } from "react-redux";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
+import { Platform } from "react-native";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { supabase } from "@/supabase/supabase";
 import { store } from "../store/store";
 import { setToken, setUser } from "../store/userSlice";
 import { FloatingProvider } from "@/context/FloatingContext";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-
-// Prevent the splash screen from auto-hiding before asset loading is complete.
+import '../translation/i18next'
+import { loadSavedLanguage } from "@/translation/i18next";
+import { useMealStore } from "@/zustandStore/mealStore";
+import { setLanguage } from "@/store/languageSlice";
+import { initializeAppleHealth } from "@/zustandStore/useAppleHealthStore";
+// Prevent the splash screen from a@/translation/i18nextfore asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
 const RootLayoutNav = () => {
   const dispatch = useDispatch();
   const user = useSelector((state: any) => state.user);
-
+  const currentLanguage = useSelector((state: any) => state.language.current)
+  const { fetchMeals, fetchCalorieHistory } = useMealStore();
   const router = useRouter();
   const colorScheme = useColorScheme();
   const token = useSelector((state: any) => state.user.token);
@@ -47,6 +52,7 @@ const RootLayoutNav = () => {
     OpenSans500: require("../assets/fonts/OpenSans-Medium.ttf"),
     OpenSans600: require("../assets/fonts/OpenSans-SemiBold.ttf"),
     OpenSans700: require("../assets/fonts/OpenSans-Bold.ttf"),
+    GroBold: require("../assets/fonts/GROBOLD.ttf"),
   });
 
   // Check for existing token on app load
@@ -55,6 +61,7 @@ const RootLayoutNav = () => {
       try {
         const token = await AsyncStorage.getItem("userToken");
         const storedUser = await AsyncStorage.getItem("user");
+        const savedLanguage = await AsyncStorage.getItem("userLanguage")
         if (token) {
           dispatch(setToken(token));
         }
@@ -65,13 +72,53 @@ const RootLayoutNav = () => {
             dispatch(setUser(parsedUser));
           }
         }
+
+        if (currentLanguage) {
+          dispatch(setLanguage(currentLanguage));
+        }
+        loadSavedLanguage()
       } catch (error) {
         console.error("Error checking token:", error);
       }
     };
     checkToken();
   }, [dispatch]);
+  
+  useEffect(() => {
+    const fetchUserMealData = async () => {
+      // Defensive check: Don't run if user is null or being cleared
+      if (!user || (!user?.user_id && !user?.id)) {
+        console.log("Skipping meal data fetch - no valid user");
+        return;
+      }
+      
+      const userId = user.user_id || user.id;
+      console.log("Fetching meals for user:", userId);
+      
+      try {
+        // Fetch current meals and calorie history
+        await fetchMeals(userId);
+        await fetchCalorieHistory(userId, 'week');
+      } catch (error) {
+        console.error("Error fetching meal data:", error);
+      }
+    };
 
+    fetchUserMealData();
+  }, [user?.user_id, user?.id, fetchMeals, fetchCalorieHistory]);
+
+
+  useEffect(() => {
+    const initializeApp = async () => {
+      // Initialize Apple Health connection on iOS
+      if (Platform.OS === 'ios') {
+        await initializeAppleHealth();
+      }
+    };
+    
+    initializeApp();
+  }, []);
+  
   // Hide the splash screen once fonts are loaded
   useEffect(() => {
     if (loaded) {
@@ -105,7 +152,7 @@ const RootLayoutNav = () => {
           options={{ title: "Forgot Password" }}
         />
         <Stack.Screen name="avatar" />
-        <Stack.Screen name="/patient/(tabs)/home" />
+        <Stack.Screen name="patient" />
       </Stack>
     </>
     // </ThemeProvider>

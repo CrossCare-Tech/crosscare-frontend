@@ -12,12 +12,14 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useSelector } from "react-redux";
+import { useTranslation } from "react-i18next";
+import { CONFIG } from "@/constants/config";
 
 interface SleepLogModalProps {
   isVisible: boolean;
   onClose: () => void;
   onSave: (date: Date, sleepTime: Date, wakeTime: Date) => void;
-  reload: () =>void;
+  reload: () => void;
 }
 
 const SleepLogModal: React.FC<SleepLogModalProps> = ({
@@ -30,6 +32,8 @@ const SleepLogModal: React.FC<SleepLogModalProps> = ({
   const [sleepTime, setSleepTime] = useState(
     new Date(new Date().setHours(23, 0, 0, 0))
   );
+
+  const { t } = useTranslation();
   const [wakeTime, setWakeTime] = useState(
     new Date(new Date().setHours(9, 0, 0, 0))
   );
@@ -50,7 +54,7 @@ const SleepLogModal: React.FC<SleepLogModalProps> = ({
     let hours = date.getHours();
     const minutes = String(date.getMinutes()).padStart(2, "0"); // Ensure 2-digit minutes
     const ampm = hours >= 12 ? "PM" : "AM";
-  
+
     hours = hours % 12 || 12; // Convert 24-hour format to 12-hour format
     return `${hours}:${minutes} ${ampm}`;
   };
@@ -68,17 +72,17 @@ const SleepLogModal: React.FC<SleepLogModalProps> = ({
     const End = formatTime(wakeTime);
     console.log(Date, Time, End);
     const response = await fetch(
-      `https://crosscare-backends.onrender.com/api/user/activity/${user.user_id}/sleep`,
+      `${CONFIG.API_BASE_URL}/user/activity/${user.user_id}/sleep`,
       {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-            date:Date,
-            sleepStart: Time,
-            sleepEnd: End,
-        })
+          date: Date,
+          sleepStart: Time,
+          sleepEnd: End,
+        }),
       }
     );
     const data = await response.json();
@@ -165,7 +169,7 @@ const SleepLogModal: React.FC<SleepLogModalProps> = ({
         <View style={styles.modalOverlay}>
           <TouchableWithoutFeedback onPress={(e) => e.stopPropagation()}>
             <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Add Log</Text>
+              <Text style={styles.modalTitle}>{t("sleepScreen.logAdded")}</Text>
 
               {/* Date Selector */}
               <TouchableOpacity
@@ -183,7 +187,7 @@ const SleepLogModal: React.FC<SleepLogModalProps> = ({
               {/* Time Selectors */}
               <View style={styles.timeSelectors}>
                 <View style={styles.timeColumn}>
-                  <Text style={styles.timeLabel}>Sleep</Text>
+                  <Text style={styles.timeLabel}>{t("sleepScreen.sleep")}</Text>
                   <TouchableOpacity
                     style={styles.timeButton}
                     onPress={() => showPicker("sleep")}
@@ -193,7 +197,7 @@ const SleepLogModal: React.FC<SleepLogModalProps> = ({
                 </View>
 
                 <View style={styles.timeColumn}>
-                  <Text style={styles.timeLabel}>Wake</Text>
+                  <Text style={styles.timeLabel}>{t("sleepScreen.wake")}</Text>
                   <TouchableOpacity
                     style={styles.timeButton}
                     onPress={() => showPicker("wake")}
@@ -206,14 +210,16 @@ const SleepLogModal: React.FC<SleepLogModalProps> = ({
               {/* Action Buttons */}
               <View style={styles.actionButtons}>
                 <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
-                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                  <Text style={styles.cancelButtonText}>{t("cancel")}</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
                   style={styles.saveButton}
                   onPress={handleSave}
                 >
-                  <Text style={styles.saveButtonText}>Save & Continue</Text>
+                  <Text style={styles.saveButtonText} numberOfLines={1}>
+                    {t("stepScreen.saveGoal")}
+                  </Text>
                 </TouchableOpacity>
               </View>
 
@@ -364,6 +370,7 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontFamily: "Inter500",
     fontSize: 14,
+    maxWidth: 130,
   },
 });
 

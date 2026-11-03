@@ -1,40 +1,63 @@
-"use client"
-
-import React, { useEffect, useState } from "react"
-import { StyleSheet, Text, View, StatusBar, TouchableOpacity, ScrollView, ActivityIndicator } from "react-native"
-import { Feather, Ionicons } from "@expo/vector-icons"
-import { SafeAreaView } from "react-native-safe-area-context"
-import { router } from "expo-router"
-import MedicationIcon from "@/assets/images/Svg/MedicationIcon"
-import DateRangePicker from "@/components/DateRangePicker"
-import DateRangeButton from "@/components/DateRangeButton"
-import { useSelector } from "react-redux"
-import AsyncStorage from "@react-native-async-storage/async-storage"
+import React, { useCallback, useEffect, useState } from "react";
+import {
+  StyleSheet,
+  Text,
+  View,
+  StatusBar,
+  TouchableOpacity,
+  ScrollView,
+  ActivityIndicator,
+} from "react-native";
+import { Feather, Ionicons } from "@expo/vector-icons";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { router, useFocusEffect } from "expo-router";
+import MedicationIcon from "@/assets/images/Svg/MedicationIcon";
+import { useSelector } from "react-redux";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useTranslation } from "react-i18next";
+import {
+  scheduleMedicationReminder,
+  cancelMedicationReminders,
+  areMedicationRemindersEnabled,
+  setMedicationRemindersEnabled,
+} from "@/utils/NotificationManager";
+import { CONFIG } from "@/constants/config";
 
 // First, let's update the interfaces to include dates
 interface MedicationTime {
-  time: string
-  isCompleted: boolean
+  time: string;
+  isCompleted: boolean;
 }
 
 interface Medication {
-  id: string
-  name: string
-  date: string // Add date field
-  originalDate: string
-  times: MedicationTime[]
+  id: string;
+  name: string;
+  date: string; // Add date field
+  originalDate: string;
+  times: MedicationTime[];
 }
-function AlertDialog({ visible, onClose, onConfirm, medicationName }: { visible: boolean, onClose: () => void, onConfirm: () => void, medicationName: string }) {
-  const user = useSelector((state: any) => state.user)
-  const [userName, setUserName] = useState(user?.user_name || "")
+
+function AlertDialog({
+  visible,
+  onClose,
+  onConfirm,
+  medicationName,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  medicationName: string;
+}) {
+  const user = useSelector((state: any) => state.user);
+  const [userName, setUserName] = useState(user?.user_name || "");
 
   useEffect(() => {
     if (user && user.user_name) {
-      setUserName(user.user_name)
+      setUserName(user.user_name);
     }
-  }, [user])
+  }, [user]);
 
-  if (!visible) return null
+  if (!visible) return null;
 
   return (
     <View style={styles.alertOverlay}>
@@ -64,7 +87,8 @@ function AlertDialog({ visible, onClose, onConfirm, medicationName }: { visible:
                 textAlign: "center",
               }}
             >
-              {medicationName} medication was missed, would you like to mark as complete?
+              {medicationName} medication was missed, would you like to mark as
+              complete?
             </Text>
             <View
               style={{
@@ -101,7 +125,8 @@ function AlertDialog({ visible, onClose, onConfirm, medicationName }: { visible:
                   borderWidth: 2,
                   borderColor: "#00A991",
                   borderRadius: 14,
-                  boxShadow: "0px 0px 4px 0px rgba(0, 0, 0, 0.25) inset, 0px 0px 2.6px 0px rgba(0, 0, 0, 0.32);",
+                  boxShadow:
+                    "0px 0px 4px 0px rgba(0, 0, 0, 0.25) inset, 0px 0px 2.6px 0px rgba(0, 0, 0, 0.32);",
                   backgroundColor: "#009883",
                 }}
                 onPress={onConfirm}
@@ -119,55 +144,78 @@ function AlertDialog({ visible, onClose, onConfirm, medicationName }: { visible:
         </View>
       </View>
     </View>
-  )
+  );
 }
 
 export default function medications() {
-  const [activeTab, setActiveTab] = useState("All")
-  const user = useSelector((state: any) => state.user)
-  const [isLoading, setIsLoading] = useState(true)
+  const [activeTab, setActiveTab] = useState("All");
+  const user = useSelector((state: any) => state.user);
+  const [isLoading, setIsLoading] = useState(true);
   const userId = user?.user_id;
+  const { t } = useTranslation();
+  const [remindersEnabled, setRemindersEnabled] = useState(true);
+
   useEffect(() => {
     const setMedicationVisited = async () => {
-      await AsyncStorage.setItem('medication_3', 'true');
+      await AsyncStorage.setItem("medication_3", "true");
     };
-    
+
     setMedicationVisited();
   }, [userId]);
 
-  // Update the medications data structure
-  const [medications, setMedications] = useState<Medication[]>([])
-  const [allMedications, setAllMedications] = useState<Medication[]>([])
+  // Load reminder preference on mount
+  useEffect(() => {
+    const loadReminderPreference = async () => {
+      try {
+        const enabled = await areMedicationRemindersEnabled();
+        console.log("Medication Reminders Enabled:", enabled);
+        setRemindersEnabled(enabled);
+      } catch (error) {
+        console.error("Error loading medication reminder preference:", error);
+      }
+    };
 
-  const [alertVisible, setAlertVisible] = useState(false)
+    loadReminderPreference();
+  }, []);
+
+  // Toggle reminder setting
+  const toggleReminders = async () => {
+    try {
+      const newValue = !remindersEnabled;
+      setRemindersEnabled(newValue);
+      await setMedicationRemindersEnabled(newValue);
+    } catch (error) {
+      console.error("Error saving medication reminder preference:", error);
+    }
+  };
+
+  // Update the medications data structure
+  const [medications, setMedications] = useState<Medication[]>([]);
+
+  const [alertVisible, setAlertVisible] = useState(false);
   const [pendingMedication, setPendingMedication] = useState({
     id: "",
     time: "",
-  })
-
-  // Add this state variable to track the button position
-  const [buttonPosition, setButtonPosition] = useState({
-    x: 0,
-    y: 0,
-    width: 0,
-    height: 0,
-  })
+  });
 
   const handleToggleComplete = (medicationId: string, timeToToggle: string) => {
-    const medication = medications?.find((m) => m.id === medicationId)
-    const time = medication?.times.find((t) => t.time === timeToToggle)
+    const medication = medications?.find((m) => m.id === medicationId);
+    const time = medication?.times.find((t) => t.time === timeToToggle);
 
     if (!time?.isCompleted) {
-      setPendingMedication({ id: medicationId, time: timeToToggle })
-      setAlertVisible(true)
+      setPendingMedication({ id: medicationId, time: timeToToggle });
+      setAlertVisible(true);
     } else {
-      updateMedicationStatus(medicationId, timeToToggle)
+      updateMedicationStatus(medicationId, timeToToggle);
     }
-  }
+  };
 
   // Update the updateMedicationStatus function to call the API endpoint
-  const updateMedicationStatus = async (medicationId: string, timeToToggle: string) => {
-    if (!medications) return
+  const updateMedicationStatus = async (
+    medicationId: string,
+    timeToToggle: string
+  ) => {
+    if (!medications) return;
 
     try {
       // The medicationId format is "uuid-date" (e.g., "ff3fefb7-65de-4ded-9741-628b3a25318c-2025-03-16")
@@ -175,37 +223,41 @@ export default function medications() {
 
       // Extract the base medication ID and date
       // Look for the pattern where the date (YYYY-MM-DD) is at the end of the string
-      const datePattern = /(\d{4}-\d{2}-\d{2})$/
-      const match = medicationId.match(datePattern)
+      const datePattern = /(\d{4}-\d{2}-\d{2})$/;
+      const match = medicationId.match(datePattern);
 
-      let baseMedicationId = medicationId
-      let medicationDate = new Date().toISOString().split("T")[0] // Default to today
+      let baseMedicationId = medicationId;
+      let medicationDate = new Date().toISOString().split("T")[0]; // Default to today
 
       if (match && match[1]) {
         // If we found a date pattern at the end
-        medicationDate = match[1]
+        medicationDate = match[1];
         // Find the position where the date starts (including the hyphen)
-        const dateStartPos = medicationId.lastIndexOf(medicationDate) - 1
+        const dateStartPos = medicationId.lastIndexOf(medicationDate) - 1;
         // Extract the base ID (everything before the date)
-        baseMedicationId = medicationId.substring(0, dateStartPos)
+        baseMedicationId = medicationId.substring(0, dateStartPos);
       }
 
-      console.log(`Base Medication ID: ${baseMedicationId}`)
-      console.log(`Medication Date: ${medicationDate}`)
+      console.log(`Base Medication ID: ${baseMedicationId}`);
+      console.log(`Medication Date: ${medicationDate}`);
 
       // Find the medication and time to determine current completion status
-      const medication = medications.find((m) => m.id === medicationId)
-      const time = medication?.times.find((t) => t.time === timeToToggle)
+      const medication = medications.find((m) => m.id === medicationId);
+      const time = medication?.times.find((t) => t.time === timeToToggle);
 
       // Toggle the completion status
-      const newCompletionStatus = !time?.isCompleted
+      const newCompletionStatus = !time?.isCompleted;
 
       // Prepare the API request
-      const userId = user?.user_id
-      const endpoint = `https://crosscare-backends.onrender.com/api/user/activity/${userId}/updateStatus/${baseMedicationId}/completed`
+      const userId = user?.user_id;
+      const endpoint = `${CONFIG.API_BASE_URL}/user/activity/${userId}/updateStatus/${baseMedicationId}/completed`;
 
-      console.log(`Sending request to: ${endpoint}`)
-      console.log(`Request body:`, { completed: newCompletionStatus, date: medicationDate, time: timeToToggle })
+      console.log(`Sending request to: ${endpoint}`);
+      console.log(`Request body:`, {
+        completed: newCompletionStatus,
+        date: medicationDate,
+        time: timeToToggle,
+      });
 
       // Make the API call - using PUT method as specified
       const response = await fetch(endpoint, {
@@ -218,14 +270,14 @@ export default function medications() {
           date: medicationDate, // Using the YYYY-MM-DD format
           time: timeToToggle,
         }),
-      })
+      });
 
       if (!response.ok) {
-        throw new Error(`API request failed with status ${response.status}`)
+        throw new Error(`API request failed with status ${response.status}`);
       }
 
-      const data = await response.json()
-      console.log("API response:", data)
+      const data = await response.json();
+      console.log("API response:", data);
 
       // Update local state after successful API call
       setMedications((prevMedications) =>
@@ -235,56 +287,41 @@ export default function medications() {
               ...medication,
               times: medication.times.map((time) => {
                 if (time.time === timeToToggle) {
-                  return { ...time, isCompleted: newCompletionStatus }
+                  return { ...time, isCompleted: newCompletionStatus };
                 }
-                return time
+                return time;
               }),
-            }
+            };
           }
-          return medication
-        }),
-      )
+          return medication;
+        })
+      );
 
-      // Also update allMedications state to keep them in sync
-      setAllMedications((prevMedications) =>
-        prevMedications.map((medication) => {
-          if (medication.id === medicationId) {
-            return {
-              ...medication,
-              times: medication.times.map((time) => {
-                if (time.time === timeToToggle) {
-                  return { ...time, isCompleted: newCompletionStatus }
-                }
-                return time
-              }),
-            }
-          }
-          return medication
-        }),
-      )
-
-      return true // Return success
+      return true; // Return success
     } catch (error) {
-      console.error("Error updating medication status:", error)
+      console.error("Error updating medication status:", error);
       // You could add error handling here, such as showing a toast notification
-      return false // Return failure
+      return false; // Return failure
     }
-  }
+  };
 
   // Render medication time item
   const renderMedicationTime = (time: MedicationTime, medicationId: string) => {
     // Extract the date from the medicationId (format: id-date)
-    const parts = medicationId.split("-")
-    const day = parts.length > 1 ? parts[1] : ""
+    const parts = medicationId.split("-");
+    const day = parts.length > 1 ? parts[1] : "";
 
     // Create a unique ID that includes both the day and medication ID
-    const uniqueId = `${medicationId}-${time.time}`
+    const uniqueId = `${medicationId}-${time.time}`;
 
     return (
       <View style={styles.timeContainer}>
         <Text style={styles.timeText}>{time.time}</Text>
         <TouchableOpacity
-          style={[styles.completionButton, time.isCompleted ? styles.completedButton : styles.incompleteButton]}
+          style={[
+            styles.completionButton,
+            time.isCompleted ? styles.completedButton : styles.incompleteButton,
+          ]}
           onPress={() => handleToggleComplete(medicationId, time.time)}
         >
           <Ionicons
@@ -293,100 +330,92 @@ export default function medications() {
             color={time.isCompleted ? "#00A991" : "#666666"}
             style={styles.checkIcon}
           />
-          <Text style={[styles.completionText, time.isCompleted ? styles.completedText : styles.incompleteText]}>
-            {time.isCompleted ? "Completed" : "Mark as Complete"}
+          <Text
+            style={[
+              styles.completionText,
+              time.isCompleted ? styles.completedText : styles.incompleteText,
+            ]}
+            numberOfLines={1}
+          >
+            {time.isCompleted ? t("completed") : t("markAsCompleteButton")}
           </Text>
         </TouchableOpacity>
       </View>
-    )
-  }
+    );
+  };
 
-  // Filter medications with missed doses (not completed)
-  const getMissedMedications = () => {
+  // Get upcoming medications (future dates/times that haven't been taken)
+  const getUpcomingMedications = () => {
     if (!medications || !Array.isArray(medications)) {
-      return []
-    }
-    return medications.filter((medication) => medication.times.some((time) => !time.isCompleted))
-  }
-
-  const [isVisible, setIsVisible] = useState(false)
-  const [startDate, setStartDate] = useState<Date | null>(null)
-  const [endDate, setEndDate] = useState<Date | null>(null)
-
-  // Update the handleSelectRange function to filter medications by date range
-  const handleSelectRange = (start: Date | null, end: Date | null) => {
-    setStartDate(start)
-    setEndDate(end)
-    setIsVisible(false)
-
-    if (start || end) {
-      // Filter medications by date range
-      filterMedicationsByDateRange(start, end)
-    } else {
-      // If both dates are null, show all medications
-      setMedications(allMedications)
-    }
-  }
-
-  // Add a function to filter medications by date range
-  const filterMedicationsByDateRange = (start: Date | null, end: Date | null) => {
-    if (!start && !end) {
-      // If no date range is selected, show all medications
-      setMedications(allMedications)
-      return
+      return [];
     }
 
-    // Convert start and end dates to timestamps for comparison
-    const startTimestamp = start ? start.setHours(0, 0, 0, 0) : 0
-    const endTimestamp = end ? end.setHours(23, 59, 59, 999) : Date.now() + 1000 * 60 * 60 * 24 * 365 // Default to a year from now
+    const now = new Date();
+    return medications.filter((medication) => {
+      const medicationDate = new Date(medication.originalDate);
 
-    // Filter medications by date range
-    const filteredMedications = allMedications.filter((medication) => {
-      // Convert medication date to timestamp
-      const medicationDate = new Date(medication.originalDate)
-      const medicationTimestamp = medicationDate.getTime()
+      // Check if the medication date is in the future
+      if (medicationDate.toDateString() === now.toDateString()) {
+        // If it's today, check if any times are incomplete and in the future
+        return medication.times.some((time) => {
+          if (time.isCompleted) return false;
 
-      // Check if medication date is within the selected range
-      return medicationTimestamp >= startTimestamp && medicationTimestamp <= endTimestamp
-    })
+          // Parse the time and create a date object for today
+          const [timeStr, period] = time.time.split(" ");
+          const [hours, minutes] = timeStr.split(":").map(Number);
+          let hour24 = hours;
 
-    setMedications(filteredMedications)
+          if (period === "PM" && hours !== 12) hour24 += 12;
+          if (period === "AM" && hours === 12) hour24 = 0;
 
-    // Log for debugging
-    console.log(`Filtered medications: ${filteredMedications.length} of ${allMedications.length}`)
-    console.log(`Date range: ${start?.toDateString()} to ${end?.toDateString()}`)
-  }
+          const timeToday = new Date();
+          timeToday.setHours(hour24, minutes, 0, 0);
+
+          return timeToday > now;
+        });
+      } else if (medicationDate > now) {
+        // If it's a future date, include if not all times are completed
+        return medication.times.some((time) => !time.isCompleted);
+      }
+
+      return false;
+    });
+  };
 
   // Add this helper function at the top of your component (before the return statement)
   const getDayOfWeekAbbr = (dayIndex: number): string => {
-    const dayAbbreviations = ["SU", "M", "T", "W", "TH", "F", "SA"]
-    return dayAbbreviations[dayIndex]
-  }
+    const dayAbbreviations = ["SU", "M", "T", "W", "TH", "F", "SA"];
+    return dayAbbreviations[dayIndex];
+  };
 
   const getMedicationList = async () => {
-    setIsLoading(true)
+    setIsLoading(true);
     try {
       if (!user || !user.user_id) {
-        console.log("User ID not available")
-        setIsLoading(false)
-        return
+        console.log("User ID not available");
+        setIsLoading(false);
+        return;
       }
 
       // Construct API URL (without date filters - we'll filter client-side)
-      const apiUrl = `https://crosscare-backends.onrender.com/api/user/activity/${user.user_id}/getMedication`
+      const apiUrl = `${CONFIG.API_BASE_URL}/user/activity/${user.user_id}/getMedication`;
 
-      console.log("Fetching medications from:", apiUrl)
-      const response = await fetch(apiUrl)
+      console.log("Fetching medications from:", apiUrl);
+      const response = await fetch(apiUrl);
 
       if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`)
+        throw new Error(`HTTP error! Status: ${response.status}`);
       }
 
-      const responseData = await response.json()
-      console.log("API response:", responseData.data)
+      const responseData = await response.json();
+      console.log("API response:", responseData.data);
 
-      if (responseData && responseData.data && Array.isArray(responseData.data)) {
-        const formattedMedications: Medication[] = []
+      if (
+        responseData &&
+        responseData.data &&
+        Array.isArray(responseData.data)
+      ) {
+        const formattedMedications: Medication[] = [];
 
         // Mapping days to JS Date object days
         const dayMapping: { [key: string]: number } = {
@@ -397,44 +426,51 @@ export default function medications() {
           TH: 4,
           F: 5,
           S: 6,
-        }
+        };
 
         responseData.data.forEach((item: any) => {
-          const startDate = new Date(item.startDate)
-          const endDate = new Date(item.endDate)
-          const allowedDays = item.days.map((d: string) => dayMapping[d]) // Convert days to numbers
+          const startDate = new Date(item.startDate);
+          const endDate = new Date(item.endDate);
+          const allowedDays = item.days.map((d: string) => dayMapping[d]); // Convert days to numbers
 
           // Get the completed days of week for checking
-          const completedDaysOfWeek = item.completedDaysOfWeek || []
+          const completedDaysOfWeek = item.completedDaysOfWeek || [];
 
-          const currentDate = new Date(startDate)
+          const currentDate = new Date(startDate);
           while (currentDate <= endDate) {
             if (allowedDays.includes(currentDate.getDay())) {
               // Store original date in "YYYY-MM-DD" format for sorting
-              const originalDateStr = currentDate.toISOString().split("T")[0]
+              const originalDateStr = currentDate.toISOString().split("T")[0];
 
               // Format date as "18 Mar, 2025" with abbreviated month
-              const day = currentDate.getDate()
-              const month = currentDate.toLocaleString("en-US", { month: "short" })
-              const year = currentDate.getFullYear()
-              const formattedDate = `${day} ${month}, ${year}`
+              const day = currentDate.getDate();
+              const month = currentDate.toLocaleString("en-US", {
+                month: "short",
+              });
+              const year = currentDate.getFullYear();
+              const formattedDate = `${day} ${month}, ${year}`;
 
               // Get the day of week abbreviation for the current date
-              const dayOfWeekAbbr = getDayOfWeekAbbr(currentDate.getDay())
+              const dayOfWeekAbbr = getDayOfWeekAbbr(currentDate.getDay());
 
               // Check if this specific date is in completedDates
-              const dateStr = currentDate.toISOString().split("T")[0]
+              const dateStr = currentDate.toISOString().split("T")[0];
               const isDateCompleted =
-                item.completedDates && item.completedDates.some((d:string) => d === dateStr || d.startsWith(dateStr))
+                item.completedDates &&
+                item.completedDates.some(
+                  (d: string) => d === dateStr || d.startsWith(dateStr)
+                );
 
               // Check if the day of week is in completedDaysOfWeek
-              const isDayOfWeekCompleted = completedDaysOfWeek.includes(dayOfWeekAbbr)
+              const isDayOfWeekCompleted =
+                completedDaysOfWeek.includes(dayOfWeekAbbr);
 
               // A medication is completed if either the specific date or the day of week is marked as completed
-              const isCompleted = isDateCompleted || isDayOfWeekCompleted || item.completed
+              const isCompleted =
+                isDateCompleted || isDayOfWeekCompleted || item.completed;
 
               // Create a medication object for the allowed day
-              formattedMedications.push({
+              const medicationEntry = {
                 id: `${item.id}-${originalDateStr}`, // Unique ID
                 name: item.medicationName,
                 date: formattedDate, // Display formatted date
@@ -445,90 +481,103 @@ export default function medications() {
                       isCompleted: isCompleted,
                     }))
                   : [],
-              })
+              };
+
+              formattedMedications.push(medicationEntry);
+
+              // Schedule reminders for this medication if reminders are enabled
+              if (remindersEnabled) {
+                // Schedule reminders for each time
+                item.times.forEach(async (timeString: string) => {
+                  try {
+                    // Parse the time string to create a proper date object
+                    const [timeStr, period] = timeString.split(" ");
+                    const [hours, minutes] = timeStr.split(":").map(Number);
+                    let hour24 = hours;
+
+                    if (period === "PM" && hours !== 12) hour24 += 12;
+                    if (period === "AM" && hours === 12) hour24 = 0;
+
+                    // Create date object for this medication time
+                    const medicationDateTime = new Date(currentDate);
+                    medicationDateTime.setHours(hour24, minutes, 0, 0);
+
+                    // Only schedule if it's in the future
+                    if (medicationDateTime > new Date()) {
+                      const reminderIds = await scheduleMedicationReminder(
+                        medicationDateTime,
+                        item.medicationName,
+                        `${item.id}-${originalDateStr}-${timeString}`
+                      );
+
+                      if (reminderIds && reminderIds.length > 0) {
+                        console.log(
+                          `✅ Scheduled ${reminderIds.length} reminders for ${item.medicationName} on ${formattedDate} at ${timeString}`
+                        );
+                      }
+                    }
+                  } catch (error) {
+                    console.error(
+                      "Error scheduling individual medication reminder:",
+                      error
+                    );
+                  }
+                });
+              }
             }
             // Move to next day
-            currentDate.setDate(currentDate.getDate() + 1)
+            currentDate.setDate(currentDate.getDate() + 1);
           }
-        })
+        });
 
         // Sort medications by originalDate (which is still "YYYY-MM-DD")
-        formattedMedications.sort((a, b) => new Date(a.originalDate).getTime() - new Date(b.originalDate).getTime())
+        formattedMedications.sort(
+          (a, b) =>
+            new Date(a.originalDate).getTime() -
+            new Date(b.originalDate).getTime()
+        );
 
-        // Store all medications
-        setAllMedications(formattedMedications)
-
-        // Apply date filtering if dates are selected
-        if (startDate || endDate) {
-          filterMedicationsByDateRange(startDate, endDate)
-        } else {
-          setMedications(formattedMedications)
-        }
+        setMedications(formattedMedications);
       } else {
-        console.error("API did not return expected data structure:", responseData)
-        setAllMedications([])
-        setMedications([])
+        console.error(
+          "API did not return expected data structure:",
+          responseData
+        );
+        setMedications([]);
       }
     } catch (error: any) {
-      console.log("Error fetching medications:", error.message)
-      setAllMedications([])
-      setMedications([])
+      console.log("Error fetching medications:", error.message);
+      setMedications([]);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
-  // Add this useEffect hook after your state declarations
-  useEffect(() => {
-    getMedicationList()
-  }, [user])
+  useFocusEffect(
+    useCallback(() => {
+      console.log("Medications screen focused");
+      getMedicationList();
+    }, [user, remindersEnabled])
+  );
 
-  const missedMedications = getMissedMedications()
+  const upcomingMedications = getUpcomingMedications();
 
   // Add a function to group medications by date
   const groupMedicationsByDate = (meds: Medication[]) => {
     if (!meds || !Array.isArray(meds) || meds.length === 0) {
-      return []
+      return [];
     }
 
-    const grouped = meds.reduce(
-      (acc, med) => {
-        if (!acc[med.date]) {
-          acc[med.date] = []
-        }
-        acc[med.date].push(med)
-        return acc
-      },
-      {} as Record<string, Medication[]>,
-    )
+    const grouped = meds.reduce((acc, med) => {
+      if (!acc[med.date]) {
+        acc[med.date] = [];
+      }
+      acc[med.date].push(med);
+      return acc;
+    }, {} as Record<string, Medication[]>);
 
-    return Object.entries(grouped)
-  }
-
-  // Update the render section for medications
-  const renderMedicationsByDate = () => {
-    const groupedMedications = groupMedicationsByDate(activeTab === "All" ? medications : getMissedMedications())
-
-    return groupedMedications.map(([date, meds], dateIndex) => (
-      <View key={date} style={styles.dateGroup}>
-        <Text style={styles.dateHeader}>{date}</Text>
-        {meds.map((medication, medIndex) => (
-          <View key={medication.id}>
-            <View style={styles.medicationItemContainer}>
-              <View style={[styles.medicationNameContainer, medIndex === 0 && styles.firstMedicationNameContainer]}>
-                <Text style={styles.medicationName}>{medication.name}</Text>
-              </View>
-              {medication.times.map((time) => (
-                <React.Fragment key={`${medication.id}-${time.time}`}>
-                  {renderMedicationTime(time, medication.id)}
-                </React.Fragment>
-              ))}
-            </View>
-          </View>
-        ))}
-      </View>
-    ))
-  }
+    return Object.entries(grouped);
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -536,17 +585,23 @@ export default function medications() {
 
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => router.back()}
+        >
           <Ionicons name="chevron-back" size={20} color="black" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Medications</Text>
+        <Text style={styles.headerTitle}>{t("medication")}</Text>
         <TouchableOpacity style={styles.menuButton}>
           <Feather name="more-vertical" size={20} color="#E5E5E5" />
         </TouchableOpacity>
       </View>
 
       {/* Medication Icon */}
-      <ScrollView style={styles.medicationList} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.medicationList}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.iconContainer}>
           <View style={styles.iconCircle}>
             <View style={styles.medicationIconGroup}>
@@ -557,27 +612,14 @@ export default function medications() {
 
         {/* Add New Medication Button */}
         <View style={styles.addButtonContainer}>
-          <TouchableOpacity onPress={() => router.push("/patient/medication/addmedication")} style={styles.addButton}>
+          <TouchableOpacity
+            onPress={() => router.push("/patient/medication/addmedication")}
+            style={styles.addButton}
+          >
             <Ionicons name="add" size={20} color="white" />
-            <Text style={styles.addButtonText}>Add New Medication</Text>
+            <Text style={styles.addButtonText}>{t("addNewMedication")}</Text>
           </TouchableOpacity>
         </View>
-
-        <DateRangeButton
-          onPress={() => setIsVisible(true)}
-          startDate={startDate}
-          endDate={endDate}
-          // onLayout={handleButtonLayout}
-        />
-
-        <DateRangePicker
-          visible={isVisible}
-          onClose={() => setIsVisible(false)}
-          onSelectRange={handleSelectRange}
-          initialStartDate={startDate || undefined}
-          initialEndDate={endDate || undefined}
-          // buttonPosition={buttonPosition}
-        />
 
         {/* Medication List */}
         <View style={styles.tabContainer}>
@@ -585,13 +627,27 @@ export default function medications() {
             style={[styles.tab, activeTab === "All" && styles.activeTab]}
             onPress={() => setActiveTab("All")}
           >
-            <Text style={[styles.tabText, activeTab === "All" && styles.activeTabText]}>All</Text>
+            <Text
+              style={[
+                styles.tabText,
+                activeTab === "All" && styles.activeTabText,
+              ]}
+            >
+              {t("all")}
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.tab, activeTab === "Missed" && styles.activeTab]}
-            onPress={() => setActiveTab("Missed")}
+            style={[styles.tab, activeTab === "Upcoming" && styles.activeTab]}
+            onPress={() => setActiveTab("Upcoming")}
           >
-            <Text style={[styles.tabText, activeTab === "Missed" && styles.activeTabText]}>Missed</Text>
+            <Text
+              style={[
+                styles.tabText,
+                activeTab === "Upcoming" && styles.activeTabText,
+              ]}
+            >
+              Upcoming
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -615,13 +671,18 @@ export default function medications() {
                             <View
                               style={[
                                 styles.medicationNameContainer,
-                                index === 0 && styles.firstMedicationNameContainer,
+                                index === 0 &&
+                                  styles.firstMedicationNameContainer,
                               ]}
                             >
-                              <Text style={styles.medicationName}>{medication.name}</Text>
+                              <Text style={styles.medicationName}>
+                                {medication.name}
+                              </Text>
                             </View>
                             {medication.times.map((time, timeIndex) => (
-                              <React.Fragment key={`${medication.id}-${time.time}`}>
+                              <React.Fragment
+                                key={`${medication.id}-${time.time}`}
+                              >
                                 {renderMedicationTime(time, medication.id)}
                               </React.Fragment>
                             ))}
@@ -631,43 +692,50 @@ export default function medications() {
                     </View>
                   ))
                 ) : (
-                  <Text style={styles.emptyText}>No medications found</Text>
+                  <Text style={styles.emptyText}>{t("emptyText")}</Text>
                 )}
               </View>
             )}
 
-            {/* Missed medications tab */}
-            {activeTab === "Missed" && (
+            {/* Upcoming medications tab */}
+            {activeTab === "Upcoming" && (
               <View style={styles.medicationsContainer}>
-                {missedMedications.length > 0 ? (
-                  groupMedicationsByDate(missedMedications).map(([date, meds]) => (
-                    <View key={date} style={styles.dateGroup}>
-                      <Text style={styles.dateHeader}>{date}</Text>
-                      {meds.map((medication, index) => (
-                        <View key={medication.id}>
-                          <View style={styles.medicationItemContainer}>
-                            <View
-                              style={[
-                                styles.medicationNameContainer,
-                                index === 0 && styles.firstMedicationNameContainer,
-                              ]}
-                            >
-                              <Text style={styles.medicationName}>{medication.name}</Text>
+                {upcomingMedications.length > 0 ? (
+                  groupMedicationsByDate(upcomingMedications).map(
+                    ([date, meds]) => (
+                      <View key={date} style={styles.dateGroup}>
+                        <Text style={styles.dateHeader}>{date}</Text>
+                        {meds.map((medication, index) => (
+                          <View key={medication.id}>
+                            <View style={styles.medicationItemContainer}>
+                              <View
+                                style={[
+                                  styles.medicationNameContainer,
+                                  index === 0 &&
+                                    styles.firstMedicationNameContainer,
+                                ]}
+                              >
+                                <Text style={styles.medicationName}>
+                                  {medication.name}
+                                </Text>
+                              </View>
+                              {medication.times
+                                .filter((time) => !time.isCompleted)
+                                .map((time, timeIndex, filteredTimes) => (
+                                  <React.Fragment
+                                    key={`${medication.id}-${time.time}`}
+                                  >
+                                    {renderMedicationTime(time, medication.id)}
+                                  </React.Fragment>
+                                ))}
                             </View>
-                            {medication.times
-                              .filter((time) => !time.isCompleted)
-                              .map((time, timeIndex, filteredTimes) => (
-                                <React.Fragment key={`${medication.id}-${time.time}`}>
-                                  {renderMedicationTime(time, medication.id)}
-                                </React.Fragment>
-                              ))}
                           </View>
-                        </View>
-                      ))}
-                    </View>
-                  ))
+                        ))}
+                      </View>
+                    )
+                  )
                 ) : (
-                  <Text style={styles.emptyText}>No missed medications</Text>
+                  <Text style={styles.emptyText}>No upcoming medications</Text>
                 )}
               </View>
             )}
@@ -678,8 +746,10 @@ export default function medications() {
       {/* Footer */}
       <View style={styles.footer}>
         <Text style={styles.footerText}>
-          Reminder On By Default.
-          <Text style={styles.footerLink}> Turn Off Reminder</Text>
+          Reminder {remindersEnabled ? "On" : "Off"} By Default,{" "}
+          <Text style={styles.footerLink} onPress={toggleReminders}>
+            {remindersEnabled ? "Turn Off Reminder" : "Turn On Reminder"}
+          </Text>
         </Text>
       </View>
 
@@ -688,20 +758,25 @@ export default function medications() {
         onClose={() => setAlertVisible(false)}
         onConfirm={async () => {
           try {
-            const success = await updateMedicationStatus(pendingMedication.id, pendingMedication.time)
+            const success = await updateMedicationStatus(
+              pendingMedication.id,
+              pendingMedication.time
+            );
             // Only close the dialog if the update was successful
             if (success) {
-              setAlertVisible(false)
+              setAlertVisible(false);
             }
           } catch (error) {
-            console.error("Error in onConfirm handler:", error)
+            console.error("Error in onConfirm handler:", error);
             // Keep dialog open if there's an error
           }
         }}
-        medicationName={medications?.find((m) => m.id === pendingMedication.id)?.name || ""}
+        medicationName={
+          medications?.find((m) => m.id === pendingMedication.id)?.name || ""
+        }
       />
     </SafeAreaView>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
@@ -783,7 +858,8 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderWidth: 1,
     borderColor: "#B0E4DD",
-    boxShadow: "0px 0px 4px 0px rgba(0, 0, 0, 0.25) inset, 0px 0px 2.6px 0px rgba(0, 0, 0, 0.32);",
+    boxShadow:
+      "0px 0px 4px 0px rgba(0, 0, 0, 0.25) inset, 0px 0px 2.6px 0px rgba(0, 0, 0, 0.32);",
     paddingHorizontal: 16,
     borderRadius: 25,
     alignItems: "center",
@@ -1024,5 +1100,4 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: "Inter500",
   },
-})
-
+});

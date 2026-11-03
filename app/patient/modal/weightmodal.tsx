@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ActivityIndicator } from "react-native";
 import {
   View,
@@ -10,6 +11,8 @@ import {
   Alert,
 } from "react-native";
 import { useSelector } from "react-redux";
+import { useUnitStore, convertWeight } from "@/zustandStore/unitStore";
+import { CONFIG } from "@/constants/config";
 
 interface WeightModalProps {
   visible: boolean;
@@ -18,11 +21,19 @@ interface WeightModalProps {
   reload: () => void;
 }
 
-const WeightModal = ({ visible, onClose, onSave, reload }: WeightModalProps) => {
+const WeightModal = ({
+  visible,
+  onClose,
+  onSave,
+  reload,
+}: WeightModalProps) => {
   const [weight, setWeight] = useState("");
   const [loading, setLoading] = useState(false);
   const user = useSelector((state: any) => state.user);
+  const { weightUnit } = useUnitStore();
   // console.log(user.user_id);
+
+  const { t } = useTranslation();
 
   const handleSave = async () => {
     if (!weight) {
@@ -32,14 +43,20 @@ const WeightModal = ({ visible, onClose, onSave, reload }: WeightModalProps) => 
 
     setLoading(true);
 
+    // Convert weight to kg for storage if user entered in lbs
+    const weightInKg =
+      weightUnit === "lbs"
+        ? convertWeight(parseFloat(weight), "lbs", "kg")
+        : parseFloat(weight);
+
     const weightData = {
-      weight: parseFloat(weight),
-      weight_unit: "kg",
+      weight: weightInKg,
+      weight_unit: "kg", // Always store in kg
     };
 
     try {
       const response = await fetch(
-        `https://crosscare-backends.onrender.com/api/user/activity/${user.user_id}/weight`,
+        `${CONFIG.API_BASE_URL}/user/activity/${user.user_id}/weight`,
         {
           method: "POST",
           headers: {
@@ -82,7 +99,9 @@ const WeightModal = ({ visible, onClose, onSave, reload }: WeightModalProps) => 
     >
       <View style={styles.modalOverlay}>
         <View style={styles.modalContainer}>
-          <Text style={styles.modalTitle}>Add New Weight Log</Text>
+          <Text style={styles.modalTitle}>
+            {t("weightScreen.addNewWeightLog")}
+          </Text>
 
           <View style={styles.inputContainer}>
             <TextInput
@@ -90,7 +109,7 @@ const WeightModal = ({ visible, onClose, onSave, reload }: WeightModalProps) => 
               value={weight}
               onChangeText={setWeight}
               keyboardType="numeric"
-              placeholder="-- KG"
+              placeholder={`-- ${weightUnit}`}
               placeholderTextColor="#ccc"
             />
           </View>
@@ -100,14 +119,18 @@ const WeightModal = ({ visible, onClose, onSave, reload }: WeightModalProps) => 
               style={styles.cancelButton}
               onPress={handleCancel}
             >
-              <Text style={styles.cancelButtonText}>Cancel</Text>
+              <Text style={styles.cancelButtonText}>
+                {t("weightScreen.cancel")}
+              </Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
               {loading ? (
                 <ActivityIndicator size="small" color="#fff" />
               ) : (
-                <Text style={styles.saveButtonText}>Save & Continue</Text>
+                <Text style={styles.saveButtonText} numberOfLines={1}>
+                  {t("weightScreen.saveAndContinue")}
+                </Text>
               )}
             </TouchableOpacity>
           </View>
@@ -185,6 +208,7 @@ const styles = StyleSheet.create({
   saveButtonText: {
     color: "white",
     fontSize: 14,
+    maxWidth: 130,
     fontFamily: "Inter500",
   },
 });

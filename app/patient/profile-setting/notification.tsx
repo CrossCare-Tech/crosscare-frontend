@@ -10,6 +10,7 @@ import {
   ScrollView,
   Alert,
   Keyboard,
+  Linking,
 } from "react-native";
 import { useEffect, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -22,281 +23,8 @@ import { requestNotificationPermissions } from "../../../utils/NotificationManag
 import { router } from "expo-router";
 import { removeToken, setToken, setUser } from "@/store/userSlice";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
-const ProfileField = ({
-  label,
-  value,
-  onEdit,
-}: {
-  label: string;
-  value: string;
-  onEdit: () => void;
-}) => {
-  return (
-    <View style={styles.fieldContainer}>
-      <View style={styles.fieldContent}>
-        <Text style={styles.fieldLabel}>{label}</Text>
-        <TouchableOpacity onPress={onEdit} style={styles.editButton}>
-          <Feather name="edit-2" size={16} color="#F76CCF" />
-        </TouchableOpacity>
-      </View>
-      <View style={styles.separator} />
-      <Text style={styles.fieldValue}>{value}</Text>
-    </View>
-  );
-};
-
-const EditableNameField = ({
-  label,
-  value,
-  onSave,
-  onCancel,
-}: {
-  label: string;
-  value: string;
-  onSave: (value: string) => void;
-  onCancel: () => void;
-}) => {
-  const [inputValue, setInputValue] = useState(value);
-
-  return (
-    <View style={styles.fieldContainer}>
-      <View style={styles.fieldContent}>
-        <Text style={styles.fieldLabel}>{label}</Text>
-        <View style={styles.editActions}>
-          {/* <TouchableOpacity
-            onPress={() => onCancel()}
-            style={styles.editButton}
-          >
-            <Text style={{
-              color: '#E162BC',
-              fontSize: 12,
-              fontFamily:'DMSans600',
-            }}>Cancel</Text>
-          </TouchableOpacity> */}
-          <TouchableOpacity
-            onPress={() => {
-              Keyboard.dismiss();
-              onSave(inputValue);
-            }}
-            style={[styles.editButton, { marginLeft: 10 }]}
-          >
-            <Text
-              style={{
-                color: "#E162BC",
-                fontSize: 14,
-                fontFamily: "DMSans600",
-              }}
-            >
-              Save
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-      <View style={styles.separator} />
-      <TextInput
-        style={styles.fieldInput}
-        value={inputValue}
-        onChangeText={setInputValue}
-        autoFocus
-      />
-    </View>
-  );
-};
-
-// Editable age field component
-const EditableAgeField = ({
-  label,
-  age,
-  onSave,
-  onCancel,
-}: {
-  label: string;
-  age: number;
-  onSave: (age: number) => void;
-  onCancel: () => void;
-}) => {
-  const [inputValue, setInputValue] = useState(age.toString());
-
-  const handleSave = () => {
-    Keyboard.dismiss();
-    const newAge = Number.parseInt(inputValue);
-    if (!isNaN(newAge) && newAge > 0) {
-      onSave(newAge);
-    } else {
-      onCancel();
-    }
-  };
-
-  return (
-    <View style={styles.fieldContainer}>
-      <View style={styles.fieldContent}>
-        <Text style={styles.fieldLabel}>{label}</Text>
-        <View style={styles.editActions}>
-          {/* <TouchableOpacity onPress={onCancel} style={styles.editButton}>
-            <Text style={{
-              color: '#E162BC',
-              fontSize: 12,
-              fontFamily:'DMSans600',
-            }}>Cancel</Text>
-          </TouchableOpacity> */}
-          <TouchableOpacity
-            onPress={handleSave}
-            style={[styles.editButton, { marginLeft: 10 }]}
-          >
-            <Text
-              style={{
-                color: "#E162BC",
-                fontSize: 14,
-                fontFamily: "DMSans600",
-              }}
-            >
-              Save
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-      <View style={styles.separator} />
-      <View style={styles.ageInputContainer}>
-        <TextInput
-          style={styles.ageInput}
-          value={inputValue}
-          onChangeText={setInputValue}
-          keyboardType="numeric"
-          autoFocus
-        />
-        <Text style={styles.fieldValue}> Years</Text>
-      </View>
-    </View>
-  );
-};
-
-const EditableEmailField = ({
-  label,
-  value,
-  onSave,
-  onCancel,
-}: {
-  label: string;
-  value: string;
-  onSave: (value: string) => void;
-  onCancel: () => void;
-}) => {
-  const [inputValue, setInputValue] = useState(value);
-
-  return (
-    <View style={styles.fieldContainer}>
-      <View style={styles.fieldContent}>
-        <Text style={styles.fieldLabel}>{label}</Text>
-        <View style={styles.editActions}>
-          {/* <TouchableOpacity
-            onPress={() => onCancel()}
-            style={styles.editButton}
-          >
-            <Text style={{
-              color: '#E162BC',
-              fontSize: 12,
-              fontFamily:'DMSans600',
-            }}>Cancel</Text>
-          </TouchableOpacity> */}
-          <TouchableOpacity
-            onPress={() => {
-              Keyboard.dismiss();
-              onSave(inputValue);
-            }}
-            style={[styles.editButton, { marginLeft: 10 }]}
-          >
-            <Text
-              style={{
-                color: "#E162BC",
-                fontSize: 14,
-                fontFamily: "DMSans600",
-              }}
-            >
-              Save
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-      <View style={styles.separator} />
-      <TextInput
-        style={styles.fieldInput}
-        value={inputValue}
-        onChangeText={setInputValue}
-        keyboardType="email-address"
-        autoCapitalize="none"
-        autoCorrect={false}
-        autoFocus
-      />
-    </View>
-  );
-};
-
-const EditablePregnancyWeekField = ({
-  label,
-  week,
-  onSave,
-  onCancel,
-}: {
-  label: string;
-  week: number;
-  onSave: (week: number) => void;
-  onCancel: () => void;
-}) => {
-  const [inputValue, setInputValue] = useState(week.toString());
-
-  const handleSave = () => {
-    Keyboard.dismiss()
-    const newWeek = Number.parseInt(inputValue);
-    if (!isNaN(newWeek) && newWeek > 0 && newWeek <= 42) {
-      onSave(newWeek);
-    } else {
-      onCancel();
-    }
-  };
-
-  return (
-    <View style={styles.fieldContainer}>
-      <View style={styles.fieldContent}>
-        <Text style={styles.fieldLabel}>{label}</Text>
-        <View style={styles.editActions}>
-          {/* <TouchableOpacity onPress={onCancel} style={styles.editButton}>
-            <Text style={{
-              color: '#E162BC',
-              fontSize: 12,
-              fontFamily:'DMSans600',
-            }}>Cancel</Text>
-          </TouchableOpacity> */}
-          <TouchableOpacity
-            onPress={handleSave}
-            style={[styles.editButton, { marginLeft: 10 }]}
-          >
-            <Text
-              style={{
-                color: "#E162BC",
-                fontSize: 14,
-                fontFamily: "DMSans600",
-              }}
-            >
-              Save
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-      <View style={styles.separator} />
-      <View style={styles.ageInputContainer}>
-        <Text style={styles.fieldValue}>Week </Text>
-        <TextInput
-          style={styles.ageInput}
-          value={inputValue}
-          onChangeText={setInputValue}
-          keyboardType="numeric"
-          autoFocus
-        />
-      </View>
-    </View>
-  );
-};
+import { useTranslation } from "react-i18next";
+import { CONFIG } from "@/constants/config";
 
 const notification = () => {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
@@ -322,7 +50,7 @@ const notification = () => {
 
   const getProfile = async () => {
     const response = await fetch(
-      `https://crosscare-backends.onrender.com/api/user/${user?.user_id}/profile`,
+      `${CONFIG.API_BASE_URL}/user/${user?.user_id}/profile`,
       {
         method: "GET",
         headers: {
@@ -363,64 +91,6 @@ const notification = () => {
     checkPermissions();
   }, []);
 
-  const updateProfile = async (fieldName: string, value: string | number) => {
-    if (!user?.user_id || !token) {
-      Alert.alert("Error", "User ID or token not available");
-      return;
-    }
-
-    setUpdating(true);
-
-    try {
-      // Create update payload
-      const updateData: Record<string, any> = {};
-      updateData[fieldName] = value;
-
-      const response = await fetch(
-        `https://crosscare-backends.onrender.com/api/user/${user.user_id}/profile`,
-        {
-          method: "PUT",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(updateData),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(
-          `Failed to update profile: ${response.status} ${response.statusText}`
-        );
-      }
-
-      const data = await response.json();
-      console.log("Profile updated:", data);
-
-      // Refresh profile data
-      getProfile();
-
-      const updatedUserData = { ...user };
-
-      // Update the specific fields in Redux based on what was changed
-      if (fieldName === "name") {
-        updatedUserData.user_name = value as string;
-      } else if (fieldName === "email") {
-        updatedUserData.user_email = value as string;
-      }
-
-      // Update Redux state with the updated user data
-      dispatch(setUser(updatedUserData));
-
-      // Alert.alert("Success", `Your ${fieldName} has been updated successfully.`)
-    } catch (error) {
-      console.error("Error updating profile:", error);
-      Alert.alert("Error", `Failed to update ${fieldName}. Please try again.`);
-    } finally {
-      setUpdating(false);
-    }
-  };
-
   const toggleNotifications = async () => {
     try {
       if (!notificationsEnabled) {
@@ -433,113 +103,65 @@ const notification = () => {
         );
 
         if (permissionGranted) {
-          // Fixed: using permissionGranted instead of status
           setNotificationsEnabled(true);
           Alert.alert(
-            "Notifications Enabled",
-            "You will now receive notifications from the app.",
+            t("profile.notificationsEnabled"),
+            t("profile.notificationsMessage"),
             [{ text: "OK" }]
           );
         } else {
-          // Show alert if permission denied
-          // Alert.alert(
-          //   "Permission Required",
-          //   "Notification permission is required. Please enable notifications in your device settings.",
-          //   [{ text: "OK" }],
-          // )
+          // If permission is denied, prompt the user to go to settings
+          Alert.alert(
+            t("profile.permissionRequired"),
+            t("profile.permissionMessage"),
+            [
+              {
+                text: t("profile.goToSettings"),
+                onPress: () => Linking.openSettings(),
+              },
+              { text: t("profile.cancel") },
+            ]
+          );
         }
       } else {
         // Simply disable notifications in the app
         setNotificationsEnabled(false);
-        // Alert.alert("Notifications Disabled", "You will no longer receive notifications from the app.", [
-        //   { text: "OK" },
-        // ])
+        Alert.alert(
+          t("profile.notificationsDisabled"),
+          t("profile.notificationsDisabledMessage"),
+          [{ text: "OK" }]
+        );
       }
     } catch (error) {
       console.error("Error toggling notifications:", error);
-      Alert.alert(
-        "Error",
-        "There was a problem updating your notification settings.",
-        [{ text: "OK" }]
-      );
+      Alert.alert(t("profile.error"), t("profile.errorMessage"), [
+        { text: "OK" },
+      ]);
     }
   };
 
-  // Name handlers
-  const handleSaveName = async (newName: string) => {
-    if (newName.trim()) {
-      setName(newName);
-      await updateProfile("name", newName);
-    }
-    setIsEditingName(false);
-  };
-
-  // Pregnancy week handlers
-  const handleSavePregnancyWeek = async (newWeek: number) => {
-    setPregnancyWeek(newWeek);
-    await updateProfile("week", newWeek);
-    setIsEditingPregnancyWeek(false);
-  };
-
-  // Email handlers
-  const handleSaveEmail = async (newEmail: string) => {
-    if (newEmail.trim() && newEmail.includes("@")) {
-      setEmail(newEmail);
-      await updateProfile("email", newEmail);
-    }
-    setIsEditingEmail(false);
-  };
-
-  // Age handlers
-  const handleSaveAge = async (newAge: number) => {
-    setAge(newAge);
-    await updateProfile("age", newAge);
-    setIsEditingAge(false);
-  };
-
-  const logout = async()=>{
-    await AsyncStorage.removeItem('userToken');
-    await AsyncStorage.removeItem('user');
-    setToken(null);
-    setUser(null);
-    dispatch(removeToken());
-    router.replace('/login');
-  }
+  const { t } = useTranslation();
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={"white"} />
       <View style={styles.header}>
-              <TouchableOpacity onPress={() => router.back()}>
-                <Ionicons name="chevron-back" size={20} color="black" />
-              </TouchableOpacity>
-              <Text style={styles.headerTitle}>Notification</Text>
-              <View
-                style={{
-                  width: 20,
-                }}
-              />
-            </View>
+        <TouchableOpacity onPress={() => router.back()}>
+          <Ionicons name="chevron-back" size={20} color="black" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>{t("profile.notifications")}</Text>
+        <View
+          style={{
+            width: 20,
+          }}
+        />
+      </View>
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
-          {/* <TouchableOpacity
-            style={styles.avatarContainer}
-            onPress={() => router.push("/avatar")}
-          >
-            <Text style={styles.avatarText}>Customize your Avatar</Text>
-            <View style={styles.avatarRight}>
-              <Image
-                source={{
-                  uri: user?.avatar_url
-                }}
-                style={styles.avatarImage}
-              />
-              <Ionicons name="chevron-forward" size={20} color="#E162BC" />
-            </View>
-          </TouchableOpacity> */}
-
           <View style={styles.notificationContainer}>
-            <Text style={styles.notificationText}>Allow Notifications</Text>
+            <Text style={styles.notificationText}>
+              {t("allowNotification")}
+            </Text>
             <Switch
               trackColor={{ false: "#E5E5E5", true: "#F76CCF" }}
               thumbColor={"#fff"}
@@ -548,8 +170,6 @@ const notification = () => {
               value={notificationsEnabled}
             />
           </View>
-
-         
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -566,9 +186,9 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: 20,
     paddingVertical: 15,
-    justifyContent:'space-between',
-    flexDirection: 'row',
-    alignItems:'center',
+    justifyContent: "space-between",
+    flexDirection: "row",
+    alignItems: "center",
   },
   headerTitle: {
     fontSize: 18,

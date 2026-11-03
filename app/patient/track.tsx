@@ -15,6 +15,8 @@ import { StatusBar } from "expo-status-bar";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import WeekSelector from "@/components/WeekSelector";
+import { useTranslation } from "react-i18next";
+import { useLocalSearchParams } from "expo-router";
 
 interface Section {
   id: number
@@ -32,8 +34,12 @@ interface FruitData {
 
 export default function track() {
   const router = useRouter();
+   const { weeksComplete } = useLocalSearchParams(); 
+  const {t} = useTranslation();
 
-  const [selectedWeek, setSelectedWeek] = useState<string | undefined>(undefined);
+    const initialWeek = weeksComplete ? parseInt(weeksComplete as string) : 8;
+  
+  const [selectedWeek, setSelectedWeek] = useState<string | undefined>(initialWeek.toString());
   const [babyData, setBabyData] = useState<FruitData>({
     name: "cherry",
     imageUrl: "https://cdn-icons-png.flaticon.com/512/590/590685.png",
@@ -46,7 +52,7 @@ export default function track() {
   // Calculate weeks remaining
   const calculateWeeksRemaining = (week: number) => {
     const weeksRemaining = 40 - week
-    return `${weeksRemaining} weeks`
+    return `${weeksRemaining} ${t("weeksRemaining")}`
   }
 
 
@@ -88,45 +94,32 @@ export default function track() {
   const sections = [
     {
       id: 1,
-      title: `${selectedWeek} weeks and 1 days`,
+      title: `${selectedWeek} ${t("weeksComplete")}`,
       backgroundColor: "#6ED7E9",
     },
-    {
-      id: 2,
-      title: "Baby",
-      content:
-        "In week 8 the embryo looks more and more like a human, instead of an alien. The head is about half of the entire body length.",
-      backgroundColor: "#F989D9", // Pink background for Baby section
-    },
-    {
-      id: 3,
-      title: "Mom",
-      content:
-        "In week 8, people around you still won’t notice your growing belly, but you might find yourself having trouble buttoning your favorite jeans.",
-      backgroundColor: "#6ED7E9", // Teal background for Mom section
-    },
-    {
-      id: 4,
-      title: "Fun Fact",
-      content:
-        "A baby’s heart starts beating as early as 5-6 weeks, and by week 10, they already have tiny fingers.",
-      backgroundColor: "#F989D9", // White background for Fun Fact section
-    },
+    
+    // {
+    //   id: 4,
+    //   title: t('funFact'),
+    //   content: t('funFactDescription'),
+    //   backgroundColor: "#F989D9", // White background for Fun Fact section
+    // },
   ];
 
   const [progress] = useState(new Animated.Value(0));
 
   useEffect(() => {
-    // Set initial progress based on default week (8/40)
-    const initialWeekNumber = 8
-    const initialProgress = initialWeekNumber / 40
+  // ✅ Use the passed week for initial progress
+  const initialProgress = initialWeek / 40
+  
+  Animated.timing(progress, {
+    toValue: initialProgress,
+    duration: 1000,
+    useNativeDriver: false,
+  }).start()
 
-    Animated.timing(progress, {
-      toValue: initialProgress,
-      duration: 1000,
-      useNativeDriver: false,
-    }).start()
-  }, [])
+  console.log('Track component initialized with week:', initialWeek);
+}, [initialWeek])
 
   interface RenderCustomProgressBarProps {
     progressValue: Animated.Value;
@@ -184,21 +177,22 @@ export default function track() {
         <ScrollView
           style={styles.scrollView}
           showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ flexGrow: 1 }}
         >
           <View style={styles.statsContainer}>
             <View style={styles.statBox}>
               <Text style={styles.statValue}>{babyData.weight}</Text>
-              <Text style={styles.statLabel}>weight</Text>
+              <Text style={styles.statLabel}>{t("weight")}</Text>
             </View>
 
             <View style={styles.statBox1}>
               <Text style={styles.statValue}>{babyData.length}</Text>
-              <Text style={styles.statLabel}>length</Text>
+              <Text style={styles.statLabel}>{t("length")}</Text>
             </View>
           </View>
 
           <WeekSelector onWeekChange={handleWeekChange} initialWeek={selectedWeek} />
-          <Text style={styles.currentWeekText}>Current week</Text>
+          <Text style={styles.currentWeekText}>{t("currentWeek")}</Text>
 
           <FlatList
             data={sections}
@@ -216,13 +210,6 @@ export default function track() {
                       }}
                     >
                       <Text style={styles.progressText}>{item.title}</Text>
-                      <Text style={styles.trimesterText}>
-                        {Number.parseInt(selectedWeek ?? "0") <= 13
-                          ? "1st trimester"
-                          : Number.parseInt(selectedWeek ?? "0") <= 26
-                            ? "2nd trimester"
-                            : "3rd trimester"}
-                      </Text>
                     </View>
                     {renderCustomProgressBar({ progressValue: progress })}
                     <View
@@ -234,7 +221,7 @@ export default function track() {
                       }}
                     >
                       <Text style={styles.dueDate}>
-                        Date of labor {calculateDueDate(Number(selectedWeek ?? "0"))}
+                        {t('dateOfLabor')} {calculateDueDate(Number(selectedWeek ?? "0"))}
                       </Text>
                       <Text style={styles.timeLeft}>
                       {calculateWeeksRemaining(Number.parseInt(selectedWeek ?? "0"))}
@@ -247,11 +234,12 @@ export default function track() {
                 {item.id !== 1 && (
                   <Text style={styles.cardTitle}>{item.title}</Text>
                 )}
-                <Text style={styles.cardText}>{item.content}</Text>
+                
               </View>
             )}
             keyExtractor={(item, index) => index.toString()}
-            contentContainerStyle={{ marginTop: 30 }}
+            contentContainerStyle={{ marginTop: 30, flexGrow: 1 }}
+            style={{ flex: 1 }}
           />
         </ScrollView>
       </LinearGradient>
@@ -283,12 +271,12 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: "#FFFFFF5B",
-    // borderRadius:13,
     borderTopLeftRadius: 23,
     borderTopRightRadius: 23,
     paddingHorizontal: 30,
     paddingVertical: 30,
-    marginTop: -14,
+    flex: 1, // Add this to make it expand
+    minHeight: '100%', // Add this to ensure it fills the available space
   },
   progressText: {
     fontSize: 20,

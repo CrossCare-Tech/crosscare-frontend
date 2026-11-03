@@ -1,18 +1,27 @@
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "react-native";
 import { router } from "expo-router";
 import { Feather, Ionicons } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
+import { useUnitStore, WaterUnit } from "@/zustandStore/unitStore";
 
 const unitscreen = () => {
+  const {t} = useTranslation();
+  const { waterUnit, setWaterUnit } = useUnitStore();
+  const [selectedUnit, setSelectedUnit] = useState<WaterUnit>(waterUnit);
 
-    const [selectedUnit, setSelectedUnit] = useState('ml');
+  useEffect(() => {
+    setSelectedUnit(waterUnit);
+  }, [waterUnit]);
 
   const handleSave = () => {
-    // Save the selected unit and go back
+    // Save the selected unit to the store
+    setWaterUnit(selectedUnit);
     router.back();
   };
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
@@ -24,21 +33,21 @@ const unitscreen = () => {
         >
           <Ionicons name="chevron-back" size={20} color="black" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Units & Measurements</Text>
-        <TouchableOpacity>
-            <Text>Save</Text>
+        <Text style={styles.headerTitle}>{t('title')}</Text>
+        <TouchableOpacity onPress={handleSave}>
+            <Text style={styles.saveText}>{t('save')}</Text>
         </TouchableOpacity>
       </View>
 
       <View style={styles.content}>
-        <Text style={styles.sectionTitle}>Volume</Text>
+        <Text style={styles.sectionTitle}>{t('sectionTitle2')}</Text>
         
         <View style={styles.optionsContainer}>
           <TouchableOpacity 
             style={styles.optionRow}
             onPress={() => setSelectedUnit('ml')}
           >
-            <Text style={styles.optionText}>Milliliters (ml)</Text>
+            <Text style={styles.optionText}>{t('ml')}</Text>
             {selectedUnit === 'ml' && (
               <Ionicons name="checkmark" size={16} color="#007AFF" />
             )}
@@ -50,7 +59,7 @@ const unitscreen = () => {
             style={styles.optionRow}
             onPress={() => setSelectedUnit('fl.oz')}
           >
-            <Text style={styles.optionText}>US Fluid Ounces (fl.oz)</Text>
+            <Text style={styles.optionText}>{t('flOz')}</Text>
             {selectedUnit === 'fl.oz' && (
               <Ionicons name="checkmark" size={16} color="#007AFF" />
             )}
@@ -81,6 +90,11 @@ const styles = StyleSheet.create({
   },
   backButton: {
     padding: 8,
+  },
+  saveText: {
+    fontSize: 14,
+    fontFamily: "Inter500",
+    color: "#007AFF",
   },
   content: {
     flex: 1,
