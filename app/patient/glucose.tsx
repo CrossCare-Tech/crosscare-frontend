@@ -68,9 +68,10 @@ const GlucoseScreen = () => {
     if (date === fmtDate(daysAgo(1))) return t("bloodPressureLog.yesterday");
     return new Date(`${date}T12:00:00`).toLocaleDateString(i18n.language, { month: "short", day: "numeric" });
   };
-  const pill = (reading: { level: number; unit: string; context: string | null }) => {
+  // The big reading says "Normal range" (prototype 5.2); the list rows say "Normal"
+  const pill = (reading: { level: number; unit: string; context: string | null }, hero = false) => {
     const category = getGlucoseCategory(reading.level, reading.unit, reading.context);
-    return { label: t(`glucoseLog.${category.key}`), tone: category.tone };
+    return { label: t(`glucoseLog.${hero && category.key === "normal" ? "normalRange" : category.key}`), tone: category.tone };
   };
 
   // Fasting target band, in the unit the readings use
@@ -92,12 +93,10 @@ const GlucoseScreen = () => {
             <ActivityIndicator color={Theme.colors.magenta} style={styles.loader} />
           ) : latest ? (
             <MetricHero
-              when={`${contextLabel(latest.context) || t("metric.latest")} · ${dayLabel(latest.date)}`}
+              when={`${t("glucoseLog.currentReading")}${latest.context ? ` · ${contextLabel(latest.context)?.toLowerCase()}` : ""}`}
               value={String(latest.level)}
               unit={latest.unit}
-              pill={pill(latest)}
-              source={t("metric.enteredByYou")}
-              manual
+              pill={pill(latest, true)}
             />
           ) : (
             <MetricEmpty text={t("glucoseLog.noReadings")} />
@@ -114,6 +113,7 @@ const GlucoseScreen = () => {
           />
 
           <ChartCard
+            title={period === "7" ? t("bloodPressureLog.lastReadings") : t(`metric.days${period}`)}
             axis={periodAxis(period, i18n.language)}
             legend={[
               { mark: "trend", label: t("glucoseLog.legendReadings") },

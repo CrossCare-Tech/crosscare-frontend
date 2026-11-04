@@ -77,11 +77,6 @@ const WeightScreen = () => {
       : { label: t("weightLog.sinceLast", { value: signed(change) }), tone: "teal" };
   };
 
-  const source =
-    readings.length > 1
-      ? `${t("metric.enteredByYou")} · ${t("weightLog.soFar", { value: signed(latest!.weight - readings[0].weight) })}`
-      : t("metric.enteredByYou");
-
   const range = periodWindow(period);
   const inRange = readings
     .map((reading, index) => ({ ...reading, index }))
@@ -102,12 +97,10 @@ const WeightScreen = () => {
             <ActivityIndicator color={Theme.colors.magenta} style={styles.loader} />
           ) : latest ? (
             <MetricHero
-              when={`${t("metric.latest")} · ${dayLabel(latest.date)}`}
+              when={t("bloodPressureLog.currentReading")}
               value={String(latest.weight)}
               unit={weightUnit}
               pill={changePill(readings.length - 1)}
-              source={source}
-              manual
             />
           ) : (
             <MetricEmpty text={t("weightLog.noReadings")} />
@@ -123,7 +116,11 @@ const WeightScreen = () => {
             onChange={setPeriod}
           />
 
-          <ChartCard axis={periodAxis(period, i18n.language)} legend={[{ mark: "trend", label: t("weightLog.legend") }]}>
+          <ChartCard
+            title={period === "7" ? t("bloodPressureLog.lastReadings") : t(`metric.days${period}`)}
+            axis={periodAxis(period, i18n.language)}
+            legend={[{ mark: "trend", label: t("weightLog.legend") }]}
+          >
             <TrendChart
               points={inRange.map((reading) => ({ x: range.x(reading.date), value: reading.weight }))}
               min={values.length ? Math.min(...values) - padding : 0}

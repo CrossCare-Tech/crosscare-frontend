@@ -115,40 +115,29 @@ const RichText = ({ text, style, boldStyle }: { text: string; style: any; boldSt
   </Text>
 );
 
+// Prototype 5.1 / 5.2 "Current reading": centred on the canvas, big serif value, status pill under it.
+// A "118/76" value keeps the diastolic part small, like the unit.
 export const MetricHero = ({
   when,
   value,
   unit,
   pill,
-  source,
-  manual,
 }: {
   when: string;
   value: string;
   unit: string;
   pill: { label: string; tone: Tone };
-  source: string;
-  manual: boolean;
 }) => (
-  <View style={[styles.card, styles.hero]}>
-    <Text style={styles.when}>{when}</Text>
-    <Text style={styles.big}>
-      {value}
-      <Text style={styles.unit}> {unit}</Text>
+  <View style={styles.heroPlain}>
+    <Text style={styles.heroWhen}>{when}</Text>
+    <Text style={styles.heroBig}>
+      {value.split("/")[0]}
+      <Text style={styles.heroUnit}>
+        {value.includes("/") ? `/${value.split("/")[1]}` : ""}
+        {unit ? ` ${unit}` : ""}
+      </Text>
     </Text>
-    <View style={styles.pillRow}>
-      <Pill label={pill.label} tone={pill.tone} />
-    </View>
-    <View style={styles.source}>
-      {manual ? (
-        <Feather name="edit-3" size={14} color={Theme.colors.teal} />
-      ) : (
-        <LineIcon size={14} color={Theme.colors.teal}>
-          <Path d="M20 11a8 8 0 0 0-14-4L4 9M4 4v5h5M4 13a8 8 0 0 0 14 4l2-2M20 20v-5h-5" />
-        </LineIcon>
-      )}
-      <Text style={styles.sourceText}>{source}</Text>
-    </View>
+    <Pill label={pill.label} tone={pill.tone} />
   </View>
 );
 
@@ -360,15 +349,23 @@ export const RangeBarsChart = ({
 export type LegendMark = "line" | "earlier" | "band" | "trend" | "trendSecond" | "goal";
 
 export const ChartCard = ({
+  title,
   axis,
   legend,
   children,
 }: {
+  title?: string; // prototype "Last 7 readings": title on the left, trend icon on the right
   axis: string[];
   legend: { mark: LegendMark; label: string }[];
   children: React.ReactNode;
 }) => (
   <View style={[styles.card, styles.chartCard]}>
+    {title ? (
+      <View style={styles.chartHeader}>
+        <Text style={styles.chartTitle}>{title}</Text>
+        <Feather name="trending-up" size={16} color={Theme.colors.ink} />
+      </View>
+    ) : null}
     {children}
     <View style={styles.axis}>
       {axis.map((label, index) => (
@@ -582,6 +579,12 @@ const styles = StyleSheet.create({
     fontSize: 11.5,
     color: Theme.colors.inkSoft,
   },
+  heroPlain: { alignItems: "center", gap: 6, paddingVertical: Theme.spacing.sm },
+  heroWhen: { fontFamily: Theme.typography.heading, fontSize: 14, color: Theme.colors.inkSoft },
+  heroBig: { fontFamily: Theme.typography.display, fontSize: 52, lineHeight: 60, color: Theme.colors.ink },
+  heroUnit: { fontFamily: Theme.typography.display, fontSize: 24, color: Theme.colors.inkSoft },
+  chartHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: Theme.spacing.sm },
+  chartTitle: { fontFamily: Theme.typography.heading, fontSize: 13, color: Theme.colors.inkSoft },
   empty: {
     fontFamily: Theme.typography.body,
     fontSize: 13,
