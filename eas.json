@@ -52,8 +52,7 @@
       "extends": "production",
       "env": {
         "NPM_CONFIG_LEGACY_PEER_DEPS": "true",
-        "EXPO_PUBLIC_DEMO_MODE": "true",
-        "EXPO_PUBLIC_DEV_TOOLS": "false"
+        "EXPO_PUBLIC_DEMO_MODE": "true"
       }
     }
   },
