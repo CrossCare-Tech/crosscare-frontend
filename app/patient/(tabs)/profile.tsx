@@ -6,6 +6,7 @@ import {
   ScrollView,
   Alert,
   Linking,
+  Platform,
 } from "react-native";
 import React, { useEffect, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -354,7 +355,7 @@ const Profile = () => {
             <MenuRow
               icon="devices"
               title={t("devices.title")}
-              subtitle={t("devices.profileHint")}
+              subtitle={Platform.OS === "ios" ? "Apple Health" : "Health Connect, Fitbit"}
               onPress={() => router.push("/patient/devices")}
             />
             <MenuRow

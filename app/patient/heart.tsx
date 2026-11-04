@@ -170,12 +170,10 @@ export default function HeartRateScreen() {
             <ActivityIndicator color={Theme.colors.magenta} style={styles.loader} />
           ) : latest ? (
             <MetricHero
-              when={`${t("heartLog.resting")} · ${dayLabel(latest.date)}`}
+              when={`${t("bloodPressureLog.currentReading")} · ${t("heartLog.resting").toLowerCase()}`}
               value={String(latest.bpm)}
               unit="bpm"
               pill={pill(latest.bpm)}
-              source={sourceLabel(latest.source)}
-              manual={latest.source === "manual"}
             />
           ) : (
             <MetricEmpty text={t("heartLog.noReadings")} />
@@ -192,6 +190,7 @@ export default function HeartRateScreen() {
           />
 
           <ChartCard
+            title={period === "7" ? t("bloodPressureLog.lastReadings") : t(`metric.days${period}`)}
             axis={periodAxis(period, i18n.language)}
             legend={[
               { mark: "trend", label: t("heartLog.legendResting") },

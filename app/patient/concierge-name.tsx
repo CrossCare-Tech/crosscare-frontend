@@ -51,7 +51,7 @@ function ConciergeName() {
   return (
     <ScreenBackground>
       <SafeAreaView style={styles.safe}>
-        <ConciergeTopBar title={t("conciergeName.title")} onBack={() => router.replace("/patient/concierge-meet")} />
+        <ConciergeTopBar titleStart title={t("conciergeName.title")} onBack={() => router.replace("/patient/concierge-meet")} />
         <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : undefined}>
           <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
             <Image source={guide.portrait} style={styles.hero} accessibilityLabel={guide.name} />

@@ -186,18 +186,16 @@ const BloodPressureScreen = () => {
             <ActivityIndicator color={Theme.colors.magenta} style={styles.loader} />
           ) : latest && latestCategory ? (
             <MetricHero
-              when={`${t("metric.latest")} · ${dayLabel(latest.date)}`}
+              when={t("bloodPressureLog.currentReading")}
               value={`${latest.systolic}/${latest.diastolic}`}
-              unit="mmHg"
+              unit=""
               pill={{
                 label:
                   latestCategory.key === "high2"
                     ? t("bloodPressureLog.aboveSafe")
-                    : t(`bloodPressureLog.${latestCategory.key}`),
+                    : t(`bloodPressureLog.${latestCategory.key === "normal" ? "normalRange" : latestCategory.key}`),
                 tone: latestCategory.tone,
               }}
-              source={t("metric.enteredByYou")}
-              manual
             />
           ) : (
             <MetricEmpty text={t("bloodPressureLog.noReadings")} />
@@ -214,6 +212,7 @@ const BloodPressureScreen = () => {
           />
 
           <ChartCard
+            title={period === "7" ? t("bloodPressureLog.lastReadings") : t(`metric.days${period}`)}
             axis={periodAxis(period, i18n.language)}
             legend={[
               { mark: "trend", label: t("vitalsEntry.systolic") },
