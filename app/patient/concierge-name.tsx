@@ -19,6 +19,7 @@ import ScreenBackground from "@/components/ui/ScreenBackground";
 import ConciergeTopBar from "@/components/ui/ConciergeTopBar";
 import { Theme } from "@/constants/theme";
 import { saveGuideName, useGuide } from "@/constants/conciergeGuide";
+import AvatarImage from "@/components/ui/AvatarImage";
 
 export const CONCIERGE_MET_KEY = "concierge.met";
 
@@ -56,7 +57,7 @@ function ConciergeName() {
         <ConciergeTopBar titleStart title={t("conciergeName.title")} onBack={() => router.replace("/patient/concierge-meet")} />
         <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : undefined}>
           <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-            <Image source={guide.portrait} style={styles.hero} accessibilityLabel={guide.name} />
+            <AvatarImage source={guide.portrait} style={styles.hero} accessibilityLabel={guide.name} />
             <Text style={styles.heading} accessibilityRole="header">
               {t("conciergeName.heading")}
             </Text>
