@@ -17,6 +17,7 @@ import {
   loadCurrentThread,
   restoreThread,
 } from "@/utils/conciergeThreads";
+import AvatarImage from "@/components/ui/AvatarImage";
 
 type Group = "today" | "yesterday" | "earlier";
 
@@ -75,7 +76,7 @@ function ConciergeHistory() {
         />
         <ScrollView contentContainerStyle={styles.scroll}>
           <Pressable onPress={openSettings} accessibilityRole="button" style={styles.guideRow}>
-            <Image source={guide.portrait} style={styles.avatar} />
+            <AvatarImage source={guide.portrait} style={styles.avatar} />
             <View style={styles.rowText}>
               <Text style={styles.guideName}>{guide.name}</Text>
               <Text style={styles.guideSub}>{t("conciergeHistory.rowSub")}</Text>
@@ -95,7 +96,7 @@ function ConciergeHistory() {
               <View key={thread.id}>
                 {showGroup && <Text style={styles.group}>{t(`conciergeHistory.${group}`)}</Text>}
                 <Pressable onPress={() => openThread(thread.id)} accessibilityRole="button" style={styles.hist}>
-                  <Image source={guide.portrait} style={styles.avatar} />
+                  <AvatarImage source={guide.portrait} style={styles.avatar} />
                   <View style={styles.rowText}>
                     <Text style={styles.histTitle} numberOfLines={1}>
                       {thread.title}

@@ -71,6 +71,7 @@ import { deepgramTTS, speakWithDeepgram } from "@/utils/deepgramTTS";
 import { hasPremiumAccess, usePremiumStore } from "@/zustandStore/premiumStore";
 import PremiumLocked from "@/components/premium/PremiumLocked";
 import { PremiumBadge } from "@/components/premium/PremiumUI";
+import AvatarImage from "@/components/ui/AvatarImage";
 
 /**
  * Gemini model used for chat. Google retires model names on a schedule and
@@ -2139,7 +2140,7 @@ function AskDoulaChat() {
             accessibilityRole="button"
             accessibilityLabel={t("conciergeHistory.settings")}
           >
-            <Image source={guide.portrait} style={styles.headerAvatar} />
+            <AvatarImage source={guide.portrait} style={styles.headerAvatar} />
             <View style={styles.presence} />
           </TouchableOpacity>
           <View style={styles.headerText}>
@@ -2228,7 +2229,7 @@ function AskDoulaChat() {
                 accessibilityRole="button"
                 accessibilityLabel={t("conciergeHistory.settings")}
               >
-                <Image source={guide.portrait} style={styles.profileImage} />
+                <AvatarImage source={guide.portrait} style={styles.profileImage} />
               </TouchableOpacity>
 
               <Text style={styles.greeting}>
@@ -2257,7 +2258,7 @@ function AskDoulaChat() {
                   ]}
                 >
                   {!message.isUser && (
-                    <Image source={guide.portrait} style={styles.doulaAvatar} />
+                    <AvatarImage source={guide.portrait} style={styles.doulaAvatar} />
                   )}
 
                   {message.type === "text" ? (
@@ -2326,7 +2327,7 @@ function AskDoulaChat() {
           {showInvite && (
             <View style={styles.inviteWrap}>
               <View style={styles.messageRow}>
-                <Image source={guide.portrait} style={styles.doulaAvatar} />
+                <AvatarImage source={guide.portrait} style={styles.doulaAvatar} />
                 <View style={[styles.messageBubble, styles.doulaBubble]}>
                   <Text style={styles.doulaMessageText}>
                     {t("questionnairePopup.invite", { name: user?.user_name })}

@@ -9,6 +9,7 @@ import { Theme } from "@/constants/theme";
 import { AVATAR_GUIDES, AVATAR_OUTFITS, AVATAR_TONES, AvatarItem } from "@/constants/avatarCatalog";
 import { loadGuideName, saveGuideName } from "@/constants/conciergeGuide";
 import { AvatarChoice, DEFAULT_AVATAR, avatarImage, useAvatarStudio } from "@/zustandStore/avatarStudioStore";
+import AvatarImage from "@/components/ui/AvatarImage";
 
 type TabId = "guide" | "tone" | "hair" | "outfit";
 const TABS: TabId[] = ["guide", "tone", "hair", "outfit"];
@@ -130,7 +131,7 @@ export default function AvatarStudio() {
 
         <View style={styles.previewWrap}>
           <View style={[styles.preview, { width: previewSize, height: previewSize }]}>
-            <Image source={avatarImage(draft)} style={[styles.previewImg, !!locked && styles.dim]} resizeMode="cover" />
+            <AvatarImage fallback={null} source={avatarImage(draft)} style={[styles.previewImg, !!locked && styles.dim]} resizeMode="cover" />
             {locked && (
               <View style={styles.previewLock}>
                 <Feather name="lock" size={16} color={Theme.colors.magenta} />
@@ -183,7 +184,7 @@ export default function AvatarStudio() {
                 accessibilityLabel={isLocked ? `${c.label}, ${t("avatarStudio.locked")}: ${c.item!.text}` : c.label}
                 style={[styles.card, { width: cardW }, c.on && styles.cardOn, isLocked && styles.cardLocked]}
               >
-                <Image source={c.img} style={[styles.cardImg, { height: cardW - 12 }, isLocked && styles.dim]} resizeMode="cover" />
+                <AvatarImage fallback={null} source={c.img} style={[styles.cardImg, { height: cardW - 12 }, isLocked && styles.dim]} resizeMode="cover" />
                 <View style={styles.cardLabelRow}>
                   {"swatch" in c && <View style={[styles.swatch, { backgroundColor: (c as any).swatch }]} />}
                   <Text style={styles.cardLabel} numberOfLines={2}>

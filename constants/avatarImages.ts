@@ -4,6 +4,9 @@ import { supabase } from "@/supabase/supabase";
 // Path: <bucket>/<guide>/h<hair>-o<outfit>-t<tone>.jpg  (e.g. concierge-avatars/amara/h3-o2-t2.jpg), 640px.
 export const AVATAR_BUCKET = "concierge-avatars";
 
+// Bump when the portraits in the bucket change, so devices drop their downloaded copies (see AvatarImage).
+export const AVATAR_CACHE_VERSION = 1;
+
 // EXPO_PUBLIC_AVATAR_BASE_URL overrides the bucket (a local server while testing, or a CDN in front of it).
 const BASE = process.env.EXPO_PUBLIC_AVATAR_BASE_URL;
 

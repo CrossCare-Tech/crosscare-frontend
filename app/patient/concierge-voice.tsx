@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import ScreenBackground from "@/components/ui/ScreenBackground";
 import { Theme } from "@/constants/theme";
 import { useGuide } from "@/constants/conciergeGuide";
+import AvatarImage from "@/components/ui/AvatarImage";
 
 // Voice pre-prompt (prototype /concierge/ §3): a gentle ask before the system microphone request.
 // Preview only: the real permission and live voice come later (Concierge call, N-01).
@@ -20,7 +21,7 @@ function ConciergeVoice() {
         <View style={styles.art}>
           <View style={[styles.ring, styles.ringOuter]} />
           <View style={[styles.ring, styles.ringInner]} />
-          <Image source={guide.portrait} style={styles.portrait} accessibilityLabel={guide.name} />
+          <AvatarImage source={guide.portrait} style={styles.portrait} accessibilityLabel={guide.name} />
         </View>
         <Text style={styles.title} accessibilityRole="header">
           {t("conciergeVoice.title")} <Text style={styles.name}>{guide.name}</Text>

@@ -13,6 +13,7 @@ import { GUIDE, useGuide } from "@/constants/conciergeGuide";
 import { CallTopic, callLang } from "@/constants/callScript";
 import { CallPhase, useCallSimulation } from "@/hooks/useCallSimulation";
 import { useSelector } from "react-redux";
+import AvatarImage from "@/components/ui/AvatarImage";
 
 const formatTime = (seconds: number) =>
   `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
@@ -187,7 +188,7 @@ function ConciergeCall() {
         />
         <View style={styles.avatarWrap}>
           {!connected && <Rings />}
-          <Image source={guide.portrait} style={styles.avatar} accessibilityLabel={guide.name} />
+          <AvatarImage source={guide.portrait} style={styles.avatar} accessibilityLabel={guide.name} />
         </View>
         <Text style={styles.callingName}>{guide.name}</Text>
         <Text style={styles.callingText}>{t("conciergeCall.state_calling", { name: guide.name })}</Text>
@@ -195,7 +196,7 @@ function ConciergeCall() {
 
       {/* Connected: the full portrait fading into the call gradient */}
       <Animated.View style={[styles.layer, { opacity: reveal }]} pointerEvents="none">
-        <Image source={guide.portrait} style={{ width, height: width }} resizeMode="cover" accessibilityLabel={guide.name} />
+        <AvatarImage source={guide.portrait} style={{ width, height: width }} resizeMode="cover" accessibilityLabel={guide.name} />
         <LinearGradient
           colors={["rgba(158,115,148,0)", Theme.concierge.callFade]}
           style={[styles.layer, { top: width * 0.45, height: width * 0.55 }]}

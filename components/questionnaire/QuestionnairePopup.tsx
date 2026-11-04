@@ -20,6 +20,7 @@ import { Theme } from "@/constants/theme";
 import { QuestionnaireDomain } from "@/constants/questionaireData";
 import { estimateTotal, isFreeTextStep, isInfoStep, nextQuestionId } from "@/utils/questionnairePopup";
 import { PopupDomainState } from "@/utils/questionnairePopupStore";
+import AvatarImage from "@/components/ui/AvatarImage";
 
 type Props = {
   visible: boolean;
@@ -108,7 +109,7 @@ export default function QuestionnairePopup({
           {done ? (
             <View style={styles.doneWrap}>
               <View style={styles.ring}>
-                <Image source={portrait} style={styles.doneAvatar} />
+                <AvatarImage source={portrait} style={styles.doneAvatar} />
               </View>
               <Text style={styles.doneTitle}>{t("questionnairePopup.thanks", { name: userName })}</Text>
               <Text style={styles.doneText}>{t("questionnairePopup.thanksText")}</Text>
@@ -164,7 +165,7 @@ export default function QuestionnairePopup({
                 </View>
 
                 <View style={styles.askRow}>
-                  <Image source={portrait} style={styles.askAvatar} />
+                  <AvatarImage source={portrait} style={styles.askAvatar} />
                   <View style={styles.bubble}>
                     <Text style={styles.bubbleText}>{question!.text}</Text>
                   </View>

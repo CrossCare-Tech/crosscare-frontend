@@ -10,6 +10,7 @@ import ScreenBackground from "@/components/ui/ScreenBackground";
 import { Theme } from "@/constants/theme";
 import { useGuide } from "@/constants/conciergeGuide";
 import { useSafeBack } from "@/hooks/useSafeBack";
+import AvatarImage from "@/components/ui/AvatarImage";
 
 // First meeting (prototype /concierge/ §3): who the guide is, what she does, and that she is not a doctor.
 function ConciergeMeet() {
@@ -30,7 +31,7 @@ function ConciergeMeet() {
       <ScrollView bounces={false} contentContainerStyle={styles.scroll}>
         {/* The portraits are square: the hero is as tall as it is wide, so the face and hair are never cropped. */}
         <View style={[styles.hero, { height: width }]}>
-          <Image source={guide.portrait} style={styles.portrait} resizeMode="cover" accessible accessibilityLabel={`${guide.name}, ${t("conciergeMeet.title")}`} />
+          <AvatarImage source={guide.portrait} style={styles.portrait} resizeMode="cover" accessible accessibilityLabel={`${guide.name}, ${t("conciergeMeet.title")}`} />
           <LinearGradient
             colors={["rgba(30,15,45,0.22)", "rgba(30,15,45,0)"]}
             locations={[0, 0.35]}
