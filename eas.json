@@ -50,6 +50,7 @@
     },
     "client-preview": {
       "extends": "production",
+      "environment": "production",
       "env": {
         "NPM_CONFIG_LEGACY_PEER_DEPS": "true",
         "EXPO_PUBLIC_DEMO_MODE": "true"
