@@ -7,7 +7,7 @@ import { useTranslation } from "react-i18next";
 import ScreenBackground from "@/components/ui/ScreenBackground";
 import { Theme } from "@/constants/theme";
 import { AVATAR_GUIDES, AVATAR_OUTFITS, AVATAR_TONES, AvatarItem } from "@/constants/avatarCatalog";
-import { GUIDE, loadGuideName, saveGuideName } from "@/constants/conciergeGuide";
+import { loadGuideName, saveGuideName } from "@/constants/conciergeGuide";
 import { AvatarChoice, DEFAULT_AVATAR, avatarImage, useAvatarStudio } from "@/zustandStore/avatarStudioStore";
 
 type TabId = "guide" | "tone" | "hair" | "outfit";
@@ -62,7 +62,7 @@ export default function AvatarStudio() {
   const done = async () => {
     await save(draft);
     // saveGuideName drops an empty or default name, so only a name the user chose is stored.
-    await saveGuideName(customName);
+    await saveGuideName(customName, guide.name);
     leave();
   };
 
@@ -141,7 +141,7 @@ export default function AvatarStudio() {
             style={styles.name}
             value={customName}
             onChangeText={setCustomName}
-            placeholder={GUIDE.name}
+            placeholder={guide.name}
             placeholderTextColor={Theme.colors.placeholder}
             maxLength={24}
             autoCorrect={false}

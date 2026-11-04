@@ -1,13 +1,13 @@
 {
   "nav": {
     "health": "Salud",
-    "concierge": "Conserje",
+    "concierge": "Concierge",
     "main": "Navegación principal"
   },
   "conciergeMeet": {
-    "title": "Conserje CrossCare",
+    "title": "CrossCare Concierge",
     "hi": "Hola, soy",
-    "intro": "Soy tu conserje de CrossCare. Puedo responder tus preguntas, registrar cómo te sientes y recordarte tus citas, y siempre te ayudaré a contactar a tu equipo de atención.",
+    "intro": "Soy tu CrossCare Concierge. Puedo responder tus preguntas, registrar cómo te sientes y recordarte tus citas, y siempre te ayudaré a contactar a tu equipo de atención.",
     "acog": "Basada en las guías de ACOG",
     "notDoctor": "No soy médica",
     "sources": "Toca \"fuentes\" cuando quieras",
@@ -82,8 +82,8 @@
     "notMedical": "no es consejo médico",
     "sources": "Fuentes",
     "more": "Más opciones",
-    "live": "Habla con tu Conserje en voz alta",
-    "online": "Conserje CrossCare"
+    "live": "Habla con tu Concierge en voz alta",
+    "online": "CrossCare Concierge"
   },
   "conciergeCall": {
     "state_calling": "Llamando a {{name}}…",
@@ -106,7 +106,7 @@
   },
   "conciergeName": {
     "title": "Su nombre",
-    "heading": "¿Cómo quieres llamar a tu Conserje?",
+    "heading": "¿Cómo quieres llamar a tu Concierge?",
     "lead": "Elige un nombre que haga tu experiencia más personal.",
     "label": "Nombre",
     "hint": "Puedes cambiar el nombre en cualquier momento en Ajustes.",
@@ -114,7 +114,7 @@
   },
   "conciergeHistory": {
     "title": "Conversaciones",
-    "settings": "Ajustes del Conserje",
+    "settings": "Ajustes del Concierge",
     "rowSub": "Cambia su aspecto y su nombre",
     "newChat": "Nueva conversación",
     "today": "Hoy",
@@ -293,7 +293,7 @@
     "title": "Pregunta a tu CrossCare Concierge",
     "hi": "Hola",
     "description": "Soy tu",
-    "doula": "Conserje CrossCare",
+    "doula": "CrossCare Concierge",
     "subtitle": "¿Cómo puedo ayudarte hoy?",
     "title1": "Historial de Chat Borrado",
     "message": "Tu historial de conversación ha sido eliminado. ¿Te gustaría comenzar el cuestionario de salud ahora?",
@@ -698,7 +698,7 @@
     "body_inactive": "En este momento no tienes acceso a las funciones Premium. Comunícate con tu proveedor para saber más.",
     "included": "Incluido en Premium",
     "concierge": "Concierge con IA",
-    "conciergeOn": "Tu Conserje con IA, disponible en todo momento",
+    "conciergeOn": "Tu Concierge con IA, disponible en todo momento",
     "conciergeOff": "No disponible por ahora",
     "openConcierge": "Abrir Concierge con IA",
     "note": "El acceso Premium lo ofrece y lo paga tu clínica o proveedor. No se puede comprar en la app.",
@@ -903,11 +903,11 @@
     "tired": "Cansada",
     "worried": "Preocupada",
     "unwell": "Me siento mal",
-    "hint": "Toma dos segundos. Ayuda a tu Conserje a saber cómo apoyarte.",
+    "hint": "Toma dos segundos. Ayuda a tu Concierge a saber cómo apoyarte.",
     "reply_good": "Qué bueno saberlo. Disfruta tu día.",
     "reply_tired": "Es muy común en esta etapa. Descansa cuando puedas. No hace falta nada más hoy.",
-    "reply_worried": "Es normal preocuparse a veces. No estás sola, y tu Conserje está aquí si quieres hablarlo.",
-    "reply_unwell": "Lamento que no te sientas bien. Si tienes dolor fuerte, sangrado o dificultad para respirar, llama al 911. Para todo lo demás, tu Conserje puede ayudarte.",
+    "reply_worried": "Es normal preocuparse a veces. No estás sola, y tu Concierge está aquí si quieres hablarlo.",
+    "reply_unwell": "Lamento que no te sientas bien. Si tienes dolor fuerte, sangrado o dificultad para respirar, llama al 911. Para todo lo demás, tu Concierge puede ayudarte.",
     "talk": "Hablar con Ask Your Doula"
   },
   "pregnancySummary": {
@@ -1130,7 +1130,7 @@
     "yourpregnancy": "Tu embarazo",
     "weekofpregnancy": "Semana de embarazo",
     "progresstracking": "Seguimiento de progreso",
-    "customizeyourdoula": "Personaliza tu Conserje CrossCare",
+    "customizeyourdoula": "Personaliza tu CrossCare Concierge",
     "voicetone": "Tono de voz",
     "hair": "Cabello",
     "dress": "Vestimenta",
@@ -1150,7 +1150,7 @@
     "halloffame": "Salón de la Fama",
     "earnbadge": "Insignias Ganadas",
     "rewards": "Recompensas",
-    "changedoulalanguage": "Cambiar el idioma del Conserje CrossCare",
+    "changedoulalanguage": "Cambiar el idioma del CrossCare Concierge",
     "notifications": "Notificaciones",
     "messages": "Mensajes",
     "alerts": "Alertas",
@@ -1463,13 +1463,13 @@
     "watermelon": "Sandía"
   },
   "customize": {
-    "avatar": "Personaliza tu Conserje CrossCare",
+    "avatar": "Personaliza tu CrossCare Concierge",
     "hairstyle": "Peinado",
     "outfit": "Atuendo",
     "levelUpToUnlock": "Sube de nivel para desbloquear",
     "done": "Hecho",
-    "title": "Tu Conserje CrossCare",
-    "loadingAvatar": "Cargando tu Conserje...",
+    "title": "Tu CrossCare Concierge",
+    "loadingAvatar": "Cargando tu Concierge...",
     "edit": "Editar",
     "save": "Guardar",
     "saving": "Guardando..."
@@ -2093,7 +2093,7 @@
     }
   },
   "avatarStudio": {
-    "title": "Personaliza tu Conserje",
+    "title": "Personaliza tu Concierge",
     "nameLabel": "Nombre",
     "cancel": "Cancelar",
     "done": "Listo",
@@ -2270,7 +2270,7 @@
     "notSet": "Sin definir",
     "reset": "Restablecer datos simulados",
     "sampleChat": "Cargar conversación de ejemplo",
-    "sampleChatDone": "Conversación de ejemplo cargada. Abre el Conserje para verla.",
+    "sampleChatDone": "Conversación de ejemplo cargada. Abre el Concierge para verla.",
     "voiceTest": "Prueba de voz",
     "voiceTestHint": "Toca Escuchar para oír una frase en voz alta. Revisa el sonido, la velocidad y el botón de pausa.",
     "voiceDeepgram": "Voz: Deepgram (permite pausar, cambiar la velocidad y saltar)",
@@ -2304,7 +2304,7 @@
     },
     "login": {
       "title": "Te damos la bienvenida",
-      "subtitle": "Inicia sesión para continuar tu camino de cuidado con tu conserje.",
+      "subtitle": "Inicia sesión para continuar tu camino de cuidado con tu concierge.",
       "demoPill": "Datos simulados activados · sirve cualquier correo",
       "passwordPlaceholder": "Ingresa tu contraseña",
       "forgot": "¿Olvidaste tu contraseña?",

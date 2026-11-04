@@ -28,7 +28,9 @@ function ConciergeName() {
   const { t } = useTranslation();
   const router = useRouter();
   const guide = useGuide();
-  const [value, setValue] = useState(guide.name);
+  // null until the user types: the field then follows the current name, which is still loading on first render.
+  const [typed, setTyped] = useState<string | null>(null);
+  const value = typed ?? guide.name;
   const [busy, setBusy] = useState(false);
   const started = useRef(false);
 
@@ -38,7 +40,7 @@ function ConciergeName() {
     started.current = true;
     setBusy(true);
     // The field starts with the current name; saveGuideName drops an empty or default name
-    await saveGuideName(value);
+    await saveGuideName(value, guide.defaultName);
     try {
       await AsyncStorage.setItem(CONCIERGE_MET_KEY, "true");
     } catch {
@@ -64,7 +66,7 @@ function ConciergeName() {
               <TextInput
                 style={styles.input}
                 value={value}
-                onChangeText={setValue}
+                onChangeText={setTyped}
                 placeholder={guide.name}
                 placeholderTextColor={Theme.colors.placeholder}
                 maxLength={24}
