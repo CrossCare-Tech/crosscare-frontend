@@ -7,16 +7,16 @@ import { Feather } from "@expo/vector-icons";
 import Svg, { Circle, Defs, Path, RadialGradient, Rect, Stop } from "react-native-svg";
 import { Theme } from "@/constants/theme";
 import { babyImageForWeek } from "@/constants/babyImages";
-import { fruitImageForWeek } from "@/constants/babyFruits";
+import { babyObjectKeyForWeek, fruitImageForWeek } from "@/constants/babyFruits";
 import {
   BABY_WEEK_NUMBERS,
-  BABY_WEEKS,
   BabyMeasure,
   BabyPartKey,
   FIRST_BABY_WEEK,
   formatBabyLength,
   formatBabyWeight,
   LAST_BABY_WEEK,
+  localizeBabyWeek,
 } from "@/constants/babyWeeks";
 import { useUnitStore } from "@/zustandStore/unitStore";
 import ScreenBackground from "@/components/ui/ScreenBackground";
@@ -153,7 +153,7 @@ export default function BabyDevelopmentScreen() {
   const partsY = useRef(0);
   const heroSize = useHeroSize();
 
-  const data = BABY_WEEKS[week];
+  const data = localizeBabyWeek(week, i18n.language);
   const left = 40 - week;
   const trimester = week < 14 ? 1 : week < 28 ? 2 : 3;
 
@@ -183,7 +183,7 @@ export default function BabyDevelopmentScreen() {
   // Prototype wording in English ("a banana", "an ear of corn"); other languages get the name as is
   const objectName = i18n.language.startsWith("en")
     ? `${/^[aeiou]/i.test(data.object) ? "an" : "a"} ${data.object.toLowerCase()}`
-    : data.object;
+    : t(`babyObjects.${babyObjectKeyForWeek(week)}`).toLowerCase();
 
   return (
     <ScreenBackground>

@@ -1,6 +1,22 @@
 // Weekly baby content from the design prototype (Baby development v4). Sizes are rounded reference averages:
-// length is crown to rump up to week 19 and head to heel from week 20. Text is English only for now.
+// length is crown to rump up to week 19 and head to heel from week 20. Text is English; Portuguese lives in
+// babyWeeks.pt.ts, .es.ts and .ht.ts (any other language falls back to English).
+import { BABY_WEEKS_ES } from "@/constants/babyWeeks.es";
+import { BABY_WEEKS_HT } from "@/constants/babyWeeks.ht";
+import { BABY_WEEKS_PT } from "@/constants/babyWeeks.pt";
+
 export type BabyPartKey = "development" | "organs" | "brain" | "senses" | "movement";
+
+// The translatable text of a week, in the same order as the English one (parts: [text, did-you-know?])
+export interface BabyWeekText {
+  head: string;
+  text: string;
+  why: string;
+  highlights: string[];
+  parts: [text: string, dyk?: string][];
+  notice: string[];
+  tip: string;
+}
 
 export interface BabyWeek {
   object: string; // comparison object, drawn by constants/babyFruits.ts
@@ -888,4 +904,22 @@ export const formatBabyWeight = (ounces: number, unit: "kg" | "lbs"): BabyMeasur
   if (grams < 1) return [["<1", "g"]];
   if (grams < 1000) return [[String(Math.round(grams)), "g"]];
   return [[trim(grams / 1000), "kg"]];
+};
+
+const WEEK_TEXTS: Record<string, Record<number, BabyWeekText>> = { pt: BABY_WEEKS_PT, es: BABY_WEEKS_ES, ht: BABY_WEEKS_HT };
+
+// The week with its text in the user's language; anything not translated keeps the English text. The comparison
+// object keeps its English name here: screens translate it through babyObjects.
+export const localizeBabyWeek = (week: number, language: string): BabyWeek => {
+  const en = BABY_WEEKS[week];
+  const tx = WEEK_TEXTS[language.slice(0, 2)]?.[week];
+  if (!tx) return en;
+  return {
+    ...en,
+    big: { ...en.big, head: tx.head, text: tx.text, why: tx.why },
+    highlights: tx.highlights,
+    parts: en.parts.map((part, i) => ({ ...part, text: tx.parts[i]?.[0] ?? part.text, dyk: part.dyk ? tx.parts[i]?.[1] ?? part.dyk : undefined })),
+    notice: tx.notice,
+    tip: tx.tip,
+  };
 };
