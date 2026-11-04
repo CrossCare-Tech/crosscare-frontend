@@ -8,7 +8,7 @@ import ScreenBackground from "@/components/ui/ScreenBackground";
 import { Theme } from "@/constants/theme";
 import { AVATAR_GUIDES, AVATAR_OUTFITS, AVATAR_TONES, AvatarItem } from "@/constants/avatarCatalog";
 import { GUIDE, loadGuideName, saveGuideName } from "@/constants/conciergeGuide";
-import { AvatarChoice, avatarImage, useAvatarStudio } from "@/zustandStore/avatarStudioStore";
+import { AvatarChoice, DEFAULT_AVATAR, avatarImage, useAvatarStudio } from "@/zustandStore/avatarStudioStore";
 
 type TabId = "guide" | "tone" | "hair" | "outfit";
 const TABS: TabId[] = ["guide", "tone", "hair", "outfit"];
@@ -53,7 +53,7 @@ export default function AvatarStudio() {
     const next = { ...draft, ...patch };
     // Hairstyles belong to a guide: keep the nearest valid one when the guide changes.
     const g = AVATAR_GUIDES.find((x) => x.id === next.guide)!;
-    if (!g.hairstyles.some((h) => h.id === next.hair)) next.hair = 1;
+    if (!g.hairstyles.some((h) => h.id === next.hair)) next.hair = DEFAULT_AVATAR.hair;
     setDraft(next);
   };
 
@@ -76,7 +76,7 @@ export default function AvatarStudio() {
       return AVATAR_GUIDES.map((g) => ({
         key: g.id,
         label: g.name,
-        img: avatarImage({ ...draft, guide: g.id, hair: 1 }),
+        img: avatarImage({ ...draft, guide: g.id, hair: DEFAULT_AVATAR.hair }),
         on: g.id === draft.guide,
         item: null as AvatarItem | null,
         pick: () => update({ guide: g.id }),
@@ -120,7 +120,7 @@ export default function AvatarStudio() {
           <Pressable onPress={leave} accessibilityRole="button" hitSlop={12}>
             <Text style={styles.cancel}>{t("avatarStudio.cancel")}</Text>
           </Pressable>
-          <Text style={styles.title} accessibilityRole="header">
+          <Text style={styles.title} numberOfLines={2} accessibilityRole="header">
             {t("avatarStudio.title")}
           </Text>
           <Pressable onPress={done} disabled={!!locked} accessibilityRole="button" accessibilityState={{ disabled: !!locked }} hitSlop={12}>
@@ -213,8 +213,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: Theme.spacing.md + 4,
     paddingVertical: Theme.spacing.sm + 4,
   },
+  // The title takes the space between the two buttons and wraps instead of pushing "Done" off the screen
   cancel: { fontFamily: Theme.typography.caption, fontSize: 15, color: Theme.colors.inkFaint },
-  title: { fontFamily: Theme.typography.heading, fontSize: 16, color: Theme.colors.ink },
+  title: { flex: 1, textAlign: "center", marginHorizontal: Theme.spacing.sm + 4, fontFamily: Theme.typography.heading, fontSize: 16, color: Theme.colors.ink },
   done: { fontFamily: Theme.typography.heading, fontSize: 15, color: Theme.colors.magenta },
   doneOff: { color: Theme.colors.disabledText },
   previewWrap: { alignItems: "center", paddingTop: Theme.spacing.sm },
