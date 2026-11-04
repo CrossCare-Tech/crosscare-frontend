@@ -27,7 +27,9 @@ import DeviceSourceRows from "@/components/devices/DeviceSourceRows";
 import AuthTopBar from "@/components/ui/AuthTopBar";
 import CustomTextInput from "@/components/ui/CustomTextInput";
 import { Pill, ReadingModal } from "@/components/vitals/VitalsUI";
+import MetricLogModal from "./modal/metriclogmodal";
 import {
+  AddReadingButton,
   ChartCard,
   daysAgo,
   fmtDate,
@@ -78,6 +80,7 @@ export default function StepsScreen() {
   const [goalVisible, setGoalVisible] = useState(false);
   const [goalDraft, setGoalDraft] = useState("");
   const [goalSaving, setGoalSaving] = useState(false);
+  const [logVisible, setLogVisible] = useState(false);
 
   // The Demo Watch (Simulated data) feeds the screen while it is paired and steps are allowed
   const watchActive = useDemoWatchActive();
@@ -321,6 +324,25 @@ export default function StepsScreen() {
             </TouchableOpacity>
           </View>
         </ScrollView>
+
+        {/* Manual entry. Not gated on a connected source: with the Fitbit Web API
+            switched off, an Android user has no source feeding steps and this is
+            their only way to record them. */}
+        <AddReadingButton label={t("metric.addReading")} onPress={() => setLogVisible(true)} />
+
+        <MetricLogModal
+          visible={logVisible}
+          onClose={() => setLogVisible(false)}
+          reload={reload}
+          title={t("stepScreen.addStepLog")}
+          label={t("steps")}
+          placeholder={t("stepScreen.stepsPlaceholder")}
+          path="steps"
+          buildBody={(steps) => ({ steps })}
+          min={0}
+          max={200000}
+          invalidMessage={t("stepScreen.invalidSteps")}
+        />
 
         <ReadingModal
           visible={goalVisible}

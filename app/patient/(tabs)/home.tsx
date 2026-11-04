@@ -1,3 +1,4 @@
+import { todayDateString } from "@/utils/date";
 import {
   ActivityIndicator,
   Alert,
@@ -262,7 +263,7 @@ const Home = () => {
 
       try {
         if (watchActive) {
-          const day = new Date().toISOString().split('T')[0];
+          const day = todayDateString();
           const watchSteps = parseInt(demoWatchReaders.steps(day, day)["activities-steps"][0]?.value, 10);
           if (watchSteps > 0) useStepsStore.getState().setStepsWalked(watchSteps);
           return;
@@ -276,7 +277,7 @@ const Home = () => {
           }
         } else {
           // For Fitbit
-          const today = new Date().toISOString().split('T')[0];
+          const today = todayDateString();
           stepsData = await fitbitGetStepsData(today);
         }
 

@@ -12,7 +12,11 @@ const MEDICATION_REMINDERS_ENABLED_KEY = 'medication_reminders_enabled';
 // Configure notification behavior
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true,
+    // expo-notifications 0.31 (SDK 53) deprecated shouldShowAlert and made
+    // shouldShowBanner and shouldShowList required. Omitting them left the
+    // behaviour object invalid, so a delivered notification was not presented.
+    shouldShowBanner: true,
+    shouldShowList: true,
     shouldPlaySound: true,
     shouldSetBadge: false,
   }),

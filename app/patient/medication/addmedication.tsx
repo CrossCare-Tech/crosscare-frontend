@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Alert, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -33,6 +33,7 @@ const DAY_INDEX: Record<string, number> = { SU: 0, M: 1, T: 2, W: 3, TH: 4, F: 5
 
 // Add medication: name, dates, days of the week and dose times
 export default function AddMedicationScreen() {
+  const [submitting, setSubmitting] = useState(false);
   const [state, setState] = useState<MedicationState>({
     setMedicationName: "",
     selectedDays: ["T"],
@@ -128,6 +129,12 @@ export default function AddMedicationScreen() {
   };
 
   const handleSubmit = async () => {
+    // Submitting posts the medication and then schedules a reminder for every
+    // matching day in the range, so it stays in flight long enough to tap the
+    // button twice and create the course twice.
+    if (submitting) {
+      return;
+    }
     if (!state.setMedicationName.trim()) {
       Alert.alert(t("vitalsEntry.errorTitle"), t("medicationLog.errName"));
       return;
@@ -153,6 +160,7 @@ export default function AddMedicationScreen() {
       return;
     }
 
+    setSubmitting(true);
     try {
       const apiUrl = `${CONFIG.API_BASE_URL}/user/activity/${user.user_id}/addMedication`;
 
@@ -292,6 +300,8 @@ export default function AddMedicationScreen() {
     } catch (error: any) {
       console.log("Error occurred", error.message);
       Alert.alert(t("vitalsEntry.errorTitle"), t("vitalsEntry.saveFailed"));
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -307,7 +317,14 @@ export default function AddMedicationScreen() {
       <SafeAreaView style={styles.container}>
         <AuthTopBar title={t("medicationLog.add")} />
 
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[metricStyles.content, styles.content]}>
+        {/* The medication name input sits above a long form, so the keyboard
+            covered it and the save button without this. */}
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={[metricStyles.content, styles.content]}
+        >
           <View style={styles.card}>
             <CustomTextInput
               label={t("medicationLog.name")}
@@ -396,6 +413,7 @@ export default function AddMedicationScreen() {
         </ScrollView>
 
         <AddReadingButton label={t("medicationLog.save")} onPress={handleSubmit} />
+        </KeyboardAvoidingView>
       </SafeAreaView>
     </ScreenBackground>
   );

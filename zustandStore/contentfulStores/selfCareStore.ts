@@ -2,6 +2,12 @@ import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import * as FileSystem from 'expo-file-system'
+import type {
+  CacheEnvelope,
+  ContentfulAsset,
+  ContentfulAssetLink,
+  ContentfulEntry,
+} from '@/types/contentful';
 
 const SPACE_ID = 'ar5yaphmi182';
 const ACCESS_TOKEN = '9g_w7hnzte5Uwu_-6ZhwMb8WCeF-9c7lQyJUoTYbip4';
@@ -13,11 +19,23 @@ const CACHE_EXPIRY_MS = 0;
 interface SelfCareRoutine {
     id: string;
     title: string;
-    routineImage: string;
+    /** null when the entry carries no matching asset link. */
+    routineImage: string | null;
     description: string;
-    audio: string;
-    localAudioPath: string;
+    audio: string | null;
+    /** null until the audio has been downloaded for offline use. */
+    localAudioPath: string | null;
     gradientColors: string[];
+}
+
+interface SelfCareRoutineFields {
+    id?: string;
+    title?: string;
+    routineImage?: ContentfulAssetLink;
+    description?: string;
+    audio?: ContentfulAssetLink;
+    duration?: string;
+    gradientColors?: { gradientColors?: string[] };
 }
 
 interface SelfCareState {
@@ -41,14 +59,14 @@ const fetchRoutinesFromContentful = async () => {
                 params: { content_type: CONTENT_TYPE, include: 10 },
             });
 
-        const includes = response.data.includes.Asset;
-        const assetMap = {};
+        const includes: ContentfulAsset[] = response.data.includes.Asset;
+        const assetMap: Record<string, string> = {};
 
         includes.forEach((asset) => {
             assetMap[asset.sys.id] = `https:${asset.fields.file.url}`;
         });
 
-        return response.data.items.map((item) => {
+        return (response.data.items as ContentfulEntry<SelfCareRoutineFields>[]).map((item) => {
             const fields = item.fields;
             return {
                 id: fields.id || item.sys.id,
@@ -193,7 +211,7 @@ export const useSelfCareStore = create<SelfCareState>((set, get) => ({
             try {
                 const cachedData = await AsyncStorage.getItem(CACHE_KEY);
                 if (cachedData) {
-                    const parsedData = JSON.parse(cachedData);
+                    const parsedData = JSON.parse(cachedData) as CacheEnvelope<SelfCareRoutine>;
                     const updatedData = {
                         ...parsedData,
                         data: parsedData.data.map(r => 

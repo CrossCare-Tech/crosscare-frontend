@@ -44,7 +44,7 @@ const AudioPlayerScreen = () => {
   const fadeAnim = useRef(new Animated.Value(0)).current
 
   // Timer for manual progress updates
-  const progressTimer = useRef<NodeJS.Timeout | null>(null)
+  const progressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Format time as MM:SS
   const formatTime = (seconds: number) => {
@@ -176,7 +176,9 @@ const AudioPlayerScreen = () => {
       console.log("Creating sound object...")
       try {
         // Add a timeout to the audio loading
-        const timeoutPromise = new Promise((_, reject) =>
+        // Types as Promise<never>: this promise only ever rejects, so it must
+        // not widen the Promise.race result and erase the sound handle.
+        const timeoutPromise = new Promise<never>((_, reject) =>
           setTimeout(() => reject(new Error("Audio loading timed out")), 10000),
         )
 
