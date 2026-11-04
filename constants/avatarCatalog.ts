@@ -93,6 +93,8 @@ export const AVATAR_OUTFITS: AvatarItem[] = [
   }
 ];
 
+// Every guide has the same 10 hairstyles. The 4 slots each guide had in the prototype catalog keep their rule
+// (2 free, then 3 days of vitals, then 14 check-ins; Marianne: 7 days); the 6 new ones are locked behind outfit rules.
 export const AVATAR_GUIDES: AvatarGuide[] = [
   {
     "id": "sofia",
@@ -100,27 +102,63 @@ export const AVATAR_GUIDES: AvatarGuide[] = [
     "hairstyles": [
       {
         "id": 1,
-        "label": "Low bun",
+        "label": "Braids low bun",
         "rule": "start",
         "text": "Available from the first launch (free)"
       },
       {
         "id": 2,
-        "label": "Loose waves",
-        "rule": "start",
-        "text": "Available from the first launch (free)"
+        "label": "High puff",
+        "rule": "journal-5",
+        "text": "Write 5 journal entries"
       },
       {
         "id": 3,
+        "label": "Bob",
+        "rule": "vitals-streak-7",
+        "text": "Log vital signs 7 days in a row"
+      },
+      {
+        "id": 4,
+        "label": "Long straight",
+        "rule": "journal-20",
+        "text": "Write 20 journal entries"
+      },
+      {
+        "id": 5,
+        "label": "Short gray crop",
+        "rule": "vitals-streak-30",
+        "text": "Log vital signs 30 days in a row"
+      },
+      {
+        "id": 6,
+        "label": "Half-up curls",
+        "rule": "checkin-14",
+        "text": "Complete 14 daily check-ins"
+      },
+      {
+        "id": 7,
         "label": "High ponytail",
         "rule": "vitals-streak-3",
         "text": "Log vital signs 3 days in a row"
       },
       {
-        "id": 4,
-        "label": "Half-up curls",
-        "rule": "checkin-14",
-        "text": "Complete 14 daily check-ins"
+        "id": 8,
+        "label": "Low braid",
+        "rule": "journal-5",
+        "text": "Write 5 journal entries"
+      },
+      {
+        "id": 9,
+        "label": "Long waves",
+        "rule": "start",
+        "text": "Available from the first launch (free)"
+      },
+      {
+        "id": 10,
+        "label": "Short natural curls",
+        "rule": "vitals-streak-7",
+        "text": "Log vital signs 7 days in a row"
       }
     ]
   },
@@ -130,27 +168,63 @@ export const AVATAR_GUIDES: AvatarGuide[] = [
     "hairstyles": [
       {
         "id": 1,
-        "label": "Short natural curls",
-        "rule": "start",
-        "text": "Available from the first launch (free)"
-      },
-      {
-        "id": 2,
-        "label": "Twist-out",
-        "rule": "start",
-        "text": "Available from the first launch (free)"
-      },
-      {
-        "id": 3,
         "label": "Braids low bun",
         "rule": "vitals-streak-3",
         "text": "Log vital signs 3 days in a row"
       },
       {
-        "id": 4,
+        "id": 2,
         "label": "High puff",
         "rule": "checkin-14",
         "text": "Complete 14 daily check-ins"
+      },
+      {
+        "id": 3,
+        "label": "Bob",
+        "rule": "journal-5",
+        "text": "Write 5 journal entries"
+      },
+      {
+        "id": 4,
+        "label": "Long straight",
+        "rule": "vitals-streak-7",
+        "text": "Log vital signs 7 days in a row"
+      },
+      {
+        "id": 5,
+        "label": "Short gray crop",
+        "rule": "journal-20",
+        "text": "Write 20 journal entries"
+      },
+      {
+        "id": 6,
+        "label": "Half-up curls",
+        "rule": "vitals-streak-30",
+        "text": "Log vital signs 30 days in a row"
+      },
+      {
+        "id": 7,
+        "label": "High ponytail",
+        "rule": "journal-5",
+        "text": "Write 5 journal entries"
+      },
+      {
+        "id": 8,
+        "label": "Low braid",
+        "rule": "vitals-streak-7",
+        "text": "Log vital signs 7 days in a row"
+      },
+      {
+        "id": 9,
+        "label": "Long waves",
+        "rule": "start",
+        "text": "Available from the first launch (free)"
+      },
+      {
+        "id": 10,
+        "label": "Short natural curls",
+        "rule": "start",
+        "text": "Available from the first launch (free)"
       }
     ]
   },
@@ -160,27 +234,63 @@ export const AVATAR_GUIDES: AvatarGuide[] = [
     "hairstyles": [
       {
         "id": 1,
-        "label": "Straight, bob length",
-        "rule": "start",
-        "text": "Available from the first launch (free)"
-      },
-      {
-        "id": 2,
-        "label": "Shoulder waves",
-        "rule": "start",
-        "text": "Available from the first launch (free)"
-      },
-      {
-        "id": 3,
-        "label": "Low bun",
+        "label": "Braids low bun",
         "rule": "vitals-streak-3",
         "text": "Log vital signs 3 days in a row"
       },
       {
+        "id": 2,
+        "label": "High puff",
+        "rule": "journal-5",
+        "text": "Write 5 journal entries"
+      },
+      {
+        "id": 3,
+        "label": "Bob",
+        "rule": "start",
+        "text": "Available from the first launch (free)"
+      },
+      {
         "id": 4,
+        "label": "Long straight",
+        "rule": "vitals-streak-7",
+        "text": "Log vital signs 7 days in a row"
+      },
+      {
+        "id": 5,
+        "label": "Short gray crop",
+        "rule": "journal-20",
+        "text": "Write 20 journal entries"
+      },
+      {
+        "id": 6,
+        "label": "Half-up curls",
+        "rule": "vitals-streak-30",
+        "text": "Log vital signs 30 days in a row"
+      },
+      {
+        "id": 7,
         "label": "High ponytail",
         "rule": "checkin-14",
         "text": "Complete 14 daily check-ins"
+      },
+      {
+        "id": 8,
+        "label": "Low braid",
+        "rule": "journal-5",
+        "text": "Write 5 journal entries"
+      },
+      {
+        "id": 9,
+        "label": "Long waves",
+        "rule": "start",
+        "text": "Available from the first launch (free)"
+      },
+      {
+        "id": 10,
+        "label": "Short natural curls",
+        "rule": "vitals-streak-7",
+        "text": "Log vital signs 7 days in a row"
       }
     ]
   },
@@ -190,27 +300,63 @@ export const AVATAR_GUIDES: AvatarGuide[] = [
     "hairstyles": [
       {
         "id": 1,
+        "label": "Braids low bun",
+        "rule": "journal-5",
+        "text": "Write 5 journal entries"
+      },
+      {
+        "id": 2,
+        "label": "High puff",
+        "rule": "vitals-streak-3",
+        "text": "Log vital signs 3 days in a row"
+      },
+      {
+        "id": 3,
+        "label": "Bob",
+        "rule": "vitals-streak-7",
+        "text": "Log vital signs 7 days in a row"
+      },
+      {
+        "id": 4,
+        "label": "Long straight",
+        "rule": "start",
+        "text": "Available from the first launch (free)"
+      },
+      {
+        "id": 5,
+        "label": "Short gray crop",
+        "rule": "journal-20",
+        "text": "Write 20 journal entries"
+      },
+      {
+        "id": 6,
+        "label": "Half-up curls",
+        "rule": "vitals-streak-30",
+        "text": "Log vital signs 30 days in a row"
+      },
+      {
+        "id": 7,
+        "label": "High ponytail",
+        "rule": "journal-5",
+        "text": "Write 5 journal entries"
+      },
+      {
+        "id": 8,
+        "label": "Low braid",
+        "rule": "checkin-14",
+        "text": "Complete 14 daily check-ins"
+      },
+      {
+        "id": 9,
         "label": "Long waves",
         "rule": "start",
         "text": "Available from the first launch (free)"
       },
       {
-        "id": 2,
-        "label": "Straight, side part",
-        "rule": "start",
-        "text": "Available from the first launch (free)"
-      },
-      {
-        "id": 3,
-        "label": "High bun",
-        "rule": "vitals-streak-3",
-        "text": "Log vital signs 3 days in a row"
-      },
-      {
-        "id": 4,
-        "label": "Low braid",
-        "rule": "checkin-14",
-        "text": "Complete 14 daily check-ins"
+        "id": 10,
+        "label": "Short natural curls",
+        "rule": "vitals-streak-7",
+        "text": "Log vital signs 7 days in a row"
       }
     ]
   },
@@ -220,27 +366,63 @@ export const AVATAR_GUIDES: AvatarGuide[] = [
     "hairstyles": [
       {
         "id": 1,
+        "label": "Braids low bun",
+        "rule": "journal-5",
+        "text": "Write 5 journal entries"
+      },
+      {
+        "id": 2,
+        "label": "High puff",
+        "rule": "vitals-streak-7",
+        "text": "Log vital signs 7 days in a row"
+      },
+      {
+        "id": 3,
         "label": "Bob",
         "rule": "start",
         "text": "Available from the first launch (free)"
       },
       {
-        "id": 2,
+        "id": 4,
         "label": "Long straight",
         "rule": "start",
         "text": "Available from the first launch (free)"
       },
       {
-        "id": 3,
-        "label": "Low ponytail",
+        "id": 5,
+        "label": "Short gray crop",
+        "rule": "journal-20",
+        "text": "Write 20 journal entries"
+      },
+      {
+        "id": 6,
+        "label": "Half-up curls",
+        "rule": "vitals-streak-30",
+        "text": "Log vital signs 30 days in a row"
+      },
+      {
+        "id": 7,
+        "label": "High ponytail",
         "rule": "vitals-streak-3",
         "text": "Log vital signs 3 days in a row"
       },
       {
-        "id": 4,
-        "label": "Wavy lob",
+        "id": 8,
+        "label": "Low braid",
+        "rule": "journal-5",
+        "text": "Write 5 journal entries"
+      },
+      {
+        "id": 9,
+        "label": "Long waves",
         "rule": "checkin-14",
         "text": "Complete 14 daily check-ins"
+      },
+      {
+        "id": 10,
+        "label": "Short natural curls",
+        "rule": "vitals-streak-7",
+        "text": "Log vital signs 7 days in a row"
       }
     ]
   },
@@ -250,27 +432,63 @@ export const AVATAR_GUIDES: AvatarGuide[] = [
     "hairstyles": [
       {
         "id": 1,
-        "label": "Gray low ponytail",
-        "rule": "start",
-        "text": "Available from the first launch (free)"
+        "label": "Braids low bun",
+        "rule": "checkin-14",
+        "text": "Complete 14 daily check-ins"
       },
       {
         "id": 2,
-        "label": "Short gray crop",
-        "rule": "start",
-        "text": "Available from the first launch (free)"
+        "label": "High puff",
+        "rule": "journal-5",
+        "text": "Write 5 journal entries"
       },
       {
         "id": 3,
-        "label": "Gray waves",
+        "label": "Bob",
         "rule": "vitals-streak-7",
         "text": "Log vital signs 7 days in a row"
       },
       {
         "id": 4,
-        "label": "Gray low bun",
-        "rule": "checkin-14",
-        "text": "Complete 14 daily check-ins"
+        "label": "Long straight",
+        "rule": "journal-20",
+        "text": "Write 20 journal entries"
+      },
+      {
+        "id": 5,
+        "label": "Short gray crop",
+        "rule": "start",
+        "text": "Available from the first launch (free)"
+      },
+      {
+        "id": 6,
+        "label": "Half-up curls",
+        "rule": "vitals-streak-30",
+        "text": "Log vital signs 30 days in a row"
+      },
+      {
+        "id": 7,
+        "label": "High ponytail",
+        "rule": "start",
+        "text": "Available from the first launch (free)"
+      },
+      {
+        "id": 8,
+        "label": "Low braid",
+        "rule": "journal-5",
+        "text": "Write 5 journal entries"
+      },
+      {
+        "id": 9,
+        "label": "Long waves",
+        "rule": "vitals-streak-7",
+        "text": "Log vital signs 7 days in a row"
+      },
+      {
+        "id": 10,
+        "label": "Short natural curls",
+        "rule": "vitals-streak-7",
+        "text": "Log vital signs 7 days in a row"
       }
     ]
   }

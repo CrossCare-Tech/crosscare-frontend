@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { AVATAR_IMAGES } from "@/constants/avatarImages";
+import { AVATAR_GUIDES, AVATAR_OUTFITS, AVATAR_TONES } from "@/constants/avatarCatalog";
+import { avatarUrl } from "@/constants/avatarImages";
 
 // The avatar the user picked in Avatar Selection: guide + skin tone + hairstyle + outfit (the bundled avatar pack).
 export interface AvatarChoice {
@@ -10,11 +11,18 @@ export interface AvatarChoice {
   outfit: number;
 }
 
-export const DEFAULT_AVATAR: AvatarChoice = { guide: "sofia", tone: 2, hair: 1, outfit: 1 };
+// Hairstyle 9 (Long waves) is one of the free ones
+export const DEFAULT_AVATAR: AvatarChoice = { guide: "sofia", tone: 2, hair: 9, outfit: 1 };
 
 const KEY = "avatar.studio";
 
-export const avatarImage = (c: AvatarChoice) => AVATAR_IMAGES[`${c.guide}/h${c.hair}-o${c.outfit}-t${c.tone}`];
+export const avatarImage = (c: AvatarChoice) => ({ uri: avatarUrl(`${c.guide}/h${c.hair}-o${c.outfit}-t${c.tone}`) });
+
+// A look exists when its guide, hairstyle, outfit and tone are all in the catalog.
+const isValid = (c: AvatarChoice) =>
+  AVATAR_GUIDES.some((g) => g.id === c.guide && g.hairstyles.some((h) => h.id === c.hair)) &&
+  AVATAR_OUTFITS.some((o) => o.id === c.outfit) &&
+  AVATAR_TONES.some((t) => t.id === c.tone);
 
 interface AvatarStudioState {
   choice: AvatarChoice;
@@ -30,8 +38,8 @@ export const useAvatarStudio = create<AvatarStudioState>((set) => ({
     try {
       const raw = await AsyncStorage.getItem(KEY);
       const saved = raw ? (JSON.parse(raw) as AvatarChoice) : null;
-      // Ignore a stale choice that no longer maps to an image in the pack.
-      if (saved && avatarImage(saved)) set({ choice: saved });
+      // Ignore a stale choice that no longer maps to a look in the catalog.
+      if (saved && isValid(saved)) set({ choice: saved });
     } catch {
       // Not remembering the avatar is harmless: the default one is used.
     }
