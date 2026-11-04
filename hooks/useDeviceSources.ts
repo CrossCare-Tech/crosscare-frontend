@@ -94,5 +94,6 @@ export function useDeviceSources(): DeviceSource[] {
     });
   }
 
-  return sources;
+  // Each phone lists only the stores it can use (PM decision): Apple Health on iOS, Health Connect and Fitbit on Android
+  return sources.filter((source) => source.id === "demoWatch" || (source.id === "apple") === isIos);
 }
