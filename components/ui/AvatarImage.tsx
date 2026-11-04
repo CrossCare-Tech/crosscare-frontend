@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { Image, ImageProps, ImageSourcePropType, StyleProp, View, ViewStyle } from "react-native";
 import * as FileSystem from "expo-file-system";
-import { AVATAR_CACHE_VERSION } from "@/constants/avatarImages";
-import { GUIDE } from "@/constants/conciergeGuide";
+import { AVATAR_CACHE_VERSION, AVATAR_MIN_BYTES } from "@/constants/avatarCache";
+
+// Same portrait as GUIDE.portrait; required here so this component does not pull in the store and Supabase client.
+const DEFAULT_PORTRAIT = require("@/assets/images/concierge/sofia.jpg");
 
 // Remote avatar portraits are downloaded once into the app's document folder and read from there afterwards,
 // so a portrait seen once keeps showing offline (the document folder is not cleared with "Clear cache").
@@ -16,11 +18,19 @@ const cached = (uri: string): Promise<string> => {
   let job = inflight.get(path);
   if (!job) {
     job = (async () => {
-      if ((await FileSystem.getInfoAsync(path)).exists) return path;
+      const known = await FileSystem.getInfoAsync(path);
+      if (known.exists && (known.size ?? 0) >= AVATAR_MIN_BYTES) return path;
       await FileSystem.makeDirectoryAsync(DIR, { intermediates: true }).catch(() => {});
       // Download to a temp name so an interrupted download is never mistaken for a cached portrait
-      await FileSystem.downloadAsync(uri, `${path}.part`);
-      await FileSystem.moveAsync({ from: `${path}.part`, to: path });
+      const part = `${path}.part`;
+      const res = await FileSystem.downloadAsync(uri, part);
+      // downloadAsync does not fail on 404/429: it saves the error body, so check the status and the size
+      const got = await FileSystem.getInfoAsync(part);
+      if (res.status !== 200 || !got.exists || (got.size ?? 0) < AVATAR_MIN_BYTES) {
+        await FileSystem.deleteAsync(part, { idempotent: true });
+        throw new Error(`avatar download failed (${res.status})`);
+      }
+      await FileSystem.moveAsync({ from: part, to: path });
       return path;
     })().finally(() => inflight.delete(path));
     inflight.set(path, job);
@@ -34,7 +44,7 @@ interface Props extends ImageProps {
 }
 
 // Drop-in replacement of Image for the Concierge portraits.
-export default function AvatarImage({ source, fallback = GUIDE.portrait, ...rest }: Props) {
+export default function AvatarImage({ source, fallback = DEFAULT_PORTRAIT, ...rest }: Props) {
   const remote = typeof source === "object" && !Array.isArray(source) && "uri" in source && source.uri ? source.uri : null;
   const [local, setLocal] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
