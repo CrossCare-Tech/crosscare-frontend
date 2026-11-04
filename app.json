@@ -42,6 +42,8 @@
       "package": "com.crosscaretech.concierge"
     },
     "plugins": [
+      "./plugins/withAutofillHighlight",
+      "./plugins/withDialogTheme",
       "expo-router",
       [
         "expo-splash-screen",
