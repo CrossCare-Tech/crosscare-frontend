@@ -33,6 +33,13 @@ type AccountForm = {
 
 const EMPTY_FORM: AccountForm = { name: "", email: "", phoneNumber: "" };
 
+// The API stores an age in years, not a date of birth, so the picked date is saved as the age it gives today
+const ageFromDate = (born: Date, now = new Date()) => {
+  const birthdayPassed =
+    now.getMonth() > born.getMonth() || (now.getMonth() === born.getMonth() && now.getDate() >= born.getDate());
+  return now.getFullYear() - born.getFullYear() - (birthdayPassed ? 0 : 1);
+};
+
 const Account = () => {
   const user = useSelector((state: any) => state.user);
   const token = useSelector((state: any) => state.user.token);
@@ -45,6 +52,7 @@ const Account = () => {
   const [form, setForm] = useState<AccountForm>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [dateOfBirth, setDateOfBirth] = useState<Date | null>(null);
+  const [savedAge, setSavedAge] = useState<number | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
 
   const setField = (key: keyof AccountForm) => (value: string) =>
@@ -71,6 +79,7 @@ const Account = () => {
       };
       setSaved(loaded);
       setForm(loaded);
+      setSavedAge(typeof data.age === "number" ? data.age : null);
       if (data.profileImage) setPhoto(data.profileImage);
     } catch (error) {
       console.error("Error fetching profile:", error);
@@ -93,6 +102,9 @@ const Account = () => {
     (key) => form[key].trim() !== saved[key]
   );
 
+  const newAge = dateOfBirth ? ageFromDate(dateOfBirth) : null;
+  const ageChanged = newAge !== null && newAge !== savedAge;
+
   const saveChanges = async () => {
     const email = form.email.trim();
     if (changes.includes("email") && !/^\S+@\S+\.\S+$/.test(email)) {
@@ -105,6 +117,7 @@ const Account = () => {
       const value = form[key].trim();
       if (key !== "name" || value) updateData[key] = value;
     }
+    if (ageChanged) updateData.age = String(newAge);
 
     if (Object.keys(updateData).length === 0) return;
 
@@ -143,7 +156,7 @@ const Account = () => {
     }
   };
 
-  const canSave = changes.length > 0 && !saving;
+  const canSave = (changes.length > 0 || ageChanged) && !saving;
 
   return (
     <ScreenBackground>
@@ -195,7 +208,7 @@ const Account = () => {
               keyboardType="phone-pad"
               textContentType="telephoneNumber"
             />
-            {/* Visual only: the backend has no date-of-birth field yet, so this is not saved */}
+            {/* The backend has no date-of-birth field: the date picked here is saved as the age (years) */}
             <View style={styles.field}>
               <Text style={styles.label}>{t("profile.dateOfBirth")}</Text>
               <TouchableOpacity
