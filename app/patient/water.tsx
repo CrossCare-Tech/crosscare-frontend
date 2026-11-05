@@ -89,9 +89,13 @@ const WaterScreen = () => {
     return new Date(`${date}T12:00:00`).toLocaleDateString(i18n.language, { month: "short", day: "numeric" });
   };
 
-  // Same request as the Home tile: the API stores today's total, not an increment
+  // The count on screen is the sum of the day's records (GET /user/activity/:id merges them), but
+  // POST /water with an absolute value overwrites a single record. When the API holds two records for
+  // one day the total jumps (5 + 3 shown as 8, tap to 9, saved as 9 on top of 5 = 14). Sending the
+  // difference as an increment moves the sum by exactly what the person tapped.
   const saveCount = async (next: number) => {
-    if (!user?.user_id || next < 0 || saving) return;
+    const delta = next - count;
+    if (!user?.user_id || next < 0 || saving || delta === 0) return;
     const previous = count;
     setSaving(true);
     setGlassCount(next);
@@ -99,7 +103,7 @@ const WaterScreen = () => {
       const response = await fetch(`${CONFIG.API_BASE_URL}/user/activity/${user.user_id}/water`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ water: next }),
+        body: JSON.stringify({ water: delta, isIncrement: true }),
       });
       if (!response.ok) throw new Error(`API returned status ${response.status}`);
       reload();
