@@ -43,18 +43,19 @@ const time12 = (date: Date) => {
   return `${String(h).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")} ${hours >= 12 ? "PM" : "AM"}`;
 };
 
+// The backend writes these with the server clock (UTC), so the mock does too.
 // "10/29/2026, 8:40 AM", as formatDateTime() in activity.controller.js:2810
 const dateTimeUS = (iso: string) => {
   const d = new Date(iso);
-  const h = d.getHours() % 12 || 12;
-  return `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}, ${h}:${String(d.getMinutes()).padStart(2, "0")} ${d.getHours() >= 12 ? "PM" : "AM"}`;
+  const h = d.getUTCHours() % 12 || 12;
+  return `${d.getUTCMonth() + 1}/${d.getUTCDate()}/${d.getUTCFullYear()}, ${h}:${String(d.getUTCMinutes()).padStart(2, "0")} ${d.getUTCHours() >= 12 ? "PM" : "AM"}`;
 };
 
 // "29/10/2026, 8:40 AM", as the journal handlers in activity.controller.js:3650
 const dateTimeJournal = (iso: string) => {
   const d = new Date(iso);
-  const h = d.getHours() % 12 || 12;
-  return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}, ${h}:${String(d.getMinutes()).padStart(2, "0")} ${d.getHours() >= 12 ? "PM" : "AM"}`;
+  const h = d.getUTCHours() % 12 || 12;
+  return `${d.getUTCDate()}/${d.getUTCMonth() + 1}/${d.getUTCFullYear()}, ${h}:${String(d.getUTCMinutes()).padStart(2, "0")} ${d.getUTCHours() >= 12 ? "PM" : "AM"}`;
 };
 
 const duration = (startIso: string | null, endIso: string | null) => {

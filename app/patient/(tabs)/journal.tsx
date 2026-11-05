@@ -22,6 +22,7 @@ import ScreenBackground from "@/components/ui/ScreenBackground";
 import { useAuthDialog } from "@/components/ui/AuthDialog";
 import LineIcon from "@/components/profile/LineIcon";
 import { JournalEntryParam } from "@/components/journal/entry";
+import { parseApiDate } from "@/utils/apiDate";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const ROW_HEIGHT = 92;
@@ -37,21 +38,6 @@ type Entry = {
 };
 
 type Day = { key: string; date: Date; entries: Entry[] };
-
-// The API returns formatted strings instead of ISO dates:
-// notes   "10/23/2026, 1:16 PM" (month first), photos "23/10/2026, 1:16 PM" (day first)
-const parseApiDate = (value: string, order: "mdy" | "dmy"): Date | null => {
-  const match = value?.match(
-    /^(\d{1,2})\/(\d{1,2})\/(\d{4}),?\s+(\d{1,2}):(\d{2})\s*(AM|PM)?/i
-  );
-  if (!match) return null;
-  const [, a, b, year, h, min, ampm] = match;
-  const month = Number(order === "mdy" ? a : b) - 1;
-  const day = Number(order === "mdy" ? b : a);
-  let hours = Number(h) % 12;
-  if (ampm?.toUpperCase() === "PM") hours += 12;
-  return new Date(Number(year), month, day, hours, Number(min));
-};
 
 const flattenSections = (sections: any[]): any[] =>
   Array.isArray(sections) ? sections.flatMap((section) => section?.items ?? []) : [];
