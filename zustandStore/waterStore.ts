@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { CONFIG } from "@/constants/config";
 import { todayDateString } from "@/utils/date";
+import { toLocalDay } from "@/components/vitals/MetricUI";
 
 // Helper function to get today's date in YYYY-MM-DD format
 const getTodayDate = () => todayDateString();
@@ -18,6 +19,7 @@ interface WaterStore {
   setMaxGlasses: (max: number) => void;
   setLastAccessedDate: (date: string) => void;
   fetchUserGoals: (userId: string) => Promise<void>;
+  fetchToday: (userId: string) => Promise<void>;
   checkAndResetForNewDay: () => void; // New action to check and reset for new day
   resetDailyProgress: () => void; // New action to manually reset daily progress
 }
@@ -125,6 +127,20 @@ export const useWaterStore = create<WaterStore>()(
           console.log("💧 Water goals fetched successfully:", data);
         } catch (error) {
           console.error("💧 Error fetching water goals:", error);
+        }
+      },
+
+      // The count lives on the server too: after a reinstall, a new phone or a glass logged from the chat, the
+      // Home tile would show 0 until the Water screen was opened. Same read the Water screen uses (the day's total)
+      fetchToday: async (userId: string) => {
+        try {
+          const response = await fetch(`${get().baseUrl}/user/activity/${userId}`);
+          if (!response.ok) return;
+          const data = await response.json();
+          const today = (data?.activities || []).find((a: any) => toLocalDay(a.date) === getTodayDate());
+          set({ glassCount: Number(today?.details?.water) || 0, lastAccessedDate: getTodayDate() });
+        } catch (error) {
+          console.error("💧 Error fetching today's water:", error);
         }
       },
     }),

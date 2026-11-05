@@ -623,6 +623,7 @@ const Home = () => {
         // Check and reset water store
         const waterStore = useWaterStore.getState();
         waterStore.checkAndResetForNewDay();
+        waterStore.fetchToday(userId);
 
         // Initialize all user goals (these should persist)
         // Only fetch if goals are not already set to prevent overriding manual settings
