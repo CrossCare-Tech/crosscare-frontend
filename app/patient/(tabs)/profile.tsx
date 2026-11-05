@@ -25,7 +25,7 @@ import ProfilePhoto, {
 } from "@/components/profile/ProfilePhoto";
 import { PremiumBadge } from "@/components/premium/PremiumUI";
 import { usePremiumStore } from "@/zustandStore/premiumStore";
-import { DEV_TOOLS_VISIBLE, useDemoMode } from "@/utils/demo/demoMode";
+import { DEV_TOOLS_VISIBLE, useDemoMode, usePreviewScreens } from "@/utils/demo/demoMode";
 import { GUIDE } from "@/constants/conciergeGuide";
 
 const ICONS: Record<string, React.ReactNode> = {
@@ -214,6 +214,7 @@ const Profile = () => {
   const hint = (...keys: string[]) => keys.map((key) => t(`profile.${key}`)).join(", ");
   const premiumStatus = usePremiumStore((state) => state.status);
   const demoMode = useDemoMode((state) => state.enabled);
+  const preview = usePreviewScreens();
 
   const getProfile = async () => {
     try {
@@ -323,12 +324,14 @@ const Profile = () => {
               title={t("pregnancySummary.title")}
               onPress={() => router.push("/patient/pregnancy-summary")}
             />
-            <MenuRow
-              icon="documents"
-              title={t("documents.title")}
-              subtitle={t("documents.profileHint")}
-              onPress={() => router.push("/patient/documents")}
-            />
+            {preview && (
+              <MenuRow
+                icon="documents"
+                title={t("documents.title")}
+                subtitle={t("documents.profileHint")}
+                onPress={() => router.push("/patient/documents")}
+              />
+            )}
             <MenuRow
               icon="avatar"
               title={GUIDE.name} // fixed: renaming the Concierge does not rename this section

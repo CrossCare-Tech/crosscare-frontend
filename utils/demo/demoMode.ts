@@ -13,6 +13,12 @@ const DEFAULT_ENABLED = process.env.EXPO_PUBLIC_DEMO_MODE === "true";
 // Developer tools are visible unless a build turns them off with EXPO_PUBLIC_DEV_TOOLS=false.
 export const DEV_TOOLS_VISIBLE = process.env.EXPO_PUBLIC_DEV_TOOLS !== "false";
 
+// Screens built as demos have no backend behind them yet (Cycle and mental health, Documents, Activity log).
+// They show with Simulated data on, or in a build that sets EXPO_PUBLIC_PREVIEW_SCREENS=true; a build that talks
+// to the real backend leaves both off, so nobody sees sample data presented as their own.
+export const usePreviewScreens = () =>
+  useDemoMode((state) => state.enabled) || process.env.EXPO_PUBLIC_PREVIEW_SCREENS === "true";
+
 type DemoModeState = {
   enabled: boolean;
   loaded: boolean;

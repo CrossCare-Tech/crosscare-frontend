@@ -8,6 +8,7 @@ import { Theme } from "@/constants/theme";
 import ScreenBackground from "@/components/ui/ScreenBackground";
 import AuthTopBar from "@/components/ui/AuthTopBar";
 import SessionExpiryModal from "@/components/security/SessionExpiryModal";
+import { usePreviewScreens } from "@/utils/demo/demoMode";
 import { metricStyles } from "@/components/vitals/MetricUI";
 import { styles as rowStyles } from "@/components/devices/DeviceSourceRows";
 
@@ -16,10 +17,12 @@ import { styles as rowStyles } from "@/components/devices/DeviceSourceRows";
 export default function SecurityScreen() {
   const { t } = useTranslation();
   const [warning, setWarning] = useState(false);
+  const preview = usePreviewScreens();
   const rows: { icon: keyof typeof Feather.glyphMap; title: string; sub: string; onPress: () => void }[] = [
     { icon: "message-square", title: t("security.mfaTitle"), sub: t("security.mfaHint"), onPress: () => router.push("/patient/mfa") },
     { icon: "unlock", title: t("security.biometricRow"), sub: t("security.confirmItsYou"), onPress: () => router.push("/patient/biometric") },
-    { icon: "list", title: t("security.activityLog"), sub: t("security.activityHint"), onPress: () => router.push("/patient/activity-log") },
+    // The log lists sample events, so it only shows in the demo builds
+    ...(preview ? [{ icon: "list" as const, title: t("security.activityLog"), sub: t("security.activityHint"), onPress: () => router.push("/patient/activity-log") }] : []),
     { icon: "clock", title: t("security.sessionPreview"), sub: t("security.sessionPreviewHint"), onPress: () => setWarning(true) },
   ];
 

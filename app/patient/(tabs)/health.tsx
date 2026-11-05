@@ -15,7 +15,7 @@ import { useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { Theme } from '@/constants/theme';
 import ScreenBackground from '@/components/ui/ScreenBackground';
-import { useDemoMode } from '@/utils/demo/demoMode';
+import { usePreviewScreens } from '@/utils/demo/demoMode';
 
 interface TrackingOption {
   id: string;
@@ -30,7 +30,7 @@ const TrackingOptionsScreen = () => {
   const userId = user?.user_id;
 
   const {t} = useTranslation();
-  const demoMode = useDemoMode((state) => state.enabled);
+  const preview = usePreviewScreens();
 
   useEffect(() => {
     const setHealthVisited = async () => {
@@ -40,9 +40,9 @@ const TrackingOptionsScreen = () => {
     setHealthVisited();
   }, [userId]);
 
-  // Cycle and check-in screens have no backend routes yet, so they only show with Simulated data on.
+  // Cycle and check-in screens have no backend routes yet, so they only show with Simulated data on (or in a preview build).
   // They belong to the Well-being section, after Mood, Symptoms and Medication.
-  const cycleAndMentalHealth: TrackingOption[] = demoMode
+  const cycleAndMentalHealth: TrackingOption[] = preview
     ? [
         {
           id: 'cycle-log',
