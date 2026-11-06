@@ -124,11 +124,12 @@ const SignUp: FC = () => {
       setEmailError(t("authFlow.signup.invalidEmail"));
       isValid = false;
     }
-    if (phoneNumber.replace(/\D/g, "").length < 7) {
+    // Same rules as the team's app: the phone is optional (international format), the password needs 6 characters
+    if (phoneNumber.trim() && !/^[+]?[1-9][\d]{0,15}$/.test(phoneNumber.replace(/\s/g, ""))) {
       setPhoneNumberError(t("authFlow.signup.invalidPhone"));
       isValid = false;
     }
-    if (!password || password.length < 8 || !/\d/.test(password)) {
+    if (!password || password.length < 6) {
       setPasswordError(t("authFlow.common.passwordRule"));
       isValid = false;
     }
@@ -142,7 +143,7 @@ const SignUp: FC = () => {
     if (!dateOfBirth) {
       setDobError(t("authFlow.signup.dobRequired"));
       isValid = false;
-    } else if (validateAge(dateOfBirth) < 18) {
+    } else if (validateAge(dateOfBirth) < 13) {
       setDobError(t("authFlow.signup.tooYoung"));
       isValid = false;
     }
@@ -162,7 +163,7 @@ const SignUp: FC = () => {
           firstName: firstName.trim(),
           lastName: lastName.trim(),
           email: email.toLowerCase().trim(),
-          phoneNumber: phoneNumber.trim(),
+          phoneNumber: phoneNumber.trim() || null,
           password: password,
           dateOfBirth: dateOfBirth!.toISOString().split("T")[0],
           role: "patient",

@@ -112,7 +112,7 @@ const ForgetScreen: FC = () => {
     setPasswordError("");
     setConfirmError("");
 
-    if (newPassword.length < 8 || !/\d/.test(newPassword)) {
+    if (newPassword.length < 6) {
       setPasswordError(t("authFlow.common.passwordRule"));
       return;
     }
