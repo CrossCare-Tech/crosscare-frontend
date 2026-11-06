@@ -10,6 +10,10 @@ import { AVATAR_GUIDES, AVATAR_OUTFITS, AVATAR_TONES, AvatarItem } from "@/const
 import { loadGuideName, saveGuideName } from "@/constants/conciergeGuide";
 import { AvatarChoice, DEFAULT_AVATAR, avatarImage, useAvatarStudio } from "@/zustandStore/avatarStudioStore";
 import AvatarImage from "@/components/ui/AvatarImage";
+import { useSelector } from "react-redux";
+import { CONFIG } from "@/constants/config";
+import { toLocalDay } from "@/components/vitals/MetricUI";
+import { AvatarStats, isRuleMet, longestStreak, ruleProgress } from "@/utils/avatarUnlocks";
 
 type TabId = "guide" | "tone" | "hair" | "outfit";
 const TABS: TabId[] = ["guide", "tone", "hair", "outfit"];
@@ -21,8 +25,37 @@ const TAB_KEY: Record<TabId, string> = {
 };
 
 // Visual build of the app's Avatar Selection from the prototype /avatar-studio/.
-// Guide and skin tone are never locked; hairstyles and outfits are (unlock rules are shown, not enforced yet).
-const isOpen = (item: AvatarItem) => item.rule === "start";
+// Guide and skin tone are never locked; hairstyles and outfits open when the patient meets their rule
+// (journal entries and vitals streak, read from the account; check-ins have no backend yet).
+const flatten = (sections: any): any[] => (Array.isArray(sections) ? sections.flatMap((s) => s?.items ?? []) : []);
+const hasVital = (details: any) =>
+  details?.bloodPressure?.systolic > 0 || details?.glucose?.value > 0 || details?.weight?.value > 0 || details?.heart > 0;
+
+const useAvatarStats = (): AvatarStats => {
+  const user = useSelector((state: any) => state.user);
+  const [stats, setStats] = useState<AvatarStats>({ journalEntries: 0, bestVitalsStreak: 0 });
+  useEffect(() => {
+    if (!user?.user_id) return;
+    const base = `${CONFIG.API_BASE_URL}/user/activity/${user.user_id}`;
+    const auth = user?.token ? { Authorization: `Bearer ${user.token}` } : undefined;
+    const get = async (path: string) => {
+      try {
+        const res = await fetch(`${base}${path}`, { headers: auth });
+        return res.ok ? await res.json() : null;
+      } catch {
+        return null;
+      }
+    };
+    Promise.all([get("/notes"), get("/journal"), get("")]).then(([notes, photos, history]) => {
+      const days = (history?.activities ?? []).filter((a: any) => hasVital(a.details)).map((a: any) => toLocalDay(a.date));
+      setStats({
+        journalEntries: flatten(notes?.data).length + flatten(photos?.data).length,
+        bestVitalsStreak: longestStreak(days),
+      });
+    });
+  }, [user?.user_id, user?.token]);
+  return stats;
+};
 
 export default function AvatarStudio() {
   const { t } = useTranslation();
@@ -31,6 +64,11 @@ export default function AvatarStudio() {
   const save = useAvatarStudio((s) => s.save);
   const [draft, setDraft] = useState<AvatarChoice>(saved);
   const [tab, setTab] = useState<TabId>("hair");
+  const stats = useAvatarStats();
+  // The catalog comes in English; the names and unlock rules are translated by id
+  const itemLabel = (label: string) => t(`avatarItems.labels.${label}`, { defaultValue: label });
+  const ruleText = (item: AvatarItem) => t(`avatarItems.rules.${item.rule}`, { defaultValue: item.text });
+  const isOpen = (item: AvatarItem) => isRuleMet(item.rule, stats);
 
   const load = useAvatarStudio((s) => s.load);
 
@@ -86,7 +124,7 @@ export default function AvatarStudio() {
     if (tab === "tone") {
       return AVATAR_TONES.map((tn) => ({
         key: String(tn.id),
-        label: tn.label,
+        label: itemLabel(tn.label),
         img: avatarImage({ ...draft, tone: tn.id }),
         on: tn.id === draft.tone,
         item: null as AvatarItem | null,
@@ -97,7 +135,7 @@ export default function AvatarStudio() {
     if (tab === "hair") {
       return guide.hairstyles.map((h) => ({
         key: String(h.id),
-        label: h.label,
+        label: itemLabel(h.label),
         img: avatarImage({ ...draft, hair: h.id }),
         on: h.id === draft.hair,
         item: h,
@@ -106,7 +144,7 @@ export default function AvatarStudio() {
     }
     return AVATAR_OUTFITS.map((o) => ({
       key: String(o.id),
-      label: o.label,
+      label: itemLabel(o.label),
       img: avatarImage({ ...draft, outfit: o.id }),
       on: o.id === draft.outfit,
       item: o,
@@ -150,10 +188,16 @@ export default function AvatarStudio() {
             accessibilityLabel={t("avatarStudio.nameLabel")}
           />
           {locked ? (
-            <Text style={styles.hint}>{t("avatarStudio.unlockHint", { rule: locked.text })}</Text>
+            <Text style={styles.hint}>
+              {t("avatarStudio.unlockHint", { rule: ruleText(locked) })}
+              {(() => {
+                const progress = ruleProgress(locked.rule, stats);
+                return progress ? ` (${Math.min(progress.have, progress.need)}/${progress.need})` : "";
+              })()}
+            </Text>
           ) : (
             <Text style={styles.hint}>
-              {hair.label} · {outfit.label}
+              {itemLabel(hair.label)} · {itemLabel(outfit.label)}
             </Text>
           )}
         </View>
@@ -181,7 +225,7 @@ export default function AvatarStudio() {
                 onPress={c.pick}
                 accessibilityRole="radio"
                 accessibilityState={{ checked: c.on }}
-                accessibilityLabel={isLocked ? `${c.label}, ${t("avatarStudio.locked")}: ${c.item!.text}` : c.label}
+                accessibilityLabel={isLocked ? `${c.label}, ${t("avatarStudio.locked")}: ${ruleText(c.item!)}` : c.label}
                 style={[styles.card, { width: cardW }, c.on && styles.cardOn, isLocked && styles.cardLocked]}
               >
                 <AvatarImage fallback={null} source={c.img} style={[styles.cardImg, { height: cardW - 12 }, isLocked && styles.dim]} resizeMode="cover" />
