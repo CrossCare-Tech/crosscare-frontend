@@ -26,6 +26,7 @@ import ScreenBackground from "@/components/ui/ScreenBackground";
 import AuthTopBar from "@/components/ui/AuthTopBar";
 import InlineNotice from "@/components/ui/InlineNotice";
 import Toggle from "@/components/profile/Toggle";
+import { usePreviewScreens } from "@/utils/demo/demoMode";
 
 // Concierge suggestions and the weekly email do not exist yet; these toggles only
 // remember the user's choice on the device until the features are built.
@@ -63,6 +64,7 @@ const Row = ({
 
 const NotificationSettings = () => {
   const { t } = useTranslation();
+  const preview = usePreviewScreens();
 
   const [permissionGranted, setPermissionGranted] = useState(true);
   const [medication, setMedication] = useState(true);
@@ -192,22 +194,27 @@ const NotificationSettings = () => {
               />
             </View>
 
-            <Text style={styles.sectionTitle}>{t("profile.conciergeSection")}</Text>
-            <View style={styles.card}>
-              <Row
-                title={t("profile.proactiveSuggestions")}
-                channel={t("profile.pushChannel")}
-                value={proactive}
-                onChange={toggleLocalPreference(PROACTIVE_SUGGESTIONS_KEY, setProactive)}
-              />
-              <Row
-                title={t("profile.weeklySummary")}
-                channel={t("profile.emailChannel")}
-                value={weeklySummary}
-                onChange={toggleLocalPreference(WEEKLY_SUMMARY_KEY, setWeeklySummary)}
-                isLast
-              />
-            </View>
+            {/* Concierge suggestions and the weekly email are not built: the toggles only remember a choice */}
+            {preview && (
+              <>
+                <Text style={styles.sectionTitle}>{t("profile.conciergeSection")}</Text>
+                <View style={styles.card}>
+                  <Row
+                    title={t("profile.proactiveSuggestions")}
+                    channel={t("profile.pushChannel")}
+                    value={proactive}
+                    onChange={toggleLocalPreference(PROACTIVE_SUGGESTIONS_KEY, setProactive)}
+                  />
+                  <Row
+                    title={t("profile.weeklySummary")}
+                    channel={t("profile.emailChannel")}
+                    value={weeklySummary}
+                    onChange={toggleLocalPreference(WEEKLY_SUMMARY_KEY, setWeeklySummary)}
+                    isLast
+                  />
+                </View>
+              </>
+            )}
 
             <Text style={styles.sectionTitle}>{t("profile.clinicalAlerts")}</Text>
             <View style={styles.card}>

@@ -1,3 +1,4 @@
+import { usePreviewScreens } from "@/utils/demo/demoMode";
 import React, { useState } from "react";
 import { ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
@@ -13,13 +14,14 @@ import { buildMilestones, latestReading } from "@/components/pregnancy-summary/m
 import { LockedSheet } from "@/components/pregnancy-summary/ExportSheets";
 import { MilestonesSection } from "@/components/pregnancy-summary/Sections";
 import { usePregnancySummary } from "@/hooks/usePregnancySummary";
-import { hasPremiumAccess, usePremiumStore } from "@/zustandStore/premiumStore";
+import { hasPremiumAccess, usePremiumStatus } from "@/zustandStore/premiumStore";
 
 // 6.1 — Pregnancy Summary (see docs/pregnancy-summary.md)
 const PregnancySummary = () => {
   const { t } = useTranslation();
   const { patient, vitals, demo } = usePregnancySummary();
-  const premium = hasPremiumAccess(usePremiumStore((state) => state.status));
+  const preview = usePreviewScreens();
+  const premium = hasPremiumAccess(usePremiumStatus());
   // The demo switch only affects this export. Premium also gates the Concierge chat, so it is read, never changed.
   const [planIncludesExport, setPlanIncludesExport] = useState(true);
   const unlocked = premium && planIncludesExport;
@@ -77,7 +79,8 @@ const PregnancySummary = () => {
               <Feather name="chevron-right" size={16} color={Theme.colors.warning} />
             </TouchableOpacity>
           )}
-          <MilestonesSection rows={milestones} />
+          {/* The milestones are sample data (labelled Demo), so only demo and preview builds show them */}
+          {preview && <MilestonesSection rows={milestones} />}
           {demo && (
             <View style={styles.planRow}>
               <View style={styles.flex}>
@@ -104,19 +107,24 @@ const PregnancySummary = () => {
             </View>
             <Feather name="chevron-right" size={16} color={Theme.colors.ink} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.shareRow} onPress={() => openExport("qr")} accessibilityRole="button">
-            <View style={styles.shareIcon}>
-              <Feather name="file-text" size={19} color={Theme.colors.purple} />
-            </View>
-            <View style={styles.flex}>
-              <Text style={styles.rowTitle}>{t("summaryExport.shareTitle")}</Text>
-              <Text style={styles.rowSub}>{t("summaryExport.shareHint")}</Text>
-            </View>
-            <Feather name="chevron-right" size={16} color={Theme.colors.ink} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.exportButton} onPress={() => openExport("pdf")} activeOpacity={0.88} accessibilityRole="button">
-            <Text style={styles.exportText}>{t("summaryExport.export")}</Text>
-          </TouchableOpacity>
+          {/* The PDF and QR export are a demo (no file, link or message is created), so only demo and preview builds show them */}
+          {preview && (
+            <>
+              <TouchableOpacity style={styles.shareRow} onPress={() => openExport("qr")} accessibilityRole="button">
+                <View style={styles.shareIcon}>
+                  <Feather name="file-text" size={19} color={Theme.colors.purple} />
+                </View>
+                <View style={styles.flex}>
+                  <Text style={styles.rowTitle}>{t("summaryExport.shareTitle")}</Text>
+                  <Text style={styles.rowSub}>{t("summaryExport.shareHint")}</Text>
+                </View>
+                <Feather name="chevron-right" size={16} color={Theme.colors.ink} />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.exportButton} onPress={() => openExport("pdf")} activeOpacity={0.88} accessibilityRole="button">
+                <Text style={styles.exportText}>{t("summaryExport.export")}</Text>
+              </TouchableOpacity>
+            </>
+          )}
         </ScrollView>
         {locked && <LockedSheet onClose={() => setLocked(false)} onManagePlan={managePlan} />}
       </SafeAreaView>

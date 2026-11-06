@@ -1,3 +1,4 @@
+import { usePreviewScreens } from "@/utils/demo/demoMode";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -114,6 +115,7 @@ const NoteTile = ({ entry, style, tag, onPress, selected }: { entry: Entry; styl
 export default function Journal() {
   const user = useSelector((state: any) => state.user);
   const token = useSelector((state: any) => state.user.token);
+  const preview = usePreviewScreens();
   const { t, i18n } = useTranslation();
 
   const [entries, setEntries] = useState<Entry[]>([]);
@@ -313,7 +315,8 @@ export default function Journal() {
       <SafeAreaView style={styles.container} edges={["top"]}>
         <View style={styles.headerRow}>
           <Text style={styles.header}>{t("journalTimeline.title")}</Text>
-          {!loading && entries.length > 0 && (
+          {/* Select only exists to delete, and the API has no delete route for notes or photos */}
+          {preview && !loading && entries.length > 0 && (
             <TouchableOpacity
               onPress={selecting ? stopSelecting : () => setSelecting(true)}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}

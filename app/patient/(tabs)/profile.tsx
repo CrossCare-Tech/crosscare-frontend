@@ -237,6 +237,11 @@ const Profile = () => {
     }
   }, [user?.user_id]);
 
+  // The name saved on the Account screen lands in Redux; this tab stays mounted, so it must follow it
+  useEffect(() => {
+    if (user?.user_name) setName(user.user_name);
+  }, [user?.user_name]);
+
   // Picks made on the Account screen land in Redux
   useEffect(() => {
     if (user?.user_photo) setPhoto(user.user_photo);
@@ -300,12 +305,14 @@ const Profile = () => {
               subtitle={hint("name", "age", "email")}
               onPress={() => router.push("/patient/profile-setting/name")}
             />
-            <MenuRow
-              icon="premium"
-              title={t("premium.title")}
-              trailing={<PremiumBadge status={premiumStatus} />}
-              onPress={() => router.push("/patient/profile-setting/premium")}
-            />
+            {preview && (
+              <MenuRow
+                icon="premium"
+                title={t("premium.title")}
+                trailing={<PremiumBadge status={premiumStatus} />}
+                onPress={() => router.push("/patient/profile-setting/premium")}
+              />
+            )}
             <MenuRow
               icon="pregnancy"
               title={t("profile.yourpregnancy")}
@@ -331,12 +338,14 @@ const Profile = () => {
               subtitle={hint("name", "hair", "dress", "skintone")}
               onPress={() => router.push("/avatar-studio")}
             />
-            <MenuRow
-              icon="clinic"
-              title={t("clinic.yourClinics")}
-              subtitle={t("clinic.profileHint")}
-              onPress={() => router.push("/patient/clinics")}
-            />
+            {preview && (
+              <MenuRow
+                icon="clinic"
+                title={t("clinic.yourClinics")}
+                subtitle={t("clinic.profileHint")}
+                onPress={() => router.push("/patient/clinics")}
+              />
+            )}
             <MenuRow
               icon="fame"
               title={t("profile.halloffame")}
@@ -351,15 +360,18 @@ const Profile = () => {
             <MenuRow
               icon="devices"
               title={t("devices.title")}
-              subtitle={Platform.OS === "ios" ? "Apple Health" : "Health Connect, Fitbit"}
+              subtitle={Platform.OS === "ios" ? "Apple Health" : "Fitbit"}
               onPress={() => router.push("/patient/devices")}
             />
-            <MenuRow
-              icon="security"
-              title={t("security.title")}
-              subtitle={t("security.profileHint")}
-              onPress={() => router.push("/patient/security")}
-            />
+            {/* Two-step verification and Face ID are visual only (any code passes), so they stay out of live builds */}
+            {preview && (
+              <MenuRow
+                icon="security"
+                title={t("security.title")}
+                subtitle={t("security.profileHint")}
+                onPress={() => router.push("/patient/security")}
+              />
+            )}
             <MenuRow
               icon="language"
               title={t("profile.language")}

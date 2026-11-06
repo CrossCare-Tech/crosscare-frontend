@@ -33,7 +33,8 @@
         "INTERNET",
         "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO"
-      ]
+      ],
+      "allowBackup": false
     },
     "web": {
       "bundler": "metro",

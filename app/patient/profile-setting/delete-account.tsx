@@ -17,7 +17,7 @@ import { useTranslation } from "react-i18next";
 import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { removeToken, setUser } from "@/store/userSlice";
+import { removeToken, removeUser } from "@/store/userSlice";
 import { CONFIG } from "@/constants/config";
 import { Theme } from "@/constants/theme";
 import ScreenBackground from "@/components/ui/ScreenBackground";
@@ -124,7 +124,7 @@ const DeleteAccount = () => {
                 
                 // Clear Redux state SECOND  
                 dispatch(removeToken());
-                dispatch(setUser(null));
+                dispatch(removeUser()); // setUser(null) throws in the reducer, so the user was never cleared
                 console.log("Redux state cleared");
 
                 // Use setTimeout to ensure state changes are processed
@@ -151,8 +151,8 @@ const DeleteAccount = () => {
                 console.error("Error during cleanup:", cleanupError);
                 // Even if cleanup fails, still redirect since account is deleted
                 Alert.alert(
-                  "Account Deleted",
-                  "Your account has been deleted",
+                  t("uiText.accountDeleted"),
+                  t("uiText.accountDeletedMsg"),
                   [
                     {
                       text: "OK",

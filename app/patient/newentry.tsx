@@ -1,3 +1,4 @@
+import { usePreviewScreens } from "@/utils/demo/demoMode";
 import React, { useEffect, useRef, useState } from "react";
 import { useDemoMode } from "@/utils/demo/demoMode";
 import { mentionsDistress } from "@/components/wellbeing/keywords";
@@ -38,6 +39,7 @@ const DEFAULT_TAGS = ["tagFirstKick", "tagBump", "tagUltrasound", "tagFamily", "
 const NewEntry = () => {
   const params = useLocalSearchParams<{ item?: string }>();
   const editing: JournalEntryParam | null = params.item ? JSON.parse(params.item) : null;
+  const preview = usePreviewScreens();
   const initialPhoto = editing?.kind === "photo" ? editing.imageUrl ?? null : null;
   const initialNote = editing ? entryText(editing) : "";
   const user = useSelector((state: any) => state.user);
@@ -306,39 +308,45 @@ const NewEntry = () => {
             keyboardShouldPersistTaps="handled"
             contentContainerStyle={styles.scrollContent}
           >
-            <View style={styles.section}>
-              <Text style={styles.label}>
-                {t("newEntry.photo")} <Text style={styles.optional}>{t("newEntry.optional")}</Text>
-              </Text>
-              <TouchableOpacity
-                style={[styles.photoBox, photo && styles.photoBoxFilled]}
-                onPress={choosePhoto}
-                activeOpacity={0.8}
-                accessibilityRole="button"
-                accessibilityLabel={photo ? t("newEntry.editPhoto") : t("newEntry.addPhoto")}
-              >
-                {photo ? (
-                  <>
-                    <Image source={{ uri: photo }} style={StyleSheet.absoluteFill} resizeMode="cover" />
-                    <View style={styles.photoEdit}>
-                      <LineIcon size={16} color={Theme.colors.magenta}>
-                        <Path d="M17 3a2.85 2.85 0 0 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-                        <Path d="m15 5 4 4" />
-                      </LineIcon>
-                    </View>
-                  </>
-                ) : (
-                  <>
-                    <LineIcon size={26} color={Theme.colors.purple}>
-                      <Path d="M4 8h3l1.6-2h6.8L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z" />
-                      <Path d="M15.4 13a3.4 3.4 0 1 1-6.8 0 3.4 3.4 0 0 1 6.8 0Z" />
-                    </LineIcon>
-                    <Text style={styles.photoTitle}>{t("newEntry.addPhoto")}</Text>
-                    <Text style={styles.photoHint}>{t("newEntry.cameraOrLibrary")}</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-            </View>
+            {/* Adding a photo to a note creates a photo entry and then deletes the note, and the API cannot delete: */}
+            {/* a build with the backend keeps a note a note */}
+            {!(editing?.kind === "note" && !preview) && (
+              <>
+                <View style={styles.section}>
+                  <Text style={styles.label}>
+                    {t("newEntry.photo")} <Text style={styles.optional}>{t("newEntry.optional")}</Text>
+                  </Text>
+                  <TouchableOpacity
+                    style={[styles.photoBox, photo && styles.photoBoxFilled]}
+                    onPress={choosePhoto}
+                    activeOpacity={0.8}
+                    accessibilityRole="button"
+                    accessibilityLabel={photo ? t("newEntry.editPhoto") : t("newEntry.addPhoto")}
+                  >
+                    {photo ? (
+                      <>
+                        <Image source={{ uri: photo }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+                        <View style={styles.photoEdit}>
+                          <LineIcon size={16} color={Theme.colors.magenta}>
+                            <Path d="M17 3a2.85 2.85 0 0 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                            <Path d="m15 5 4 4" />
+                          </LineIcon>
+                        </View>
+                      </>
+                    ) : (
+                      <>
+                        <LineIcon size={26} color={Theme.colors.purple}>
+                          <Path d="M4 8h3l1.6-2h6.8L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z" />
+                          <Path d="M15.4 13a3.4 3.4 0 1 1-6.8 0 3.4 3.4 0 0 1 6.8 0Z" />
+                        </LineIcon>
+                        <Text style={styles.photoTitle}>{t("newEntry.addPhoto")}</Text>
+                        <Text style={styles.photoHint}>{t("newEntry.cameraOrLibrary")}</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
 
             <View style={styles.section}>
               <Text style={styles.label}>
@@ -406,7 +414,8 @@ const NewEntry = () => {
               </View>
             </View>
 
-            {editing && (
+            {/* The API has no delete route for journal entries, so only demo and preview builds offer it */}
+            {editing && preview && (
               <TouchableOpacity
                 style={styles.deleteButton}
                 onPress={() => setConfirmDelete(true)}
@@ -481,7 +490,7 @@ const NewEntry = () => {
               <TouchableOpacity style={styles.sheetButton} onPress={fromMenu(() => pickPhoto("camera"))}>
                 <Text style={styles.sheetText}>{t("newEntry.takePhoto")}</Text>
               </TouchableOpacity>
-              {photo && (
+              {photo && (preview || !editing) && (
                 <TouchableOpacity
                   style={[styles.sheetButton, styles.sheetDanger]}
                   onPress={fromMenu(() => setPhoto(null))}

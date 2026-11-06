@@ -24,6 +24,7 @@ import ScreenBackground from "@/components/ui/ScreenBackground";
 import AuthTopBar from "@/components/ui/AuthTopBar";
 import LineIcon from "@/components/profile/LineIcon";
 import { Pill } from "@/components/vitals/VitalsUI";
+import { usePreviewScreens } from "@/utils/demo/demoMode";
 import AppointmentModal, { EditableAppointment } from "./modal/add-appointment";
 import DayStrip, { DayMarks, dayKey } from "@/components/appointments/DayStrip";
 import MonthSheet from "@/components/appointments/MonthSheet";
@@ -42,6 +43,7 @@ const sameDay = (a: Date, b: Date) =>
 // 10.1 — Appointment Calendar
 const Calendar = () => {
   const user = useSelector((state: any) => state.user);
+  const preview = usePreviewScreens();
   const { t, i18n } = useTranslation();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [selectedDay, setSelectedDay] = useState(() => new Date());
@@ -196,16 +198,19 @@ const Calendar = () => {
           </Text>
           <Text style={styles.rowSub}>{when}</Text>
         </View>
-        <Pill
-          label={
-            !isUpcoming
-              ? t("appointments.completed")
-              : appointment.id === pendingSyncId
-                ? t("appointments.pendingSync")
-                : t("appointments.confirmed")
-          }
-          tone={!isUpcoming ? "success" : appointment.id === pendingSyncId ? "neutral" : "teal"}
-        />
+        {/* "Confirmed" and "Pending sync" are simulated, so a build with the backend only shows "Completed" */}
+        {(preview || !isUpcoming) && (
+          <Pill
+            label={
+              !isUpcoming
+                ? t("appointments.completed")
+                : appointment.id === pendingSyncId
+                  ? t("appointments.pendingSync")
+                  : t("appointments.confirmed")
+            }
+            tone={!isUpcoming ? "success" : appointment.id === pendingSyncId ? "neutral" : "teal"}
+          />
+        )}
       </TouchableOpacity>
     );
   };
@@ -323,14 +328,16 @@ const Calendar = () => {
             />
           </View>
 
-          {/* 10.3 NextGen sync status */}
-          <TouchableOpacity style={styles.reminderCard} onPress={() => router.push("/patient/nextgen-sync")} accessibilityRole="button">
-            <View style={styles.rowText}>
-              <Text style={styles.rowTitle}>{t("nextGen.title")}</Text>
-              <Text style={styles.rowSub}>{t("nextGen.hint")}</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={Theme.colors.inkFaint} />
-          </TouchableOpacity>
+          {/* 10.3 NextGen sync status: simulated, the API has no NextGen sync */}
+          {preview && (
+            <TouchableOpacity style={styles.reminderCard} onPress={() => router.push("/patient/nextgen-sync")} accessibilityRole="button">
+              <View style={styles.rowText}>
+                <Text style={styles.rowTitle}>{t("nextGen.title")}</Text>
+                <Text style={styles.rowSub}>{t("nextGen.hint")}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={Theme.colors.inkFaint} />
+            </TouchableOpacity>
+          )}
         </ScrollView>
 
         <TouchableOpacity

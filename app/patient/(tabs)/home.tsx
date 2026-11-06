@@ -1,3 +1,4 @@
+import { usePreviewScreens } from "@/utils/demo/demoMode";
 import { todayDateString } from "@/utils/date";
 import {
   ActivityIndicator,
@@ -56,6 +57,9 @@ interface Progress {
   remainingDays: number;
   dueDate: string;
 }
+
+// A new account has no steps goal on the server; the Steps screen already falls back to 8,000, so Home does too
+const DEFAULT_STEPS_GOAL = 8000;
 
 const calculatePregnancyProgress = (pregnancyData: any): Progress => {
   const totalWeeks = 40; // Standard pregnancy duration (40 weeks)
@@ -172,8 +176,10 @@ const Home = () => {
         return;
       }
       const data = await res.json();
-      setBpSystolic(data?.data?.lastBloodPressure?.systolic ?? null);
-      setBpDiastolic(data?.data?.lastBloodPressure?.diastolic ?? null);
+      // Today's reading first: it is the latest write of the day, while "last" can be an old row of the same day
+      const bp = data?.data?.todayBloodPressure?.systolic > 0 ? data.data.todayBloodPressure : data?.data?.lastBloodPressure;
+      setBpSystolic(bp?.systolic ?? null);
+      setBpDiastolic(bp?.diastolic ?? null);
     } catch (error) {
       setBpSystolic(null);
       setBpDiastolic(null);
@@ -199,8 +205,9 @@ const Home = () => {
         return;
       }
       const data = await res.json();
-      setGlucoseLevel(data?.data?.lastGlucose ?? null);
-      setGlucoseUnit(data?.data?.glucoseUnit || "mg/dL");
+      const today = data?.data?.todayGlucose > 0;
+      setGlucoseLevel((today ? data.data.todayGlucose : data?.data?.lastGlucose) ?? null);
+      setGlucoseUnit((today ? data.data.todayGlucoseUnit : data?.data?.glucoseUnit) || "mg/dL");
     } catch (error) {
       setGlucoseLevel(null);
       setGlucoseUnit("mg/dL");
@@ -661,6 +668,7 @@ const Home = () => {
   const [image, setImage] = React.useState<string | null>(null);
   const [appointments, setAppointments] = useState<{ title: string; date: string }[]>([]);
   const { routines, fetchRoutines } = useSelfCareStore();
+  const preview = usePreviewScreens();
 
   const fetchAppointments = useCallback(async () => {
     if (!user?.user_id) return;
@@ -906,8 +914,8 @@ const Home = () => {
               <StatTile
                 title={t("homeB.steps")}
                 value={(stepsWalked || 0).toLocaleString(i18n.language)}
-                unit={t("homeB.ofSteps", { goal: (stepGoal || 0).toLocaleString(i18n.language) })}
-                progress={stepGoal ? (stepsWalked || 0) / stepGoal : 0}
+                unit={t("homeB.ofSteps", { goal: (stepGoal || DEFAULT_STEPS_GOAL).toLocaleString(i18n.language) })}
+                progress={(stepsWalked || 0) / (stepGoal || DEFAULT_STEPS_GOAL)}
                 colors={Theme.home.tiles.steps}
                 bar={Theme.home.bars.steps}
                 art={<StepsArt />}
@@ -975,7 +983,8 @@ const Home = () => {
                 <Path d="M9 6l6 6-6 6" />
               </LineIcon>
             </TouchableOpacity>
-            {routine && (
+            {/* The Self-care screen is static (its cards do not open anything yet), so only demo and preview builds link to it */}
+            {routine && preview && (
               <TouchableOpacity
                 style={styles.tipCard}
                 onPress={() => router.push("/patient/(tabs)/selfcare")}

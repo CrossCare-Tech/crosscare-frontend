@@ -68,7 +68,8 @@ import {
 import { CONFIG } from "@/constants/config";
 import i18n from "@/translation/i18next";
 import { deepgramTTS, speakWithDeepgram } from "@/utils/deepgramTTS";
-import { hasPremiumAccess, usePremiumStore } from "@/zustandStore/premiumStore";
+import { hasPremiumAccess, usePremiumStatus } from "@/zustandStore/premiumStore";
+import { usePreviewScreens } from "@/utils/demo/demoMode";
 import PremiumLocked from "@/components/premium/PremiumLocked";
 import { PremiumBadge } from "@/components/premium/PremiumUI";
 import AvatarImage from "@/components/ui/AvatarImage";
@@ -108,6 +109,24 @@ const GEMINI_THINKING_CONFIG = { thinkingBudget: 0 };
  */
 const GEMINI_TIMEOUT_MS = 30000;
 
+/**
+ * Gemini can split one answer across several parts, and the app used to read
+ * only parts[0], so the rest of the reply never reached the screen. Joins every
+ * text part (skipping reasoning parts) and logs why the model stopped, so a
+ * reply cut by MAX_TOKENS shows up in the logs instead of passing as complete.
+ */
+const geminiReplyText = (data: any): string => {
+  const candidate = data?.candidates?.[0];
+  const text = (candidate?.content?.parts ?? [])
+    .filter((part: any) => typeof part?.text === "string" && !part?.thought)
+    .map((part: any) => part.text)
+    .join("");
+  if (candidate?.finishReason && candidate.finishReason !== "STOP") {
+    console.warn("Gemini finishReason:", candidate.finishReason, "parts:", candidate?.content?.parts?.length);
+  }
+  return text;
+};
+
 const fetchWithTimeout = async (
   url: string,
   init: RequestInit,
@@ -140,12 +159,13 @@ interface Message {
 
 // The AI Concierge is a Premium feature: without access, the patient sees why instead of the chat
 export default function askdoula() {
-  const { status } = usePremiumStore();
+  const status = usePremiumStatus();
   return hasPremiumAccess(status) ? <AskDoulaChat /> : <PremiumLocked />;
 }
 
 function AskDoulaChat() {
-  const premiumStatus = usePremiumStore((state) => state.status);
+  const premiumStatus = usePremiumStatus();
+  const previewScreens = usePreviewScreens();
   const guide = useGuide();
   const [inputText, setInputText] = useState("");
   const [showOptions, setShowOptions] = useState(true);
@@ -988,7 +1008,7 @@ function AskDoulaChat() {
 
       // Extract the response text from Gemini's response format
       let responseText =
-        data.candidates?.[0]?.content?.parts?.[0]?.text ||
+        geminiReplyText(data) ||
         "I'm sorry, I couldn't process your request at this time.";
 
       responseText = responseText
@@ -1226,7 +1246,7 @@ function AskDoulaChat() {
 
       // Extract the response text from Gemini's response format
       let responseText =
-        data.candidates?.[0]?.content?.parts?.[0]?.text ||
+        geminiReplyText(data) ||
         "I'm sorry, I couldn't process your request at this time.";
 
       // Not stripped of "*" any more. Doula messages render through
@@ -1816,7 +1836,7 @@ function AskDoulaChat() {
       ]);
     } catch (error) {
       console.error("Error clearing chat history:", error);
-      Alert.alert("Error", "Failed to clear chat history. Please try again.");
+      Alert.alert(i18n.t("uiText.error"), i18n.t("uiText.clearChatFailed"));
     }
   };
 
@@ -2162,16 +2182,18 @@ function AskDoulaChat() {
           </TouchableOpacity>
         </View>
 
-        {/* Premium status of the AI Concierge, opens the Premium screen */}
-        <TouchableOpacity
-          onPress={() => router.push("/patient/profile-setting/premium")}
-          style={styles.premiumBar}
-          accessibilityRole="button"
-        >
-          <PremiumBadge status={premiumStatus} label={t(`premium.chatBadge_${premiumStatus}`)} />
-          <Text style={styles.premiumBarLink}>{t("premium.details")}</Text>
-          <Feather name="chevron-right" size={16} color={Theme.colors.magenta} />
-        </TouchableOpacity>
+        {/* Premium has no backend yet: the bar only shows in demo and preview builds */}
+        {previewScreens && (
+          <TouchableOpacity
+            onPress={() => router.push("/patient/profile-setting/premium")}
+            style={styles.premiumBar}
+            accessibilityRole="button"
+          >
+            <PremiumBadge status={premiumStatus} label={t(`premium.chatBadge_${premiumStatus}`)} />
+            <Text style={styles.premiumBarLink}>{t("premium.details")}</Text>
+            <Feather name="chevron-right" size={16} color={Theme.colors.magenta} />
+          </TouchableOpacity>
+        )}
 
         {/* Intake questionnaire card: opens the pop-up (Start now / Resume) */}
         {intake.loaded && intake.domain && (
@@ -2200,7 +2222,7 @@ function AskDoulaChat() {
           onPress={() => router.push("/patient/profile-setting/citations")}
           style={styles.sourcesBanner}
           accessibilityRole="link"
-          accessibilityLabel="View medical sources and citations"
+          accessibilityLabel={i18n.t("uiText.viewSources")}
         >
           <Ionicons name="shield-checkmark-outline" size={16} color={Theme.colors.purple} />
           <Text style={styles.sourcesBannerText}>
@@ -2469,7 +2491,8 @@ function AskDoulaChat() {
                 >
                   <Feather name="send" size={18} color={Theme.colors.surface} />
                 </TouchableOpacity>
-              ) : (
+              ) : previewScreens ? (
+                // The live call is a scripted simulation (no microphone, canned answers), so only demo and preview builds open it
                 <TouchableOpacity
                   style={styles.liveButton}
                   onPress={() => {
@@ -2481,7 +2504,7 @@ function AskDoulaChat() {
                 >
                   <LiveBars color={Theme.colors.surface} size={20} />
                 </TouchableOpacity>
-              )}
+              ) : null}
             </View>
           </View>
         </View>

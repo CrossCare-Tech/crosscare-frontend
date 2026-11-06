@@ -36,7 +36,7 @@ export default function AddMedicationScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [state, setState] = useState<MedicationState>({
     setMedicationName: "",
-    selectedDays: ["T"],
+    selectedDays: ["SU", "M", "T", "W", "TH", "F", "SA"], // every day: opening with only Tuesday silently scheduled a dose once a week
     isStartDatePickerVisible: false,
     isEndDatePickerVisible: false,
     isTimePickerVisible: false,
