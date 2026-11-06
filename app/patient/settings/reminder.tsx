@@ -28,6 +28,7 @@ import {
   generateDefaultReminders,
   ReminderSettings,
   hasSavedReminders,
+  reminderMessage,
 } from '../../../utils/NotificationManager';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -145,7 +146,7 @@ export default function RemindersScreen() {
       setReminders(savedReminders);
     } catch (error) {
       console.error('Error loading reminders:', error);
-      Alert.alert('Error', 'Could not load reminder settings');
+      Alert.alert(t('uiText.error'), t('uiText.reminderLoadFailed'));
     } finally {
       setLoading(false);
     }
@@ -236,7 +237,7 @@ export default function RemindersScreen() {
       time: newReminderTime,
       enabled: true,
       days: [], // Empty array means every day
-      message: newReminderMessage || `Time to track your ${newReminderType}!`,
+      message: newReminderMessage || t("pushText.genericBody"),
     };
 
     // Add to list
@@ -349,7 +350,7 @@ default: return t('reminder.healthTracking');
           <Text style={styles.reminderTime}>{formatTime(item.time)}</Text>
         </TouchableOpacity>
 
-        <Text style={styles.reminderMessage}>{item.message}</Text>
+        <Text style={styles.reminderMessage}>{reminderMessage(item)}</Text>
       </View>
 
       <View style={styles.reminderActions}>
@@ -389,7 +390,7 @@ default: return t('reminder.healthTracking');
     <ScreenBackground>
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.headerButton} onPress={() => router.back()} accessibilityLabel="Go back">
+        <TouchableOpacity style={styles.headerButton} onPress={() => router.back()} accessibilityLabel={t("uiText.goBack")}>
           <Ionicons name="chevron-back" size={20} color={Theme.colors.ink} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{t('healthReminders')}</Text>

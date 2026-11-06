@@ -2,6 +2,7 @@ import * as Notifications from 'expo-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import { DailyTriggerInput, SchedulableTriggerInputTypes } from 'expo-notifications';
+import i18n from 'i18next';
 
 // Define constants
 const REMINDER_STORAGE_KEY = 'health_reminders';
@@ -81,7 +82,7 @@ export async function scheduleDailyReminder(reminder: ReminderSettings): Promise
     await Notifications.scheduleNotificationAsync({
       content: {
         title: getReminderTitle(reminder.type),
-        body: reminder.message || `Time to track your ${reminder.type}!`,
+        body: reminderMessage(reminder),
         data: { 
           type: reminder.type,
           screen: getScreenForType(reminder.type)
@@ -105,23 +106,23 @@ export async function scheduleDailyReminder(reminder: ReminderSettings): Promise
 }
 
 // Helper functions for notifications
+// The three starter reminders are stored with their text, so one saved in English would stay in English after the
+// language changes. Their text is read from the translations when it is shown or scheduled, unless the user edited it.
+const DEFAULT_REMINDER_TEXT: Record<string, { key: string; english: string }> = {
+  'water-morning': { key: 'pushText.defaultWater', english: 'Time to track your morning water intake!' },
+  'steps-evening': { key: 'pushText.defaultSteps', english: "Don't forget to log your steps for today!" },
+  'sleep-morning': { key: 'pushText.defaultSleep', english: 'How did you sleep last night? Tap to log your sleep.' },
+};
+
+export function reminderMessage(reminder: ReminderSettings): string {
+  const starter = DEFAULT_REMINDER_TEXT[reminder.id];
+  if (starter && (!reminder.message || reminder.message === starter.english)) return i18n.t(starter.key);
+  return reminder.message || i18n.t('pushText.genericBody');
+}
+
 function getReminderTitle(type: string): string {
-  switch (type) {
-    case 'water':
-      return '💧 Water Reminder';
-    case 'steps':
-      return '👟 Steps Reminder';
-    case 'medication':
-      return '💊 Medication Reminder';
-    case 'sleep':
-      return '😴 Sleep Reminder';
-    case 'heart':
-      return '❤️ Heart Rate Reminder';
-    case 'weight':
-      return '⚖️ Weight Reminder';
-    default:
-      return 'Health Reminder';
-  }
+  const key = ['water', 'steps', 'medication', 'sleep', 'heart', 'weight'].includes(type) ? `${type}Title` : 'healthTitle';
+  return i18n.t(`pushText.${key}`);
 }
 
 function getColorForType(type: string): string {
@@ -280,7 +281,7 @@ export function generateDefaultReminders(): ReminderSettings[] {
       time: '09:00',
       enabled: true,
       days: [],
-      message: 'Time to track your morning water intake!'
+      message: i18n.t('pushText.defaultWater')
     },
     {
       id: 'steps-evening',
@@ -288,7 +289,7 @@ export function generateDefaultReminders(): ReminderSettings[] {
       time: '19:00',
       enabled: true,
       days: [],
-      message: 'Don\'t forget to log your steps for today!'
+      message: i18n.t('pushText.defaultSteps')
     },
     {
       id: 'sleep-morning',
@@ -296,7 +297,7 @@ export function generateDefaultReminders(): ReminderSettings[] {
       time: '08:00',
       enabled: true,
       days: [],
-      message: 'How did you sleep last night? Tap to log your sleep.'
+      message: i18n.t('pushText.defaultSleep')
     }
   ];
 }
@@ -361,8 +362,8 @@ export async function scheduleAppointmentReminder(
       
       await Notifications.scheduleNotificationAsync({
         content: {
-          title: '📅 Appointment Reminder',
-          body: `You have an appointment "${description}" in 1 hour`,
+          title: i18n.t('pushText.appointmentTitle'),
+          body: i18n.t('pushText.appointmentInHour', { description }),
           data: { 
             screen: '/patient/calendar',
             appointmentId: appointmentId || 'unknown'
@@ -391,8 +392,8 @@ export async function scheduleAppointmentReminder(
       
       await Notifications.scheduleNotificationAsync({
         content: {
-          title: '📅 Appointment Reminder',
-          body: `You have an appointment "${description}" tomorrow`,
+          title: i18n.t('pushText.appointmentTitle'),
+          body: i18n.t('pushText.appointmentTomorrow', { description }),
           data: { 
             screen: '/patient/calendar',
             appointmentId: appointmentId || 'unknown'
@@ -556,8 +557,8 @@ export async function scheduleMedicationReminder(
       
       await Notifications.scheduleNotificationAsync({
         content: {
-          title: '💊 Medication Reminder',
-          body: `Time to take "${medicationName}" in 1 hour`,
+          title: i18n.t('pushText.medicationTitle'),
+          body: i18n.t('pushText.medicationInHour', { name: medicationName }),
           data: { 
             screen: '/patient/medication/medications',
             medicationId: medicationId || 'unknown'
@@ -586,8 +587,8 @@ export async function scheduleMedicationReminder(
       
       await Notifications.scheduleNotificationAsync({
         content: {
-          title: '💊 Medication Reminder',
-          body: `It's time to take "${medicationName}"`,
+          title: i18n.t('pushText.medicationTitle'),
+          body: i18n.t('pushText.medicationNow', { name: medicationName }),
           data: { 
             screen: '/patient/medication/medications',
             medicationId: medicationId || 'unknown'

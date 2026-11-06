@@ -186,10 +186,7 @@ export default function VoiceRecorder({
 
       const { status } = await Audio.requestPermissionsAsync();
       if (status !== "granted") {
-        Alert.alert(
-          "Permission needed",
-          "Please grant microphone permission to record audio."
-        );
+        Alert.alert(t("uiText.permissionRequired"), t("uiText.micPermission"));
         return;
       }
 
@@ -216,7 +213,7 @@ export default function VoiceRecorder({
       setRecordingTimer(timer);
     } catch (error) {
       console.error("Failed to start recording", error);
-      Alert.alert("Error", "Failed to start recording");
+      Alert.alert(t("uiText.error"), t("uiText.recordFailed"));
     }
   };
 
@@ -327,10 +324,7 @@ export default function VoiceRecorder({
     } catch (error) {
       console.error("Error transcribing audio:", JSON.stringify(error, null, 2));
       if (setIsProcessing) setIsProcessing(false);
-      Alert.alert(
-        "Speech Recognition Error",
-        "I'm having trouble understanding. Please try again."
-      );
+      Alert.alert(t("uiText.speechErrorTitle"), t("uiText.speechErrorMsg"));
     }
   };
 

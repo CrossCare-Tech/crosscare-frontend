@@ -1,3 +1,4 @@
+import i18n from "i18next";
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useRouter } from "expo-router";
@@ -20,7 +21,7 @@ const AuthTopBar: React.FC<AuthTopBarProps> = ({ title, onBack, action }) => {
       style={styles.backButton}
       onPress={handleBack}
       accessibilityRole="button"
-      accessibilityLabel="Go back"
+      accessibilityLabel={i18n.t("uiText.goBack")}
       hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
     >
       <Feather name="chevron-left" size={18} color={Theme.colors.ink} />

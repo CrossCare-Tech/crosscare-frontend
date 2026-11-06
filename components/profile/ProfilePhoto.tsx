@@ -1,3 +1,4 @@
+import i18n from "i18next";
 import React from "react";
 import { Alert, Image, StyleSheet, TouchableOpacity, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
@@ -21,10 +22,7 @@ export const usePickProfileImage = () => {
         await ImagePicker.requestMediaLibraryPermissionsAsync();
 
       if (status !== "granted") {
-        Alert.alert(
-          "Permission Required",
-          "Please allow access to your photo library to change your profile picture."
-        );
+        Alert.alert(i18n.t("uiText.permissionRequired"), i18n.t("uiText.photoLibraryPermission"));
         return null;
       }
 
@@ -82,7 +80,7 @@ const ProfilePhoto = ({
   <TouchableOpacity
     onPress={onPress}
     activeOpacity={0.8}
-    accessibilityLabel="Edit photo"
+    accessibilityLabel={i18n.t("uiText.editPhoto")}
   >
     <LinearGradient
       colors={[Theme.colors.photoFrom, Theme.colors.photoTo]}

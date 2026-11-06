@@ -1,3 +1,4 @@
+import i18n from "i18next";
 import React, { useEffect, useState } from "react";
 import { Alert, TextInput } from "react-native";
 import { Modal, View, Text, TouchableOpacity, StyleSheet } from "react-native";
@@ -69,13 +70,13 @@ const PregnancyModal: React.FC<PregnancyModalProps> = ({
 
     // Validate week range (0-42)
     if (weekValue < 0 || weekValue > 42) {
-      Alert.alert("Invalid Week", "Please enter a week between 0 and 42");
+      Alert.alert(i18n.t("uiText.invalidWeek"), i18n.t("uiText.invalidWeekMsg"));
       return false;
     }
 
     // Validate day range (0-6)
     if (dayValue < 0 || dayValue > 6) {
-      Alert.alert("Invalid Day", "Please enter a day between 0 and 6");
+      Alert.alert(i18n.t("uiText.invalidDay"), i18n.t("uiText.invalidDayMsg"));
       return false;
     }
 
@@ -133,7 +134,7 @@ const PregnancyModal: React.FC<PregnancyModalProps> = ({
       }, 1000);
     } catch (error) {
       Alert.alert(
-        "Error",
+        i18n.t("uiText.error"),
         error instanceof Error
           ? error.message
           : "Failed to update pregnancy information"
@@ -152,7 +153,7 @@ const PregnancyModal: React.FC<PregnancyModalProps> = ({
     >
       <View style={styles.modalOverlay}>
         <View style={styles.modalContainer}>
-          <Text style={styles.modalTitle}>How Far Along Are You?</Text>
+          <Text style={styles.modalTitle}>{i18n.t("uiText.howFarAlong")}</Text>
 
           <View style={styles.inputRow}>
             <View style={styles.inputBox}>
@@ -185,7 +186,7 @@ const PregnancyModal: React.FC<PregnancyModalProps> = ({
 
             <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
               <Text style={styles.saveButtonText} numberOfLines={1}>
-                Save & Continue
+                {i18n.t("metricLog.save")}
               </Text>
             </TouchableOpacity>
           </View>

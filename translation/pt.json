@@ -1158,7 +1158,10 @@
     "yes": "Sim",
     "no": "Agora não",
     "errorTitle": "Erro",
-    "errorMessage": "Falha ao limpar o histórico de conversa. Por favor, tente novamente."
+    "errorMessage": "Falha ao limpar o histórico de conversa. Por favor, tente novamente.",
+    "responses": {
+      "welcomeBack": "Bem-vinda de volta! Vamos continuar de onde paramos. "
+    }
   },
   "options": {
     "healthStats": "Estatísticas de Saúde",
@@ -1332,7 +1335,10 @@
     "stepAnalysis": "Análise",
     "stepsNotFound": "Nenhum dado de passos encontrado para este período.",
     "retry": "Tentar Novamente",
-    "periodSelector": "Selecionar Período de Tempo"
+    "periodSelector": "Selecionar Período de Tempo",
+    "addStepLog": "Adicionar passos",
+    "invalidSteps": "Digite uma quantidade de passos entre 0 e 200.000.",
+    "stepsPlaceholder": "-- passos"
   },
   "sleepScreen": {
     "hi": "Oi",
@@ -1650,7 +1656,9 @@
     "addAria": "Adicionar",
     "setCalorieGoal": "Definir Meta de Calorias",
     "enterCalorieGoal": "Digite sua meta diária de calorias",
-    "loading": "Carregando..."
+    "loading": "Carregando...",
+    "invalidCalorieGoal": "Digite uma meta de calorias entre 500 e 10.000.",
+    "getYourDailyIntake": "Veja sua ingestão diária"
   },
   "healthData": {
     "sleep": "Sono",
@@ -1719,7 +1727,31 @@
     "hours": "horas",
     "weekly_average": "Média semanal",
     "monthly_average1": "Média mensal",
-    "weight": "Peso"
+    "weight": "Peso",
+    "average_daily_calories": "Sua ingestão calórica média diária é",
+    "avg_per_day_weekly": "média por dia nesta semana",
+    "calorie_goal": "meta de calorias",
+    "calories": "calorias",
+    "calories_consumed_today": "Você consumiu",
+    "calories_past_week": "calorias na última semana",
+    "calories_remaining": "calorias restantes",
+    "calories_today": "Hoje você consumiu",
+    "consumed_today": "consumidas hoje",
+    "food_quality_today": "Hoje você comeu",
+    "goal": "Meta",
+    "goal_is": "Sua meta é",
+    "goal_reached": "Ótimo trabalho ao atingir sua meta!",
+    "healthy_choices": "escolhas saudáveis",
+    "healthy_foods": "alimentos saudáveis e",
+    "less_healthy_foods": "alimentos menos saudáveis",
+    "meals_logged_today": "Hoje você registrou refeições para",
+    "no_food_logged_today": "Você ainda não registrou nenhum alimento hoje",
+    "no_meal_data": "Ainda não tenho acesso aos seus dados de refeição. Tente registrar algum alimento primeiro!",
+    "no_meals_logged_today": "Você ainda não registrou nenhuma refeição hoje",
+    "out_of": "de",
+    "thats": "Isso é",
+    "total_calories": "Total de calorias:",
+    "you_have": "Você tem"
   },
   "questionnaire": {
     "domains": {
@@ -2045,37 +2077,7 @@
     "stepsOff": "Passos não compartilhados",
     "nothingShared": "Nada compartilhado",
     "synced": "Sincronizado",
-    "guide": "Ative **Dados simulados** em Perfil > Desenvolvedor para testar o Demo Watch sem um dispositivo real.",
     "demoNote": "O **Demo Watch** é simulado: os números são inventados para a paciente de exemplo e não saem deste celular."
-  },
-  "developer": {
-    "title": "Desenvolvedor",
-    "notice": "Só para demonstração. Com os dados simulados ligados, o app responde a todas as requisições neste celular e não precisa do servidor. Desligue para usar o backend real.",
-    "dataSection": "Origem dos dados",
-    "simulatedData": "Dados simulados",
-    "simulatedDataHint": "Dados de exemplo guardados neste celular. O que você adicionar fica salvo até redefinir.",
-    "on": "Ligado · sem servidor",
-    "off": "Desligado · usando o servidor",
-    "source": "Os dados vêm de",
-    "sourceDevice": "Este celular (simulado)",
-    "notSet": "Não definido",
-    "reset": "Redefinir dados simulados",
-    "sampleChat": "Carregar conversa de exemplo",
-    "sampleChatDone": "Conversa de exemplo carregada. Abra a Concierge para ver.",
-    "voiceTest": "Teste de voz",
-    "voiceTestHint": "Toque em Ouvir para ouvir uma frase. Confira o som, a velocidade e o botão de pausa.",
-    "voiceDeepgram": "Voz: Deepgram (pausa, muda a velocidade e pula)",
-    "voiceDevice": "Voz: este celular (pausar reinicia a frase, sem pular)",
-    "resetTitle": "Redefinir dados simulados?",
-    "resetMessage": "Tudo o que foi adicionado na demonstração será apagado e os dados de exemplo voltam.",
-    "resetConfirm": "Redefinir",
-    "resetDone": "Os dados simulados foram redefinidos.",
-    "switchTitle": "Trocar a origem dos dados?",
-    "switchMessage": "Você vai sair da conta. Entre de novo para carregar os dados da nova origem.",
-    "switchConfirm": "Trocar e sair",
-    "requests": "Requisições simuladas recentes",
-    "noRequests": "Nenhuma requisição ainda.",
-    "unmatched": "sem rota"
   },
   "wellbeingCare": {
     "keyword": {
@@ -2249,7 +2251,7 @@
       "done": "Concluir",
       "verifyNow": "Verificar agora",
       "somethingWrong": "Algo deu errado. Tente novamente.",
-      "passwordRule": "Use 8 ou mais caracteres com pelo menos um número",
+      "passwordRule": "Use pelo menos 6 caracteres",
       "didntReceive": "Não recebeu o código? ",
       "resendCode": "Reenviar código",
       "terms": "Termos e Condições",
@@ -2259,7 +2261,6 @@
     "login": {
       "title": "Que bom te ver de volta",
       "subtitle": "Entre para continuar sua jornada de cuidado com o seu concierge.",
-      "demoPill": "Dados simulados ativados · qualquer e-mail funciona",
       "passwordPlaceholder": "Digite sua senha",
       "forgot": "Esqueceu a senha?",
       "faceId": "Usar Face ID",
@@ -2295,10 +2296,10 @@
       "phone": "Número de telefone",
       "invalidEmail": "Digite um e-mail válido",
       "invalidPhone": "Digite um número de telefone válido",
-      "passwordHelper": "Use 8 ou mais caracteres com pelo menos um número.",
+      "passwordHelper": "Use pelo menos 6 caracteres.",
       "mustAgree": "Você precisa concordar com os Termos de Serviço para continuar",
       "dobRequired": "Selecione sua data de nascimento",
-      "tooYoung": "Você precisa ter pelo menos 18 anos para se cadastrar",
+      "tooYoung": "Você precisa ter pelo menos 13 anos para se cadastrar",
       "agreePrefix": "Concordo com os",
       "and": "e a",
       "termsOfService": "Termos de Serviço",
@@ -2317,7 +2318,7 @@
       "head3": "Crie uma nova senha",
       "sub1": "Digite seu e-mail e enviaremos um código de verificação seguro para redefinir sua senha.",
       "sub2": "Enviamos um código de verificação de 6 dígitos para {{email}}.",
-      "sub3": "Escolha uma senha com 8 ou mais caracteres e pelo menos um número.",
+      "sub3": "Escolha uma senha com pelo menos 6 caracteres.",
       "checkEmail": "Verifique seu e-mail",
       "checkEmailText": "Enviamos um código de redefinição. Pode levar um minuto para chegar, então confira também o spam.",
       "emailRequired": "O e-mail é obrigatório.",
@@ -2380,5 +2381,98 @@
     "typeToConfirm": "Digite DELETE para confirmar",
     "button": "Excluir minha conta",
     "cancel": "Cancelar"
+  },
+  "pushText": {
+    "waterTitle": "💧 Lembrete de água",
+    "stepsTitle": "👟 Lembrete de passos",
+    "medicationTitle": "💊 Lembrete de medicação",
+    "sleepTitle": "😴 Lembrete de sono",
+    "heartTitle": "❤️ Lembrete de frequência cardíaca",
+    "weightTitle": "⚖️ Lembrete de peso",
+    "healthTitle": "Lembrete de saúde",
+    "genericBody": "É hora de registrar seus dados de saúde!",
+    "defaultWater": "Hora de registrar a água da manhã!",
+    "defaultSteps": "Não esqueça de registrar seus passos de hoje!",
+    "defaultSleep": "Como você dormiu ontem à noite? Toque para registrar seu sono.",
+    "appointmentTitle": "📅 Lembrete de consulta",
+    "appointmentInHour": "Você tem uma consulta \"{{description}}\" em 1 hora",
+    "appointmentTomorrow": "Você tem uma consulta \"{{description}}\" amanhã",
+    "medicationInHour": "Falta 1 hora para tomar \"{{name}}\"",
+    "medicationNow": "É hora de tomar \"{{name}}\""
+  },
+  "heartScreen": {
+    "addHeartRateLog": "Adicionar frequência cardíaca",
+    "heartRatePlaceholder": "-- bpm",
+    "invalidHeartRate": "Digite uma frequência cardíaca entre 20 e 250 bpm."
+  },
+  "metricLog": {
+    "cancel": "Cancelar",
+    "error": "Erro",
+    "failedToSave": "Não foi possível salvar seu registro. Tente novamente.",
+    "save": "Salvar e continuar"
+  },
+  "seeYourBabyGrowHere": "Veja seu bebê crescer aqui!",
+  "avatarItems": {
+    "labels": {
+      "Bob": "Chanel (bob)",
+      "Braids low bun": "Tranças com coque baixo",
+      "Brown": "Marrom",
+      "Chambray shirt": "Camisa chambray",
+      "Charcoal turtleneck": "Gola alta cinza-carvão",
+      "Cream knit sweater": "Suéter de tricô creme",
+      "Deep": "Escuro",
+      "Dusty-rose knit top": "Blusa de tricô rosa antigo",
+      "Floral blouse": "Blusa floral",
+      "Half-up curls": "Cachos meio presos",
+      "High ponytail": "Rabo de cavalo alto",
+      "High puff": "Puff alto",
+      "Ivory blazer": "Blazer marfim",
+      "Light": "Claro",
+      "Lilac blouse": "Blusa lilás",
+      "Long straight": "Longo e liso",
+      "Long waves": "Ondas longas",
+      "Low braid": "Trança baixa",
+      "Mustard cardigan": "Cardigã mostarda",
+      "Sage cardigan": "Cardigã verde-sálvia",
+      "Short gray crop": "Curto grisalho",
+      "Short natural curls": "Cachos naturais curtos",
+      "Tan": "Bronzeado",
+      "Teal wrap blouse": "Blusa transpassada azul-petróleo"
+    },
+    "rules": {
+      "checkin-14": "Complete 14 check-ins diários",
+      "journal-20": "Escreva 20 entradas no diário",
+      "journal-5": "Escreva 5 entradas no diário",
+      "start": "Disponível desde o primeiro acesso (grátis)",
+      "vitals-streak-3": "Registre seus sinais vitais 3 dias seguidos",
+      "vitals-streak-7": "Registre seus sinais vitais 7 dias seguidos",
+      "vitals-streak-30": "Registre seus sinais vitais 30 dias seguidos"
+    }
+  },
+  "uiText": {
+    "permissionRequired": "Permissão necessária",
+    "photoLibraryPermission": "Permita o acesso à sua galeria para alterar sua foto de perfil.",
+    "cameraPermission": "É necessária permissão para usar a câmera",
+    "editPhoto": "Editar foto",
+    "accountDeleted": "Conta excluída",
+    "accountDeletedMsg": "Sua conta foi excluída",
+    "invalidWeek": "Semana inválida",
+    "invalidWeekMsg": "Digite uma semana entre 0 e 42",
+    "invalidDay": "Dia inválido",
+    "invalidDayMsg": "Digite um dia entre 0 e 6",
+    "error": "Erro",
+    "howFarAlong": "De quantas semanas você está?",
+    "viewSources": "Ver fontes médicas e citações",
+    "clearChatFailed": "Não foi possível limpar o histórico do chat. Tente novamente.",
+    "reminderLoadFailed": "Não foi possível carregar as configurações de lembretes",
+    "goBack": "Voltar",
+    "micPermission": "Conceda permissão ao microfone para gravar áudio.",
+    "recordFailed": "Não foi possível iniciar a gravação",
+    "speechErrorTitle": "Erro de reconhecimento de voz",
+    "speechErrorMsg": "Estou com dificuldade para entender. Tente novamente.",
+    "noBadges": "Nenhuma insígnia conquistada ainda",
+    "badgeRewarded": "Insígnia concedida",
+    "startDate": "Data de início",
+    "endDate": "Data de término"
   }
 }

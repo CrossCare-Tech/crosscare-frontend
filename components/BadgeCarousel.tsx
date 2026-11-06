@@ -1,3 +1,4 @@
+import i18n from "i18next";
 import React, { useRef } from "react";
 import {
   View,
@@ -92,7 +93,7 @@ const BadgeCarousel: React.FC<BadgeCarouselProps> = ({
   if (badges.length === 0) {
     return (
       <View style={styles.emptyContainer}>
-        <Text style={styles.emptyText}>No badges earned yet</Text>
+        <Text style={styles.emptyText}>{i18n.t("uiText.noBadges")}</Text>
       </View>
     );
   }
@@ -154,7 +155,7 @@ const BadgeCarousel: React.FC<BadgeCarouselProps> = ({
             </Text>
             
             <TouchableOpacity style={styles.badgeRewardedButton}>
-              <Text style={styles.badgeRewardedText}>Badge Rewarded</Text>
+              <Text style={styles.badgeRewardedText}>{i18n.t("uiText.badgeRewarded")}</Text>
             </TouchableOpacity>
           </View>
         ))}
