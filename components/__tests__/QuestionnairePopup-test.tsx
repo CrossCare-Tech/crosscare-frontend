@@ -7,7 +7,10 @@ jest.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string, vars?: any) => (vars ? `${key}:${JSON.stringify(vars)}` : key) }),
 }));
 jest.mock("@/components/ui/ScreenBackground", () => ({ children }: any) => children);
-jest.mock("react-native-safe-area-context", () => ({ SafeAreaView: ({ children }: any) => children }));
+jest.mock("react-native-safe-area-context", () => ({
+  SafeAreaView: ({ children }: any) => children,
+  SafeAreaProvider: ({ children }: any) => children,
+}));
 jest.mock("@expo/vector-icons", () => ({ Feather: () => null, Ionicons: () => null }));
 
 const domain = QUESTIONNAIRE_DOMAINS[0];

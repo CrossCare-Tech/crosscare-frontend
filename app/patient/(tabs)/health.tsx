@@ -164,7 +164,8 @@ const TrackingOptionsScreen = () => {
 
   return (
     <ScreenBackground>
-      <SafeAreaView style={styles.container}>
+      {/* Top edge only, like Home, Journal and Profile: the bottom dock already pads itself, and an extra bottom inset shows as a pink strip on iPhone */}
+      <SafeAreaView style={styles.container} edges={["top"]}>
         {/* A tab: plain title, no back button (same as Journal) */}
         <Text style={styles.header}>{t('nav.health')}</Text>
 

@@ -13,7 +13,7 @@ import {
   View,
 } from "react-native";
 import { Feather, Ionicons } from "@expo/vector-icons";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import ScreenBackground from "@/components/ui/ScreenBackground";
 import { Theme } from "@/constants/theme";
@@ -104,6 +104,8 @@ export default function QuestionnairePopup({
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={() => onSaveExit(snapshot())}>
+      {/* A Modal is its own native window: without its own provider the safe-area insets are 0 on iPhone and the top bar slides under the clock and the Dynamic Island */}
+      <SafeAreaProvider>
       <ScreenBackground>
         <SafeAreaView style={styles.safeArea}>
           {done ? (
@@ -237,6 +239,7 @@ export default function QuestionnairePopup({
           )}
         </SafeAreaView>
       </ScreenBackground>
+      </SafeAreaProvider>
     </Modal>
   );
 }
