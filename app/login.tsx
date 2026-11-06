@@ -1,3 +1,4 @@
+import { usePreviewScreens } from "@/utils/demo/demoMode";
 import React, { FC, useLayoutEffect, useState } from "react";
 import {
   StyleSheet,
@@ -26,7 +27,6 @@ import ScreenBackground from "@/components/ui/ScreenBackground";
 import { useAuthDialog } from "@/components/ui/AuthDialog";
 import InlineNotice, { Notice } from "@/components/ui/InlineNotice";
 import { FontAwesome5, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { DEV_TOOLS_VISIBLE, useDemoMode } from "@/utils/demo/demoMode";
 import { useTranslation } from "react-i18next";
 
 // Logo oficial com o coração 3D e "CROSSCARE TECH" em ameixa
@@ -40,7 +40,7 @@ const LoginContent: FC = () => {
   const navigation = useNavigation();
   const router = useRouter();
   const dispatch = useDispatch();
-  const demoMode = useDemoMode((state) => state.enabled);
+  const preview = usePreviewScreens();
   const { dialog, show } = useAuthDialog();
   const [notice, setNotice] = useState<Notice>(null);
   const [emailError, setEmailError] = useState("");
@@ -213,26 +213,11 @@ const LoginContent: FC = () => {
         >
           {/* Header com Logo Oficial */}
           <View style={styles.header}>
-            {/* Long-press opens Developer, so demo mode can be turned on before signing in */}
-            <Pressable
-              onLongPress={DEV_TOOLS_VISIBLE ? () => router.push("/developer") : undefined}
-              delayLongPress={800}
-            >
-              <Image
-                source={officialLogo}
-                style={styles.logo}
-                resizeMode="contain"
-              />
-            </Pressable>
-            {demoMode && (
-              <TouchableOpacity
-                style={styles.demoPill}
-                onPress={() => router.push("/developer")}
-                accessibilityRole="button"
-              >
-                <Text style={styles.demoPillText}>{t("authFlow.login.demoPill")}</Text>
-              </TouchableOpacity>
-            )}
+            <Image
+              source={officialLogo}
+              style={styles.logo}
+              resizeMode="contain"
+            />
             <Text style={styles.title}>{t("authFlow.login.title")}</Text>
             <Text style={styles.subtitle}>
               {t("authFlow.login.subtitle")}
@@ -286,53 +271,58 @@ const LoginContent: FC = () => {
               )}
             </TouchableOpacity>
 
-            {/* Face ID / Biometria */}
-            <TouchableOpacity
-              style={styles.biometricButton}
-              onPress={handleBiometricAuth}
-              accessibilityRole="button"
-              accessibilityLabel={t("authFlow.login.faceId")}
-              activeOpacity={0.7}
-            >
-              <MaterialCommunityIcons
-                name="fingerprint"
-                size={18}
-                color={Theme.colors.inkFaint}
-              />
-              <Text style={styles.biometricText}>{t("authFlow.login.faceId")}</Text>
-            </TouchableOpacity>
+            {/* Face ID and the Apple and Google buttons only show a message (nothing signs in), so a build with the backend leaves them out */}
+            {preview && (
+              <>
+                {/* Face ID / Biometria */}
+                <TouchableOpacity
+                  style={styles.biometricButton}
+                  onPress={handleBiometricAuth}
+                  accessibilityRole="button"
+                  accessibilityLabel={t("authFlow.login.faceId")}
+                  activeOpacity={0.7}
+                >
+                  <MaterialCommunityIcons
+                    name="fingerprint"
+                    size={18}
+                    color={Theme.colors.inkFaint}
+                  />
+                  <Text style={styles.biometricText}>{t("authFlow.login.faceId")}</Text>
+                </TouchableOpacity>
 
-            {/* Divisor "or continue with" */}
-            <View style={styles.dividerRow}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>{t("authFlow.login.orContinue")}</Text>
-              <View style={styles.dividerLine} />
-            </View>
+                {/* Divisor "or continue with" */}
+                <View style={styles.dividerRow}>
+                  <View style={styles.dividerLine} />
+                  <Text style={styles.dividerText}>{t("authFlow.login.orContinue")}</Text>
+                  <View style={styles.dividerLine} />
+                </View>
 
-            {/* Botões Sociais */}
-            <View style={styles.socialRow}>
-              <TouchableOpacity
-                style={styles.socialButton}
-                onPress={() => handleSocialAuth("Apple")}
-                accessibilityRole="button"
-                accessibilityLabel={t("authFlow.login.continueApple")}
-                activeOpacity={0.8}
-              >
-                <Ionicons name="logo-apple" size={18} color={Theme.colors.ink} />
-                <Text style={styles.socialButtonText}>Apple</Text>
-              </TouchableOpacity>
+                {/* Botões Sociais */}
+                <View style={styles.socialRow}>
+                  <TouchableOpacity
+                    style={styles.socialButton}
+                    onPress={() => handleSocialAuth("Apple")}
+                    accessibilityRole="button"
+                    accessibilityLabel={t("authFlow.login.continueApple")}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons name="logo-apple" size={18} color={Theme.colors.ink} />
+                    <Text style={styles.socialButtonText}>Apple</Text>
+                  </TouchableOpacity>
 
-              <TouchableOpacity
-                style={styles.socialButton}
-                onPress={() => handleSocialAuth("Google")}
-                accessibilityRole="button"
-                accessibilityLabel={t("authFlow.login.continueGoogle")}
-                activeOpacity={0.8}
-              >
-                <FontAwesome5 name="google" size={16} color={Theme.colors.ink} />
-                <Text style={styles.socialButtonText}>Google</Text>
-              </TouchableOpacity>
-            </View>
+                  <TouchableOpacity
+                    style={styles.socialButton}
+                    onPress={() => handleSocialAuth("Google")}
+                    accessibilityRole="button"
+                    accessibilityLabel={t("authFlow.login.continueGoogle")}
+                    activeOpacity={0.8}
+                  >
+                    <FontAwesome5 name="google" size={16} color={Theme.colors.ink} />
+                    <Text style={styles.socialButtonText}>Google</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
 
             {/* Cadastro */}
             <View style={styles.signupRow}>
@@ -400,19 +390,6 @@ const styles = StyleSheet.create({
     width: 104,
     height: 113,
     marginBottom: 12,
-  },
-  demoPill: {
-    marginTop: -6,
-    marginBottom: 14,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 999,
-    backgroundColor: Theme.colors.purpleTint,
-  },
-  demoPillText: {
-    fontFamily: Theme.typography.heading,
-    fontSize: 11.5,
-    color: Theme.colors.purple,
   },
   title: {
     fontSize: 28,

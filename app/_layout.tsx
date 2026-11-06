@@ -161,7 +161,6 @@ const RootLayoutNav = () => {
         />
         <Stack.Screen name="avatar" />
         <Stack.Screen name="avatar-studio" />
-        <Stack.Screen name="developer" />
         <Stack.Screen name="patient" />
       </Stack>
     </>

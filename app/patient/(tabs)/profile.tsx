@@ -25,7 +25,7 @@ import ProfilePhoto, {
 } from "@/components/profile/ProfilePhoto";
 import { PremiumBadge } from "@/components/premium/PremiumUI";
 import { usePremiumStore } from "@/zustandStore/premiumStore";
-import { DEV_TOOLS_VISIBLE, useDemoMode, usePreviewScreens } from "@/utils/demo/demoMode";
+import { usePreviewScreens } from "@/utils/demo/demoMode";
 import { GUIDE } from "@/constants/conciergeGuide";
 
 const ICONS: Record<string, React.ReactNode> = {
@@ -127,12 +127,6 @@ const ICONS: Record<string, React.ReactNode> = {
       <Path d="M10 14v1a4.5 4.5 0 0 0 6.5 4" />
     </>
   ),
-  developer: (
-    <>
-      <Path d="M8.5 7.5 4 12l4.5 4.5M15.5 7.5 20 12l-4.5 4.5" />
-      <Path d="M13.2 5.5 10.8 18.5" />
-    </>
-  ),
   logout: (
     <>
       <Path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4" />
@@ -213,7 +207,6 @@ const Profile = () => {
   // Original section hints ("Name, Age, Email"), built from the same keys in every language
   const hint = (...keys: string[]) => keys.map((key) => t(`profile.${key}`)).join(", ");
   const premiumStatus = usePremiumStore((state) => state.status);
-  const demoMode = useDemoMode((state) => state.enabled);
   const preview = usePreviewScreens();
 
   const getProfile = async () => {
@@ -405,21 +398,6 @@ const Profile = () => {
               onPress={() => router.push("/patient/profile-setting/citations")}
             />
           </View>
-
-          {DEV_TOOLS_VISIBLE && (
-            <>
-              <Text style={styles.sectionTitle}>{t("developer.title")}</Text>
-              <View style={styles.card}>
-                <MenuRow
-                  icon="developer"
-                  title={t("developer.simulatedData")}
-                  subtitle={demoMode ? t("developer.on") : t("developer.off")}
-                  isLast
-                  onPress={() => router.push("/developer")}
-                />
-              </View>
-            </>
-          )}
 
           <View style={styles.card}>
             <MenuRow

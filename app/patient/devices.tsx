@@ -152,7 +152,8 @@ export default function DevicesScreen() {
 
           <SectionLabel>{t("devices.sources")}</SectionLabel>
           <View style={styles.card}>
-            {sources.map((source, index) => (
+            {/* Only what this phone can use today: no "Coming soon" rows and no other platform's source */}
+            {sources.filter((source) => source.available).map((source, index) => (
               <View key={source.id} style={[rowStyles.row, index > 0 && rowStyles.divider]}>
                 {/* The connected Demo Watch opens its 5.4 Device sync screen */}
                 <TouchableOpacity
@@ -258,9 +259,7 @@ export default function DevicesScreen() {
               </View>
               <GuideNote text={t("devices.demoNote")} />
             </>
-          ) : (
-            <GuideNote text={t("devices.guide")} />
-          )}
+          ) : null}
         </ScrollView>
       </SafeAreaView>
     </ScreenBackground>
