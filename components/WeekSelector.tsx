@@ -370,7 +370,7 @@ const WeekSelector: React.FC<WeekSelectorProps> = ({
       <View style={styles.fruitInfoContainer}>
         {selectedWeek === "0" ? (
           <View style={styles.comingSoonContainer}>
-            <Text style={styles.comingSoonText}>See your baby grow here!</Text>
+            <Text style={styles.comingSoonText}>{t("seeYourBabyGrowHere")}</Text>
           </View>
         ) : (
           <>

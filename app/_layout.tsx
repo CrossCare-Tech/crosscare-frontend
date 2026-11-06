@@ -9,6 +9,7 @@ import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import "react-native-reanimated";
+import "@/utils/demo/installDemoInterceptor";
 import { Provider, useDispatch, useSelector } from "react-redux";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
@@ -16,7 +17,6 @@ import { useColorScheme } from "@/hooks/useColorScheme";
 import { supabase } from "@/supabase/supabase";
 import { store } from "../store/store";
 import { setToken, setUser } from "../store/userSlice";
-import { FloatingProvider } from "@/context/FloatingContext";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import '../translation/i18next'
@@ -31,11 +31,12 @@ const RootLayoutNav = () => {
   const dispatch = useDispatch();
   const user = useSelector((state: any) => state.user);
   const currentLanguage = useSelector((state: any) => state.language.current)
-  const { fetchMeals, fetchCalorieHistory } = useMealStore();
+  // Select only the actions: the root layout must not re-render on every meal store change
+  const fetchMeals = useMealStore((state) => state.fetchMeals);
+  const fetchCalorieHistory = useMealStore((state) => state.fetchCalorieHistory);
   const router = useRouter();
   const colorScheme = useColorScheme();
   const token = useSelector((state: any) => state.user.token);
-  console.log(token);
   const [loaded] = useFonts({
     DMSans300: require("../assets/fonts/DMSans-Light.ttf"),
     DMSans400: require("../assets/fonts/DMSans-Regular.ttf"),
@@ -53,6 +54,12 @@ const RootLayoutNav = () => {
     OpenSans500: require("../assets/fonts/OpenSans-Medium.ttf"),
     OpenSans600: require("../assets/fonts/OpenSans-SemiBold.ttf"),
     OpenSans700: require("../assets/fonts/OpenSans-Bold.ttf"),
+    Manrope400: require("../assets/fonts/Manrope_400Regular.ttf"),
+    Manrope500: require("../assets/fonts/Manrope_500Medium.ttf"),
+    Manrope600: require("../assets/fonts/Manrope_600SemiBold.ttf"),
+    Manrope700: require("../assets/fonts/Manrope_700Bold.ttf"),
+    Manrope800: require("../assets/fonts/Manrope_800ExtraBold.ttf"),
+    Fraunces600: require("../assets/fonts/Fraunces_600SemiBold.ttf"),
     GroBold: require("../assets/fonts/GROBOLD.ttf"),
   });
 
@@ -153,6 +160,7 @@ const RootLayoutNav = () => {
           options={{ title: "Forgot Password" }}
         />
         <Stack.Screen name="avatar" />
+        <Stack.Screen name="avatar-studio" />
         <Stack.Screen name="patient" />
       </Stack>
     </>
@@ -172,9 +180,7 @@ export default function RootLayout() {
           works without it, which is why its absence went unnoticed. */}
       <SafeAreaProvider>
         <Provider store={store}>
-          <FloatingProvider>
-            <RootLayoutNav />
-          </FloatingProvider>
+          <RootLayoutNav />
         </Provider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

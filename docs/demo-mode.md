@@ -1,0 +1,121 @@
+# Demo mode (simulated data)
+
+Demo mode shows the client the whole design on a phone without depending on the backend. It ships in this version's APK (Profile > Developer) and should be hidden (`EXPO_PUBLIC_DEV_TOOLS=false`) or removed before a store release.
+
+## How to use it
+
+| Where | What |
+|---|---|
+| Profile > Developer > **Simulated data** | Turns demo mode on or off. Switching signs the user out, because a session from one data source is not valid in the other. |
+| Login screen, **long-press the logo** (0.8 s) | Opens Developer before signing in, so demo mode can be turned on when the backend is down. |
+| Login, with demo mode on | Any email and password work. A pill under the logo says "Simulated data on". |
+| Developer > **Reset simulated data** | Removes what was added during a demo and puts the sample data back. |
+| Developer > **Recent simulated requests** | The last 40 requests answered on the device. "no route" marks a request the simulation does not know (it got an empty success). |
+| `EXPO_PUBLIC_DEMO_MODE=true` in `.env` | A fresh install starts in demo mode (for the client APK). The switch still works. |
+| `EXPO_PUBLIC_DEV_TOOLS=false` in `.env` | Hides the Developer row and the long-press. |
+
+The flag and the simulated database are files in the app's document folder (`demo-mode.json`, `demo-db.json`), not AsyncStorage, because logout runs `AsyncStorage.clear()`.
+
+## How it works
+
+`utils/demo/installDemoInterceptor.ts` is imported first in `app/_layout.tsx`. It wraps `global.fetch` and adds an axios request interceptor. While demo mode is on:
+
+- Requests to `CONFIG.API_BASE_URL` (the CrossCare API) and `CONFIG.RAG_SERVICE_URL` (the Doula chat) are answered by `utils/demo/mockRoutes.ts` from the on-device database in `utils/demo/mockDb.ts`. No screen code changed.
+- Every handler returns the same JSON as the matching controller in `crosscare-backend`, including status codes and validation errors, so screens behave as they do against the real server.
+- Requests to other services go out as usual (see "Still online" below).
+
+Sample data: patient "Maya Thompson", 24 weeks + 3 days, two weeks of water, steps, sleep, weight, heart rate, blood pressure, glucose, mood and calories; 3 notes, 3 journal photos, 2 medications, 4 appointments, 3 symptoms, today's meals and 5 badges.
+
+Demo mode also turns on `CONFIG.BACKDATED_READINGS` (logging a vital for an earlier date), because the simulated API stores `recorded_at` and the real one does not yet.
+
+## What the demo covers
+
+All of these work with no backend:
+
+| Area | Screens | API routes simulated |
+|---|---|---|
+| Auth | Login, Sign up, Verify email (any code), Forgot / reset password | `/login`, `/signup`, `/verify-email`, `/resend-verification`, `/forgot-password`, `/reset-password` |
+| Profile | Profile, Account details, Your pregnancy, pregnancy week modal, profile photo, Delete account (resets the demo) | `/user/:id/profile` (GET, PUT), `/profile/image`, `/pregnancy-week` (GET, PUT), `/avatar`, `/delete-account` |
+| Home | Week and baby card, vitals tiles, water glass, appointments, Explorer badge | `/user/activity/:id`, `bpstatus`, `glucosestatus`, `water`, `appointments`, `/user/:id/badges/award` |
+| Health | Water, Steps, Sleep, Weight, Heart rate, Blood pressure, Glucose, Mood, Symptoms, Medication, Food (search, portion, goals, history) | every `/user/activity/:id/*` and `/user/metrics/:id/*` route in `activity.route.js` and `metrics.route.js` |
+| Journal | Timeline, new entry (note or photo), open / edit / delete note and photo | `note`, `notes`, `journal`, `journal/upload`, `journal/:entryId` |
+| Calendar | Calendar, add / edit / delete appointment | `appointment`, `appointments/:appointmentId` |
+| Hall of Fame | Badges | `GET /user/:id` |
+| Ask Doula / Concierge chat | Typed and spoken questions, intake questionnaire answers, health logging from chat | RAG `POST /chat/:userId` (canned replies in English, Portuguese and Spanish), `/user/:id/domain` |
+| Devices | Devices (Profile > Devices, or "Manage devices" on Heart rate and Steps), Heart rate, Steps, Sleep and the Home steps tile fed by the Demo Watch | none: the Demo Watch is on the phone (`utils/demo/demoWatch.ts`); today's steps are still posted to `POST /user/activity/:id/steps` |
+
+### Cycle and mental health (prototype 9.1–9.6)
+
+Health > **Cycle & mental health** only shows with Simulated data on, and `app/patient/wellbeing/_layout.tsx` sends anyone else back to Health, because the backend has no routes for this data. Logs and the last check-in live in `demo-wellbeing.json` in the document folder (`utils/demo/demoWellbeing.ts`), and **Reset simulated data** restores the sample of six finished cycles.
+
+Prototype 9.7 (journal keyword alert) is not built. Its word list and the use of journal text need clinical and privacy validation first.
+
+Decisions that differ from the prototype, all to be validated by the client:
+
+- PHQ-9 questions use the validated wording and order, so sleep is question 3. The prototype's sample screen shows it as question 4.
+- Any answer above "Not at all" on question 9 moves support and the 988 call to the top of the results, whatever the score.
+- The results do not say "Sent automatically to your care team" or name a doctor, because nothing is sent. They offer the answers to show at a visit.
+
+The Portuguese and Haitian Creole PHQ texts are working translations, and the Spanish one must also be checked against the validated version before a real release. 988 is a US line.
+
+### Demo Watch (simulated smartwatch)
+
+With Simulated data on, Devices lists a fourth source, **Demo Watch** (tagged Demo). Connect and Disconnect work with no HealthKit, Fitbit or account.
+
+- Connect plays a short flow: "Looking for Demo Watch…" (about 1.6 s), then Steps, Heart rate and Sleep sync one at a time (Syncing… then Synced, about 1 s each), ending on "Synced with Demo Watch". Sync now plays the sync part again. Timings are `PAIRING_MS` and `STEP_MS` in `utils/demo/demoWatch.ts`.
+- While it is connected, Heart rate, Steps, Sleep and the Home steps tile read from it instead of Apple Health or Fitbit. Resting heart rate, steps and sleep are made up for Maya Thompson and derived from the date, so the same day always shows the same numbers. Today's steps grow with the time of day.
+- Devices has a sync indicator (last synced, Sync now), per-data-type permissions (Steps, Heart rate, Sleep: a type switched off returns nothing to the screens), the last 7 days, and a sync history.
+- Turning Simulated data off stops the watch feeding the screens, even if it stays paired. Connection, permissions and sync history live in `demo-watch.json` in the document folder, like the demo flag, so logout keeps them.
+- Apple Health (iPhone), Fitbit (Android) and Health Connect are listed as named sources. Health Connect is shown as "Coming soon": its store (`useHealthConnectStore.ts`) is still commented out and the real integration is pending.
+- With Simulated data off nothing changes: Heart rate and Steps show the platform's real source, and the Demo Watch row is hidden.
+
+Intake questionnaire (Concierge chat): answers go to `POST /user/:id/domain` and are kept in the demo database. In demo mode the simulated guide quotes them back when the patient asks about their home or "what do you know about me", to show that saved answers become AI context. The real AI does this through `getUserProfile` in CrossCare-rag; it is not run in demo mode.
+
+Scripted Concierge conversations (`utils/demo/mockConversations.ts`, in English, Portuguese and Spanish): greeting and thanks, next appointment, glucose test, hospital bag, contractions, caffeine, swelling, heartburn, anxiety (with a breathing exercise), baby size, vaccines and travel. Warning signs (bleeding, severe pain) always answer first with the "call your provider or 911" message. Replying "yes" to an offer ("Want a list of questions to bring?") gets the follow-up. Profile > Developer > **Load sample conversation** fills the chat with an earlier exchange about kicks, sleep and the next appointment, so the chat is not empty on stage.
+
+Intake questionnaire pop-up (Concierge chat): answers go to `POST /user/:id/domain` and are kept in the demo database. In demo mode the simulated guide quotes them back when the patient asks about their home or "what do you know about me", to show that saved answers become AI context. The real AI does this through `getUserProfile` in CrossCare-rag; it is not run in demo mode.
+
+Already local before this branch (no backend involved, in demo mode or not): Concierge meet / name / voice / call / history screens, Avatar Studio choices, guide name, Premium status, notification preferences.
+Note: these live in AsyncStorage, so logout and switching the data source reset them.
+
+## Where the design is ahead of the backend
+
+Work the backend needs so the real app matches what the demo shows. In demo mode these work because the simulation fills the gap.
+
+| # | Gap | Front end that depends on it | What the backend needs |
+|---|---|---|---|
+| 1 | Vitals ignore `recorded_at` | Backdated readings (`components/vitals/VitalsUI.tsx`, `backdate.ts`); off in real mode via `EXPO_PUBLIC_BACKDATED_READINGS` | Accept `recorded_at` on `water`, `weight`, `heart`, `bp`, `glucose`, `steps` and store the reading on that day |
+| 2 | No `GET /user/activity/:id/note/:noteId` | Opening a note with its full text; `GET notes` cuts descriptions at 30 characters | Add the route, or return the full description in `notes` |
+| 3 | No `POST /user/activity/:id/heartrate` | Apple Health sync (`useAppleHealthStore.ts`) | Add the route or point the store to `heart` |
+| 4 | No `GET /user/activity/:id/stepsGoal` | Apple Health steps goal | Add the route or read `goals` |
+| 5 | Self-care routes are commented out (`selfcare.route.js`) | Exercise detail (`app/patient/excerises/excerise.tsx`, `GET /categories/:id`) | Restore the routes, or move the screen to Contentful like the Self-care list |
+| 6 | No premium API | Premium screen keeps a simulated status (`premiumStore.ts`) | An entitlement on the patient (from clinic or provider) |
+| 7 | No chat history or guide profile on the server | Concierge history, guide name and avatar live only on the phone | Endpoints to save threads and the guide / avatar choice per patient |
+| 8 | No preference storage | "Proactive suggestions" and "Weekly summary" toggles (`notification.tsx`) | Preference fields, plus the features themselves |
+| 9 | Email depends on SendGrid | Sign up verification and password reset | A valid `SENDGRID_API_KEY` and verified sender on the server |
+| 10 | Photos depend on Supabase Storage | Profile photo, journal photos | `SUPABASE_URL`, keys and the storage bucket on the server |
+| 11 | Health Connect (Android) is not integrated | Devices lists it as "Coming soon"; Android falls back to Fitbit | Restore `useHealthConnectStore.ts` (commented out) and wire it into `useDeviceSources.ts` |
+
+## Still online in demo mode
+
+These are third-party services called directly from the app. Demo mode does not replace them, so they need internet and valid keys in the `.env` at build time. The "without it" column is what the code suggests; it has not been tested on a device.
+
+| Service | Used for | Without it (expected, not tested) |
+|---|---|---|
+| Gemini (`EXPO_PUBLIC_GEMINI_API`) | Translating replies, chat fallback when RAG fails | The simulated RAG answers first, so chat replies still appear; translation fails |
+| OpenAI (`EXPO_PUBLIC_OPENAI_API_KEY`) | Intent classifier and empathy lines in the questionnaire | Those steps fail; check the intake flow before a demo |
+| Deepgram (`EXPO_PUBLIC_DEEPGRAM_API`) | Read-aloud (TTS) and voice notes (speech to text) | Voice features fail; typing works |
+| Contentful | Self-care routines, avatar content | Self-care content does not load |
+| Open Food Facts | Barcode lookup in Food | Barcode search fails |
+
+## Files
+
+- `utils/demo/demoMode.ts`: the flag (zustand + file), `DEV_TOOLS_VISIBLE`
+- `utils/demo/mockDb.ts`: the database, sample data, save and reset
+- `utils/demo/mockRoutes.ts`: one handler per backend route
+- `utils/demo/mockContent.ts`: badge names and the canned Doula replies
+- `utils/demo/demoWatch.ts`, `utils/demo/demoWatchData.ts`: the Demo Watch store and its readings
+- `hooks/useDeviceSources.ts`, `components/devices/DeviceSourceRows.tsx`, `app/patient/devices.tsx`: the source list shared by Heart rate, Steps and Devices
+- `utils/demo/installDemoInterceptor.ts`: the fetch and axios hooks, request log
+- `app/developer.tsx`: the Developer screen
+- Touched: `app/patient/heart.tsx`, `steps.tsx`, `tracksleep.tsx`, `(tabs)/home.tsx`, `app/_layout.tsx`, `app/login.tsx`, `app/patient/(tabs)/profile.tsx`, `constants/config.ts`, `translation/en.json`, `translation/pt.json`

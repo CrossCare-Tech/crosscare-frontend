@@ -1,3 +1,4 @@
+import i18n from "i18next";
 import type React from "react";
 import { useState, useCallback, useMemo } from "react";
 import {
@@ -187,7 +188,7 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({
           {/* Date Inputs */}
           <View style={styles.inputsContainer}>
             <View style={styles.inputWrapper}>
-              <Text style={styles.inputLabel}>Start Date</Text>
+              <Text style={styles.inputLabel}>{i18n.t("uiText.startDate")}</Text>
               <TextInput
                 style={styles.input}
                 placeholder="dd-mm-yy"
@@ -196,7 +197,7 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({
               />
             </View>
             <View style={styles.inputWrapper}>
-              <Text style={styles.inputLabel}>End Date</Text>
+              <Text style={styles.inputLabel}>{i18n.t("uiText.endDate")}</Text>
               <TextInput
                 style={styles.input}
                 placeholder="dd-mm-yy"

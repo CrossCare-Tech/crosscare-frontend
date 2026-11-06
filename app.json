@@ -2,7 +2,7 @@
   "expo": {
     "name": "Crosscare Concierge",
     "slug": "crosscare",
-    "version": "1.0.6",
+    "version": "1.0.7",
     "orientation": "portrait",
     "icon": "./assets/images/app-splash.png",
     "scheme": "com.crosscare.tech",
@@ -33,7 +33,9 @@
         "INTERNET",
         "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO"
-      ]
+      ],
+      "allowBackup": false,
+      "edgeToEdgeEnabled": true
     },
     "web": {
       "bundler": "metro",
@@ -42,6 +44,8 @@
       "package": "com.crosscaretech.concierge"
     },
     "plugins": [
+      "./plugins/withAutofillHighlight",
+      "./plugins/withDialogTheme",
       "expo-router",
       [
         "expo-splash-screen",
@@ -79,9 +83,9 @@
         "expo-build-properties", 
         {
           "android": {
-              "compileSdkVersion": 35,
-              "targetSdkVersion": 35,
-              "buildToolsVersion": "35.0.0"
+              "compileSdkVersion": 36,
+              "targetSdkVersion": 36,
+              "buildToolsVersion": "36.0.0"
             }
         }
       ]

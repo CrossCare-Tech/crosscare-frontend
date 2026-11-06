@@ -1,28 +1,23 @@
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  ActivityIndicator,
-  Alert,
-  Modal,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { Alert } from "react-native";
 import { useSelector } from "react-redux";
 import { CONFIG } from "@/constants/config";
+import CustomTextInput from "@/components/ui/CustomTextInput";
+import { ReadingModal } from "@/components/vitals/VitalsUI";
 
 /**
  * A numeric log entry for one health metric.
  *
- * Steps and heart rate are the only metrics with no manual entry path: both
- * arrive solely from Fitbit or Apple Health, and the Fitbit Web API was
- * switched off on 30 October 2026. The write endpoints already exist and are
- * used by the Doula chat, so this is the same POST behind a form.
+ * Steps have no manual entry path of their own: they arrive solely from Fitbit
+ * or Apple Health, and the Fitbit Web API was switched off on 30 October 2026,
+ * so an Android user would have no way to record them. The write endpoint
+ * already exists and is used by the Doula chat, so this is the same POST behind
+ * a form.
  *
- * Shared rather than copied per metric because the two differ only in their
- * accent colour, bounds and request body.
+ * The behaviour (request, bounds, double-tap guard, messages) is the client's
+ * original. Only the look changed: it renders through ReadingModal, like the
+ * other manual-entry pop-ups, instead of drawing its own card and colours.
  */
 interface MetricLogModalProps {
   visible: boolean;
@@ -30,6 +25,8 @@ interface MetricLogModalProps {
   /** Re-fetch the screen's data after a successful save. */
   reload: () => void;
   title: string;
+  /** Label above the input. */
+  label: string;
   placeholder: string;
   /** Path segment under `/user/activity/{userId}/`. */
   path: string;
@@ -40,9 +37,6 @@ interface MetricLogModalProps {
   max: number;
   /** Shown when the input is empty or outside the bounds. */
   invalidMessage: string;
-  accent: string;
-  accentBorder: string;
-  inputBorder: string;
 }
 
 const MetricLogModal = ({
@@ -50,15 +44,13 @@ const MetricLogModal = ({
   onClose,
   reload,
   title,
+  label,
   placeholder,
   path,
   buildBody,
   min,
   max,
   invalidMessage,
-  accent,
-  accentBorder,
-  inputBorder,
 }: MetricLogModalProps) => {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -112,133 +104,24 @@ const MetricLogModal = ({
   };
 
   return (
-    <Modal
-      transparent
+    <ReadingModal
       visible={visible}
-      animationType="fade"
-      onRequestClose={close}
+      loading={loading}
+      onSave={handleSave}
+      onClose={close}
+      title={title}
+      showDateTime={false}
     >
-      <View style={styles.overlay}>
-        <View style={styles.container}>
-          <Text style={[styles.title, { color: accent }]}>{title}</Text>
-
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={[styles.input, { borderColor: inputBorder }]}
-              value={input}
-              onChangeText={setInput}
-              keyboardType="numeric"
-              placeholder={placeholder}
-              placeholderTextColor="#CCCCCC"
-              editable={!loading}
-              autoFocus
-            />
-          </View>
-
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={styles.cancelButton}
-              onPress={close}
-              disabled={loading}
-            >
-              <Text style={styles.cancelButtonText}>
-                {t("metricLog.cancel")}
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.saveButton,
-                { backgroundColor: accent, borderColor: accentBorder },
-                loading && styles.saveButtonDisabled,
-              ]}
-              onPress={handleSave}
-              disabled={loading}
-            >
-              {loading ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <Text style={styles.saveButtonText} numberOfLines={1}>
-                  {t("metricLog.save")}
-                </Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-    </Modal>
+      <CustomTextInput
+        label={label}
+        value={input}
+        onChangeText={(value) => setInput(value.replace(/[^\d]/g, ""))}
+        placeholder={placeholder}
+        keyboardType="number-pad"
+        maxLength={String(max).length}
+      />
+    </ReadingModal>
   );
 };
-
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  container: {
-    width: "80%",
-    backgroundColor: "white",
-    borderRadius: 15,
-    padding: 20,
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  title: {
-    fontSize: 18,
-    fontFamily: "Inter600",
-    marginBottom: 20,
-    textAlign: "center",
-  },
-  inputContainer: {
-    width: "60%",
-    marginBottom: 20,
-  },
-  input: {
-    borderWidth: 1,
-    borderRadius: 10,
-    padding: 10,
-    fontSize: 16,
-    textAlign: "center",
-    fontFamily: "Inter500",
-  },
-  buttonContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    width: "100%",
-  },
-  cancelButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-  },
-  cancelButtonText: {
-    color: "#7B7B7B",
-    fontSize: 14,
-    fontFamily: "Inter500",
-  },
-  saveButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 32,
-    borderWidth: 1,
-    minWidth: 118,
-    alignItems: "center",
-  },
-  saveButtonDisabled: {
-    opacity: 0.6,
-  },
-  saveButtonText: {
-    color: "white",
-    fontSize: 14,
-    maxWidth: 130,
-    fontFamily: "Inter500",
-  },
-});
 
 export default MetricLogModal;

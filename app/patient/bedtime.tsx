@@ -1,400 +1,188 @@
 import React, { useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  StatusBar,
-  ScrollView,
-  Platform,
-} from "react-native";
-import { Ionicons, Feather } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Feather } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import { calculateBedtimes, calculateWakeupTimes, parseTimeString } from "@/constants/constant";
-import SunIcon from "@/assets/images/Svg/SunIcon";
-import { width } from "../../constants/helper";
-import MoonIcon from "@/assets/images/Svg/MoonIcon";
-import { useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
+import { Theme } from "@/constants/theme";
+import ScreenBackground from "@/components/ui/ScreenBackground";
+import AuthTopBar from "@/components/ui/AuthTopBar";
+import { Pill, Tone } from "@/components/vitals/VitalsUI";
+import { GuideNote, metricParts, metricStyles, SectionLabel } from "@/components/vitals/MetricUI";
 
-// Handle time change
-interface TimeChangeEvent {
-  type: string;
-  nativeEvent: any;
-}
+type Mode = "wake" | "sleep";
 
-interface FormatTime {
-  (date: Date): string;
-}
+const CYCLE_MINUTES = 90;
+const FALL_ASLEEP_MINUTES = 15;
 
-const bedtime = () => {
-  const [wakeUpTime, setWakeUpTime] = useState(new Date());
-  const [sleepTime, setSleepTime] = useState(new Date());
-  const [showWakeUpPicker, setShowWakeUpPicker] = useState(false);
-  const [showSleepPicker, setShowSleepPicker] = useState(false);
+// Fewer cycles mean a shorter night: 5–6 is best, 4 is fine, less is short
+const quality = (cycles: number): { key: string; tone: Tone } =>
+  cycles >= 5 ? { key: "best", tone: "success" } : cycles === 4 ? { key: "okay", tone: "teal" } : { key: "short", tone: "warning" };
 
-  const user = useSelector((state:any)=>state.user);
-  const {t} = useTranslation();
-  // Format time to display in the button
+// Bedtime calculator: pick when to wake up (or go to bed) and see times that end on a full sleep cycle
+export default function BedtimeScreen() {
+  const { t, i18n } = useTranslation();
+  const [mode, setMode] = useState<Mode>("wake");
+  const [time, setTime] = useState(() => {
+    const d = new Date();
+    d.setHours(7, 0, 0, 0);
+    return d;
+  });
+  const [pickerVisible, setPickerVisible] = useState(false);
 
-  const formatTime: FormatTime = (date) => {
-    let hours = date.getHours();
-    const minutes = date.getMinutes().toString().padStart(2, "0");
-    const ampm = hours >= 12 ? "PM" : "AM";
+  const format = (date: Date) => date.toLocaleTimeString(i18n.language, { hour: "numeric", minute: "2-digit" });
 
-    hours = hours % 12;
-    hours = hours ? hours : 12; // Convert 0 to 12
+  // From the picked time, walk back (wake mode) or forward (sleep mode) by whole cycles
+  const options = [6, 5, 4, 3].map((cycles) => {
+    const minutes = cycles * CYCLE_MINUTES + FALL_ASLEEP_MINUTES;
+    const result = new Date(time.getTime() + (mode === "wake" ? -minutes : minutes) * 60000);
+    return { cycles, hours: (cycles * CYCLE_MINUTES) / 60, time: result };
+  });
 
-    return `${hours}:${minutes} | ${ampm}`;
-  };
-
-  const onTimeChange = (
-    event: TimeChangeEvent,
-    selectedDate: Date | undefined,
-    isWakeUp: boolean
-  ): void => {
-    if (Platform.OS === "android") {
-      setShowWakeUpPicker(false);
-      setShowSleepPicker(false);
-    }
-
-    if (selectedDate) {
-      if (isWakeUp) {
-        setWakeUpTime(selectedDate);
-      } else {
-        setSleepTime(selectedDate);
-      }
-    }
+  const switchMode = (next: Mode) => {
+    setMode(next);
+    const d = new Date();
+    d.setHours(next === "wake" ? 7 : 22, 0, 0, 0);
+    setTime(d);
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#001B3D" />
+    <ScreenBackground>
+      <SafeAreaView style={styles.container}>
+        <AuthTopBar title={t("sleepLog.bedtimeTitle")} />
 
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <Ionicons name="chevron-back" size={20} color="white" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{t('sleepScreen.trackSleep')}</Text>
-        <TouchableOpacity style={styles.menuButton}>
-          <Feather name="more-vertical" size={20} color="#E5E5E5" />
-        </TouchableOpacity>
-      </View>
-
-      {/* Main Content */}
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Day/Night Circle */}
-        <View style={styles.circleContainer}>
-          <View
-            style={{
-              borderRadius: 999,
-              borderWidth: 5,
-              boxShadow:'0px 0px 4px 0px rgba(0, 0, 0, 0.10);',
-              borderColor: "#E6EBF0",
-              overflow: "hidden",
-              flexDirection: "row",
-              width: 180,
-              height: 180,
-            }}
-          >
-            <View
-              style={{
-                flex: 1,
-                backgroundColor: "#FFD764",
-                justifyContent: "center",
-                alignItems: "center",
-              }}
-            >
-              <SunIcon width={40} height={40} />
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={metricStyles.content}>
+          <View style={[metricParts.card, metricParts.hero, styles.card]}>
+            <View style={styles.segmented} accessibilityRole="tablist">
+              {(["wake", "sleep"] as Mode[]).map((option) => {
+                const selected = option === mode;
+                return (
+                  <TouchableOpacity
+                    key={option}
+                    style={[styles.segment, selected && styles.segmentOn]}
+                    onPress={() => switchMode(option)}
+                    accessibilityRole="tab"
+                    accessibilityState={{ selected }}
+                  >
+                    <Text style={[styles.segmentText, selected && styles.segmentTextOn]}>
+                      {option === "wake" ? t("sleepLog.modeWake") : t("sleepLog.modeSleep")}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
-            <View
-              style={{
-                flex: 1,
-                backgroundColor: "#547698",
-                justifyContent: "center",
-                alignItems: "center",
-              }}
-            >
-              <MoonIcon width={40} height={40} />
-            </View>
-          </View>
-        </View>
-
-        {/* Welcome Text */}
-        <Text style={styles.greeting}>{t('sleepScreen.hi')} {user.user_name}!</Text>
-        <Text style={styles.welcomeText}>
-          {t('sleepScreen.welcomeText')}
-        </Text>
-
-        {/* Time Selection */}
-        <View style={styles.timeSelectionContainer}>
-          <View>
-            <Text style={styles.timeLabel}>{t('sleepScreen.timeToWakeUp')}</Text>
-            <View
-              style={{
-                flexDirection: "row",
-                justifyContent: "center",
-                alignItems: "center",
-                gap: 10,
-              }}
-            >
-              <TouchableOpacity
-                style={{
-                  paddingHorizontal: 8,
-                  paddingVertical: 6,
-                  borderWidth: 2,
-                  borderColor: "#E6EBF0",
-                  borderRadius: 99,
-                  backgroundColor: "#547698",
-                  boxShadow: "0px 0px 4px 0px rgba(255, 255, 255, 0.25);",
+            <Text style={metricParts.when}>{mode === "wake" ? t("sleepLog.wakeQuestion") : t("sleepLog.sleepQuestion")}</Text>
+            <TouchableOpacity style={styles.timeField} onPress={() => setPickerVisible(true)} accessibilityRole="button">
+              <Text style={metricParts.big}>{format(time)}</Text>
+              <Feather name="clock" size={20} color={Theme.colors.purple} />
+            </TouchableOpacity>
+            {pickerVisible && (
+              <DateTimePicker
+                value={time}
+                mode="time"
+                display={Platform.OS === "ios" ? "spinner" : "default"}
+                onChange={(event, value) => {
+                  setPickerVisible(Platform.OS === "ios");
+                  if (event.type !== "dismissed" && value) setTime(value);
                 }}
-                onPress={() => setShowWakeUpPicker(true)}
-              >
-                <Text
-                  style={{
-                    color: "#E6EBF0",
-                    fontSize: 16,
-                    fontFamily: "Inter600",
-                  }}
-                >
-                  {formatTime(wakeUpTime)}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={{
-                  width: 20,
-                  height: 20,
-                  borderRadius: 50,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  backgroundColor: "#E6EBF0",
-                }}
-                onPress={() => {
-                  // Get the current displayed sleep time
-                  const sleepTime = formatTime(wakeUpTime);
-
-                  // Calculate wake-up times based on this sleep time
-                  const sleepDate = parseTimeString(sleepTime);
-                  const calculatedTimes = calculateBedtimes(sleepDate);
-
-                  // Navigate to the wakeup screen with the calculated times
-                  router.push({
-                    pathname: "/patient/wakeup",
-                    params: {
-                      sleepTime: sleepTime,
-                      wakeupTimes: JSON.stringify(calculatedTimes),
-                    },
-                  });
-                }}
-              >
-                <Ionicons name="arrow-forward" size={16} color="black" />
-              </TouchableOpacity>
-            </View>
+              />
+            )}
           </View>
 
-          <Text style={styles.orText}>{t('sleepScreen.or')}</Text>
-          <View>
-            <Text style={styles.timeLabel}>{t('sleepScreen.timeToSleep')}</Text>
-            <View
-              style={{
-                flexDirection: "row",
-                justifyContent: "center",
-                alignItems: "center",
-                gap: 10,
-              }}
-            >
-              <TouchableOpacity
-                style={{
-                  paddingHorizontal: 8,
-                  paddingVertical: 6,
-                  borderWidth: 2,
-                  borderColor: "#E6EBF0",
-                  borderRadius: 99,
-                  backgroundColor: "#547698",
-                  boxShadow: "0px 0px 4px 0px rgba(255, 255, 255, 0.25);",
-                }}
-                onPress={() => setShowSleepPicker(true)}
-              >
-                <Text
-                  style={{
-                    color: "#E6EBF0",
-                    fontSize: 16,
-                    fontFamily: "Inter600",
-                  }}
-                >
-                  {formatTime(sleepTime)}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={{
-                  width: 20,
-                  height: 20,
-                  borderRadius: 50,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  backgroundColor: "#E6EBF0",
-                }}
-                onPress={() => {
-                  // Get the current displayed sleep time
-
-                  // Calculate wake-up times based on this sleep time
-                  const sleepDate = parseTimeString(formatTime(sleepTime));
-                  const calculatedTimes = calculateWakeupTimes(sleepDate);
-
-                  // Navigate to the wakeup screen with the calculated times
-                  router.push({
-                    pathname: "/patient/sleepup",
-                    params: {
-                      sleepTime: formatTime(sleepTime),
-                      wakeupTimes: JSON.stringify(calculatedTimes),
-                    },
-                  });
-                }}
-              >
-                <Ionicons name="arrow-forward" size={16} color="black" />
-              </TouchableOpacity>
-            </View>
+          <SectionLabel>{mode === "wake" ? t("sleepLog.goToBedAt") : t("sleepLog.wakeUpAt")}</SectionLabel>
+          <View style={[metricParts.card, styles.list]}>
+            {options.map((option, index) => {
+              const q = quality(option.cycles);
+              return (
+                <View key={option.cycles} style={[styles.row, index > 0 && styles.divider]}>
+                  <View style={styles.flex}>
+                    <Text style={styles.rowTime}>{format(option.time)}</Text>
+                    <Text style={styles.rowSub}>
+                      {t("sleepLog.cycles", { count: option.cycles, hours: option.hours })}
+                    </Text>
+                  </View>
+                  <Pill label={t(`sleepLog.${q.key}`)} tone={q.tone} />
+                </View>
+              );
+            })}
           </View>
-        </View>
-      </ScrollView>
 
-      {/* DateTimePicker for Wake Up Time */}
-      {showWakeUpPicker && (
-        <DateTimePicker
-          value={wakeUpTime}
-          mode="time"
-          is24Hour={false}
-          display={Platform.OS === "ios" ? "spinner" : "default"}
-          onChange={(event, selectedDate) =>
-            onTimeChange(event, selectedDate, true)
-          }
-          style={styles.dateTimePicker}
-          textColor="#E6EBF0"
-          themeVariant="dark"
-        />
-      )}
-
-      {/* DateTimePicker for Sleep Time */}
-      {showSleepPicker && (
-        <DateTimePicker
-          value={sleepTime}
-          mode="time"
-          is24Hour={false}
-          display={Platform.OS === "ios" ? "spinner" : "default"}
-          onChange={(event, selectedDate) =>
-            onTimeChange(event, selectedDate, false)
-          }
-          style={styles.dateTimePicker}
-          textColor="#E6EBF0"
-          themeVariant="dark"
-        />
-      )}
-    </SafeAreaView>
+          <GuideNote text={t("sleepLog.guide")} />
+        </ScrollView>
+      </SafeAreaView>
+    </ScreenBackground>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#001B3D",
   },
-  header: {
+  flex: {
+    flex: 1,
+  },
+  card: {
+    gap: 12,
+  },
+  segmented: {
+    flexDirection: "row",
+    gap: 4,
+    padding: 3,
+    borderRadius: Theme.borderRadius.md,
+    backgroundColor: Theme.colors.surfaceSunken,
+  },
+  segment: {
+    flex: 1,
+    height: 38,
+    borderRadius: 9,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  segmentOn: {
+    backgroundColor: Theme.colors.surface,
+    ...Theme.shadows.card,
+  },
+  segmentText: {
+    fontFamily: Theme.typography.subheading,
+    fontSize: 13,
+    color: Theme.colors.inkFaint,
+  },
+  segmentTextOn: {
+    color: Theme.colors.purple,
+  },
+  timeField: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 6,
+    borderRadius: Theme.borderRadius.md,
+    borderWidth: 1,
+    borderColor: Theme.colors.inputBorder,
+    backgroundColor: Theme.colors.inputBg,
   },
-  backButton: {
-    padding: 8,
+  list: {
+    paddingHorizontal: Theme.spacing.md,
   },
-  headerTitle: {
-    fontSize: 16,
-    fontFamily: "DMSans600",
-    color: "white",
-  },
-  dateTimePicker: {
-    backgroundColor: "#335C85",
-    height: 200,
-  },
-  menuButton: {
-    padding: 8,
-  },
-  content: {
-    flex: 1,
-  },
-  circleContainer: {
-    width: "100%",
-    alignItems: "center",
-    paddingVertical: 20,
-  },
-  greeting: {
-    fontSize: 16,
-    color: "white",
-    fontFamily: "Inter600",
-    textAlign: "center",
-    marginBottom: 8,
-  },
-  welcomeText: {
-    fontSize: 12,
-    color: "#E5E5E5",
-    textAlign: "center",
-    marginHorizontal: 40,
-    lineHeight: 22,
-    fontFamily: "Inter400",
-    marginBottom: 40,
-  },
-  timeSelectionContainer: {
-    flexDirection: "column",
-    gap: 12,
-    justifyContent: "flex-start",
-    alignItems: "center",
-  },
-  timeLabel: {
-    fontSize: 16,
-    color: "#E5E5E5",
-    fontFamily: "Inter600",
-    marginBottom: 12,
-    alignSelf: "center",
-  },
-  timeButton: {
+  row: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#547698",
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 30,
-    marginBottom: 24,
+    gap: 12,
+    minHeight: 62,
+    paddingVertical: 10,
   },
-  timeText: {
-    fontSize: 18,
-    color: "white",
-    fontFamily: "Inter600",
-    marginRight: 4,
+  divider: {
+    borderTopWidth: 1,
+    borderTopColor: Theme.colors.hairlineLight,
   },
-  ampmText: {
-    fontSize: 18,
-    color: "white",
-    fontFamily: "Inter400",
-    flex: 1,
+  rowTime: {
+    fontFamily: Theme.typography.display,
+    fontSize: 22,
+    color: Theme.colors.ink,
   },
-  arrowContainer: {
-    backgroundColor: "#335C85",
-    borderRadius: 20,
-    padding: 8,
-  },
-  orText: {
-    fontSize: 16,
-    color: "#E5E5E5",
-    fontFamily: "Inter400",
-    marginVertical: 16,
+  rowSub: {
+    fontFamily: Theme.typography.subheading,
+    fontSize: 12,
+    color: Theme.colors.inkFaint,
   },
 });
-
-export default bedtime;

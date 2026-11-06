@@ -2,9 +2,11 @@ import * as Notifications from 'expo-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import { DailyTriggerInput, SchedulableTriggerInputTypes } from 'expo-notifications';
+import i18n from 'i18next';
 
 // Define constants
 const REMINDER_STORAGE_KEY = 'health_reminders';
+const SCHEDULE_STORAGE_KEY = 'notification_schedule';
 const APPOINTMENT_REMINDERS_ENABLED_KEY = 'appointment_reminders_enabled';
 const MEDICATION_REMINDERS_ENABLED_KEY = 'medication_reminders_enabled';
 
@@ -29,6 +31,27 @@ export interface ReminderSettings {
   days: number[]; // 0-6 for days of week (0 = Sunday)
   message: string;
 }
+
+// "Notification schedule": three fixed nudges (morning, midday, evening) the user can switch on and set to
+// run daily, on weekdays or on chosen days. Separate from the health reminders above.
+export type ScheduleFrequency = 'daily' | 'weekdays' | 'custom';
+export interface ScheduleItem {
+  id: 'morning' | 'midday' | 'evening';
+  time: string; // 'HH:MM'
+  enabled: boolean;
+  frequency: ScheduleFrequency;
+  days: number[]; // 0-6 (0 = Sunday), used when frequency is 'custom'
+}
+export type ScheduleCopy = Record<ScheduleItem['id'], { title: string; body: string }>;
+
+export const WEEKDAYS = [1, 2, 3, 4, 5];
+export const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6];
+
+export const DEFAULT_SCHEDULE: ScheduleItem[] = [
+  { id: 'morning', time: '08:00', enabled: true, frequency: 'daily', days: ALL_DAYS },
+  { id: 'midday', time: '13:00', enabled: true, frequency: 'weekdays', days: WEEKDAYS },
+  { id: 'evening', time: '20:30', enabled: false, frequency: 'daily', days: ALL_DAYS },
+];
 
 // Request permissions
 export async function requestNotificationPermissions() {
@@ -59,7 +82,7 @@ export async function scheduleDailyReminder(reminder: ReminderSettings): Promise
     await Notifications.scheduleNotificationAsync({
       content: {
         title: getReminderTitle(reminder.type),
-        body: reminder.message || `Time to track your ${reminder.type}!`,
+        body: reminderMessage(reminder),
         data: { 
           type: reminder.type,
           screen: getScreenForType(reminder.type)
@@ -83,23 +106,23 @@ export async function scheduleDailyReminder(reminder: ReminderSettings): Promise
 }
 
 // Helper functions for notifications
+// The three starter reminders are stored with their text, so one saved in English would stay in English after the
+// language changes. Their text is read from the translations when it is shown or scheduled, unless the user edited it.
+const DEFAULT_REMINDER_TEXT: Record<string, { key: string; english: string }> = {
+  'water-morning': { key: 'pushText.defaultWater', english: 'Time to track your morning water intake!' },
+  'steps-evening': { key: 'pushText.defaultSteps', english: "Don't forget to log your steps for today!" },
+  'sleep-morning': { key: 'pushText.defaultSleep', english: 'How did you sleep last night? Tap to log your sleep.' },
+};
+
+export function reminderMessage(reminder: ReminderSettings): string {
+  const starter = DEFAULT_REMINDER_TEXT[reminder.id];
+  if (starter && (!reminder.message || reminder.message === starter.english)) return i18n.t(starter.key);
+  return reminder.message || i18n.t('pushText.genericBody');
+}
+
 function getReminderTitle(type: string): string {
-  switch (type) {
-    case 'water':
-      return '💧 Water Reminder';
-    case 'steps':
-      return '👟 Steps Reminder';
-    case 'medication':
-      return '💊 Medication Reminder';
-    case 'sleep':
-      return '😴 Sleep Reminder';
-    case 'heart':
-      return '❤️ Heart Rate Reminder';
-    case 'weight':
-      return '⚖️ Weight Reminder';
-    default:
-      return 'Health Reminder';
-  }
+  const key = ['water', 'steps', 'medication', 'sleep', 'heart', 'weight'].includes(type) ? `${type}Title` : 'healthTitle';
+  return i18n.t(`pushText.${key}`);
 }
 
 function getColorForType(type: string): string {
@@ -144,6 +167,16 @@ export async function saveReminders(reminders: ReminderSettings[]) {
 }
 
 // Load reminders from storage
+// True once reminders were saved at least once (even if the user later deleted them all)
+export async function hasSavedReminders(): Promise<boolean> {
+  try {
+    return (await AsyncStorage.getItem(REMINDER_STORAGE_KEY)) !== null;
+  } catch (error) {
+    console.error('Error checking reminders:', error);
+    return false;
+  }
+}
+
 export async function loadReminders(): Promise<ReminderSettings[]> {
   try {
     const storedReminders = await AsyncStorage.getItem(REMINDER_STORAGE_KEY);
@@ -152,6 +185,63 @@ export async function loadReminders(): Promise<ReminderSettings[]> {
     console.error('Error loading reminders:', error);
     return [];
   }
+}
+
+export async function loadNotificationSchedule(): Promise<ScheduleItem[]> {
+  try {
+    const stored = await AsyncStorage.getItem(SCHEDULE_STORAGE_KEY);
+    const items: ScheduleItem[] = stored ? JSON.parse(stored).items : [];
+    return DEFAULT_SCHEDULE.map((fallback) => items.find((i) => i.id === fallback.id) ?? fallback);
+  } catch (error) {
+    console.error('Error loading notification schedule:', error);
+    return DEFAULT_SCHEDULE;
+  }
+}
+
+// Weekday numbers (0 = Sunday) an item runs on, or null for every day
+function scheduleDays(item: ScheduleItem): number[] | null {
+  if (item.frequency === 'daily') return null;
+  return item.frequency === 'weekdays' ? WEEKDAYS : item.days;
+}
+
+async function applyNotificationSchedule(items: ScheduleItem[], copy: ScheduleCopy) {
+  for (const item of items) {
+    // Clear the daily id and the seven weekly ids, then schedule what the item asks for now
+    const ids = [`schedule-${item.id}`, ...ALL_DAYS.map((d) => `schedule-${item.id}-${d}`)];
+    await Promise.all(ids.map((id) => Notifications.cancelScheduledNotificationAsync(id).catch(() => {})));
+    if (!item.enabled) continue;
+
+    const [hour, minute] = item.time.split(':').map(Number);
+    const content = {
+      title: copy[item.id].title,
+      body: copy[item.id].body,
+      data: { screen: '/patient/(tabs)/home' },
+      sound: true,
+    };
+    const days = scheduleDays(item);
+    if (!days) {
+      await Notifications.scheduleNotificationAsync({
+        content,
+        trigger: { type: SchedulableTriggerInputTypes.DAILY, hour, minute },
+        identifier: `schedule-${item.id}`,
+      });
+    } else {
+      for (const day of days) {
+        await Notifications.scheduleNotificationAsync({
+          content,
+          // expo weekdays run 1-7 with Sunday as 1
+          trigger: { type: SchedulableTriggerInputTypes.WEEKLY, weekday: day + 1, hour, minute },
+          identifier: `schedule-${item.id}-${day}`,
+        });
+      }
+    }
+  }
+}
+
+// Saves the schedule with the texts it was written with (so it can be rebuilt later) and schedules it
+export async function saveNotificationSchedule(items: ScheduleItem[], copy: ScheduleCopy) {
+  await AsyncStorage.setItem(SCHEDULE_STORAGE_KEY, JSON.stringify({ items, copy }));
+  await applyNotificationSchedule(items, copy);
 }
 
 // Reschedule all active reminders (useful on app startup)
@@ -166,6 +256,13 @@ export async function rescheduleAllReminders() {
     const activeReminders = reminders.filter(r => r.enabled);
     for (const reminder of activeReminders) {
       await scheduleDailyReminder(reminder);
+    }
+
+    // The notification schedule was cancelled above too: bring it back
+    const stored = await AsyncStorage.getItem(SCHEDULE_STORAGE_KEY);
+    if (stored) {
+      const { items, copy } = JSON.parse(stored);
+      await applyNotificationSchedule(items, copy);
     }
     
     return activeReminders.length;
@@ -184,7 +281,7 @@ export function generateDefaultReminders(): ReminderSettings[] {
       time: '09:00',
       enabled: true,
       days: [],
-      message: 'Time to track your morning water intake!'
+      message: i18n.t('pushText.defaultWater')
     },
     {
       id: 'steps-evening',
@@ -192,7 +289,7 @@ export function generateDefaultReminders(): ReminderSettings[] {
       time: '19:00',
       enabled: true,
       days: [],
-      message: 'Don\'t forget to log your steps for today!'
+      message: i18n.t('pushText.defaultSteps')
     },
     {
       id: 'sleep-morning',
@@ -200,7 +297,7 @@ export function generateDefaultReminders(): ReminderSettings[] {
       time: '08:00',
       enabled: true,
       days: [],
-      message: 'How did you sleep last night? Tap to log your sleep.'
+      message: i18n.t('pushText.defaultSleep')
     }
   ];
 }
@@ -265,8 +362,8 @@ export async function scheduleAppointmentReminder(
       
       await Notifications.scheduleNotificationAsync({
         content: {
-          title: '📅 Appointment Reminder',
-          body: `You have an appointment "${description}" in 1 hour`,
+          title: i18n.t('pushText.appointmentTitle'),
+          body: i18n.t('pushText.appointmentInHour', { description }),
           data: { 
             screen: '/patient/calendar',
             appointmentId: appointmentId || 'unknown'
@@ -295,8 +392,8 @@ export async function scheduleAppointmentReminder(
       
       await Notifications.scheduleNotificationAsync({
         content: {
-          title: '📅 Appointment Reminder',
-          body: `You have an appointment "${description}" tomorrow`,
+          title: i18n.t('pushText.appointmentTitle'),
+          body: i18n.t('pushText.appointmentTomorrow', { description }),
           data: { 
             screen: '/patient/calendar',
             appointmentId: appointmentId || 'unknown'
@@ -324,6 +421,24 @@ export async function scheduleAppointmentReminder(
   } catch (error) {
     console.error('❌ Error scheduling appointment reminder:', error);
     return null;
+  }
+}
+
+// One-off reminder to measure blood pressure again after a high reading (5.5 "Recheck in 15 minutes")
+export async function scheduleBloodPressureRecheck(title: string, body: string, minutes = 15): Promise<boolean> {
+  try {
+    if (!(await requestNotificationPermissions())) {
+      return false;
+    }
+    await Notifications.scheduleNotificationAsync({
+      content: { title, body, data: { screen: '/patient/bloodpressure' }, sound: true },
+      trigger: { type: SchedulableTriggerInputTypes.TIME_INTERVAL, seconds: minutes * 60 },
+      identifier: 'bp-recheck',
+    });
+    return true;
+  } catch (error) {
+    console.error('Error scheduling blood pressure recheck:', error);
+    return false;
   }
 }
 
@@ -442,8 +557,8 @@ export async function scheduleMedicationReminder(
       
       await Notifications.scheduleNotificationAsync({
         content: {
-          title: '💊 Medication Reminder',
-          body: `Time to take "${medicationName}" in 1 hour`,
+          title: i18n.t('pushText.medicationTitle'),
+          body: i18n.t('pushText.medicationInHour', { name: medicationName }),
           data: { 
             screen: '/patient/medication/medications',
             medicationId: medicationId || 'unknown'
@@ -472,8 +587,8 @@ export async function scheduleMedicationReminder(
       
       await Notifications.scheduleNotificationAsync({
         content: {
-          title: '💊 Medication Reminder',
-          body: `It's time to take "${medicationName}"`,
+          title: i18n.t('pushText.medicationTitle'),
+          body: i18n.t('pushText.medicationNow', { name: medicationName }),
           data: { 
             screen: '/patient/medication/medications',
             medicationId: medicationId || 'unknown'

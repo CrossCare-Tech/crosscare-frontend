@@ -1,437 +1,328 @@
-import { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  StatusBar,
-  ScrollView,
-  Alert,
-  ActivityIndicator,
-  Modal,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
-import { useSelector } from 'react-redux';
-import { useSymptomStore, SYMPTOM_TYPES } from '@/zustandStore/useSymptomStore';
+import React, { useEffect, useState } from "react";
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Feather } from "@expo/vector-icons";
+import { useSelector } from "react-redux";
+import { useTranslation } from "react-i18next";
+import { Theme } from "@/constants/theme";
+import { SYMPTOM_TYPES, useSymptomStore } from "@/zustandStore/useSymptomStore";
+import ScreenBackground from "@/components/ui/ScreenBackground";
+import { useAuthDialog } from "@/components/ui/AuthDialog";
+import AuthTopBar from "@/components/ui/AuthTopBar";
+import { Pill, ReadingModal, Tone } from "@/components/vitals/VitalsUI";
+import { daysAgo, fmtDate, GuideNote, metricParts, metricStyles, SectionLabel, toLocalDay } from "@/components/vitals/MetricUI";
 
-type SymptomSeverity = 'NONE' | 'MILD' | 'MODERATE' | 'SEVERE';
+type Severity = "MILD" | "MODERATE" | "SEVERE";
 
-const SEVERITY_OPTIONS: { level: SymptomSeverity; label: string; color: string }[] = [
-  { level: 'MILD', label: 'Mild', color: '#2ECC71' },
-  { level: 'MODERATE', label: 'Moderate', color: '#F1C40F' },
-  { level: 'SEVERE', label: 'Severe', color: '#E74C3C' },
+const SEVERITIES: { level: Severity; tone: Tone }[] = [
+  { level: "MILD", tone: "teal" },
+  { level: "MODERATE", tone: "warning" },
+  { level: "SEVERE", tone: "danger" },
 ];
+const toneOf = (severity: string): Tone => SEVERITIES.find((item) => item.level === severity)?.tone ?? "teal";
+const iconOf = (type: string) => SYMPTOM_TYPES.find((item) => item.id === type)?.icon ?? "🔸";
 
+// Symptoms: pick one to log it with a severity, then this week's list
 export default function SymptomsScreen() {
   const user = useSelector((state: any) => state.user);
   const userId = user?.user_id;
-
-  const {
-    symptoms,
-    summary,
-    isLoading,
-    fetchSymptoms,
-    logSymptom,
-    deleteSymptom,
-  } = useSymptomStore();
-
-  const [modalVisible, setModalVisible] = useState(false);
-  const [selectedSymptom, setSelectedSymptom] = useState<string | null>(null);
-  const [selectedSeverity, setSelectedSeverity] = useState<SymptomSeverity>('MILD');
+  const { t, i18n } = useTranslation();
+  const { dialog, show } = useAuthDialog();
+  const { symptoms, summary, isLoading, fetchSymptoms, logSymptom, deleteSymptom } = useSymptomStore();
+  const [picked, setPicked] = useState<string | null>(null);
+  const [severity, setSeverity] = useState<Severity>("MILD");
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (userId) {
-      fetchSymptoms(userId);
-    }
+    if (userId) fetchSymptoms(userId);
   }, [userId]);
 
-  const handleOpenModal = (symptomType: string) => {
-    setSelectedSymptom(symptomType);
-    setSelectedSeverity('MILD');
-    setModalVisible(true);
+  const name = (type: string) => t(`symptomLog.types.${type}`, { defaultValue: type });
+  const todayStr = fmtDate(daysAgo(0));
+  const dayLabel = (date: string) => {
+    if (date === todayStr) return t("bloodPressureLog.today");
+    if (date === fmtDate(daysAgo(1))) return t("bloodPressureLog.yesterday");
+    return new Date(`${date}T12:00:00`).toLocaleDateString(i18n.language, { month: "short", day: "numeric" });
+  };
+  // occurredAt carries the real moment; older entries only have the API's UTC day
+  const dayOf = (symptom: any) => (symptom.occurredAt ? fmtDate(new Date(symptom.occurredAt)) : toLocalDay(symptom.date));
+
+  const open = (type: string) => {
+    setSeverity("MILD");
+    setPicked(type);
   };
 
-  const handleLogSymptom = async () => {
+  const save = async () => {
     if (!userId) {
-      Alert.alert('Error', 'User not found. Please log in again.');
+      Alert.alert(t("vitalsEntry.errorTitle"), t("vitalsEntry.loginAgain"));
       return;
     }
-    if (!selectedSymptom) return;
-
-    const success = await logSymptom(userId, {
-      symptomType: selectedSymptom,
-      severity: selectedSeverity,
-    });
-
-    if (success) {
-      setModalVisible(false);
-      Alert.alert('Success', 'Symptom logged successfully!');
-    } else {
-      Alert.alert('Error', 'Failed to log symptom. Please try again.');
-    }
+    if (!picked) return;
+    setSaving(true);
+    const success = await logSymptom(userId, { symptomType: picked, severity });
+    setSaving(false);
+    if (success) setPicked(null);
+    else Alert.alert(t("vitalsEntry.errorTitle"), t("vitalsEntry.saveFailed"));
   };
 
-  const handleDeleteSymptom = (symptomId: string) => {
+  const confirmDelete = (symptom: any) => {
     if (!userId) return;
-
-    Alert.alert('Delete Symptom', 'Are you sure you want to delete this entry?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: () => deleteSymptom(userId, symptomId),
-      },
-    ]);
-  };
-
-  const getSymptomLabel = (type: string): string => {
-    return SYMPTOM_TYPES.find((s) => s.id === type)?.label || type;
-  };
-
-  const getSymptomIcon = (type: string): string => {
-    return SYMPTOM_TYPES.find((s) => s.id === type)?.icon || '🔸';
-  };
-
-  const getSeverityColor = (severity: string): string => {
-    return SEVERITY_OPTIONS.find((s) => s.level === severity)?.color || '#999';
+    show({
+      variant: "delete",
+      title: t("symptomLog.delete"),
+      message: t("symptomLog.deleteConfirm", { name: name(symptom.symptomType) }),
+      buttons: [
+        { text: t("cancel"), style: "cancel" },
+        {
+          text: t("symptomLog.delete"),
+          // Reload so the weekly summary drops the deleted entry too
+          onPress: async () => {
+            await deleteSymptom(userId, symptom.id);
+            fetchSymptoms(userId);
+          },
+        },
+      ],
+    });
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+    <ScreenBackground>
+      <SafeAreaView style={styles.container}>
+        <AuthTopBar title={t("symptomLog.title")} />
 
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="chevron-back" size={24} color="#000" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Symptoms</Text>
-        <View style={{ width: 24 }} />
-      </View>
-
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.sectionTitle}>Log a Symptom</Text>
-        <View style={styles.symptomGrid}>
-          {SYMPTOM_TYPES.map((symptom) => (
-            <TouchableOpacity
-              key={symptom.id}
-              style={styles.symptomOption}
-              onPress={() => handleOpenModal(symptom.id)}
-            >
-              <Text style={styles.symptomEmoji}>{symptom.icon}</Text>
-              <Text style={styles.symptomLabel}>{symptom.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {summary && summary.totalSymptoms > 0 && (
-          <View style={styles.summaryContainer}>
-            <Text style={styles.sectionTitle}>This Week</Text>
-            <View style={styles.summaryCard}>
-              <Text style={styles.summaryText}>
-                You've logged <Text style={styles.summaryHighlight}>{summary.totalSymptoms}</Text> symptoms
-              </Text>
-              {summary.mostCommon && (
-                <Text style={styles.summarySubtext}>
-                  Most common: {getSymptomLabel(summary.mostCommon)}
-                </Text>
-              )}
-            </View>
-          </View>
-        )}
-
-        <Text style={styles.sectionTitle}>Recent Symptoms</Text>
-        {symptoms.length > 0 ? (
-          <View style={styles.symptomsContainer}>
-            {symptoms.slice(0, 10).map((symptom, index) => (
-              <View key={symptom.id || index} style={styles.symptomItem}>
-                <View style={styles.symptomItemLeft}>
-                  <Text style={styles.symptomItemIcon}>{getSymptomIcon(symptom.symptomType)}</Text>
-                  <View>
-                    <Text style={styles.symptomItemName}>{getSymptomLabel(symptom.symptomType)}</Text>
-                    <Text style={styles.symptomItemDate}>{symptom.date}</Text>
-                  </View>
-                </View>
-                <View style={styles.symptomItemRight}>
-                  <View
-                    style={[
-                      styles.severityBadge,
-                      { backgroundColor: getSeverityColor(symptom.severity) },
-                    ]}
-                  >
-                    <Text style={styles.severityText}>{symptom.severity}</Text>
-                  </View>
-                  <TouchableOpacity onPress={() => handleDeleteSymptom(symptom.id)}>
-                    <Ionicons name="trash-outline" size={20} color="#E74C3C" />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ))}
-          </View>
-        ) : (
-          <Text style={styles.noDataText}>No symptoms logged yet.</Text>
-        )}
-
-        <View style={{ height: 40 }} />
-      </ScrollView>
-
-      <Modal visible={modalVisible} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>
-              {selectedSymptom ? `${getSymptomIcon(selectedSymptom)} ${getSymptomLabel(selectedSymptom)}` : ''}
-            </Text>
-
-            <Text style={styles.modalSubtitle}>How severe is it?</Text>
-
-            <View style={styles.severityOptions}>
-              {SEVERITY_OPTIONS.map((option) => (
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={metricStyles.content}>
+          <View style={[metricParts.card, metricParts.hero, styles.pickCard]}>
+            <Text style={styles.question}>{t("symptomLog.question")}</Text>
+            <View style={styles.grid}>
+              {SYMPTOM_TYPES.map((symptom) => (
                 <TouchableOpacity
-                  key={option.level}
-                  style={[
-                    styles.severityOption,
-                    selectedSeverity === option.level && {
-                      borderColor: option.color,
-                      borderWidth: 3,
-                    },
-                  ]}
-                  onPress={() => setSelectedSeverity(option.level)}
+                  key={symptom.id}
+                  style={styles.chip}
+                  onPress={() => open(symptom.id)}
+                  accessibilityRole="button"
                 >
-                  <View style={[styles.severityDot, { backgroundColor: option.color }]} />
-                  <Text style={styles.severityOptionText}>{option.label}</Text>
+                  <Text style={styles.chipEmoji}>{symptom.icon}</Text>
+                  <Text style={styles.chipLabel} numberOfLines={2}>
+                    {name(symptom.id)}
+                  </Text>
                 </TouchableOpacity>
               ))}
             </View>
-
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={styles.cancelButton}
-                onPress={() => setModalVisible(false)}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.logButton}
-                onPress={handleLogSymptom}
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <ActivityIndicator color="#FFFFFF" />
-                ) : (
-                  <Text style={styles.logButtonText}>Log Symptom</Text>
-                )}
-              </TouchableOpacity>
-            </View>
           </View>
-        </View>
-      </Modal>
-    </SafeAreaView>
+
+          <GuideNote text={t("symptomLog.guide")} />
+
+          {summary && summary.totalSymptoms > 0 && (
+            <View style={[metricParts.card, styles.summary]}>
+              <Text style={styles.summaryValue}>{summary.totalSymptoms}</Text>
+              <View style={styles.rowText}>
+                <Text style={styles.rowTitle}>{t("symptomLog.thisWeek")}</Text>
+                {summary.mostCommon && (
+                  <Text style={styles.rowSub}>{t("symptomLog.mostCommon", { name: name(summary.mostCommon) })}</Text>
+                )}
+              </View>
+            </View>
+          )}
+
+          <SectionLabel>{t("symptomLog.recent")}</SectionLabel>
+          {isLoading && symptoms.length === 0 ? (
+            <ActivityIndicator color={Theme.colors.magenta} />
+          ) : symptoms.length === 0 ? (
+            <Text style={styles.empty}>{t("symptomLog.noHistory")}</Text>
+          ) : (
+            <View style={[metricParts.card, styles.list]}>
+              {symptoms.map((symptom: any, index: number) => (
+                <View key={symptom.id} style={[styles.row, index > 0 && styles.divider]}>
+                  <Text style={styles.rowEmoji}>{iconOf(symptom.symptomType)}</Text>
+                  <View style={styles.rowText}>
+                    <Text style={styles.rowTitle}>{name(symptom.symptomType)}</Text>
+                    <Text style={styles.rowSub}>{dayLabel(dayOf(symptom))}</Text>
+                  </View>
+                  <Pill label={t(`symptomLog.${symptom.severity}`, { defaultValue: symptom.severity })} tone={toneOf(symptom.severity)} />
+                  <TouchableOpacity
+                    onPress={() => confirmDelete(symptom)}
+                    accessibilityRole="button"
+                    accessibilityLabel={t("symptomLog.delete")}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <Feather name="trash-2" size={17} color={Theme.colors.inkFaint} />
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          )}
+        </ScrollView>
+
+        <ReadingModal
+          visible={!!picked}
+          loading={saving}
+          onSave={save}
+          onClose={() => setPicked(null)}
+          title={t("symptomLog.logTitle")}
+          saveLabel={t("symptomLog.logButton")}
+          showDateTime={false}
+        >
+          {picked && (
+            <View style={styles.sheetHead}>
+              <Text style={styles.sheetEmoji}>{iconOf(picked)}</Text>
+              <Text style={styles.sheetTitle}>{name(picked)}</Text>
+            </View>
+          )}
+          <Text style={styles.sheetLabel}>{t("symptomLog.howSevere")}</Text>
+          <View style={styles.severities} accessibilityRole="radiogroup">
+            {SEVERITIES.map((option) => {
+              const selected = option.level === severity;
+              return (
+                <TouchableOpacity
+                  key={option.level}
+                  style={[styles.severity, selected && styles.severityOn]}
+                  onPress={() => setSeverity(option.level)}
+                  accessibilityRole="radio"
+                  accessibilityState={{ checked: selected }}
+                >
+                  <Text style={[styles.severityText, selected && styles.severityTextOn]}>
+                    {t(`symptomLog.${option.level}`)}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </ReadingModal>
+        {dialog}
+      </SafeAreaView>
+    </ScreenBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 15,
+  pickCard: {
+    gap: 12,
   },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000',
+  question: {
+    fontFamily: Theme.typography.display,
+    fontSize: 20,
+    lineHeight: 26,
+    color: Theme.colors.ink,
   },
-  content: {
-    flex: 1,
-    paddingHorizontal: 20,
+  grid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
   },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 15,
-    marginTop: 10,
-  },
-  symptomGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    marginBottom: 25,
-  },
-  symptomOption: {
-    width: '23%',
-    aspectRatio: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFF0F0',
-    borderRadius: 15,
-    marginBottom: 10,
-  },
-  symptomEmoji: {
-    fontSize: 24,
-  },
-  symptomLabel: {
-    fontSize: 9,
-    color: '#666',
-    marginTop: 4,
-    textAlign: 'center',
-  },
-  summaryContainer: {
-    marginBottom: 20,
-  },
-  summaryCard: {
-    backgroundColor: '#F8F9FA',
-    borderRadius: 15,
-    padding: 20,
-  },
-  summaryText: {
-    fontSize: 16,
-    color: '#333',
-  },
-  summaryHighlight: {
-    fontWeight: '700',
-    color: '#E74C3C',
-  },
-  summarySubtext: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 5,
-  },
-  symptomsContainer: {
-    backgroundColor: '#F8F9FA',
-    borderRadius: 15,
-    padding: 15,
-  },
-  symptomItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  chip: {
+    width: "31.5%",
+    alignItems: "center",
+    gap: 4,
     paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    paddingHorizontal: 4,
+    borderRadius: Theme.borderRadius.md,
+    borderWidth: 1,
+    borderColor: Theme.colors.hairline,
+    backgroundColor: Theme.colors.surface,
   },
-  symptomItemLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  chipEmoji: {
+    fontSize: 22,
   },
-  symptomItemIcon: {
-    fontSize: 24,
-    marginRight: 12,
+  chipLabel: {
+    fontFamily: Theme.typography.subheading,
+    fontSize: 11.5,
+    color: Theme.colors.ink,
+    textAlign: "center",
   },
-  symptomItemName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
+  summary: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    padding: Theme.spacing.md,
   },
-  symptomItemDate: {
-    fontSize: 12,
-    color: '#666',
+  summaryValue: {
+    fontFamily: Theme.typography.display,
+    fontSize: 32,
+    color: Theme.colors.magenta,
   },
-  symptomItemRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  empty: {
+    fontFamily: Theme.typography.body,
+    fontSize: 13,
+    color: Theme.colors.inkFaint,
+  },
+  list: {
+    paddingHorizontal: Theme.spacing.md,
+  },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    minHeight: 58,
+    paddingVertical: 10,
+  },
+  divider: {
+    borderTopWidth: 1,
+    borderTopColor: Theme.colors.hairlineLight,
+  },
+  rowEmoji: {
+    fontSize: 22,
+  },
+  rowText: {
+    flex: 1,
+    gap: 2,
+  },
+  rowTitle: {
+    fontFamily: Theme.typography.heading,
+    fontSize: 14.5,
+    color: Theme.colors.ink,
+  },
+  rowSub: {
+    fontFamily: Theme.typography.subheading,
+    fontSize: 11.5,
+    color: Theme.colors.inkFaint,
+  },
+  sheetHead: {
+    flexDirection: "row",
+    alignItems: "center",
     gap: 10,
+    marginBottom: Theme.spacing.md,
   },
-  severityBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
+  sheetEmoji: {
+    fontSize: 26,
+  },
+  sheetTitle: {
+    fontFamily: Theme.typography.display,
+    fontSize: 20,
+    color: Theme.colors.ink,
+  },
+  sheetLabel: {
+    fontFamily: Theme.typography.heading,
+    fontSize: 13.5,
+    color: Theme.colors.inkSoft,
+    marginBottom: Theme.spacing.sm,
+  },
+  severities: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  severity: {
+    flex: 1,
+    height: 44,
+    borderRadius: Theme.borderRadius.sm,
+    borderWidth: 1,
+    borderColor: Theme.colors.hairline,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: Theme.colors.surface,
+  },
+  severityOn: {
+    borderColor: Theme.colors.magenta,
+    backgroundColor: Theme.colors.magentaTint,
   },
   severityText: {
-    fontSize: 10,
-    color: '#FFFFFF',
-    fontWeight: '600',
+    fontFamily: Theme.typography.subheading,
+    fontSize: 13.5,
+    color: Theme.colors.inkSoft,
   },
-  noDataText: {
-    textAlign: 'center',
-    color: '#999',
-    fontSize: 14,
-    paddingVertical: 20,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 25,
-    borderTopRightRadius: 25,
-    padding: 25,
-    paddingBottom: 40,
-  },
-  modalTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#333',
-    textAlign: 'center',
-    marginBottom: 10,
-  },
-  modalSubtitle: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: 25,
-  },
-  severityOptions: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginBottom: 30,
-  },
-  severityOption: {
-    alignItems: 'center',
-    padding: 15,
-    borderRadius: 15,
-    borderWidth: 2,
-    borderColor: 'transparent',
-    width: '30%',
-  },
-  severityDot: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    marginBottom: 8,
-  },
-  severityOptionText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#333',
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  cancelButton: {
-    flex: 1,
-    paddingVertical: 15,
-    marginRight: 10,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: '#E0E0E0',
-    alignItems: 'center',
-  },
-  cancelButtonText: {
-    color: '#666',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  logButton: {
-    flex: 1,
-    paddingVertical: 15,
-    marginLeft: 10,
-    borderRadius: 10,
-    backgroundColor: '#E74C3C',
-    alignItems: 'center',
-  },
-  logButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
+  severityTextOn: {
+    color: Theme.colors.magenta,
   },
 });

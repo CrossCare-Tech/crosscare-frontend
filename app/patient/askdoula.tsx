@@ -1,4 +1,5 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useUnitStore } from "@/zustandStore/unitStore";
 import {
   StyleSheet,
   Text,
@@ -6,7 +7,6 @@ import {
   Image,
   TextInput,
   TouchableOpacity,
-  StatusBar,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
@@ -27,9 +27,27 @@ import { systemPrompts } from "@/constants/systemPrompts";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   QUESTIONNAIRE_DOMAINS,
+  getQuestionnaireDomainsWithTranslation,
+  type QuestionnaireDomain,
   type QuestionnaireResponse,
 } from "@/constants/questionaireData";
+import { useSafeBack } from "@/hooks/useSafeBack";
+import { useDemoMode } from "@/utils/demo/demoMode";
+import { playSound } from "@/utils/callSounds";
+import ListenPlayer from "@/components/chat/ListenPlayer";
+import { replyAudio } from "@/utils/replyAudio";
+import ReplyMedia from "@/components/chat/ReplyMedia";
+import type { ReplyMedia as ReplyMediaItem } from "@/constants/replyMedia";
+import { cancelReminder, remindAtSixPm, saveToJournal } from "@/utils/replyMediaActions";
+import QuestionnairePopup from "@/components/questionnaire/QuestionnairePopup";
+import { useQuestionnairePopup } from "@/hooks/useQuestionnairePopup";
+import { estimateTotal } from "@/utils/questionnairePopup";
+import { PopupDomainState } from "@/utils/questionnairePopupStore";
 import { useLocalSearchParams } from "expo-router";
+import ScreenBackground from "@/components/ui/ScreenBackground";
+import { Theme } from "@/constants/theme";
+import { GUIDE, useGuide } from "@/constants/conciergeGuide";
+import LiveBars from "@/components/ui/LiveBars";
 import User from "@/assets/images/Svg/User";
 import {
   fetchHealthData,
@@ -50,6 +68,11 @@ import {
 import { CONFIG } from "@/constants/config";
 import i18n from "@/translation/i18next";
 import { deepgramTTS, speakWithDeepgram } from "@/utils/deepgramTTS";
+import { hasPremiumAccess, usePremiumStatus } from "@/zustandStore/premiumStore";
+import { usePreviewScreens } from "@/utils/demo/demoMode";
+import PremiumLocked from "@/components/premium/PremiumLocked";
+import { PremiumBadge } from "@/components/premium/PremiumUI";
+import AvatarImage from "@/components/ui/AvatarImage";
 
 /**
  * Gemini model used for chat. Google retires model names on a schedule and
@@ -86,6 +109,24 @@ const GEMINI_THINKING_CONFIG = { thinkingBudget: 0 };
  */
 const GEMINI_TIMEOUT_MS = 30000;
 
+/**
+ * Gemini can split one answer across several parts, and the app used to read
+ * only parts[0], so the rest of the reply never reached the screen. Joins every
+ * text part (skipping reasoning parts) and logs why the model stopped, so a
+ * reply cut by MAX_TOKENS shows up in the logs instead of passing as complete.
+ */
+const geminiReplyText = (data: any): string => {
+  const candidate = data?.candidates?.[0];
+  const text = (candidate?.content?.parts ?? [])
+    .filter((part: any) => typeof part?.text === "string" && !part?.thought)
+    .map((part: any) => part.text)
+    .join("");
+  if (candidate?.finishReason && candidate.finishReason !== "STOP") {
+    console.warn("Gemini finishReason:", candidate.finishReason, "parts:", candidate?.content?.parts?.length);
+  }
+  return text;
+};
+
 const fetchWithTimeout = async (
   url: string,
   init: RequestInit,
@@ -113,10 +154,22 @@ interface Message {
   type: "text" | "audio";
   content: string; // text content or audio URI
   isEducational?: boolean;
+  media?: ReplyMediaItem[]; // image, video, link or follow-up buttons that came with the reply
 }
 
+// The AI Concierge is a Premium feature: without access, the patient sees why instead of the chat
 export default function askdoula() {
+  const status = usePremiumStatus();
+  return hasPremiumAccess(status) ? <AskDoulaChat /> : <PremiumLocked />;
+}
+
+function AskDoulaChat() {
+  const premiumStatus = usePremiumStatus();
+  const previewScreens = usePreviewScreens();
+  const guide = useGuide();
   const [inputText, setInputText] = useState("");
+  const [showOptions, setShowOptions] = useState(true);
+  const demoMode = useDemoMode((state) => state.enabled);
   const [isTyping, setIsTyping] = useState(false);
   const { t, i18n } = useTranslation();
   const currentLanguage = i18n.language;
@@ -185,6 +238,107 @@ export default function askdoula() {
     t, // Pass the translation function
     currentLanguage,
   });
+
+  // Intake questionnaire as a pop-up over the chat (the client's preferred version)
+  const questionnaireDomains = useMemo(() => getQuestionnaireDomainsWithTranslation(t), [t]);
+  const intake = useQuestionnairePopup(user?.user_id, questionnaireDomains);
+  // The pop-up keeps the domain and answers it opened with, because saving a finished domain
+  // moves `intake.domain` on to the next one while the thank-you screen is still showing.
+  const [intakeSession, setIntakeSession] = useState<{
+    domain: QuestionnaireDomain;
+    initial: PopupDomainState;
+    restart: boolean;
+  } | null>(null);
+  const [inviteDismissed, setInviteDismissed] = useState(false);
+  const intakeSummary = useRef("");
+  const showInvite =
+    intake.loaded &&
+    !!intake.domain &&
+    intake.domain.id === questionnaireDomains[0].id &&
+    !intake.hasStarted &&
+    !inviteDismissed &&
+    !intakeSession;
+
+  // Reminders set from a reply, by title, so tapping the button again can cancel them
+  const replyReminders = useRef<Record<string, string>>({});
+  const handleSaveReply = async (title: string) => {
+    try {
+      await saveToJournal(user?.user_id, title);
+    } catch (error) {
+      console.warn("[chat] Could not save the reply to the journal:", error);
+      Alert.alert(t("replyMedia.saveFailed"));
+      throw error;
+    }
+  };
+  const handleRemindReply = async (title: string) => {
+    const id = await remindAtSixPm(title);
+    if (!id) {
+      Alert.alert(t("replyMedia.notificationsOff"));
+      return false;
+    }
+    replyReminders.current[title] = id;
+    return true;
+  };
+  const handleUndoRemindReply = (title: string) => {
+    const id = replyReminders.current[title];
+    if (id) cancelReminder(id);
+    delete replyReminders.current[title];
+  };
+
+  const addChatMessage = (content: string, isUser: boolean) =>
+    setMessages((prev) => [
+      ...prev,
+      { id: `${Date.now()}-${prev.length}`, type: "text", content, isUser, timestamp: new Date() },
+    ]);
+
+  const openIntake = (restart = false) => {
+    if (!intake.domain) return;
+    intakeSummary.current = "";
+    setIntakeSession({ domain: intake.domain, initial: intake.current, restart });
+  };
+
+  const handleIntakeStartNow = () => {
+    setInviteDismissed(true);
+    addChatMessage(t("questionnairePopup.startNow"), true);
+    openIntake();
+  };
+
+  const handleIntakeNotToday = () => {
+    setInviteDismissed(true);
+    addChatMessage(t("questionnairePopup.notToday"), true);
+    addChatMessage(t("questionnairePopup.notTodayReply"), false);
+  };
+
+  const handleIntakeSaveExit = async (next: PopupDomainState) => {
+    if (!intakeSession) return;
+    const { domain } = intakeSession;
+    setIntakeSession(null);
+    await intake.persist(domain, next);
+    if (Object.keys(next.answers).length) {
+      const percent = Math.round(((next.path.length - 1) / estimateTotal(domain, next.path)) * 100);
+      addChatMessage(t("questionnairePopup.saved", { percent }), false);
+    }
+  };
+
+  const handleIntakeFinish = async (next: PopupDomainState) => {
+    if (!intakeSession) return;
+    const { domain } = intakeSession;
+    intakeSummary.current = domain.questions
+      .filter((q) => next.answers[q.id]?.response)
+      .map((q) => `- ${q.text} **${next.answers[q.id].response}**`)
+      .join("\n");
+    await intake.persist(domain, next);
+  };
+
+  const handleIntakeBackToChat = () => {
+    setIntakeSession(null);
+    if (intakeSummary.current) {
+      addChatMessage(
+        `${t("questionnairePopup.thanksChat", { name: user?.user_name })}\n\n**${t("questionnairePopup.yourAnswers")}**\n${intakeSummary.current}`,
+        false
+      );
+    }
+  };
 
   const checkQuestionnaireCompletionStatus = async () => {
     try {
@@ -330,6 +484,12 @@ export default function askdoula() {
   const isNavigatingAwayRef = useRef(false);
 
   // 3. ADD this comprehensive go back handler function
+  // Stop reading a reply aloud when the patient leaves the chat
+  useEffect(() => () => {
+    replyAudio.stop();
+  }, []);
+
+  const safeBack = useSafeBack();
   const handleGoBack = useCallback(async () => {
     try {
       console.log(
@@ -341,7 +501,7 @@ export default function askdoula() {
         console.log(
           "Context save already in progress, proceeding with navigation"
         );
-        router.back();
+        safeBack();
         return true;
       }
 
@@ -518,11 +678,11 @@ export default function askdoula() {
       contextSavingRef.current = false;
 
       // Always proceed with navigation, even if save fails
-      router.back();
+      safeBack();
     }
 
     return true; // Indicate we handled the back press
-  }, [questionnaireManager, messages, user?.user_id, router]);
+  }, [questionnaireManager, messages, user?.user_id, router, safeBack]);
 
   useEffect(() => {
     const backAction = () => {
@@ -848,7 +1008,7 @@ export default function askdoula() {
 
       // Extract the response text from Gemini's response format
       let responseText =
-        data.candidates?.[0]?.content?.parts?.[0]?.text ||
+        geminiReplyText(data) ||
         "I'm sorry, I couldn't process your request at this time.";
 
       responseText = responseText
@@ -1086,7 +1246,7 @@ export default function askdoula() {
 
       // Extract the response text from Gemini's response format
       let responseText =
-        data.candidates?.[0]?.content?.parts?.[0]?.text ||
+        geminiReplyText(data) ||
         "I'm sorry, I couldn't process your request at this time.";
 
       // Not stripped of "*" any more. Doula messages render through
@@ -1107,6 +1267,7 @@ export default function askdoula() {
   };
 
   const speakResponse = (text: string) => {
+    replyAudio.stop(); // one voice at a time
     // Check if muted - if so, don't speak but still process
     if (effectiveMuted) {
       console.log("Voice is muted, not speaking response:", text);
@@ -1242,7 +1403,7 @@ export default function askdoula() {
           ? text.match(/\b(kg|kgs|kilograms)\b/i)
             ? "kg"
             : "lbs"
-          : "kg"; // Default to kg
+          : useUnitStore.getState().weightUnit; // Default to the unit chosen in Units & Measurements
 
         return {
           value: Number.parseFloat(numbers[0]),
@@ -1675,7 +1836,7 @@ export default function askdoula() {
       ]);
     } catch (error) {
       console.error("Error clearing chat history:", error);
-      Alert.alert("Error", "Failed to clear chat history. Please try again.");
+      Alert.alert(i18n.t("uiText.error"), i18n.t("uiText.clearChatFailed"));
     }
   };
 
@@ -1976,79 +2137,84 @@ export default function askdoula() {
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+      // Android already resizes the window (windowSoftInputMode=adjustResize).
+      // A second "height" resize here leaves the view stuck at a stale height.
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      enabled={Platform.OS === "ios"}
     >
+      <ScreenBackground>
       <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="dark-content" backgroundColor={"white"} />
 
-        {/* Header */}
-        {fromModal && (
-          <View style={styles.header}>
-            {/* {fromModal && ( */}
-            <View
-              style={{
-                flexDirection: "row",
-                gap: 20,
-                alignItems: "center",
-              }}
-            >
-              <TouchableOpacity onPress={() => handleGoBack()}>
-                <Ionicons name="chevron-back" size={20} color="#434343" />
-              </TouchableOpacity>
-              {/* )} */}
-              <Text style={styles.headerTitle}>{t("askDoula.title")}</Text>
-            </View>
-            <View style={{ flexDirection: "row" }}>
-              {}
-              <TouchableOpacity
-                onPress={clearChatHistory}
-                style={{ marginRight: 12 }}
-              >
-                <Feather
-                  name="trash-2"
-                  size={20}
-                  color={messages.length > 0 ? "#434343" : "#f5f5f5"}
-                />
-              </TouchableOpacity>
-              {/* <TouchableOpacity>
-                <Feather name="more-vertical" size={20} color="#E5E5E5" />
-              </TouchableOpacity> */}
-            </View>
+        {/* Header: the guide, with a presence dot (prototype /concierge/) */}
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => handleGoBack()}
+            style={styles.backButton}
+            accessibilityRole="button"
+            accessibilityLabel={t("back")}
+          >
+            <Ionicons name="chevron-back" size={18} color={Theme.colors.ink} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => router.push("/avatar-studio")}
+            accessibilityRole="button"
+            accessibilityLabel={t("conciergeHistory.settings")}
+          >
+            <AvatarImage source={guide.portrait} style={styles.headerAvatar} />
+            <View style={styles.presence} />
+          </TouchableOpacity>
+          <View style={styles.headerText}>
+            <Text style={styles.headerName}>{guide.name}</Text>
+            {guide.name !== GUIDE.name && <Text style={styles.headerSub}>{t("conciergeChat.online")}</Text>}
           </View>
+          <TouchableOpacity
+            onPress={clearChatHistory}
+            disabled={messages.length === 0}
+            accessibilityRole="button"
+            accessibilityLabel={t("delete")}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Feather
+              name="trash-2"
+              size={20}
+              color={messages.length > 0 ? Theme.colors.inkSoft : Theme.colors.hairline}
+            />
+          </TouchableOpacity>
+        </View>
+
+        {/* Premium has no backend yet: the bar only shows in demo and preview builds */}
+        {previewScreens && (
+          <TouchableOpacity
+            onPress={() => router.push("/patient/profile-setting/premium")}
+            style={styles.premiumBar}
+            accessibilityRole="button"
+          >
+            <PremiumBadge status={premiumStatus} label={t(`premium.chatBadge_${premiumStatus}`)} />
+            <Text style={styles.premiumBarLink}>{t("premium.details")}</Text>
+            <Feather name="chevron-right" size={16} color={Theme.colors.magenta} />
+          </TouchableOpacity>
         )}
 
-        {(questionnaireManager.isActive ||
-          questionnaireManager.isPaused ||
-          !questionnaireManager.isCompleted) && (
-          <View style={styles.questionnaireStatusContainer}>
-            <View style={styles.statusTextContainer}>
-              <Text style={styles.questionnaireStatusTitle}>
-                {t("questionStatus")} - {getCurrentDomainTitle()}
+        {/* Intake questionnaire card: opens the pop-up (Start now / Resume) */}
+        {intake.loaded && intake.domain && (
+          <TouchableOpacity
+            style={styles.intakeCard}
+            onPress={() => openIntake()}
+            accessibilityRole="button"
+          >
+            <View style={styles.intakeCardText}>
+              <Text style={styles.intakeCardTitle}>{intake.domain.description}</Text>
+              <Text style={styles.intakeCardStatus}>
+                {t("questionnairePopup.cardStatus", { percent: intake.percent, min: intake.minutesLeft })}
               </Text>
-              <TouchableOpacity
-                style={[styles.pauseButton, isPaused && styles.resumeButton]}
-                onPress={handlePauseResumeToggle}
-              >
-                <Text
-                  style={[
-                    styles.pauseButtonText,
-                    isPaused && styles.resumeButtonText,
-                  ]}
-                >
-                  {isPaused ? t("resume") : t("pause")}
-                </Text>
-              </TouchableOpacity>
+              <View style={styles.intakeCardTrack}>
+                <View style={[styles.intakeCardFill, { width: `${intake.percent}%` }]} />
+              </View>
             </View>
-
-            {/* Progress Bar */}
-            <View style={styles.progressBarContainer}>
-              <View style={[styles.progressBar, { width: `${progress}%` }]} />
-              <Text style={[styles.progressText, { left: `${progress}%` }]}>
-                {progress}%
-              </Text>
-            </View>
-          </View>
+            <Text style={styles.intakeCardAction}>
+              {intake.hasStarted ? t("questionnairePopup.resume") : t("questionnairePopup.start")}
+            </Text>
+          </TouchableOpacity>
         )}
 
         {/* Medical sources disclaimer banner — required by Apple guideline 1.4.1 */}
@@ -2056,13 +2222,13 @@ export default function askdoula() {
           onPress={() => router.push("/patient/profile-setting/citations")}
           style={styles.sourcesBanner}
           accessibilityRole="link"
-          accessibilityLabel="View medical sources and citations"
+          accessibilityLabel={i18n.t("uiText.viewSources")}
         >
-          <Ionicons name="information-circle-outline" size={16} color="#87247D" />
+          <Ionicons name="shield-checkmark-outline" size={16} color={Theme.colors.purple} />
           <Text style={styles.sourcesBannerText}>
-            Medical information — tap to view trusted sources
+            <Text style={styles.sourcesBannerBold}>{t("conciergeChat.online")}</Text> · {t("conciergeChat.notMedical")}
           </Text>
-          <Ionicons name="chevron-forward" size={14} color="#87247D" />
+          <Text style={styles.sourcesLink}>{t("conciergeChat.sources")}</Text>
         </TouchableOpacity>
 
         {/* Chat Container */}
@@ -2079,16 +2245,14 @@ export default function askdoula() {
         >
           {messages.length === 0 ? (
             <View style={styles.profileSection}>
-              <View style={styles.profileImageContainer}>
-                <Image
-                  source={
-                    user?.avatar_url
-                      ? { uri: user.avatar_url } // If avatar_url exists, use the URI
-                      : require("../../assets/images/hairs/h1/face/c1.png") // Fallback to local image if no avatar_url
-                  }
-                  style={styles.profileImage}
-                />
-              </View>
+              <TouchableOpacity
+                style={styles.profileImageContainer}
+                onPress={() => router.push("/avatar-studio")}
+                accessibilityRole="button"
+                accessibilityLabel={t("conciergeHistory.settings")}
+              >
+                <AvatarImage source={guide.portrait} style={styles.profileImage} />
+              </TouchableOpacity>
 
               <Text style={styles.greeting}>
                 <Text>👋 {t("askDoula.hi")}, </Text>
@@ -2116,14 +2280,7 @@ export default function askdoula() {
                   ]}
                 >
                   {!message.isUser && (
-                    <Image
-                      source={user.avatar_url?
-                        {uri:
-                        user.avatar_url} :
-                          require("../../assets/images/doulaImg.png")
-                      }
-                      style={styles.doulaAvatar}
-                    />
+                    <AvatarImage source={guide.portrait} style={styles.doulaAvatar} />
                   )}
 
                   {message.type === "text" ? (
@@ -2133,34 +2290,6 @@ export default function askdoula() {
                         message.isUser ? styles.userBubble : styles.doulaBubble,
                       ]}
                     >
-                      {!message.isUser && (
-                        <TouchableOpacity
-                          style={styles.bubbleMuteButton}
-                          onPress={() => {
-                            console.log("Pressed message ID:", message.id);
-                            console.log(
-                              "Current speaking ID:",
-                              speakingMessageId
-                            );
-                            console.log("Is speaking:", isSpeaking);
-                            speakMessage(message.id, message.content);
-                          }}
-                        >
-                          <Ionicons
-                            name={
-                              speakingMessageId === message.id && isSpeaking
-                                ? "volume-high"
-                                : "volume-medium"
-                            }
-                            size={16}
-                            color={
-                              speakingMessageId === message.id && isSpeaking
-                                ? "#E162BC"
-                                : "#CCCCCC"
-                            }
-                          />
-                        </TouchableOpacity>
-                      )}
                       {/* <Text
                         style={[
                           styles.messageText,
@@ -2187,6 +2316,21 @@ export default function askdoula() {
                           {message.content}
                         </Markdown>
                       )}
+                      {!message.isUser && (
+                        <ListenPlayer
+                          messageId={message.id}
+                          text={message.content}
+                          language={currentLanguage}
+                        />
+                      )}
+                      {!message.isUser && !!message.media?.length && (
+                        <ReplyMedia
+                          items={message.media}
+                          onSave={handleSaveReply}
+                          onRemind={handleRemindReply}
+                          onUndoRemind={handleUndoRemindReply}
+                        />
+                      )}
                     </View>
                   ) : (
                     <AudioMessage
@@ -2195,37 +2339,48 @@ export default function askdoula() {
                     />
                   )}
 
-                  {message.isUser && (
-                    <>
-                      {user?.user_photo ? (
-                        <Image
-                          source={{ uri: user.user_photo }}
-                          style={styles.userAvatar}
-                        />
-                      ) : (
-                        <>
-                          <View
-                            style={{
-                              borderWidth: 1.44,
-                              borderRadius: 25,
-                              borderColor: "#FDE8F8",
-                              boxShadow:
-                                "0px 0px 0.72px 0px rgba(0, 0, 0, 0.30);",
-                            }}
-                          >
-                            <User width={36} height={36} />
-                          </View>
-                        </>
-                      )}
-                    </>
-                  )}
                 </View>
               ))}
 
               {isTyping && renderTypingIndicator()}
             </View>
           )}
+
+          {showInvite && (
+            <View style={styles.inviteWrap}>
+              <View style={styles.messageRow}>
+                <AvatarImage source={guide.portrait} style={styles.doulaAvatar} />
+                <View style={[styles.messageBubble, styles.doulaBubble]}>
+                  <Text style={styles.doulaMessageText}>
+                    {t("questionnairePopup.invite", { name: user?.user_name })}
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.inviteChips}>
+                <TouchableOpacity style={styles.invitePrimary} onPress={handleIntakeStartNow} accessibilityRole="button">
+                  <Text style={styles.invitePrimaryText}>{t("questionnairePopup.startNow")}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.inviteSecondary} onPress={handleIntakeNotToday} accessibilityRole="button">
+                  <Text style={styles.inviteSecondaryText}>{t("questionnairePopup.notToday")}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
         </ScrollView>
+
+        {intakeSession && (
+          <QuestionnairePopup
+            visible
+            domain={intakeSession.domain}
+            userName={user?.user_name ?? ""}
+            portrait={guide.portrait}
+            initial={intakeSession.initial}
+            startOver={intakeSession.restart}
+            onSaveExit={handleIntakeSaveExit}
+            onFinish={handleIntakeFinish}
+            onBackToChat={handleIntakeBackToChat}
+          />
+        )}
 
         {/* Options and Input Section */}
         <View
@@ -2234,12 +2389,25 @@ export default function askdoula() {
             gap: 10,
           }}
         >
+          {showOptions && (
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
             style={styles.optionsContainer}
             keyboardShouldPersistTaps="handled"
           >
+            {/* Demo mode: suggestions that answer with an image, a video or a link (see replyMedia) */}
+            {demoMode &&
+              (["Baby", "Stretch", "Walk"] as const).map((name) => (
+                <TouchableOpacity
+                  key={name}
+                  style={styles.optionButton}
+                  onPress={() => handleOptionPress(t(`replyMedia.chip${name}Query`))}
+                  disabled={isAssistantResponding}
+                >
+                  <Text style={styles.optionText}>{t(`replyMedia.chip${name}`)}</Text>
+                </TouchableOpacity>
+              ))}
             <TouchableOpacity
               style={styles.optionButton}
               onPress={() => handleOptionPress(t("options.healthStats1"))}
@@ -2282,13 +2450,23 @@ export default function askdoula() {
               <Text style={styles.optionText}>{t("options.travelSafety")}</Text>
             </TouchableOpacity>
           </ScrollView>
+          )}
 
           <View style={styles.inputContainer}>
             <View style={styles.inputWrapper}>
+              <TouchableOpacity
+                style={styles.plusButton}
+                onPress={() => setShowOptions((v) => !v)}
+                accessibilityRole="button"
+                accessibilityState={{ expanded: showOptions }}
+                accessibilityLabel={t("conciergeChat.more")}
+              >
+                <Feather name="plus" size={20} color={Theme.colors.inkSoft} />
+              </TouchableOpacity>
               <TextInput
                 style={styles.input}
                 placeholder={t("inputPlaceholder")}
-                placeholderTextColor="#999"
+                placeholderTextColor={Theme.colors.placeholder}
                 value={inputText}
                 onChangeText={(text) => setInputText(text)}
                 onSubmitEditing={(e) => sendMessage(e.nativeEvent.text)}
@@ -2303,21 +2481,35 @@ export default function askdoula() {
                 isProcessing={isProcessing}
                 setIsProcessing={setIsProcessing}
               />
+              {inputText.trim() ? (
+                <TouchableOpacity
+                  style={[styles.sendButton, isTyping && styles.sendButtonDisabled]}
+                  onPress={() => sendMessage()}
+                  disabled={isTyping}
+                  accessibilityRole="button"
+                  accessibilityLabel={t("send")}
+                >
+                  <Feather name="send" size={18} color={Theme.colors.surface} />
+                </TouchableOpacity>
+              ) : previewScreens ? (
+                // The live call is a scripted simulation (no microphone, canned answers), so only demo and preview builds open it
+                <TouchableOpacity
+                  style={styles.liveButton}
+                  onPress={() => {
+                    playSound("tap", 0.6);
+                    router.push("/patient/concierge-call");
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel={t("conciergeChat.live")}
+                >
+                  <LiveBars color={Theme.colors.surface} size={20} />
+                </TouchableOpacity>
+              ) : null}
             </View>
-
-            <TouchableOpacity
-              style={[
-                styles.sendButton,
-                (!inputText.trim() || isTyping) && styles.sendButtonDisabled,
-              ]}
-              onPress={() => sendMessage()}
-              disabled={!inputText.trim() || isTyping}
-            >
-              <Feather name="send" size={20} color="white" />
-            </TouchableOpacity>
           </View>
         </View>
       </SafeAreaView>
+      </ScreenBackground>
     </KeyboardAvoidingView>
   );
 }
@@ -2325,27 +2517,84 @@ export default function askdoula() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "white",
     justifyContent: "space-between",
   },
   header: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
+    gap: 10,
     paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingTop: 8,
+    paddingBottom: 12,
+  },
+  premiumBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 16,
+    paddingBottom: 10,
+  },
+  premiumBarLink: {
+    flex: 1,
+    textAlign: "right",
+    fontFamily: Theme.typography.heading,
+    fontSize: 12.5,
+    color: Theme.colors.magenta,
   },
   headerTitle: {
-    color: "#434343",
+    color: Theme.colors.ink,
     fontSize: 16,
-    fontFamily: "DMSans600",
+    fontFamily: Theme.typography.heading,
   },
+  intakeCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginHorizontal: 16,
+    marginBottom: 8,
+    padding: 12,
+    backgroundColor: Theme.colors.surface,
+    borderWidth: 1,
+    borderColor: Theme.colors.hairline,
+    borderRadius: Theme.borderRadius.md,
+  },
+  intakeCardText: { flex: 1, gap: 2 },
+  intakeCardTitle: { fontFamily: Theme.typography.heading, fontSize: 14, color: Theme.colors.ink },
+  intakeCardStatus: { fontFamily: Theme.typography.caption, fontSize: 11, color: Theme.colors.inkFaint },
+  intakeCardTrack: {
+    height: 4,
+    borderRadius: 2,
+    marginTop: 6,
+    backgroundColor: Theme.colors.hairline,
+    overflow: "hidden",
+  },
+  intakeCardFill: { height: 4, borderRadius: 2, backgroundColor: Theme.colors.magenta },
+  intakeCardAction: { fontFamily: Theme.typography.heading, fontSize: 13, color: Theme.colors.magenta },
+  inviteWrap: { paddingHorizontal: 16, marginTop: 12, gap: 12 },
+  inviteChips: { flexDirection: "row", gap: 10, paddingLeft: 40 },
+  invitePrimary: {
+    backgroundColor: Theme.colors.magenta,
+    borderRadius: Theme.borderRadius.full,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+  },
+  invitePrimaryText: { fontFamily: Theme.typography.heading, fontSize: 13, color: Theme.colors.surface },
+  inviteSecondary: {
+    backgroundColor: Theme.colors.surface,
+    borderWidth: 1,
+    borderColor: Theme.colors.hairline,
+    borderRadius: Theme.borderRadius.full,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+  },
+  inviteSecondaryText: { fontFamily: Theme.typography.heading, fontSize: 13, color: Theme.colors.purple },
   // Add these to your styles
   questionnaireStatusContainer: {
-    padding: 16,
-    backgroundColor: "#FFF",
-    borderBottomWidth: 1,
-    borderBottomColor: "#F0F0F0",
+    padding: 12,
+    marginHorizontal: 16,
+    marginBottom: 8,
+    backgroundColor: Theme.colors.surface,
+    borderRadius: Theme.borderRadius.md,
   },
   statusTextContainer: {
     flexDirection: "row",
@@ -2423,20 +2672,20 @@ const styles = StyleSheet.create({
   sourcesBanner: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FBE8F6",
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    backgroundColor: Theme.colors.purpleTint,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     marginHorizontal: 16,
-    marginTop: 8,
-    marginBottom: 4,
-    borderRadius: 10,
+    marginTop: 0,
+    marginBottom: 8,
+    borderRadius: Theme.borderRadius.md,
     gap: 8,
   },
   sourcesBannerText: {
     flex: 1,
-    fontSize: 12,
-    fontFamily: "DMSans500",
-    color: "#87247D",
+    fontSize: 11.5,
+    fontFamily: Theme.typography.body,
+    color: Theme.colors.inkSoft,
   },
   chatContent: {
     flexGrow: 1,
@@ -2448,17 +2697,13 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   userBubble: {
-    backgroundColor: "#FEF0FA",
+    backgroundColor: Theme.colors.magenta,
     borderBottomRightRadius: 4,
-    borderWidth: 1,
-    borderColor: "#FBBBE9",
-    marginRight: 8,
+    marginRight: 0,
   },
   doulaBubble: {
-    backgroundColor: "#FFF",
+    backgroundColor: Theme.colors.purpleTint,
     borderTopLeftRadius: 4,
-    borderWidth: 0.5,
-    borderColor: "#E5E5E5",
     marginLeft: 8,
   },
   messageText: {
@@ -2467,21 +2712,18 @@ const styles = StyleSheet.create({
     fontFamily: "Inter400",
   },
   userMessageText: {
-    color: "#E162BC",
+    color: Theme.colors.surface,
   },
   doulaMessageText: {
-    color: "#434343",
+    color: Theme.colors.ink,
     fontSize: 14,
     lineHeight: 22,
-    fontFamily: "Inter400",
+    fontFamily: Theme.typography.body,
   },
   doulaAvatar: {
     width: 36,
     height: 36,
-    borderWidth: 1.44,
-    borderColor: "#FDE8F8",
     borderRadius: 18,
-    boxShadow: "0px 0px 0.72px 0px rgba(0, 0, 0, 0.30);",
   },
   userAvatar: {
     width: 36,
@@ -2493,11 +2735,9 @@ const styles = StyleSheet.create({
   },
   typingIndicator: {
     flexDirection: "row",
-    backgroundColor: "#FFF",
+    backgroundColor: Theme.colors.purpleTint,
     borderRadius: 20,
     borderTopLeftRadius: 4,
-    borderWidth: 0.5,
-    borderColor: "#E5E5E5",
     padding: 12,
     marginLeft: 8,
     alignItems: "center",
@@ -2509,18 +2749,17 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: "#E162BC",
+    backgroundColor: Theme.colors.purple,
     marginHorizontal: 4,
   },
   profileImageContainer: {
     width: 100,
     height: 100,
     borderWidth: 3,
-    borderColor: "#FDD1F0",
+    borderColor: Theme.colors.surface,
     borderRadius: 50,
-    boxShadow: "0px 0px 2px 0px rgba(0, 0, 0, 0.30);",
     overflow: "hidden",
-    backgroundColor: "#FF80AB",
+    ...Theme.shadows.soft,
   },
   profileImage: {
     width: "100%",
@@ -2529,24 +2768,29 @@ const styles = StyleSheet.create({
   greeting: {
     marginTop: 16,
     fontSize: 18,
+    fontFamily: Theme.typography.body,
+    color: Theme.colors.ink,
   },
   name: {
-    fontWeight: "bold",
+    fontFamily: Theme.typography.heading,
   },
   title: {
     fontSize: 24,
-    fontWeight: "600",
     marginTop: 8,
     textAlign: "center",
+    fontFamily: Theme.typography.display,
+    color: Theme.colors.ink,
   },
   highlight: {
-    color: "#F66DCE",
+    color: Theme.colors.magenta,
   },
   subtitle: {
-    fontSize: 12,
-    color: "#7B7B7B",
-    fontFamily: "DMSans400",
+    fontSize: 13,
+    lineHeight: 19,
+    color: Theme.colors.inkFaint,
+    fontFamily: Theme.typography.body,
     marginTop: 4,
+    paddingHorizontal: 16,
     textAlign: "center",
   },
   optionsContainer: {
@@ -2557,50 +2801,49 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   optionButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
     borderRadius: 20,
-    marginRight: 10,
+    marginRight: 8,
     borderWidth: 1,
-    backgroundColor: "#FFF8FD",
-    borderColor: "#FBBBE9",
+    backgroundColor: Theme.colors.surface,
+    borderColor: Theme.colors.hairline,
   },
   optionText: {
-    color: "#F76CCF",
-    fontSize: 12,
-    fontFamily: "Inter400",
+    color: Theme.colors.purple,
+    fontSize: 12.5,
+    fontFamily: Theme.typography.heading,
   },
   inputContainer: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     marginTop: "auto",
-    paddingTop: 10,
-    paddingBottom: Platform.OS === "ios" ? 10 : 10,
+    paddingTop: 4,
+    paddingBottom: 12,
   },
   inputWrapper: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
+    backgroundColor: Theme.colors.surface,
     borderWidth: 1,
-    borderColor: "#E0E0E0",
-    borderRadius: 50,
-    paddingLeft: 16,
-    paddingRight: 0,
-    height: 48,
+    borderColor: Theme.colors.hairline,
+    borderRadius: 30,
+    paddingLeft: 8,
+    paddingRight: 8,
+    minHeight: 56,
+    gap: 8,
+    ...Theme.shadows.soft,
   },
   input: {
     flex: 1,
-    fontFamily: "DMSans400",
-    fontSize: 12,
-    // height: 48,
+    fontFamily: Theme.typography.body,
+    fontSize: 15,
+    color: Theme.colors.ink,
     height: "100%",
-    // Without an explicit colour the field inherits the platform default, which
-    // on Android in dark mode is white. The screen sets backgroundColor white
-    // unconditionally, so typed text was white on white and invisible while the
-    // placeholder, which sets its own colour, stayed readable. Matches
-    // doulaMessageText.
-    color: "#434343",
+    // The colour above is explicit on purpose: without one the field inherits the
+    // platform default, which on Android in dark mode is white on a white screen.
   },
   micButton: {
     padding: 4,
@@ -2619,19 +2862,61 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   sendButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "#F76CCF",
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: Theme.colors.magenta,
     justifyContent: "center",
-    borderWidth: 2,
-    borderColor: "#F989D9",
     alignItems: "center",
-    marginLeft: 8,
-    boxShadow:
-      "0px 0px 4px 0px rgba(0, 0, 0, 0.25) inset, 0px 0px 2.6px 0px rgba(0, 0, 0, 0.32);",
   },
   sendButtonDisabled: {
     opacity: 0.5,
+  },
+  backButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: Theme.colors.surface,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: Theme.colors.surface,
+  },
+  presence: {
+    position: "absolute",
+    right: 0,
+    bottom: 0,
+    width: 11,
+    height: 11,
+    borderRadius: 6,
+    backgroundColor: Theme.concierge.presence,
+    borderWidth: 2,
+    borderColor: Theme.colors.surface,
+  },
+  headerText: { flex: 1 },
+  headerName: { fontFamily: Theme.typography.heading, fontSize: 16, color: Theme.colors.ink },
+  headerSub: { fontFamily: Theme.typography.subheading, fontSize: 11.5, color: Theme.colors.teal },
+  sourcesBannerBold: { fontFamily: Theme.typography.heading, color: Theme.colors.ink },
+  sourcesLink: { fontFamily: Theme.typography.heading, fontSize: 11.5, color: Theme.colors.purple },
+  plusButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: Theme.colors.surfaceSunken,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  liveButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: Theme.colors.purple,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

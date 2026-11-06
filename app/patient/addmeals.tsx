@@ -1,27 +1,17 @@
-import {
-  StyleSheet,
-  Text,
-  View,
-  TextInput,
-  FlatList,
-  TouchableOpacity,
-  ActivityIndicator,
-  StatusBar,
-  Platform,
-  UIManager,
-  Animated,
-  Easing,
-} from "react-native";
+import { ActivityIndicator, FlatList, Image, Platform, StyleSheet, Text, TextInput, TouchableOpacity, UIManager, View } from "react-native";
 import React, { useState, useEffect, useRef } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { AntDesign, Feather, Ionicons } from "@expo/vector-icons";
-import { useRouter, useLocalSearchParams, router } from "expo-router";
+import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { useTranslation } from "react-i18next";
 import FoodClassificationModal from "./modal/foodClassificationModal";
 import { useMealStore, FoodItem as MealStoreFoodItem } from "@/zustandStore/mealStore";
 import { useSelector } from "react-redux";
+import { Theme } from "@/constants/theme";
+import ScreenBackground from "@/components/ui/ScreenBackground";
+import AuthTopBar from "@/components/ui/AuthTopBar";
+import { COMMON_FOODS, FOOD_IMAGES, catalogFood, foodImageByName } from "@/constants/foodCatalog";
 
-// Enable LayoutAnimation for Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
@@ -52,6 +42,7 @@ interface FoodNutrient {
   nutrientId: number;
   value: number;
   nutrientName?: string;
+  unitName?: string;
   nutrient?: {
     name: string;
   };
@@ -60,6 +51,7 @@ interface FoodNutrient {
 interface FoodItem {
   fdcId: number;
   description: string;
+  dataType?: string;
   name?: string;
   servingSize?: number;
   servingSizeUnit?: string;
@@ -100,8 +92,6 @@ const addmeals = () => {
   const [error, setError] = useState<string | null>(null);
   const [displayData, setDisplayData] = useState<any[]>([]);
   const [isSearchMode, setIsSearchMode] = useState(false);
-  const [expandedId, setExpandedId] = useState<number | null>(null);
-  const animatedValues = useRef<{ [key: number]: Animated.Value }>({});
   // Guards re-entry into handleFoodClassification. The modal's confirm button
   // stays mounted for the frame in which the item is added and router.back()
   // is called, so two quick taps logged the food twice.
@@ -113,9 +103,22 @@ const addmeals = () => {
   const [selectedFoodForClassification, setSelectedFoodForClassification] = useState<ToggleSelectionItem | null>(null);
   const [selectedQuantity, setSelectedQuantity] = useState(1);
   
-  // Initial API call to get some default foods
+  // Latest search typed; answers to older searches that arrive late are ignored
+  const latestQuery = useRef("");
+
+  // Before any search: the pinned common foods, with their pictures
+  const showCommonFoods = () => {
+    latestQuery.current = "";
+    setLoading(false);
+    setIsSearchMode(false);
+    setError(null);
+    setDisplayData(
+      COMMON_FOODS.map((food) => ({ ...food, description: food.name, servingSize: 100, servingSizeUnit: "g" }))
+    );
+  };
+
   useEffect(() => {
-    searchFood("common foods");
+    showCommonFoods();
   }, []);
 
   // Handle item selection
@@ -189,12 +192,11 @@ const addmeals = () => {
   // Search food using USDA API only
   const searchFood = async (input: string) => {
     if (!input.trim()) {
-      setIsSearchMode(false);
-      setDisplayData([]);
-      setError(null);
+      showCommonFoods();
       return;
     }
 
+    latestQuery.current = input;
     setLoading(true);
     setError(null);
     setIsSearchMode(true);
@@ -211,6 +213,7 @@ const addmeals = () => {
       }
 
       const usdaData = await usdaResponse.json();
+      if (latestQuery.current !== input) return;
 
       if (usdaData && Array.isArray(usdaData.foods) && usdaData.foods.length > 0) {
         const processedResults = processSearchResults(usdaData.foods);
@@ -222,12 +225,13 @@ const addmeals = () => {
         setDisplayData([]);
       }
     } catch (error) {
+      if (latestQuery.current !== input) return;
       console.error("Error searching for food:", error);
       setSearchResults([]);
       setDisplayData([]);
       setError(`Error searching for food: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
-      setLoading(false);
+      if (latestQuery.current === input) setLoading(false);
     }
   };
 
@@ -235,92 +239,50 @@ const addmeals = () => {
     const uniqueFoods = new Map();
 
     foods.forEach((food) => {
-      const normalizedName = food.description.toLowerCase().trim();
-      if (!uniqueFoods.has(normalizedName)) {
-        // Extract a cleaner name from the description
-        const cleanName = getCleanName(food.description);
-        const score = calculateScore(food);
-        const calories = getNutrientValue(food, ["energy", "calories"]);
+      // Skip research datasets and industrial ingredients that the search also returns
+      if (food.dataType === "Experimental" || /ingredient in food/i.test(food.description)) return;
+      const name = catalogFood(food.fdcId)?.name ?? getCleanName(food.description);
+      const key = name.toLowerCase();
+      if (!name || uniqueFoods.has(key)) return;
 
-        uniqueFoods.set(normalizedName, {
-          ...food,
-          // Add a name field derived from description
-          name: cleanName,
-          // Add default serving size if not present
-          servingSize: food.servingSize || getDefaultServingSize(food.description),
-          servingSizeUnit: food.servingSizeUnit || getDefaultServingUnit(food.description),
-          category: food.foodCategory || "Unknown",
-          yukaScore: score,
-          calories: calories,
-          carbs: getNutrientValue(food, ["carbohydrate", "carbs"]).toFixed(1),
-          fat: getNutrientValue(food, ["fat", "total fat"]).toFixed(1),
-          protein: getNutrientValue(food, ["protein"]).toFixed(1),
-          expanded: false,
-        });
-      }
+      uniqueFoods.set(key, {
+        ...food,
+        name,
+        // USDA search values are per 100 g
+        servingSize: 100,
+        servingSizeUnit: "g",
+        category: food.foodCategory || "Unknown",
+        yukaScore: calculateScore(food),
+        calories: getCalories(food),
+        carbs: getNutrientValue(food, ["carbohydrate", "carbs"]).toFixed(1),
+        fat: getNutrientValue(food, ["fat", "total fat"]).toFixed(1),
+        protein: getNutrientValue(food, ["protein"]).toFixed(1),
+        expanded: false,
+      });
     });
 
     return Array.from(uniqueFoods.values()).slice(0, 50);
   };
 
-  // Function to extract a cleaner name from the description
+  // USDA descriptions read "Category, food, detail" ("Fast foods, burrito, with beans"): keep the food and
+  // its first detail so different items do not end up with the same name
   const getCleanName = (description: string) => {
-    // Remove brand names, UPC codes, and other unnecessary information
-    let name = description;
-
-    // Remove text in parentheses
-    name = name.replace(/\([^)]*\)/g, "");
-
-    // Remove text after comma, colon, or dash
-    name = name.split(/[,:-]/)[0];
-
-    // Capitalize first letter of each word
-    name = name
-      .split(" ")
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-      .join(" ");
-
-    // Trim extra spaces
-    name = name.trim();
-
-    // If the name is too long, truncate it
-    if (name.length > 25) {
-      name = name.substring(0, 22) + "...";
-    }
-
-    return name;
+    let parts = description
+      .replace(/\([^)]*\)/g, "")
+      .split(",")
+      .map((part) => part.trim())
+      .filter((part) => part && part.toUpperCase() !== "NFS");
+    if (parts.length > 1 && /^fast foods?$/i.test(parts[0])) parts = parts.slice(1);
+    const name = parts.slice(0, 2).join(", ");
+    return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
   };
 
-  const getDefaultServingSize = (description: string) => {
-    const lowerDesc = description.toLowerCase();
-    if (lowerDesc.includes("coffee") || lowerDesc.includes("tea")) return 1;
-    if (
-      lowerDesc.includes("apple") ||
-      lowerDesc.includes("banana") ||
-      lowerDesc.includes("orange") ||
-      lowerDesc.includes("guava")
-    )
-      return 1;
-    if (lowerDesc.includes("almond")) return 5;
-    if (lowerDesc.includes("egg")) return 1;
-    if (lowerDesc.includes("milk")) return 0.75;
-    if (lowerDesc.includes("walnut")) return 4;
-    return 1;
-  };
-
-  const getDefaultServingUnit = (description: string) => {
-    const lowerDesc = description.toLowerCase();
-    if (lowerDesc.includes("coffee") || lowerDesc.includes("tea"))
-      return "Tea cup";
-    if (lowerDesc.includes("apple")) return 'Small (2-3/4" dia)';
-    if (lowerDesc.includes("banana")) return 'Small (4.5" long)';
-    if (lowerDesc.includes("orange")) return 'fruit (2-5/8" dia)';
-    if (lowerDesc.includes("almond")) return "almond";
-    if (lowerDesc.includes("guava")) return "fruit, with refuse";
-    if (lowerDesc.includes("egg")) return "large";
-    if (lowerDesc.includes("milk")) return "glass";
-    if (lowerDesc.includes("walnut")) return "piece (half of one)";
-    return "serving";
+  // Energy comes twice, in kJ and in kcal; only the kcal value is calories
+  const getCalories = (foodItem: FoodItem) => {
+    const kcal = foodItem.foodNutrients?.find(
+      (n) => n.nutrientId === 1008 || (/energy/i.test(n.nutrientName ?? "") && n.unitName?.toUpperCase() === "KCAL")
+    );
+    return kcal?.value ?? 0;
   };
 
   const getNutrientValue = (foodItem: FoodItem, nutrientNames: string[]) => {
@@ -343,7 +305,7 @@ const addmeals = () => {
     const factor = 100 / servingSize; // normalize to per 100g
 
     // Extract nutrient values normalized per 100g
-    const energy = getNutrientValue(foodItem, ["energy", "calories"]) * factor; // kcal
+    const energy = getCalories(foodItem) * factor; // kcal
     const saturatedFat = getNutrientValue(foodItem, ["saturated fat"]) * factor; // g
     const sugars = getNutrientValue(foodItem, ["sugars", "sugar"]) * factor; // g
     const sodium = getNutrientValue(foodItem, ["sodium"]) * factor; // mg
@@ -383,326 +345,194 @@ const addmeals = () => {
     };
   };
 
-  const toggleExpanded = (id: number) => {
-    // Initialize animation value if it doesn't exist
-    if (!animatedValues.current[id]) {
-      animatedValues.current[id] = new Animated.Value(0);
-    }
-    
-    // Toggle expanded state
-    const isExpanding = expandedId !== id;
-    setExpandedId(isExpanding ? id : null);
-    
-    // Animate to expanded or collapsed state
-    Animated.timing(animatedValues.current[id], {
-      toValue: isExpanding ? 1 : 0,
-      duration: 300,
-      easing: Easing.bezier(0.25, 0.1, 0.25, 1),
-      useNativeDriver: false, // Set to false for height animations
-    }).start();
-  };
-
-  // Update the renderFoodItem to use the new toggleSelection
   const renderFoodItem = ({ item }: { item: any }) => {
     const isSelected = selectedItems.has(item.fdcId);
-    const calories = item.calories ?? 0;
-
+    const image = FOOD_IMAGES[item.fdcId] ?? foodImageByName(item.name);
+    const kind = foodClassifications.get(item.fdcId);
     return (
-      <View style={styles.foodItemContainer}>
-        <TouchableOpacity
-          onPress={() => toggleExpanded(item.fdcId)}
-          style={styles.foodItem}
-          activeOpacity={0.7}
-        >
-          <View style={styles.foodInfo}>
-            <Text style={styles.foodName}>
-              {isSelected && (
-                <>
-                  <View style={[
-                    styles.classificationDot,
-                    {
-                      backgroundColor: foodClassifications.get(item.fdcId) === 'bad'
-                        ? 'rgba(252, 49, 48, 1)'  // Red for bad food
-                        : 'rgba(64, 206, 35, 1)'  // Green for good food
-                    }
-                  ]} />
-                  <Text> </Text> {/* Small space after dot */}
-                </>
-              )}
-              {item.name || item.description}
-            </Text>
-            
-            <Text style={styles.servingSize}>
-              <Text>{item.servingSize}</Text> 
-              <Text>{item.servingSizeUnit}</Text>
-            </Text>
-          </View>
-
-          <View style={styles.rightContent}>
-            <Text style={styles.calories}>{calories} Cal</Text>
-            <TouchableOpacity
-              style={styles.addButton}
-              onPress={() => toggleSelection(item)}
-            >
-              {isSelected ? (
-                <View
-                  style={{
-                    width: 20,
-                    height: 20,
-                    padding: 2,
-                    justifyContent: "center",
-                    alignItems: "center",
-                    backgroundColor: "#EBF9F1",
-                    borderRadius: 50,
-                  }}
-                >
-                  <Feather name="check" size={15} color="#38C472" />
-                </View>
-              ) : (
-                <Feather name="plus" size={18} color="#38C472" />
-              )}
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </View>
+      <TouchableOpacity style={styles.row} onPress={() => toggleSelection(item)} accessibilityRole="button" activeOpacity={0.7}>
+        <View style={styles.thumb}>
+          {image ? (
+            <Image source={image} style={styles.thumbImage} resizeMode="contain" />
+          ) : (
+            <MaterialCommunityIcons name="food-apple-outline" size={22} color={Theme.colors.inkFaint} />
+          )}
+        </View>
+        <View style={styles.flex}>
+          <Text style={styles.foodName} numberOfLines={2}>
+            {item.name || item.description}
+          </Text>
+          <Text style={styles.foodSub}>
+            {item.servingSize} {item.servingSizeUnit} · {t("foodLog.kcal", { value: Math.round(item.calories ?? 0) })}
+          </Text>
+        </View>
+        <View style={[styles.addChip, isSelected && (kind === "bad" ? styles.addChipTreat : styles.addChipGood)]}>
+          <Feather
+            name={isSelected ? "check" : "plus"}
+            size={16}
+            color={isSelected ? (kind === "bad" ? Theme.colors.warning : Theme.colors.success) : Theme.colors.magenta}
+          />
+        </View>
+      </TouchableOpacity>
     );
   };
 
+  const mealName = mealType?.startsWith("meals.") ? t(mealType) : t("foodLog.title");
+
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+    <ScreenBackground>
+      <SafeAreaView style={styles.container}>
+        <AuthTopBar title={t("foodLog.addTo", { meal: mealName })} />
 
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <Ionicons name="chevron-back" size={20} color="#434343" />
-        </TouchableOpacity>
-        <View style={styles.searchContainer}>
-          <Ionicons
-            name="search-outline"
-            size={18}
-            color="#666666"
-            style={styles.searchIcon}
-          />
-          <TextInput
-            style={styles.searchInput}
-            placeholder={t('meals.searchPlaceholder')}
-            placeholderTextColor="#666666"
-            value={searchQuery}
-            onChangeText={(text) => {
-              setSearchQuery(text);
-              if (text.length > 2) {
-                searchFood(text);
-              } else if (text.length === 0) {
-                searchFood("common foods");
-              }
-            }}
-          />
+        <View style={styles.searchWrap}>
+          <View style={styles.search}>
+            <Feather name="search" size={17} color={Theme.colors.inkFaint} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder={t("meals.searchPlaceholder")}
+              placeholderTextColor={Theme.colors.placeholder}
+              value={searchQuery}
+              onChangeText={(text) => {
+                setSearchQuery(text);
+                if (text.length > 2) {
+                  searchFood(text);
+                } else if (text.length === 0) {
+                  showCommonFoods();
+                }
+              }}
+              returnKeyType="search"
+            />
+          </View>
         </View>
-      </View>
 
-      {/* Results */}
-      {loading ? (
-        <ActivityIndicator style={styles.loader} size="large" color="#00A991" />
-      ) : error ? (
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>{error}</Text>
-        </View>
-      ) : (
-        <FlatList
-          data={displayData}
-          renderItem={renderFoodItem}
-          keyExtractor={(item) => item.fdcId.toString()}
-          contentContainerStyle={styles.listContainer}
-          ListHeaderComponent={
-            <Text style={styles.sectionTitle}>{t('meals.sectionTitle')}</Text>
-          }
-          showsVerticalScrollIndicator={false}
+        {loading ? (
+          <ActivityIndicator style={styles.loader} color={Theme.colors.magenta} />
+        ) : error ? (
+          <Text style={styles.empty}>{t("foodLog.noResults")}</Text>
+        ) : (
+          <FlatList
+            data={displayData}
+            renderItem={renderFoodItem}
+            keyExtractor={(item) => item.fdcId.toString()}
+            contentContainerStyle={styles.list}
+            ListHeaderComponent={
+              <Text style={styles.sectionLabel}>{searchQuery.length > 2 ? t("foodLog.results") : t("meals.sectionTitle")}</Text>
+            }
+            ItemSeparatorComponent={() => <View style={styles.separator} />}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          />
+        )}
+
+        <FoodClassificationModal
+          visible={classificationModalVisible}
+          foodName={selectedFoodForClassification?.name || selectedFoodForClassification?.description || ""}
+          onClose={handleModalClose}
+          onClassify={handleFoodClassification}
         />
-      )}
-
-      <FoodClassificationModal
-        visible={classificationModalVisible}
-        foodName={selectedFoodForClassification?.name || selectedFoodForClassification?.description || ''}
-        onClose={handleModalClose}
-        onClassify={handleFoodClassification}
-      />
-    </SafeAreaView>
+      </SafeAreaView>
+    </ScreenBackground>
   );
 };
+
+export default addmeals;
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
   },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 4,
-    backgroundColor: "#fff",
-    height: 56,
-  },
-  backButton: {
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  searchContainer: {
+  flex: {
     flex: 1,
+  },
+  searchWrap: {
+    paddingHorizontal: 20,
+    paddingBottom: 10,
+  },
+  search: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
+    gap: 10,
+    height: 48,
+    paddingHorizontal: 14,
+    borderRadius: Theme.borderRadius.sm,
     borderWidth: 1,
-    borderColor: "#E6E6E6",
-    borderRadius: 50,
-    paddingVertical: 12,
-    marginLeft: 10,
-    paddingHorizontal: 16,
-  },
-  searchIcon: {
-    marginRight: 6,
+    borderColor: Theme.colors.inputBorder,
+    backgroundColor: Theme.colors.inputBg,
   },
   searchInput: {
     flex: 1,
-    height: "100%",
-    fontSize: 12,
-    fontFamily: "Inter400",
-    color: "#000",
+    fontFamily: Theme.typography.body,
+    fontSize: 14.5,
+    color: Theme.colors.ink,
   },
   loader: {
-    marginTop: 50,
+    marginTop: Theme.spacing.xl,
   },
-  listContainer: {
-    paddingHorizontal: 20,
+  empty: {
+    paddingHorizontal: 22,
+    paddingTop: Theme.spacing.md,
+    fontFamily: Theme.typography.body,
+    fontSize: 13.5,
+    color: Theme.colors.inkFaint,
   },
-  sectionTitle: {
-    fontSize: 16,
-    fontFamily: "Inter600",
-    color: "#373737",
-    marginTop: 20,
-    marginBottom: 10,
+  list: {
+    marginHorizontal: 20,
+    paddingBottom: Theme.spacing.xxl,
   },
-  foodItemContainer: {
-    marginBottom: 4,
-  },
-  foodItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 5,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F0F0F0",
-  },
-  expandedFoodItem: {
-    backgroundColor: '#FAFAFA',
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
-    borderBottomWidth: 0,
-  },
-  foodInfo: {
-    flex: 1,
-  },
-  foodName: {
-    fontSize: 16,
-    fontFamily: "Inter500",
-    color: "#434343",
-    marginBottom: 4,
-  },
-  classificationDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
-  servingSize: {
-    fontSize: 12,
-    flexDirection:'row',
-    alignItems:'center',
-    fontFamily: "Inter400",
-    color: "#7B7B7B",
-  },
-  rightContent: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  calories: {
-    fontSize: 14,
-    fontFamily: "Inter500",
-    color: "#434343",
-    marginRight: 6,
-  },
-  expandedDetails: {
-    backgroundColor: "#F9F9F9",
-    padding: 12,
-    borderRadius: 8,
-    marginTop:10,
-    marginBottom: 10,
-  },
-  macroRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+  sectionLabel: {
+    fontFamily: Theme.typography.heading,
+    fontSize: 11.5,
+    color: Theme.colors.inkFaint,
+    marginTop: 6,
     marginBottom: 8,
   },
-  categoryContainer: {
+  row: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 4,
-    paddingHorizontal: 4,
+    gap: 12,
+    minHeight: 60,
+    paddingVertical: 10,
+    paddingHorizontal: Theme.spacing.md,
+    borderRadius: Theme.borderRadius.md,
+    backgroundColor: Theme.colors.surface,
   },
-  categoryLabel: {
-    fontSize: 12,
-    fontFamily: "Inter500",
-    color: "#7B7B7B",
-    marginRight: 4,
+  separator: {
+    height: 8,
   },
-  categoryValue: {
-    fontSize: 12,
-    fontFamily: "Inter400",
-    color: "#434343",
-  },
-  macroItem: {
-    flex: 1,
+  thumb: {
+    width: 44,
+    height: 44,
+    borderRadius: Theme.borderRadius.md,
+    backgroundColor: Theme.colors.bg,
     alignItems: "center",
-    padding: 8,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 6,
-    marginHorizontal: 4,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 1,
-    elevation: 1,
+    justifyContent: "center",
   },
-  macroLabel: {
-    fontSize: 12,
-    fontFamily: "Inter400",
-    color: "#7B7B7B",
-    marginBottom: 2,
+  thumbImage: {
+    width: 36,
+    height: 36,
   },
-  macroValue: {
+  foodName: {
+    fontFamily: Theme.typography.heading,
     fontSize: 14,
-    fontFamily: "Inter600",
-    color: "#434343",
+    color: Theme.colors.ink,
   },
-  addButton: {
-    padding: 4,
+  foodSub: {
+    fontFamily: Theme.typography.body,
+    fontSize: 12,
+    color: Theme.colors.inkFaint,
   },
-  expandedDetailsContainer: {
-    overflow: 'hidden',
-  },
-  errorContainer: {
-    padding: 20,
+  addChip: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: Theme.colors.magentaTint,
     alignItems: "center",
+    justifyContent: "center",
   },
-  errorText: {
-    color: "#666666",
-    textAlign: "center",
-    fontFamily: "Inter400",
+  addChipGood: {
+    backgroundColor: Theme.colors.successTint,
+  },
+  addChipTreat: {
+    backgroundColor: Theme.colors.warningTint,
   },
 });
-
-export default addmeals;
