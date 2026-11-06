@@ -1,3 +1,4 @@
+import { serverToday, withTodayReadings } from "@/utils/todayReadings";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Animated, Easing, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Svg, { Circle, Line, Path, Polyline, Rect } from "react-native-svg";
@@ -73,17 +74,28 @@ export const useActivityHistory = () => {
     }
     setLoading(true);
     try {
-      const response = await fetch(`${CONFIG.API_BASE_URL}/user/activity/${user.user_id}`, {
+      const options = {
         headers: {
           Accept: "application/json",
           ...(user?.token ? { Authorization: `Bearer ${user.token}` } : {}),
         },
-      });
+      };
+      const base = `${CONFIG.API_BASE_URL}/user/activity/${user.user_id}`;
+      // The status routes hold today's latest blood pressure and glucose (see utils/todayReadings.ts)
+      const optional = (path: string) =>
+        fetch(`${base}${path}`, options)
+          .then((res) => (res.ok ? res.json() : null))
+          .catch(() => null);
+      const [response, bpStatus, glucoseStatus] = await Promise.all([
+        fetch(base, options),
+        optional("/bpstatus"),
+        optional("/glucosestatus"),
+      ]);
       if (!response.ok) {
         throw new Error(`Failed to fetch activities (${response.status})`);
       }
       const result = await response.json();
-      setActivities(result?.activities || []);
+      setActivities(withTodayReadings(result?.activities || [], bpStatus, glucoseStatus, serverToday()));
     } catch (error) {
       console.warn("Error fetching activity history:", error);
     } finally {

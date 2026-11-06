@@ -191,7 +191,6 @@ export const FeelingSection = ({ section, onRetry }: { section: Section<Feeling>
   return (
     <SectionCard
       title={t("pregnancySummary.feeling")}
-      tag={<Pill label={t("pregnancySummary.demo")} tone="teal" />}
       section={section}
       isEmpty={(data) => !data.moodEntries && !data.symptomEntries && !data.noteTopics.length}
       emptyText={t("pregnancySummary.noFeeling")}

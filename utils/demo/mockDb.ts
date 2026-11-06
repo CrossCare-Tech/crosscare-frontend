@@ -194,8 +194,11 @@ const seed = (): DemoDb => {
     activity.weight_unit = "kg";
     activity.heart_rate = 74 + ((i * 7) % 12);
     if (!isToday) {
-      const start = daysAgo(i + 1, 22, 15 + ((i * 10) % 40));
-      const end = daysAgo(i, 6, 20 + ((i * 13) % 35));
+      // UTC, like the dates the real server builds from the clock text of a logged night
+      const start = daysAgo(i + 1);
+      start.setUTCHours(22, 15 + ((i * 10) % 40), 0, 0);
+      const end = daysAgo(i);
+      end.setUTCHours(6, 20 + ((i * 13) % 35), 0, 0);
       activity.sleepStart = start.toISOString();
       activity.sleepEnd = end.toISOString();
     }

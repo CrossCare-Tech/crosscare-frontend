@@ -1,10 +1,11 @@
+import { toLocalDay } from "@/components/vitals/MetricUI";
 import { useCallback, useState } from "react";
 import { useFocusEffect } from "expo-router";
 import { useSelector } from "react-redux";
 import { CONFIG } from "@/constants/config";
 import { useDemoMode } from "@/utils/demo/demoMode";
+import { serverToday, withTodayReadings } from "@/utils/todayReadings";
 import { useUnitStore } from "@/zustandStore/unitStore";
-import { getDemoDb } from "@/utils/demo/mockDb";
 import {
   buildFeeling,
   buildMedications,
@@ -55,20 +56,28 @@ export const usePregnancySummary = () => {
       get(`/user/${userId}/profile`)
         .then((profile) => active && setPatient({ name: profile.name || "", week: profile.week || 0 }))
         .catch((error) => console.warn("Error loading the profile:", error));
-      load(setVitals, async () => buildVitals((await get(`/user/activity/${userId}`)).activities || [], new Date(), weightUnit));
+      load(setVitals, async () => {
+        // Today's blood pressure and glucose come from the status routes (see utils/todayReadings.ts)
+        const optional = (path: string) => get(path).catch(() => null);
+        const [history, bpStatus, glucoseStatus] = await Promise.all([
+          get(`/user/activity/${userId}`),
+          optional(`/user/activity/${userId}/bpstatus`),
+          optional(`/user/activity/${userId}/glucosestatus`),
+        ]);
+        const activities = withTodayReadings(history.activities || [], bpStatus, glucoseStatus, serverToday());
+        return buildVitals(activities, new Date(), weightUnit);
+      });
       load(setMedications, async () => buildMedications((await get(`/user/activity/${userId}/getMedication`)).data || []));
-      if (demo) {
-        load(setFeeling, async () => {
-          const [mood, symptoms, db] = await Promise.all([
-            get(`/user/activity/${userId}/mood?days=${SUMMARY_DAYS}`),
-            get(`/user/metrics/${userId}/symptoms?days=${SUMMARY_DAYS}`),
-            getDemoDb(),
-          ]);
-          return buildFeeling(mood.moodHistory || [], symptoms.symptoms || [], db.guideNotes || []);
-        });
-      } else {
-        setFeeling({ state: "unavailable", data: null });
-      }
+      // Mood and symptoms are real records on the backend. The topics the guide noted down have no backend, so none are listed.
+      load(setFeeling, async () => {
+        const [mood, symptoms] = await Promise.all([
+          get(`/user/activity/${userId}/mood?days=${SUMMARY_DAYS}`),
+          get(`/user/metrics/${userId}/symptoms?days=${SUMMARY_DAYS}`),
+        ]);
+        // Mood days are the server's UTC days: bring them to the patient's day, or an evening entry would look like tomorrow
+        const moods = (mood.moodHistory || []).map((entry: { date: string }) => ({ ...entry, date: toLocalDay(entry.date) }));
+        return buildFeeling(moods, symptoms.symptoms || [], []);
+      });
 
       return () => {
         active = false;

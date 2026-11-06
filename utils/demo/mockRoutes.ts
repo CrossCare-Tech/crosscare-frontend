@@ -81,6 +81,12 @@ const parseClock = (value: string) => {
   return { hours, minutes };
 };
 
+// Sleep times are clock text the server turns into UTC dates, so the mock reads and writes them in UTC too
+const time12UTC = (date: Date) => {
+  const hours = date.getUTCHours();
+  return `${String(hours % 12 || 12).padStart(2, "0")}:${String(date.getUTCMinutes()).padStart(2, "0")} ${hours >= 12 ? "PM" : "AM"}`;
+};
+
 const clockTo12 = (value: string) => {
   const clock = parseClock(value);
   if (!clock) return value;
@@ -696,19 +702,18 @@ const ROUTES: [string, string, Handler][] = [
     const start = parseClock(req.body?.sleepStart);
     const end = parseClock(req.body?.sleepEnd);
     if (!start || !end) return fail(400, "Invalid time format");
-    const startDate = parseDay(key);
-    startDate.setHours(start.hours, start.minutes, 0, 0);
-    const endDate = parseDay(key);
-    endDate.setHours(end.hours, end.minutes, 0, 0);
-    if (endDate <= startDate) endDate.setDate(endDate.getDate() + 1);
+    const [y, m, d] = key.split("-").map(Number);
+    const startDate = new Date(Date.UTC(y, m - 1, d, start.hours, start.minutes));
+    const endDate = new Date(Date.UTC(y, m - 1, d, end.hours, end.minutes));
+    if (endDate <= startDate) endDate.setUTCDate(endDate.getUTCDate() + 1);
     const a = activityFor(db, key);
     a.sleepStart = startDate.toISOString();
     a.sleepEnd = endDate.toISOString();
     return ok({
       id: a.id,
       date: a.date,
-      sleepStart: time12(startDate),
-      sleepEnd: time12(endDate),
+      sleepStart: time12UTC(startDate),
+      sleepEnd: time12UTC(endDate),
       duration: duration(a.sleepStart, a.sleepEnd),
       newBadges: { restedDiva: null, sleepWizard: null },
     });
@@ -721,8 +726,8 @@ const ROUTES: [string, string, Handler][] = [
         id: a.id,
         day: weekday(a.date),
         date: a.date,
-        sleepStart: a.sleepStart ? time12(new Date(a.sleepStart)) : null,
-        sleepEnd: a.sleepEnd ? time12(new Date(a.sleepEnd)) : null,
+        sleepStart: a.sleepStart ? time12UTC(new Date(a.sleepStart)) : null,
+        sleepEnd: a.sleepEnd ? time12UTC(new Date(a.sleepEnd)) : null,
         duration: duration(a.sleepStart, a.sleepEnd),
       })),
     newBadge: null,

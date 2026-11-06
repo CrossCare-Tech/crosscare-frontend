@@ -32,7 +32,9 @@ const SleepScreen = () => {
   const end = last ? new Date(last.end) : null;
   const minutes = start && end ? Math.max(0, Math.round((end.getTime() - start.getTime()) / 60000)) : 0;
   const hours = Math.floor(minutes / 60);
-  const format = (date: Date) => date.toLocaleTimeString(i18n.language, { hour: "numeric", minute: "2-digit" });
+  // The server builds these dates from the clock text the app sent ("11:00 PM") on its UTC clock, so they are read as UTC
+  const format = (date: Date) =>
+    date.toLocaleTimeString(i18n.language, { hour: "numeric", minute: "2-digit", timeZone: "UTC" });
   const enough = minutes >= 7 * 60;
 
   const actions = [
